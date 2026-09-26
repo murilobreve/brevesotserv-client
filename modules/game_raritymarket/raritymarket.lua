@@ -9,11 +9,11 @@ local FRAME_SIZE = 34
 -- one entry per rarity grade the server writes into rar_rarity
 local RARITIES = {
     none      = { label = 'Common',    color = '#c8c8c8', badge = '#e6e6e6', frame = 0 },
-    uncommon  = { label = 'Uncommon',  color = '#3ddc2e', badge = '#a6ff9a', frame = 1 },
-    rare      = { label = 'Rare',      color = '#3d9bff', badge = '#b0d6ff', frame = 2 },
-    epic      = { label = 'Epic',      color = '#b45cff', badge = '#e2c2ff', frame = 3 },
-    legendary = { label = 'Legendary', color = '#ff9a1f', badge = '#ffd49a', frame = 4 },
-    mythic    = { label = 'Mythic',    color = '#66f0ff', badge = '#dffbff', frame = 5 },
+    uncommon  = { label = 'Communis',  color = '#3ddc2e', badge = '#a6ff9a', frame = 1 },
+    rare      = { label = 'Rarus',     color = '#3d9bff', badge = '#b0d6ff', frame = 2 },
+    epic      = { label = 'Praeclarus',color = '#b45cff', badge = '#e2c2ff', frame = 3 },
+    legendary = { label = 'Legendarius',color = '#ff9a1f', badge = '#ffd49a', frame = 4 },
+    mythic    = { label = 'Mythicus',  color = '#66f0ff', badge = '#dffbff', frame = 5 },
 }
 
 local ELEMENT_COLORS = {
@@ -36,11 +36,11 @@ local CATEGORIES = {
 
 local RARITY_FILTERS = {
     { key = nil, label = 'All Rarities' },
-    { key = 'uncommon', label = 'Uncommon' },
-    { key = 'rare', label = 'Rare' },
-    { key = 'epic', label = 'Epic' },
-    { key = 'legendary', label = 'Legendary' },
-    { key = 'mythic', label = 'Mythic' },
+    { key = 'uncommon', label = 'Communis' },
+    { key = 'rare', label = 'Rarus' },
+    { key = 'epic', label = 'Praeclarus' },
+    { key = 'legendary', label = 'Legendarius' },
+    { key = 'mythic', label = 'Mythicus' },
 }
 
 local SORTS = {
@@ -100,6 +100,15 @@ local function applyFrame(frame, entry, size)
     itemWidget:setItem(item)
     if size then
         itemWidget:setSize({ width = size, height = size })
+    end
+    if ItemsDatabase and ItemsDatabase.setFrameGems then
+        local tags = {}
+        for _, tag in ipairs(entry.tags or {}) do
+            if #tags < 2 and ItemsDatabase.elementColors[tag] then
+                table.insert(tags, tag)
+            end
+        end
+        ItemsDatabase.setFrameGems(frame, tags)
     end
 end
 

@@ -88,13 +88,25 @@ function ItemsDatabase.getClipAndImagePath(item)
 end
 
 -- Server rarity grades (Baiak rarity system). The server sends them in the item
--- tooltip as a "#rarity:<grade>" first line; see ItemsDatabase.getItemRarityGrade.
+-- tooltip as a "#rarity:<grade>" first line, optionally followed by an
+-- "#elements:<Tag>[,<Tag>]" line with the item's element tags (Latin names).
 ItemsDatabase.itemRarity = {
-    uncommon  = { frame = 0, label = "Uncommon",  color = "#3ddc2e" },
-    rare      = { frame = 1, label = "Rare",      color = "#3d9bff" },
-    epic      = { frame = 2, label = "Epic",      color = "#b45cff" },
-    legendary = { frame = 3, label = "Legendary", color = "#ff9a1f" },
-    mythic    = { frame = 4, label = "Mythic",    color = "#66f0ff" },
+    uncommon  = { frame = 0, label = "Communis",    color = "#3ddc2e" },
+    rare      = { frame = 1, label = "Rarus",       color = "#3d9bff" },
+    epic      = { frame = 2, label = "Praeclarus",  color = "#b45cff" },
+    legendary = { frame = 3, label = "Legendarius", color = "#ff9a1f" },
+    mythic    = { frame = 4, label = "Mythicus",    color = "#66f0ff" },
+}
+
+-- frame gem colour per element tag
+ItemsDatabase.elementColors = {
+    Igneus     = "#ff6a2a",
+    Terrenus   = "#6cd13a",
+    Fulmineus  = "#b56bff",
+    Glacialis  = "#52dcff",
+    Sacer      = "#ffd84a",
+    Mortifer   = "#8a3dbf",
+    Corporalis = "#b8bec6",
 }
 
 function ItemsDatabase.getItemRarityGrade(item)
@@ -108,18 +120,78 @@ function ItemsDatabase.getItemRarityGrade(item)
     return nil
 end
 
--- Hover text without the "#rarity:" tag line; rarity items lead with their grade.
+-- Element tags of a rarity item, strongest first (at most two).
+function ItemsDatabase.getItemElements(item)
+    local elements = {}
+    if type(item) ~= "userdata" or not item.getTooltip then
+        return elements
+    end
+    local list = item:getTooltip():match("#elements:([%a,]+)")
+    if list then
+        for tag in list:gmatch("%a+") do
+            if ItemsDatabase.elementColors[tag] then
+                table.insert(elements, tag)
+            end
+        end
+    end
+    return elements
+end
+
+-- Hover text without the "#rarity:"/"#elements:" tag lines; rarity items lead
+-- with their grade (and elements).
 function ItemsDatabase.getItemTooltipText(item)
     if type(item) ~= "userdata" or not item.getTooltip then
         return ""
     end
-    local text = item:getTooltip():gsub("^#rarity:%a+\n?", "")
+    local text = item:getTooltip():gsub("^#rarity:%a+\n?", ""):gsub("#elements:[%a,]*\n?", "")
     local grade = ItemsDatabase.getItemRarityGrade(item)
     if grade then
-        local label = ItemsDatabase.itemRarity[grade].label .. " item"
+        local label = ItemsDatabase.itemRarity[grade].label
+        local elements = ItemsDatabase.getItemElements(item)
+        if #elements > 0 then
+            label = label .. " - " .. table.concat(elements, ", ")
+        end
         text = text:len() > 0 and (label .. "\n" .. text) or label
     end
     return text
+end
+
+local GEM_CORNERS = {
+    { AnchorTop, AnchorLeft },
+    { AnchorTop, AnchorRight },
+    { AnchorBottom, AnchorRight },
+    { AnchorBottom, AnchorLeft },
+}
+
+-- Four gems in the frame corners, painted in the element colours: one
+-- element colours all four, two elements alternate.
+function ItemsDatabase.setFrameGems(frame, elements)
+    if not frame.gems then
+        if #elements == 0 then
+            return
+        end
+        frame.gems = {}
+        for i, corner in ipairs(GEM_CORNERS) do
+            local gem = g_ui.createWidget('UIWidget', frame)
+            gem:setPhantom(true)
+            gem:setFocusable(false)
+            gem:setSize({ width = 7, height = 7 })
+            gem:setImageSource('/images/ui/item_rarity_gem')
+            gem:addAnchor(corner[1], 'parent', corner[1])
+            gem:addAnchor(corner[2], 'parent', corner[2])
+            gem:setMargin(1)
+            frame.gems[i] = gem
+        end
+    end
+    for i, gem in ipairs(frame.gems) do
+        local tag = elements[(i - 1) % 2 + 1] or elements[1]
+        if tag then
+            gem:setImageColor(ItemsDatabase.elementColors[tag])
+            gem:setVisible(true)
+        else
+            gem:setVisible(false)
+        end
+    end
 end
 
 -- Draws (or hides) the rarity frame over an item widget. It is a child overlay,
@@ -148,6 +220,7 @@ function ItemsDatabase.setItemRarityFrame(widget, item)
         widget.rarityFrame = frame
     end
     frame:setImageClip({ x = ItemsDatabase.itemRarity[grade].frame * 34, y = 0, width = 34, height = 34 })
+    ItemsDatabase.setFrameGems(frame, ItemsDatabase.getItemElements(item))
     frame:setVisible(true)
     return true
 end
@@ -201,7 +274,11 @@ function ItemsDatabase.setColorLootMessage(text)
         local rId, rName, rGrade = match:match("^(%d+)|(.+)|(%a+)$")
         local rarity = rGrade and ItemsDatabase.itemRarity[rGrade]
         if rarity then
-            return "{" .. rName .. " [" .. rarity.label .. "], " .. rarity.color .. "}"
+            -- the item name already carries its grade ("a mace Mythicus")
+            if not rName:find(rarity.label, 1, true) then
+                rName = rName .. " [" .. rarity.label .. "]"
+            end
+            return "{" .. rName .. ", " .. rarity.color .. "}"
         end
 
         local id, itemName = match:match("(%d+)|(.+)")
