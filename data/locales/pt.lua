@@ -537,6 +537,22 @@ locale = {
     ["Your connection has been lost.\nEither your network or the server went down."] = "Sua conexão foi perdida.\nOu sua rede ou o servidor caiu.",
     ["Your request has been closed"] = "Sua solicitação foi encerrada",
     ["on %s.\n"] = "em %s.\n",
+    -- Baiak Breves login card
+    ["Welcome back"] = "Bem-vindo de volta",
+    ["Sign in to play"] = "Entre para jogar",
+    ["Account name or email"] = "Conta ou email",
+    ["Remember me"] = "Lembrar de mim",
+    ["Keep your account and password saved on this computer"] = "Salvar conta e senha neste computador",
+    ["Forgot password?"] = "Esqueceu a senha?",
+    ["PLAY"] = "JOGAR",
+    ["New here?"] = "Novo por aqui?",
+    ["Create a free account"] = "Criar conta grátis",
+    ["Show password"] = "Mostrar senha",
+    ["Rarity drops"] = "Drops raros",
+    ["Five grades, up to Mythicus"] = "Cinco graus, até Mythicus",
+    ["Rates up to x4, new roll every 2h"] = "Rates até x4, sorteio a cada 2h",
+    ["Leaderboard prizes, 1 per hour online"] = "Prêmios no ranking e 1 por hora",
+    ["Trade rare gear with other players"] = "Negocie itens raros com jogadores",
   }
 }
 

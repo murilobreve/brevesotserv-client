@@ -8,11 +8,12 @@ local SERVER_NAME     = "Baiak Breves"                    -- nome exibido na jan
 local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
 local SERVER_PORT     = 80                                -- porta HTTP do login
 local CLIENT_VERSION  = 1525                              -- versao do client (15.25)
+local SITE_URL        = "http://25.18.172.192:8080"       -- site (criar conta / esqueci a senha)
 -- =====================================================================
 
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
-    --websites = "http://SEU-SITE/?subtopic=accountmanagement", --./client_entergame "Forgot password and/or email"
+    website = SITE_URL, --./client_entergame "Create a free account"
     --getCoinsUrl = "http://SEU-SITE/?subtopic=shop&step=terms", --./game_market
     clientAssets = {
         enabled = true,
