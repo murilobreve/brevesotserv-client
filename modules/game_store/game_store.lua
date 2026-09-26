@@ -8,6 +8,9 @@ local messageBox = nil
 
 local oldProtocol = false
 local a0xF2 = true
+-- Baiak Breves has one currency (Breves Coins): the server keeps every coin in
+-- the transferable balance, so the store shows and spends a single number
+local brevesCoins = 0
 
 local offerDescriptions = {}
 local reasonCategory = {}
@@ -176,7 +179,7 @@ local STORE_ICON_TAGS = {
     ["{capacityicon}"]            = {clip = "156 0 13 13", text = ""},
     ["{use}"]                     = {clip = "169 0 13 13", text = "can be used"},
     ["{useicon}"]                 = {clip = "169 0 13 13", text = ""},
-    ["{transferableprice}"]       = {clip = "182 0 13 13", text = "can be purchased with transferable Tibia Coins"},
+    ["{transferableprice}"]       = {clip = "182 0 13 13", text = "can be purchased with Breves Coins"},
     ["{transferablepriceicon}"]   = {clip = "182 0 13 13", text = ""},
     ["{star}"]                    = {localImg = "/game_store/images/icon-star-gold", text = ""},
 }
@@ -255,43 +258,27 @@ local function formatNumberWithCommas(value)
     return sign .. formattedValue
 end
 
+-- returns normal, transferable like before; with one currency everything is
+-- "transferable", so both kinds of offer check the same Breves Coins balance
 local function getCoinsBalance()
-    local function extractNumber(text)
-        if type(text) ~= "string" then 
-            return 0 
-        end
-        local numberStr = text:match("%d[%d,]*")
-        if not numberStr then 
-            return 0 
-        end
-        local cleanNumber = numberStr:gsub("[^%d]", "")
-        return tonumber(cleanNumber) or 0
+    return 0, brevesCoins
+end
+
+local function setBrevesCoins(amount)
+    brevesCoins = math.max(0, tonumber(amount) or 0)
+    if controllerShop.ui then
+        controllerShop.ui.lblCoins.lblTibiaCoins:setText(formatNumberWithCommas(brevesCoins) .. " Breves Coins")
     end
-
-    -- get coins: normal (non transferableCoins) | transfer(transferableCoins))
-    local lblNormal = controllerShop.ui.lblCoins.lblTibiaCoins
-    local lblTransfer = controllerShop.ui.lblCoins.lblTibiaTransfer
-
-    local normalCoins = lblNormal and extractNumber(lblNormal:getText()) or 0
-    local transferableCoins = lblTransfer and extractNumber(lblTransfer:getText()) or 0
-
-    return normalCoins, transferableCoins
 end
 
 local function fixServerNoSend0xF2()
     if a0xF2 then
         local player = g_game.getLocalPlayer()
-        local coin, transfer = getCoinsBalance()
-        local coinBalance = g_game.getLocalPlayer():getResourceBalance(ResourceTypes.COIN_NORMAL)
-        local transferBalance = player:getResourceBalance(ResourceTypes.COIN_TRANSFERRABLE)
-        if not coin or not transfer or coin ~= coinBalance or transfer ~= transferBalance then
-            controllerShop.ui.lblCoins.lblTibiaCoins:setText(formatNumberWithCommas(coinBalance))
-    
-            if transfer ~= transferBalance then
-                controllerShop.ui.lblCoins.lblTibiaTransfer:setText(
-                    string.format("(Including: %s", formatNumberWithCommas(transferBalance))
-                )
-            end
+        local coinBalance = player:getResourceBalance(ResourceTypes.COIN_NORMAL) or 0
+        local transferBalance = player:getResourceBalance(ResourceTypes.COIN_TRANSFERRABLE) or 0
+        local balance = math.max(coinBalance, transferBalance)
+        if balance ~= brevesCoins then
+            setBrevesCoins(balance)
             local packet2 = GameStore.SendingPackets.S_CoinBalanceUpdating
             g_logger.warning(string.format("[game_store BUG] Check 0x%X (%d) on server  onParseStoreGetCoin", packet2, packet2))
         end 
@@ -542,9 +529,9 @@ end
 
 function onParseStoreGetCoin(getTibiaCoins, getTransferableCoins)
     a0xF2 = false
-    controllerShop.ui.lblCoins.lblTibiaCoins:setText(formatNumberWithCommas(getTibiaCoins))
-    controllerShop.ui.lblCoins.lblTibiaTransfer:setText(string.format("(Including: %s",
-        formatNumberWithCommas(getTransferableCoins)))
+    -- the store script sends (total, transferable), the engine (normal, transferable);
+    -- the server merges normal coins into transferable, so the larger one is the balance
+    setBrevesCoins(math.max(getTibiaCoins or 0, getTransferableCoins or 0))
 end
 
 function onParseStoreOfferDescriptions(offerId, description)
@@ -636,9 +623,6 @@ function onParseStoreCreateProducts(storeProducts)
             local balance = isTransferable and coinsBalance1 or (coinsBalance1 + coinsBalance2)
             priceLabel:setColor(balance < price and "#d33c3c" or "white")
 
-            if isTransferable then
-                priceLabel:setIcon("/game_store/images/icon-tibiacointransferable")
-            end
         end
         local data = getProductData(product)
         if data then
@@ -686,9 +670,6 @@ function onParseStoreCreateHome(offer)
         local subOfferWidget = g_ui.createWidget('stackOfferPanel', row:getChildById('StackOffers'))
 
         subOfferWidget.lblPrice:setText(product.price)
-        if product.coinType == GameStore.CoinType.Transferable then
-            subOfferWidget.lblPrice:setIcon("/game_store/images/icon-tibiacointransferable")
-        end
 
         local data = getProductData(product)
         if data then
@@ -722,9 +703,7 @@ function onParseStoreGetHistory(currentPage, pageCount, historyData)
         row.Balance:setText(formatNumberWithCommas(balance))
         row.Balance:setColor(balance < 0 and "#D33C3C" or "#3CD33C")
         row.Description:setText(data[5])
-        row.Balance:setIcon(data[4] == GameStore.CoinType.Transferable and 
-                            "/game_store/images/icon-tibiacointransferable" or 
-                            "images/ui/tibiaCoin")
+        row.Balance:setIcon("images/ui/tibiaCoin")
         row:setBackgroundColor(i % 2 == 0 and "#ffffff12" or "#00000012")
     end
     showPanel("transferHistory")
@@ -1021,11 +1000,7 @@ function chooseOffert(self, focusedChild)
         local isTransferable = offer.coinType == GameStore.CoinType.Transferable
         local currentBalance = isTransferable and transferableCoins or (normalCoins + transferableCoins)
 
-        if isTransferable then
-            priceLabel:setIcon("/game_store/images/icon-tibiacointransferable")
-        else
-            priceLabel:setIcon("images/ui/tibiaCoin")
-        end
+        priceLabel:setIcon("images/ui/tibiaCoin")
 
         if currentBalance < offer.price then
             priceLabel:setColor("#d33c3c")
@@ -1101,7 +1076,7 @@ function chooseOffert(self, focusedChild)
                 destroyWindow(acceptWindow)
             end
 
-            local coinType = isTransferable and "transferable coins" or "regular coins"
+            local coinType = "Breves Coins"
             local confirmationMessage = string.format(
                 'Do you want to buy the product "%s" for %d %s?', 
                 product.name, 

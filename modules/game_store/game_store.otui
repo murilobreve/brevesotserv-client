@@ -149,30 +149,6 @@ StoreWindow
       focusable: false
       phantom: true
 
-    Label
-      id: lblTibiaTransfer
-      anchors.bottom: parent.bottom
-      anchors.left: prev.right
-      text-auto-resize: true
-      margin-left:5
-      margin-bottom: 3 
-      phantom: true
-
-    UIWidget
-      id: iconodos
-      anchors.bottom: parent.bottom
-      anchors.left: prev.right
-      focusable: false
-      phantom: true
-      margin-left:5
-      margin-bottom: 3
-      image-source: images/icon-tibiacointransferable
-    Label
-      anchors.bottom: parent.bottom
-      anchors.left: prev.right
-      !text: tr(")")
-      focusable: false
-      phantom: true
       margin-left:5
       margin-bottom: 3 
 
@@ -183,7 +159,7 @@ StoreWindow
     anchors.left: prev.right
     margin-left: 5
     margin-bottom: 2
-    !tooltip: tr('Get Tibia Coins')
+    !tooltip: tr('Get Breves Coins')
     image-color: green
     icon: /images/ui/tibiaCoin
     icon-align: center
