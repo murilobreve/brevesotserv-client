@@ -99,10 +99,13 @@ void main()
     // Soft moving white sheen
     // --------------------------------------------------
 
+    // screen-space, not v_TexCoord: v_TexCoord is a position inside the
+    // shared sprite atlas, so a wave built from it jumped to a different
+    // phase on every animation frame and the monster flickered while walking
     float wave =
         sin(
-            v_TexCoord.x * 18.0 +
-            v_TexCoord.y * 12.0 -
+            gl_FragCoord.x * 0.045 +
+            gl_FragCoord.y * 0.030 -
             u_Time * 1.5
         );
 

@@ -32,10 +32,16 @@ void main()
     // Strange irregular tint
     // --------------------------------------------------
 
-    // Stable pseudo-random fields from texture coordinates
-    float n1 = hash(floor(v_TexCoord * 48.0));
-    float n2 = hash(floor(v_TexCoord * 24.0) + 17.0);
-    float n3 = hash(floor(v_TexCoord * 12.0) + 53.0);
+    // Pseudo-random fields keyed by the pixel's own colour. They used to be
+    // keyed by v_TexCoord, which is a position inside the shared sprite
+    // atlas: every animation frame lives somewhere else in the atlas, so the
+    // sick-green/violet/cyan blotches jumped around on each frame and the
+    // monster seemed to change colour while walking. The same body part has
+    // the same colours in every frame, so this stays put.
+    vec3 q = floor(c * 15.0);
+    float n1 = hash(q.rg + q.b * 3.0);
+    float n2 = hash(q.gb + 17.0);
+    float n3 = hash(q.br + 53.0);
 
     float strange = (n1 * 0.50 + n2 * 0.35 + n3 * 0.15);
 

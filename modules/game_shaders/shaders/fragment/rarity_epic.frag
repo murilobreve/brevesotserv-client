@@ -1,5 +1,11 @@
 // Baiak Rarity System - item rarity tint: Epic (purple).
-// hue-rotate(280deg) - see rarity_uncommon.frag for context.
+// Colors the item by its rarity grade. A plain hue rotation (the previous
+// version) left grey/steel items - most weapons and armor - almost
+// unchanged, so the item is now tinted by luminance instead, which works on
+// any sprite, plus a slow sheen. The sheen is computed in screen space
+// (gl_FragCoord): v_TexCoord points into the shared sprite atlas, so any
+// pattern built from it jumps whenever the sprite changes.
+uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
@@ -7,9 +13,15 @@ void main()
 {
   vec4 col = texture2D(u_Tex0, v_TexCoord);
   vec3 c = col.rgb;
-  vec3 r;
-  r.r = 0.559 * c.r + 1.295 * c.g - 0.855 * c.b;
-  r.g = 0.035 * c.r + 0.627 * c.g + 0.338 * c.b;
-  r.b = 0.951 * c.r - 0.113 * c.g + 0.162 * c.b;
-  gl_FragColor = vec4(clamp(r, 0.0, 1.0), col.a);
+  float lum = dot(c, vec3(0.299, 0.587, 0.114));
+
+  vec3 tint = vec3(0.75, 0.38, 1.00);
+  vec3 tinted = tint * (lum * 1.35 + 0.06);
+  vec3 result = mix(c, tinted, 0.62);
+
+  float wave = sin((gl_FragCoord.x + gl_FragCoord.y) * 0.05 - u_Time * 1.6);
+  float sheen = smoothstep(0.90, 1.0, wave) * smoothstep(0.15, 0.6, lum);
+  result += tint * sheen * 0.30;
+
+  gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }

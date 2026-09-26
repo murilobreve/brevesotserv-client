@@ -1,0 +1,9 @@
+Module
+  name: game_raritymarket
+  description: Rarity Market - buy and sell rarity items found on monsters
+  author: Baiak Breves
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ raritymarket ]
+  @onLoad: init()
+  @onUnload: terminate()

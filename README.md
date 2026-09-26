@@ -20,6 +20,13 @@ Com um unico servidor configurado, a tela de login abre ja apontando para ele (o
 Opcoes, hotkeys, action bars e minimapa ficam em `%APPDATA%\baiakreborn` e sao salvos automaticamente
 (a cada alteracao na action bar, ao fechar as Opcoes, ao deslogar e a cada 1 minuto).
 
+## Rarity Market
+
+Janela propria para comprar e vender os itens de raridade (Uncommon, Rare, Epic, Legendary, Mythic) que caem dos monstros.
+Abre pelo botao com o diamante no painel lateral ou com `!market` no jogo. Tem tres abas: **Navegar** (busca, filtros por tipo/raridade, ordenacao e paginas),
+**Vender** (lista os itens de raridade que voce carrega; digite o preco e clique em *List for sale*) e **Minhas ofertas** (cancelar anuncios e ver o que ja vendeu).
+O modulo e `modules/game_raritymarket`; ele conversa com o script `custom_market.lua` do servidor pelo extended opcode 120.
+
 ## Assets (sprites/sons)
 
 Os arquivos da versao 15.25 sao baixados automaticamente na primeira execucao (modulo `client_assets`) para `data/things/1525/` e `data/sounds/1525/`.
