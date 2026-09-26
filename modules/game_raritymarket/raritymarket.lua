@@ -4,16 +4,16 @@
 -- is enforced on the server, this window only displays and asks.
 
 local MARKET_OPCODE = 120
-local FRAME_SIZE = 32
+local FRAME_SIZE = 34
 
 -- one entry per rarity grade the server writes into rar_rarity
 local RARITIES = {
-    none      = { label = 'Common',    color = '#c8c8c8', frame = 0 },
-    uncommon  = { label = 'Uncommon',  color = '#3ddc2e', frame = 1 },
-    rare      = { label = 'Rare',      color = '#3d9bff', frame = 2 },
-    epic      = { label = 'Epic',      color = '#b45cff', frame = 3 },
-    legendary = { label = 'Legendary', color = '#ff9a1f', frame = 4 },
-    mythic    = { label = 'Mythic',    color = '#dff6ff', frame = 5 },
+    none      = { label = 'Common',    color = '#c8c8c8', badge = '#e6e6e6', frame = 0 },
+    uncommon  = { label = 'Uncommon',  color = '#3ddc2e', badge = '#a6ff9a', frame = 1 },
+    rare      = { label = 'Rare',      color = '#3d9bff', badge = '#b0d6ff', frame = 2 },
+    epic      = { label = 'Epic',      color = '#b45cff', badge = '#e2c2ff', frame = 3 },
+    legendary = { label = 'Legendary', color = '#ff9a1f', badge = '#ffd49a', frame = 4 },
+    mythic    = { label = 'Mythic',    color = '#66f0ff', badge = '#dffbff', frame = 5 },
 }
 
 local ELEMENT_COLORS = {
@@ -141,9 +141,11 @@ local function showDetails(kind, entry)
     content.name:setText(entry.name or '')
     content.name:setColor(rarity.color)
 
+    -- pill badge: rarity-coloured text and outline on a soft tint of the same colour
     content.rarity:setText(rarity.label:upper())
-    content.rarity:setColor('#101010')
-    content.rarity:setBackgroundColor(rarity.color)
+    content.rarity:setColor(rarity.badge)
+    content.rarity:setBorderColor(rarity.color)
+    content.rarity:setBackgroundColor(rarity.color .. '40')
 
     if entry.odds and entry.odds ~= '' then
         content.odds:setText(tr('Odds: 1 in %s', formatNumber(entry.odds)))

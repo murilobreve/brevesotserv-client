@@ -131,7 +131,6 @@ function UIItem:onHoverChange(hovered)
     end
 
     if g_game.getFeature(GameItemTooltipV8) then
-        local tooltip = ""
         local function splitTextIntoLines(text, maxLineLength)
             local words = {}
             for word in text:gmatch("%S+") do
@@ -153,12 +152,17 @@ function UIItem:onHoverChange(hovered)
             return table.concat(lines, "\n")
         end
 
-        if self:getItem() and self:getItem():getTooltip():len() > 0 then
-            tooltip = splitTextIntoLines(self:getItem():getTooltip(), 80)
-            if tooltip then
-                self:setTooltip(tooltip)
+        local text = ItemsDatabase.getItemTooltipText(self:getItem())
+        if text:len() > 0 then
+            local lines = {}
+            for line in text:gmatch("[^\n]+") do
+                table.insert(lines, splitTextIntoLines(line, 80))
             end
+            self:setTooltip(table.concat(lines, "\n"))
+        elseif self.hadItemTooltip then
+            self:removeTooltip()
         end
+        self.hadItemTooltip = text:len() > 0
     end
 end
 
