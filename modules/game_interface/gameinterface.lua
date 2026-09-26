@@ -531,8 +531,21 @@ function onTradeWith(clickedWidget, mousePosition)
     end
 end
 
+-- Coins are "use with" items in the 15.x assets; using them only changes the
+-- stack (100 gold -> 1 platinum, 1 crystal -> 100 platinum...), so skip the
+-- target cursor and use them on themselves.
+local CHANGEABLE_COINS = { [3031] = true, [3035] = true, [3043] = true }
+
+function isChangeableCoin(thing)
+    return thing and thing.isItem and thing:isItem() and CHANGEABLE_COINS[thing:getId()] == true
+end
+
 function startUseWith(thing)
     if not thing then
+        return
+    end
+    if isChangeableCoin(thing) then
+        g_game.useWith(thing, thing)
         return
     end
     if g_ui.isMouseGrabbed() then
@@ -675,7 +688,11 @@ function createThingMenu(menuPosition, lookThing, useThing, creatureThing)
                 end, shortcut)
             end
         else
-            if useThing:isMultiUse() then
+            if isChangeableCoin(useThing) then
+                menu:addOption(tr('Use'), function()
+                    startUseWith(useThing)
+                end, shortcut)
+            elseif useThing:isMultiUse() then
                 menu:addOption(tr('Use with ...'), function()
                     startUseWith(useThing)
                 end, shortcut)
