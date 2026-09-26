@@ -52,6 +52,7 @@ Module
     - game_creatureinformation
     - game_rewardwall
     - game_raritymarket
+    - game_huntboard
     - game_forge
     - game_inspect
     - game_taskboard

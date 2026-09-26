@@ -1,0 +1,656 @@
+HuntTab < ButtonBox
+  size: 130 23
+  anchors.top: parent.top
+
+PeriodTab < ButtonBox
+  size: 150 22
+
+// multiplier bar: dark track, coloured fill, value on top
+MultBar < UIWidget
+  size: 118 14
+  background-color: #00000070
+  border-width: 1
+  border-color: #3a3a3a
+  phantom: true
+
+  UIWidget
+    id: fill
+    anchors.left: parent.left
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    margin: 1
+    width: 10
+    phantom: true
+
+  UIWidget
+    id: mark
+    anchors.left: parent.left
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    width: 1
+    background-color: #ffffff50
+    phantom: true
+
+  Label
+    id: value
+    anchors.fill: parent
+    text-align: center
+    font: verdana-11px-rounded
+    color: #ffffff
+    phantom: true
+
+HotCard < UIWidget
+  size: 200 84
+  background-color: #00000055
+  border-width: 1
+  border-color: #c9a227
+  padding: 4
+
+  UIWidget
+    id: medal
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 22 16
+    text-align: center
+    font: verdana-11px-rounded
+    background-color: #c9a22760
+    color: #ffe9a0
+    phantom: true
+
+  UICreature
+    id: creature
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 2
+    size: 64 64
+    creature-size: 64
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: creature.right
+    anchors.right: parent.right
+    margin-left: 6
+    margin-top: 4
+    height: 14
+    color: #ffe9a0
+    phantom: true
+
+  UIWidget
+    id: xpIcon
+    anchors.top: name.bottom
+    anchors.left: name.left
+    margin-top: 8
+    size: 15 15
+    image-source: /images/game/prey/prey_xp
+    phantom: true
+
+  Label
+    id: xp
+    anchors.left: xpIcon.right
+    anchors.verticalCenter: xpIcon.verticalCenter
+    margin-left: 4
+    text-auto-resize: true
+    phantom: true
+
+  UIWidget
+    id: lootIcon
+    anchors.top: xpIcon.bottom
+    anchors.left: name.left
+    margin-top: 6
+    size: 15 15
+    image-source: /images/game/prey/prey_loot
+    phantom: true
+
+  Label
+    id: loot
+    anchors.left: lootIcon.right
+    anchors.verticalCenter: lootIcon.verticalCenter
+    margin-left: 4
+    text-auto-resize: true
+    phantom: true
+
+RateRow < UIWidget
+  height: 46
+  focusable: true
+  background-color: alpha
+  padding: 2
+
+  $hover !focus:
+    background-color: #ffffff10
+
+  $focus:
+    background-color: #ffffff22
+
+  Label
+    id: rank
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 34
+    text-align: center
+    color: #8a8a8a
+    phantom: true
+
+  UICreature
+    id: creature
+    anchors.left: rank.right
+    anchors.verticalCenter: parent.verticalCenter
+    size: 42 42
+    creature-size: 42
+    phantom: true
+
+  MultBar
+    id: lootBar
+    anchors.right: perKill.left
+    anchors.bottom: parent.bottom
+    margin-right: 10
+    margin-bottom: 4
+
+  MultBar
+    id: xpBar
+    anchors.right: perKill.left
+    anchors.top: parent.top
+    margin-right: 10
+    margin-top: 4
+
+  UIWidget
+    id: xpIcon
+    anchors.right: xpBar.left
+    anchors.verticalCenter: xpBar.verticalCenter
+    margin-right: 4
+    size: 15 15
+    image-source: /images/game/prey/prey_xp
+    phantom: true
+
+  UIWidget
+    id: lootIcon
+    anchors.right: lootBar.left
+    anchors.verticalCenter: lootBar.verticalCenter
+    margin-right: 4
+    size: 15 15
+    image-source: /images/game/prey/prey_loot
+    phantom: true
+
+  Label
+    id: perKill
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+    width: 96
+    text-align: right
+    color: #d8d8d8
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: creature.right
+    anchors.right: xpIcon.left
+    margin-top: 6
+    margin-left: 8
+    height: 14
+    color: #e8e8e8
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 5
+    height: 14
+    color: #8a8a8a
+    phantom: true
+
+BoardRow < UIWidget
+  height: 33
+  background-color: alpha
+  padding: 2
+
+  UIWidget
+    id: position
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 24 20
+    text-align: center
+    font: verdana-11px-rounded
+    color: #b0b0b0
+    phantom: true
+
+  Label
+    id: value
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    width: 110
+    text-align: right
+    color: #ffe9a0
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: position.right
+    anchors.right: value.left
+    margin-left: 8
+    margin-top: 1
+    height: 14
+    color: #e8e8e8
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 1
+    height: 14
+    color: #7a7a7a
+    phantom: true
+
+HistoryLine < Label
+  height: 16
+  color: #b0b0b0
+  text-align: left
+
+HuntList < TextList
+  padding: 1
+  focusable: false
+  layout:
+    type: verticalBox
+
+BoardColumn < Panel
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 20
+    text-align: center
+    font: verdana-11px-rounded
+    color: #ffe9a0
+    background-color: #c9a22728
+
+  HuntList
+    id: list
+    anchors.top: title.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 334
+
+  Label
+    id: empty
+    anchors.centerIn: list
+    color: #7a7a7a
+    text-auto-resize: true
+    !text: tr('Nobody yet - be the first!')
+
+  Label
+    id: mine
+    anchors.top: list.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 18
+    text-align: center
+    color: #7fd35a
+
+MainWindow
+  id: huntBoardWindow
+  !text: tr('Hunt Board')
+  size: 820 630
+  @onEscape: modules.game_huntboard.hide()
+
+  HuntTab
+    id: ratesTab
+    anchors.left: parent.left
+    !text: tr('Monster Rates')
+    @onClick: modules.game_huntboard.selectTab('rates')
+
+  HuntTab
+    id: boardTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Leaderboard')
+    @onClick: modules.game_huntboard.selectTab('board')
+
+  // online reward progress (top right)
+  UIWidget
+    id: onlineBar
+    anchors.right: parent.right
+    anchors.verticalCenter: ratesTab.verticalCenter
+    size: 150 16
+    background-color: #00000070
+    border-width: 1
+    border-color: #3a3a3a
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin: 1
+      width: 1
+      background-color: #d4a017
+
+    Label
+      id: value
+      anchors.fill: parent
+      text-align: center
+      font: verdana-11px-rounded
+      color: #ffffff
+
+  UIWidget
+    id: onlineCoin
+    anchors.right: onlineBar.left
+    anchors.verticalCenter: onlineBar.verticalCenter
+    margin-right: 5
+    size: 12 12
+    image-source: /images/store/icon-tibiacoin
+
+  Label
+    id: onlineTitle
+    anchors.right: onlineCoin.left
+    anchors.verticalCenter: onlineBar.verticalCenter
+    margin-right: 5
+    text-auto-resize: true
+    color: #b0b0b0
+    !text: tr('Online reward')
+
+  HorizontalSeparator
+    id: topSep
+    anchors.top: ratesTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  // ---------------------------------------------------------------- rates
+  Panel
+    id: ratesPanel
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-top: 6
+    margin-bottom: 6
+
+    Label
+      id: hotTitle
+      anchors.top: parent.top
+      anchors.left: parent.left
+      text-auto-resize: true
+      color: #ffe9a0
+      !text: tr('Hottest hunts right now')
+
+    Label
+      id: countdown
+      anchors.top: parent.top
+      anchors.right: parent.right
+      text-auto-resize: true
+      color: #7fd35a
+
+    Panel
+      id: hotPanel
+      anchors.top: hotTitle.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      height: 84
+      layout:
+        type: horizontalBox
+        spacing: 8
+        fit-children: false
+
+    TextEdit
+      id: searchEdit
+      anchors.top: hotPanel.bottom
+      anchors.left: parent.left
+      margin-top: 8
+      size: 180 22
+      placeholder: Search monster...
+      placeholder-color: #6e706f
+      @onTextChange: modules.game_huntboard.onFilterChanged()
+
+    ComboBox
+      id: filterBox
+      anchors.top: searchEdit.top
+      anchors.left: searchEdit.right
+      margin-left: 6
+      size: 170 22
+
+    ComboBox
+      id: sortBox
+      anchors.top: searchEdit.top
+      anchors.left: filterBox.right
+      margin-left: 6
+      size: 180 22
+
+    CheckBox
+      id: bossBox
+      anchors.left: sortBox.right
+      anchors.verticalCenter: searchEdit.verticalCenter
+      margin-left: 10
+      width: 110
+      !text: tr('Hide bosses')
+      @onCheckChange: modules.game_huntboard.onFilterChanged()
+
+    Label
+      id: legend
+      anchors.right: parent.right
+      anchors.verticalCenter: searchEdit.verticalCenter
+      text-auto-resize: true
+      color: #7a7a7a
+      !text: tr('XP / kill')
+
+    HuntList
+      id: rateList
+      anchors.top: searchEdit.bottom
+      anchors.left: parent.left
+      anchors.right: rateScroll.left
+      anchors.bottom: prevPage.top
+      margin-top: 6
+      margin-bottom: 6
+      vertical-scrollbar: rateScroll
+
+    VerticalScrollBar
+      id: rateScroll
+      anchors.top: searchEdit.bottom
+      anchors.bottom: prevPage.top
+      margin-top: 6
+      margin-bottom: 6
+      anchors.right: parent.right
+      step: 46
+      pixel-scroll: true
+
+    Label
+      id: rateEmpty
+      anchors.centerIn: rateList
+      color: #8a8a8a
+      text-auto-resize: true
+      visible: false
+
+    Button
+      id: prevPage
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      size: 60 22
+      !text: tr('< Prev')
+      @onClick: modules.game_huntboard.changePage(-1)
+
+    Button
+      id: nextPage
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      size: 60 22
+      !text: tr('Next >')
+      @onClick: modules.game_huntboard.changePage(1)
+
+    Label
+      id: pageLabel
+      anchors.left: prevPage.right
+      anchors.right: nextPage.left
+      anchors.verticalCenter: prevPage.verticalCenter
+      text-align: center
+      color: #b0b0b0
+
+  // ---------------------------------------------------------------- leaderboard
+  Panel
+    id: boardPanel
+    anchors.fill: ratesPanel
+    visible: false
+
+    PeriodTab
+      id: hourTab
+      anchors.top: parent.top
+      anchors.left: parent.left
+      !text: tr('Hourly')
+      @onClick: modules.game_huntboard.selectPeriod('hour')
+
+    PeriodTab
+      id: dayTab
+      anchors.top: parent.top
+      anchors.left: prev.right
+      margin-left: 4
+      !text: tr('Daily')
+      @onClick: modules.game_huntboard.selectPeriod('day')
+
+    PeriodTab
+      id: monthTab
+      anchors.top: parent.top
+      anchors.left: prev.right
+      margin-left: 4
+      !text: tr('Monthly')
+      @onClick: modules.game_huntboard.selectPeriod('month')
+
+    Label
+      id: ends
+      anchors.top: parent.top
+      anchors.right: parent.right
+      text-auto-resize: true
+      color: #7fd35a
+
+    UIWidget
+      id: prizeCoin
+      anchors.top: ends.bottom
+      anchors.right: parent.right
+      margin-top: 3
+      size: 12 12
+      image-source: /images/store/icon-tibiacoin
+
+    Label
+      id: prize
+      anchors.right: prizeCoin.left
+      anchors.verticalCenter: prizeCoin.verticalCenter
+      margin-right: 4
+      text-auto-resize: true
+      color: #ffe9a0
+
+    BoardColumn
+      id: killsColumn
+      anchors.top: hourTab.bottom
+      anchors.left: parent.left
+      margin-top: 14
+      width: 392
+      height: 380
+
+    BoardColumn
+      id: expColumn
+      anchors.top: killsColumn.top
+      anchors.right: parent.right
+      width: 392
+      height: 380
+
+    Label
+      id: historyTitle
+      anchors.top: killsColumn.bottom
+      anchors.left: parent.left
+      margin-top: 6
+      text-auto-resize: true
+      color: #b0b0b0
+      !text: tr('Recent winners')
+
+    HuntList
+      id: history
+      anchors.top: historyTitle.bottom
+      anchors.left: parent.left
+      anchors.right: historyScroll.left
+      anchors.bottom: parent.bottom
+      margin-top: 4
+      vertical-scrollbar: historyScroll
+
+    VerticalScrollBar
+      id: historyScroll
+      anchors.top: historyTitle.bottom
+      anchors.bottom: parent.bottom
+      margin-top: 4
+      anchors.right: parent.right
+      step: 16
+      pixel-scroll: true
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Label
+    id: footer
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    color: #7a7a7a
+    !text: tr('Rates re-roll every 2 hours for every monster. Leaderboard winners are paid in Tibia Coins when the period ends.')
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Close')
+    @onClick: modules.game_huntboard.hide()
+
+HuntToast < UIWidget
+  size: 440 78
+  background-color: #141414ee
+  border-width: 2
+  border-color: #c9a227
+  padding: 6
+  phantom: false
+
+  UIWidget
+    id: icon
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 44 44
+    phantom: true
+
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: icon.right
+    anchors.right: open.left
+    margin-left: 8
+    height: 16
+    color: #ffe9a0
+    phantom: true
+
+  Label
+    id: text
+    anchors.top: title.bottom
+    anchors.left: title.left
+    anchors.right: open.left
+    anchors.bottom: parent.bottom
+    margin-top: 2
+    text-wrap: true
+    color: #d8d8d8
+    phantom: true
+
+  Button
+    id: open
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    size: 56 22
+    !text: tr('Open')
