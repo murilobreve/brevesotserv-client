@@ -530,12 +530,15 @@ function extendedView(extendedView)
 end
 
 function toggle()
-    if iconTopMenu:isOn() then
+    -- the top-menu button only exists in extended view
+    local visible = iconTopMenu and iconTopMenu:isOn() or (not iconTopMenu and inventoryController.ui:isVisible())
+    if visible then
         inventoryController.ui:hide()
-        iconTopMenu:setOn(false)
     else
         inventoryController.ui:show()
-        iconTopMenu:setOn(true)
+    end
+    if iconTopMenu then
+        iconTopMenu:setOn(not visible)
     end
 end
 

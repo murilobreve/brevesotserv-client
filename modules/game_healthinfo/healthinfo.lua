@@ -60,11 +60,14 @@ function extendedView(extendedView)
 end
 
 function toggle()
-    if iconTopMenu:isOn() then
+    -- the top-menu button only exists in extended view
+    local visible = iconTopMenu and iconTopMenu:isOn() or (not iconTopMenu and healthManaController.ui:isVisible())
+    if visible then
         healthManaController.ui:hide()
-        iconTopMenu:setOn(false)
     else
         healthManaController.ui:show()
-        iconTopMenu:setOn(true)
+    end
+    if iconTopMenu then
+        iconTopMenu:setOn(not visible)
     end
 end
