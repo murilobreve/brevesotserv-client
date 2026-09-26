@@ -39,8 +39,8 @@ TopMenuPanel
   anchors.horizontalCenter: parent.horizontalCenter
   width: 1020
   height: 32
-  image-source: /images/ui/top_bar_login
-  image-border: 5
+  image-source: /images/brevesui/top_bar
+  image-border: 10
 
   TopMenuButtonsPanel
     id: topLeftTogglesPanel

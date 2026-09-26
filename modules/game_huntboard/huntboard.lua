@@ -354,7 +354,7 @@ local function renderBoard()
     for position, coins in ipairs(rewards) do
         prizeParts[#prizeParts + 1] = string.format('#%d: %s', position, formatNumber(coins))
     end
-    panel.prize:setText(#prizeParts > 0 and tr('Prize per category  %s Tibia Coins', table.concat(prizeParts, '  ')) or '')
+    panel.prize:setText(#prizeParts > 0 and tr('Prize per category  %s Breves Coins', table.concat(prizeParts, '  ')) or '')
 
     panel.killsColumn.title:setText(tr('Most Monsters Killed - %s', PERIOD_LABELS[currentPeriod]))
     panel.expColumn.title:setText(tr('Most Experience - %s', PERIOD_LABELS[currentPeriod]))
@@ -396,7 +396,7 @@ local function updateOnline()
     local minutes = math.min(online.minutes, goal)
     bar.fill:setWidth(math.max(1, math.floor((bar:getWidth() - 2) * minutes / goal)))
     bar.value:setText(tr('%d / %d min', minutes, goal))
-    bar:setTooltip(tr('You get %d Tibia Coin(s) for every %d minutes online.', online.amount, goal))
+    bar:setTooltip(tr('You get %d Breves Coin(s) for every %d minutes online.', online.amount, goal))
 end
 
 local function tick()
@@ -500,7 +500,7 @@ function handlers.rates(data)
     end
     rates.monsters = monsters
     if window then
-        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Tibia Coins when the period ends.', math.floor(rates.interval / 3600)))
+        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.', math.floor(rates.interval / 3600)))
         renderHot()
         applyFilters()
     end
@@ -540,14 +540,14 @@ function handlers.coins(data)
     if data.reason == 'online' then
         online.minutes = 0
         updateOnline()
-        text = tr('+%d Tibia Coin for playing 1 hour. Thanks for playing!', data.amount or 1)
+        text = tr('+%d Breves Coin for playing 1 hour. Thanks for playing!', data.amount or 1)
     else
-        text = tr('+%s Tibia Coins for winning the leaderboard!', formatNumber(data.amount or 0))
+        text = tr('+%s Breves Coins for winning the leaderboard!', formatNumber(data.amount or 0))
     end
     if data.balance then
-        text = text .. '\n' .. tr('Balance: %s Tibia Coins', formatNumber(data.balance))
+        text = text .. '\n' .. tr('Balance: %s Breves Coins', formatNumber(data.balance))
     end
-    showToast(tr('Tibia Coins received'), text, function(icon)
+    showToast(tr('Breves Coins received'), text, function(icon)
         icon:setImageSource('/images/store/icon-tibiacoin')
         icon:setImageClip('')
     end, 8)

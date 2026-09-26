@@ -144,15 +144,20 @@ local function onUpdateNeeded(protocol, signature)
     end
 end
 
+-- the Baiak Breves login card has fixed labels (the login server takes an
+-- account name or an email on every client version)
 local function updateLabelText()
-    if enterGame:getChildById('clientComboBox') and tonumber(enterGame:getChildById('clientComboBox'):getText()) > 1080 then
-        enterGame:setText("Journey Onwards")
-        enterGame:getChildById('emailLabel'):setText("Email:")
-        enterGame:getChildById('rememberEmailBox'):setText("Remember Email:")
-    else
-        enterGame:setText("Enter Game")
-        enterGame:getChildById('emailLabel'):setText("Acc Name:")
-        enterGame:getChildById('rememberEmailBox'):setText("Remember password:")
+end
+
+-- the bottom menu (news, event schedule, boosted creature) needs data the
+-- website does not serve, so the login card shows the server features instead
+local SHOW_BOTTOM_MENU = false
+
+function EnterGame.createAccount()
+    if Services and Services.createAccount then
+        createWidgetAccount()
+    elseif Services and Services.website then
+        g_platform.openUrl(Services.website .. '/index.php/account/create')
     end
 end
 
@@ -310,7 +315,7 @@ function EnterGame.hidePanels()
 end
 
 function EnterGame.showPanels()
-    if g_modules.getModule("client_bottommenu"):isLoaded()  then
+    if SHOW_BOTTOM_MENU and g_modules.getModule("client_bottommenu"):isLoaded()  then
         modules.client_bottommenu.show()
     end
     modules.client_topmenu.show()
@@ -342,7 +347,11 @@ function EnterGame.firstShow()
         end)
     end
 
-    if Services and Services.status then
+    if not SHOW_BOTTOM_MENU then
+        if g_modules.getModule("client_bottommenu"):isLoaded() then
+            modules.client_bottommenu.hide()
+        end
+    elseif Services and Services.status then
         if g_modules.getModule("client_bottommenu"):isLoaded()  then
             EnterGame.postCacheInfo()
             EnterGame.postEventScheduler()
@@ -598,24 +607,8 @@ function EnterGame.toggleStayLoggedBox(clientVersion, init)
         return
     end
 
+    -- the option stays hidden on the Baiak Breves card, so the size never changes
     enterGame:getChildById('stayLoggedBox'):setOn(enabled)
-
-    local newHeight = enterGame:getHeight()
-    local newY = enterGame:getY()
-    if enabled then
-        newY = newY - enterGame.stayLoggedBoxHeight
-        newHeight = newHeight + enterGame.stayLoggedBoxHeight
-    else
-        newY = newY + enterGame.stayLoggedBoxHeight
-        newHeight = newHeight - enterGame.stayLoggedBoxHeight
-    end
-
-    if not init then
-        enterGame:setY(newY)
-        enterGame:bindRectToParent()
-    end
-
-    enterGame:setHeight(newHeight)
     enterGame.stayLoggedBoxEnabled = enabled
 end
 
@@ -926,18 +919,13 @@ function EnterGame.setUniqueServer(host, port, protocol, windowWidth, windowHeig
     serverListButton:setHeight(0)
     serverListButton:setWidth(0)
 
-    local rememberEmailBox = enterGame:getChildById('rememberEmailBox')
-    rememberEmailBox:setMarginTop(5)
-
-    if not windowWidth then
-        windowWidth = 380
+    -- the card keeps the size from entergame.otui unless a caller asks for one
+    if windowWidth then
+        enterGame:setWidth(windowWidth)
     end
-    enterGame:setWidth(windowWidth)
-    if not windowHeight then
-        windowHeight = 229
+    if windowHeight then
+        enterGame:setHeight(windowHeight)
     end
-
-    enterGame:setHeight(windowHeight)
     enterGame.disableToken = true
     local server = Servers_init[host]
     enterGame.disableToken = not (server and server.useAuthenticator)

@@ -1,24 +1,117 @@
-EnterGameWindow < MainWindow
-  !text: tr('Enter Game')
-  size: 236 316
+// Baiak Breves login card: brand + features on the left, sign-in form on the
+// right. Every id the entergame.lua logic looks up is still a direct child of
+// the window; the server/version fields stay hidden (single server client).
 
+BrevesInput < UITextEdit
+  font: verdana-11px-antialised
+  color: #e8ebf0
+  height: 30
+  text-offset: 0 1
+  padding: 8 10 6 10
+  image-source: /images/brevesui/input
+  image-border: 7
+  selection-color: #1c1405
+  selection-background-color: #f0b94a
+  change-cursor-image: false
 
-EnterGameButton < Button
-  width: 64
+  $focus:
+    image-source: /images/brevesui/input_focus
+
+BrevesPasswordInput < BrevesInput
+  text-hidden: true
+  padding-right: 32
+
+  UICheckBox
+    id: showPassword
+    size: 19 20
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    image-rect: 0 0 19 20
+    image-source: /images/ui/hide_eye
+    !tooltip: tr('Show password')
+    @onCheckChange: |
+      self:getParent():setTextHidden(not self:isChecked())
+
+    $!checked:
+      image-clip: 0 0 19 20
+
+    $checked:
+      image-clip: 0 20 19 20
+
+BrevesGoldButton < UIButton
+  font: Verdana Bold-11px
+  color: #1c1405
+  height: 36
+  image-source: /images/brevesui/button_gold
+  image-border: 9
+
+  $hover !disabled:
+    image-source: /images/brevesui/button_gold_hover
+
+  $pressed:
+    image-source: /images/brevesui/button_gold_pressed
+    text-offset: 0 1
+
+  $disabled:
+    image-source: /images/brevesui/button_gold_disabled
+    color: #98a1b0
+
+BrevesLink < UIButton
+  font: verdana-11px-antialised
+  color: #f0b94a
+  text-auto-resize: true
+
+  $hover:
+    color: #ffd98a
+
+BrevesLabel < Label
+  font: verdana-11px-antialised
+  color: #98a1b0
+
+BrevesFeature < Panel
+  height: 38
+  anchors.left: parent.left
+  anchors.right: parent.right
+
+  UIWidget
+    id: bullet
+    size: 12 12
+    image-source: /images/brevesui/bullet
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-top: 2
+
+  Label
+    id: title
+    font: Verdana Bold-11px
+    color: #e8ebf0
+    text-auto-resize: true
+    anchors.left: bullet.right
+    anchors.top: parent.top
+    margin-left: 10
+
+  Label
+    id: desc
+    font: verdana-11px-antialised
+    color: #98a1b0
+    anchors.left: title.left
+    anchors.right: parent.right
+    anchors.top: title.bottom
+    margin-top: 3
+    text-auto-resize: true
+
+EnterGameWindow < UIWindow
+  size: 660 312
+  anchors.centerIn: parent
+  image-source: /images/brevesui/panel
+  image-border: 12
+  color: #00000000
+  padding: 0
 
 ServerListButton < UIButton
   size: 17 17
   image-source: /images/topbuttons/minimap
-  image-color: #ffffffff
-
-  $hover !disabled:
-    image-color: #ffffff99
-
-  $pressed:
-    image-color: #ffffff44
-
-  $disabled:
-    image-color: #ffffff55
 
 EnterGameWindow
   id: enterGame
@@ -26,224 +119,252 @@ EnterGameWindow
   &authenticatorHeight: 44
   &stayLoggedBoxEnabled: false
   &stayLoggedBoxHeight: 24
-  size: 280 285
   @onEnter: EnterGame.doLogin()
 
-  Label
-    id: emailLabel
-    !text: tr('Acc Name:') 
-    anchors.left: parent.left
+  // ---------------------------------------------------------------- brand
+  Panel
+    id: brandPanel
     anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    width: 300
+    padding: 26 24 22 26
+    phantom: true
 
-    opacity: 0.8
+    UIWidget
+      id: logo
+      size: 271 58
+      image-source: /images/brevesui/logo
+      anchors.top: parent.top
+      anchors.left: parent.left
+      margin-left: -8
+      phantom: true
 
-      
+    BrevesFeature
+      id: featRarity
+      anchors.top: logo.bottom
+      margin-top: 24
+      @onSetup: |
+        self.title:setText(tr('Rarity drops'))
+        self.desc:setText(tr('Five grades, up to Mythicus'))
+
+    BrevesFeature
+      id: featHunt
+      anchors.top: prev.bottom
+      margin-top: 8
+      @onSetup: |
+        self.title:setText(tr('Hunt Board'))
+        self.desc:setText(tr('Rates up to x4, new roll every 2h'))
+
+    BrevesFeature
+      id: featCoins
+      anchors.top: prev.bottom
+      margin-top: 8
+      @onSetup: |
+        self.title:setText(tr('Breves Coins'))
+        self.desc:setText(tr('Leaderboard prizes, 1 per hour online'))
+
+    BrevesFeature
+      id: featMarket
+      anchors.top: prev.bottom
+      margin-top: 8
+      @onSetup: |
+        self.title:setText(tr('Rarity Market'))
+        self.desc:setText(tr('Trade rare gear with other players'))
+
+  UIWidget
+    id: brandSeparator
+    width: 1
+    background-color: #262c36
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.left: brandPanel.right
+    margin-top: 22
+    margin-bottom: 22
+    phantom: true
+
+  // ----------------------------------------------------------------- form
   Label
-    id: passwordLabel
-    !text: tr('Password:')
-    anchors.left: emailLabel.left
-    anchors.top: emailLabel.bottom
-    margin-top: 10
-    opacity: 0.8
+    id: formTitle
+    !text: tr('Welcome back')
+    font: Verdana Bold-13px
+    color: #f3f1ea
+    text-auto-resize: true
+    anchors.top: parent.top
+    anchors.left: brandSeparator.right
+    margin-top: 28
+    margin-left: 30
 
-  HiddenTextQtToggleEdit
+  BrevesLabel
+    id: formSubtitle
+    !text: tr('Sign in to play')
+    text-auto-resize: true
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    margin-top: 4
+
+  BrevesLabel
+    id: emailLabel
+    !text: tr('Account name or email')
+    text-auto-resize: true
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    margin-top: 18
+
+  BrevesInput
     id: accountNameTextEdit
-    anchors.right: accountPasswordTextEdit.right
-    anchors.verticalCenter: emailLabel.verticalCenter
-    anchors.left: accountPasswordTextEdit.left
-    
-  HiddenTextQtEdit
-    id: accountPasswordTextEdit
+    anchors.top: prev.bottom
+    anchors.left: prev.left
     anchors.right: parent.right
-    anchors.left: passwordLabel.right
-    anchors.verticalCenter: passwordLabel.verticalCenter
-    margin-left: 5
+    margin-top: 5
+    margin-right: 30
+
+  BrevesLabel
+    id: passwordLabel
+    !text: tr('Password')
+    text-auto-resize: true
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    margin-top: 12
+
+  BrevesPasswordInput
+    id: accountPasswordTextEdit
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    anchors.right: accountNameTextEdit.right
+    margin-top: 5
 
   QtCheckBox
     id: rememberEmailBox
-    !text: tr('Remember password')
-    !tooltip: tr('Remember account and password when starts client')
-    anchors.left: passwordLabel.left
-    anchors.right: parent.right
-    anchors.top: accountPasswordTextEdit.bottom
-    margin-top: 10
-    opacity: 0.8
+    !text: tr('Remember me')
+    !tooltip: tr('Keep your account and password saved on this computer')
+    font: verdana-11px-antialised
+    color: #cfd6df
+    text-auto-resize: true
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    margin-top: 12
     @onCheckChange: |
       self:getParent():getChildById('autoLoginBox'):setEnabled(self:isChecked())
-      self:getParent():getChildById('rememberEmailTip'):setOn(self:isChecked())
 
-  UIWidget
-    id: rememberEmailTip
-    image-source: /images/icons/show_gui_help_grey
-    !specialtooltip: 'Be aware that your email address will be stored on your configuration file "config.otml" if you activate this option.'
+  BrevesLink
+    id: Forgot_password_email
+    !text: tr('Forgot password?')
     anchors.right: accountNameTextEdit.right
     anchors.verticalCenter: rememberEmailBox.verticalCenter
+    @onClick: g_platform.openUrl(Services.website .. '/index.php/account/lost')
+    @onSetup: |
+      self:setVisible(Services ~= nil and Services.website ~= nil)
+
+  BrevesGoldButton
+    id: enterButton
+    !text: tr('PLAY')
+    anchors.top: rememberEmailBox.bottom
+    anchors.left: accountNameTextEdit.left
+    anchors.right: accountNameTextEdit.right
+    margin-top: 16
+    @onClick: EnterGame.doLogin()
+
+  BrevesLabel
+    id: newHereLabel
+    !text: tr('New here?')
+    text-auto-resize: true
+    anchors.top: prev.bottom
+    anchors.left: prev.left
+    margin-top: 14
+
+  BrevesLink
+    id: btnCreateNewAccount
+    !text: tr('Create a free account')
+    anchors.left: prev.right
+    anchors.verticalCenter: prev.verticalCenter
+    margin-left: 5
+    @onClick: EnterGame.createAccount()
+    @onSetup: |
+      self:setVisible(Services ~= nil and (Services.createAccount ~= nil or Services.website ~= nil))
+
+  Label
+    id: serverInfoLabel
+    font: verdana-11px-antialised
+    color: #4fd66b
+    text-auto-resize: true
+    anchors.top: newHereLabel.bottom
+    anchors.left: newHereLabel.left
+    margin-top: 6
+
+  // ------------------------------------------ hidden (single-server client)
+  UIWidget
+    id: rememberEmailTip
+    size: 1 1
+    anchors.top: parent.top
+    anchors.left: parent.left
     visible: false
 
-    $on:
-      visible: true
-
-    $!on:
-      visible: false
-
-  UIButton
-    !text: tr('Forgot password and/or email')
-    id: Forgot_password_email
-    font: verdana-11px-monochrome-underline
-    text-align: left
-    anchors.left: rememberEmailBox.left
-    anchors.right: parent.right
-    anchors.top: rememberEmailBox.bottom
-    opacity: 0.8
-    margin-top: 5
-    @onClick: g_platform.openUrl(Services.websites)
-    @onSetup: | 
-        if Services and Services.websites then
-            self:setVisible(true)
-        else
-            self:setVisible(false)
-            self:hide()
-        end
+  QtCheckBox
+    id: autoLoginBox
+    enabled: false
+    anchors.top: parent.top
+    anchors.left: parent.left
+    visible: false
 
   QtCheckBox
     id: stayLoggedBox
-    !text: tr('Stay logged during session')
+    anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 6
-    margin-top: -16
     visible: false
 
-    $on:
-      visible: true
-      margin-top: 8
-
-  HorizontalSeparator
+  QtCheckBox
+    id: httpLoginBox
+    anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 8
+    visible: false
 
   MenuLabel
     id: serverLabel
-    !text: tr('Server')
-    anchors.left: prev.left
-    anchors.top: prev.bottom
-    margin-top: 8
-    text-auto-resize: true
+    anchors.top: parent.top
+    anchors.left: parent.left
+    visible: false
 
   ServerListButton
     id: serverListButton
-    !tooltip: tr('Server list')
-    anchors.right: parent.right
-    anchors.top: serverLabel.bottom
-    margin-top: 3
+    anchors.top: parent.top
+    anchors.left: parent.left
+    visible: false
     @onClick: EnterGame.showServerList()
 
   TextEdit
     id: serverHostTextEdit
-    !tooltip: tr('Make sure that your client uses\nthe correct game client version')
+    width: 100
+    anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: serverListButton.left
-    anchors.top: serverLabel.bottom
-    margin-top: 2
-    margin-right: 4
+    visible: false
 
   MenuLabel
     id: clientLabel
-    !text: tr('Client Version')
+    anchors.top: parent.top
     anchors.left: parent.left
-    anchors.top: serverHostTextEdit.bottom
-    text-auto-resize: true
-    margin-right: 10
-    margin-top: 8
+    visible: false
 
   ComboBox
     id: clientComboBox
-    anchors.left: parent.left
-    anchors.right: parent.horizontalCenter
-    anchors.top: clientLabel.bottom
-    margin-top: 2
-    margin-right: 3
     width: 90
+    anchors.top: parent.top
+    anchors.left: parent.left
+    visible: false
     menu-scroll: true
     menu-height: 125
     menu-scroll-step: 25
 
   MenuLabel
     id: portLabel
-    !text: tr('Port')
-    anchors.left: serverPortTextEdit.left
-    anchors.top: serverHostTextEdit.bottom
-    margin-top: 8
-    text-auto-resize: true
+    anchors.top: parent.top
+    anchors.left: parent.left
+    visible: false
 
   TextEdit
     id: serverPortTextEdit
     text: 7171
-    anchors.right: parent.right
-    anchors.left: parent.horizontalCenter
-    anchors.top: clientComboBox.top
-    margin-left: 3
-
-  QtCheckBox
-    id: autoLoginBox
-    enabled: false
-    !text: tr('Auto login')
-    !tooltip: tr('Open charlist automatically when starting client')
+    width: 60
+    anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 10
-
-  QtCheckBox
-    id: httpLoginBox
-    enabled: true
-    !text: tr('Enable HTTP login')
-    !tooltip: tr('If login fails using HTTPS (encrypted) try with HTTP (unencrypted)')
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 2
-
-  HorizontalSeparator
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 6
-
-  QtButton
-    !text: tr('Login')
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 9
-    size: 86 20
-    @onClick: EnterGame.doLogin()
-
-  QtButton
-    id: btnCreateNewAccount
-    !text: tr('Create New Account')
-    anchors.left: parent.left
-    anchors.top: prev.bottom
-    margin-top: -17
-    size: 109 20
-    @onClick: |
-      self:disable()
-      createWidgetAccount()
-
-    @onSetup: | 
-      if Services and Servers_init and table.size(Servers_init) == 1 and Services.createAccount then
-        self:setVisible(true)
-      else
-        self:setVisible(false)
-      end
-
-  Label
-    id: serverInfoLabel
-    font: verdana-11px-rounded
-    anchors.top: prev.top
-    anchors.left: parent.left
-    margin-top: 5
-    color: green
-    text-auto-resize: true
+    visible: false

@@ -421,8 +421,7 @@ function onParseStoreGetCoin(coins, transferableCoins)
         return
     end
 
-    local coinTooltip = "Total Tibia Coins: " .. comma_value(coins + transferableCoins) ..
-                            "\nIncluded transferable Tibia Coins: " .. comma_value(transferableCoins)
+    local coinTooltip = "Breves Coins: " .. comma_value(transferableCoins)
 
     marketWindow.contentPanel.coinPanel.gold:setText(comma_value(transferableCoins))
     marketWindow.contentPanel.coinPanel.gold:setTooltip(coinTooltip)

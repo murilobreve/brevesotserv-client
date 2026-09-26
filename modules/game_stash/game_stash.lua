@@ -35,7 +35,7 @@ local categoryNames = {
     [13] = "Shields",          [14] = "Tools",             [15] = "Valuables",
     [16] = "Ammunition",       [17] = "Axes",              [18] = "Clubs",
     [19] = "Distance Weapons", [20] = "Swords",            [21] = "Wands/Rods",
-    [22] = "Premium Scrolls",  [23] = "Tibia Coins",       [24] = "Creature Products",
+    [22] = "Premium Scrolls",  [23] = "Breves Coins",       [24] = "Creature Products",
     [25] = "Quiver",           [26] = "Soul Cores",        [27] = "Fist Weapons",
 }
 
