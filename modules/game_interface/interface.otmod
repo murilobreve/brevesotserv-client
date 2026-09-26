@@ -51,6 +51,7 @@ Module
     - game_cyclopedia
     - game_creatureinformation
     - game_rewardwall
+    - game_raritymarket
     - game_forge
     - game_inspect
     - game_taskboard

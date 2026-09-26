@@ -1,0 +1,540 @@
+RarityFrame < UIWidget
+  size: 36 36
+  image-source: /game_raritymarket/images/frames
+  image-clip: 0 0 32 32
+  phantom: true
+
+  UIItem
+    id: item
+    size: 32 32
+    anchors.centerIn: parent
+    virtual: true
+    phantom: true
+
+MarketRow < UIWidget
+  height: 42
+  focusable: true
+  background-color: alpha
+  padding: 3
+
+  $hover !focus:
+    background-color: #ffffff10
+
+  $focus:
+    background-color: #ffffff24
+
+  RarityFrame
+    id: frame
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+
+  Label
+    id: price
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin-top: 3
+    margin-right: 18
+    width: 110
+    height: 14
+    text-align: right
+    color: #e8e8e8
+    phantom: true
+
+  UIWidget
+    id: gold
+    size: 12 12
+    anchors.left: price.right
+    anchors.verticalCenter: price.verticalCenter
+    margin-left: 4
+    image-source: /images/game/prey/prey_gold
+    phantom: true
+
+  Label
+    id: seller
+    anchors.top: price.bottom
+    anchors.right: parent.right
+    margin-top: 4
+    margin-right: 2
+    width: 126
+    height: 14
+    text-align: right
+    color: #8a8a8a
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: frame.right
+    anchors.right: price.left
+    margin-top: 3
+    margin-left: 8
+    height: 14
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: seller.left
+    margin-top: 4
+    height: 14
+    color: #9a9a9a
+    phantom: true
+
+MarketTab < ButtonBox
+  size: 110 23
+  anchors.top: parent.top
+
+AffixLine < Label
+  height: 15
+  color: #7fd35a
+  text-align: left
+
+MarketList < TextList
+  padding: 1
+  focusable: false
+  layout:
+    type: verticalBox
+
+MainWindow
+  id: rarityMarketWindow
+  !text: tr('Rarity Market')
+  size: 830 590
+  @onEscape: modules.game_raritymarket.hide()
+
+  MarketTab
+    id: browseTab
+    anchors.left: parent.left
+    !text: tr('Browse')
+    @onClick: modules.game_raritymarket.selectTab('browse')
+
+  MarketTab
+    id: sellTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Sell')
+    @onClick: modules.game_raritymarket.selectTab('sell')
+
+  MarketTab
+    id: myTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('My Offers')
+    @onClick: modules.game_raritymarket.selectTab('my')
+
+  UIWidget
+    id: bankGold
+    size: 12 12
+    anchors.right: parent.right
+    anchors.verticalCenter: browseTab.verticalCenter
+    image-source: /images/game/prey/prey_gold
+
+  Label
+    id: bankLabel
+    anchors.right: bankGold.left
+    anchors.verticalCenter: browseTab.verticalCenter
+    margin-right: 5
+    text-auto-resize: true
+    color: #e8e8e8
+
+  HorizontalSeparator
+    id: topSep
+    anchors.top: browseTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  // ---------------------------------------------------------------- browse
+  Panel
+    id: browsePanel
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.bottom: bottomSep.top
+    margin-top: 8
+    margin-bottom: 8
+    width: 500
+
+    TextEdit
+      id: searchEdit
+      anchors.top: parent.top
+      anchors.left: parent.left
+      size: 170 22
+      placeholder: Search by name...
+      placeholder-color: #6e706f
+      @onTextChange: modules.game_raritymarket.onSearchChanged()
+
+    ComboBox
+      id: categoryBox
+      anchors.top: parent.top
+      anchors.left: searchEdit.right
+      margin-left: 5
+      size: 102 22
+
+    ComboBox
+      id: rarityBox
+      anchors.top: parent.top
+      anchors.left: categoryBox.right
+      margin-left: 5
+      size: 102 22
+
+    ComboBox
+      id: sortBox
+      anchors.top: parent.top
+      anchors.left: rarityBox.right
+      anchors.right: parent.right
+      margin-left: 5
+      height: 22
+
+    MarketList
+      id: offersList
+      anchors.top: searchEdit.bottom
+      anchors.left: parent.left
+      anchors.right: offersScroll.left
+      anchors.bottom: prevPage.top
+      margin-top: 6
+      margin-bottom: 6
+      vertical-scrollbar: offersScroll
+
+    VerticalScrollBar
+      id: offersScroll
+      anchors.top: searchEdit.bottom
+      anchors.bottom: prevPage.top
+      margin-top: 6
+      margin-bottom: 6
+      anchors.right: parent.right
+      step: 42
+      pixel-scroll: true
+
+    Label
+      id: offersEmpty
+      anchors.centerIn: offersList
+      color: #8a8a8a
+      text-auto-resize: true
+      visible: false
+
+    Button
+      id: prevPage
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      size: 60 22
+      !text: tr('< Prev')
+      @onClick: modules.game_raritymarket.changePage(-1)
+
+    Button
+      id: nextPage
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      size: 60 22
+      !text: tr('Next >')
+      @onClick: modules.game_raritymarket.changePage(1)
+
+    Label
+      id: pageLabel
+      anchors.left: prevPage.right
+      anchors.right: nextPage.left
+      anchors.verticalCenter: prevPage.verticalCenter
+      text-align: center
+      color: #b0b0b0
+
+  // ---------------------------------------------------------------- sell
+  Panel
+    id: sellPanel
+    anchors.fill: browsePanel
+    visible: false
+
+    Label
+      id: sellHint
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 22
+      color: #b0b0b0
+      !text: tr('Rarity items you are carrying (hands and backpack):')
+
+    MarketList
+      id: sellList
+      anchors.top: sellHint.bottom
+      anchors.left: parent.left
+      anchors.right: sellScroll.left
+      anchors.bottom: parent.bottom
+      margin-top: 6
+      vertical-scrollbar: sellScroll
+
+    VerticalScrollBar
+      id: sellScroll
+      anchors.top: sellHint.bottom
+      anchors.bottom: parent.bottom
+      margin-top: 6
+      anchors.right: parent.right
+      step: 42
+      pixel-scroll: true
+
+    Label
+      id: sellEmpty
+      anchors.centerIn: sellList
+      color: #8a8a8a
+      text-auto-resize: true
+      visible: false
+      !text: tr('You are not carrying any rarity items.')
+
+  // ---------------------------------------------------------------- my offers
+  Panel
+    id: myPanel
+    anchors.fill: browsePanel
+    visible: false
+
+    Label
+      id: activeTitle
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 18
+      color: #b0b0b0
+      !text: tr('Your active listings')
+
+    MarketList
+      id: activeList
+      anchors.top: activeTitle.bottom
+      anchors.left: parent.left
+      anchors.right: activeScroll.left
+      height: 240
+      vertical-scrollbar: activeScroll
+
+    VerticalScrollBar
+      id: activeScroll
+      anchors.top: activeTitle.bottom
+      height: 240
+      anchors.right: parent.right
+      step: 42
+      pixel-scroll: true
+
+    Label
+      id: activeEmpty
+      anchors.centerIn: activeList
+      color: #8a8a8a
+      text-auto-resize: true
+      visible: false
+      !text: tr('You have no active listings.')
+
+    Label
+      id: soldTitle
+      anchors.top: activeList.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 10
+      height: 18
+      color: #b0b0b0
+      !text: tr('Recently sold')
+
+    MarketList
+      id: soldList
+      anchors.top: soldTitle.bottom
+      anchors.left: parent.left
+      anchors.right: soldScroll.left
+      anchors.bottom: parent.bottom
+      vertical-scrollbar: soldScroll
+
+    VerticalScrollBar
+      id: soldScroll
+      anchors.top: soldTitle.bottom
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      step: 42
+      pixel-scroll: true
+
+    Label
+      id: soldEmpty
+      anchors.centerIn: soldList
+      color: #8a8a8a
+      text-auto-resize: true
+      visible: false
+      !text: tr('Nothing sold yet.')
+
+  // ---------------------------------------------------------------- details
+  FlatPanel
+    id: details
+    anchors.top: topSep.bottom
+    anchors.left: browsePanel.right
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-top: 8
+    margin-bottom: 8
+    margin-left: 10
+    padding: 10
+
+    Label
+      id: placeholder
+      anchors.centerIn: parent
+      color: #8a8a8a
+      text-auto-resize: true
+      !text: tr('Select an item to see its details.')
+
+    Panel
+      id: content
+      anchors.fill: parent
+      visible: false
+
+      RarityFrame
+        id: bigFrame
+        size: 72 72
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+
+      Label
+        id: name
+        anchors.top: bigFrame.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+        text-align: center
+        text-wrap: true
+        text-auto-resize: true
+        font: verdana-11px-rounded
+
+      Label
+        id: rarity
+        anchors.top: name.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        margin-top: 5
+        text-auto-resize: true
+        padding: 2 8 2 8
+        font: verdana-11px-rounded
+
+      Label
+        id: odds
+        anchors.top: rarity.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 4
+        text-align: center
+        color: #8a8a8a
+
+      HorizontalSeparator
+        id: sep1
+        anchors.top: odds.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+
+      Label
+        id: stats
+        anchors.top: sep1.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+        color: #d0d0d0
+
+      Panel
+        id: lines
+        anchors.top: stats.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 6
+        height: 15
+        layout:
+          type: verticalBox
+          fit-children: true
+
+      Label
+        id: tags
+        anchors.top: lines.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+        text-wrap: true
+        text-auto-resize: true
+
+      Label
+        id: found
+        anchors.top: tags.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+        text-wrap: true
+        text-auto-resize: true
+        color: #8a8a8a
+
+      Button
+        id: actionButton
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 28
+        font: verdana-11px-rounded
+        color: #f4f4f4
+        $disabled:
+          color: #f4f4f466
+        @onClick: modules.game_raritymarket.onAction()
+
+      TextEdit
+        id: priceEdit
+        anchors.right: parent.right
+        anchors.bottom: actionButton.top
+        margin-bottom: 8
+        size: 150 22
+        max-length: 9
+        placeholder: 0
+        @onTextChange: modules.game_raritymarket.onPriceChanged()
+
+      Label
+        id: priceCaption
+        anchors.left: parent.left
+        anchors.verticalCenter: priceEdit.verticalCenter
+        color: #d0d0d0
+        text-auto-resize: true
+        !text: tr('Your price (gold):')
+
+      UIWidget
+        id: priceGold
+        size: 12 12
+        anchors.right: parent.right
+        anchors.bottom: priceEdit.top
+        margin-bottom: 12
+        image-source: /images/game/prey/prey_gold
+
+      Label
+        id: price
+        anchors.right: priceGold.left
+        anchors.verticalCenter: priceGold.verticalCenter
+        margin-right: 5
+        text-auto-resize: true
+        font: verdana-11px-rounded
+        color: #f0d060
+
+      Label
+        id: priceTitle
+        anchors.left: parent.left
+        anchors.verticalCenter: priceGold.verticalCenter
+        text-auto-resize: true
+        color: #d0d0d0
+        !text: tr('Price:')
+
+      Label
+        id: seller
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: priceGold.top
+        margin-bottom: 8
+        color: #8a8a8a
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Label
+    id: status
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 10
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Close')
+    @onClick: modules.game_raritymarket.hide()

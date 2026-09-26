@@ -80,10 +80,11 @@ void main()
     // --------------------------------------------------
 
     // Diagonal white reflection travelling across item.
+    // screen-space (see rarity_pale.frag): v_TexCoord is an atlas position
     float wave =
         sin(
-            v_TexCoord.x * 20.0 +
-            v_TexCoord.y * 15.0 -
+            gl_FragCoord.x * 0.060 +
+            gl_FragCoord.y * 0.045 -
             u_Time * 2.3
         );
 
@@ -114,8 +115,8 @@ void main()
 
     float wave2 =
         sin(
-            v_TexCoord.x * 12.0 -
-            v_TexCoord.y * 18.0 -
+            gl_FragCoord.x * 0.036 -
+            gl_FragCoord.y * 0.054 -
             u_Time * 1.5
         );
 
