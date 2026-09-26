@@ -119,10 +119,8 @@ function itemApi:shutdown()
         self.confirmWindow:destroy()
     end
 
-    if self.lastselectedwidget then
-        self.lastselectedwidget:destroy()
-        self.lastselectedwidget = nil
-    end
+    -- the selected widget belongs to the imbuements list and is destroyed with it
+    self.lastselectedwidget = nil
     self.confirmWindow = nil
 end
 
@@ -261,6 +259,7 @@ function itemApi.selectBaseType(selectedButtonId)
 
     local imbuementsList = self.window:recursiveGetChildById("imbuementsList")
     imbuementsList:setWidth(70)
+    self.lastselectedwidget = nil
     imbuementsList:destroyChildren()
 
     local imbuementsDetails = self.window:recursiveGetChildById("imbuementsDetails")

@@ -1,4 +1,4 @@
-return function()
+return function(context)
   local selectionApi = {
     pickItem = nil,
     isSelectingScroll = false,
@@ -79,6 +79,13 @@ return function()
       end
     end
 
+    local function finishSelection()
+      self.pickItem:ungrabMouse()
+      g_mouse.popCursor('target')
+      self.isSelectingScroll = false
+      self.isSelecting = false
+    end
+
     if item and item:isPickupable() then
       local pos = item:getPosition()
       local itemId = item:getId()
@@ -90,20 +97,22 @@ return function()
         g_game.selectImbuementItem(itemId, pos, stackPos)
       end
 
-      self.pickItem:ungrabMouse()
-      g_mouse.popCursor('target')
-      self.isSelectingScroll = false
-      self.isSelecting = false
-
+      finishSelection()
+      -- keep the window around so the server answer (or an error dialog) has somewhere to go
+      if context and context.imbuement then
+        context.imbuement.show()
+      end
       return true
-    else
+    end
+
+    if mouseButton == MouseLeftButton then
       modules.game_textmessage.displayFailureMessage(tr('Sorry, not possible.'))
     end
 
-    self.pickItem:ungrabMouse()
-    g_mouse.popCursor('target')
-    self.isSelectingScroll = false
-    self.isSelecting = false
+    finishSelection()
+    if context and context.imbuement then
+      context.imbuement.show()
+    end
     return true
   end
 
