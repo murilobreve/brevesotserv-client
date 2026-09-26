@@ -84,12 +84,19 @@ function init()
         bossImage:setImageSource("images/icon-questionmark")
         bossImage:setVisible(true)
     end
+    -- the menu belongs to the login screen only; keep it out of the game view
+    connect(g_game, {
+        onGameStart = hide
+    })
     if g_game.isOnline() then
         hide()
     end
 end
 
 function terminate()
+    disconnect(g_game, {
+        onGameStart = hide
+    })
     bottomMenu:destroy()
     calendarWindow:destroy()
 end
@@ -104,6 +111,9 @@ function hide()
 end
 
 function show()
+    if g_game.isOnline() then
+        return
+    end
     bottomMenu:show()
     bottomMenu:raise()
     bottomMenu:focus()
