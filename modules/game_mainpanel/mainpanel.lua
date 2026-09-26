@@ -184,7 +184,7 @@ function toggleStore()
     if  g_game.getFeature(GameIngameStore) then
         modules.game_store.toggle() -- cipsoft packets
     else
-        modules.game_shop.toggle() -- custom
+        modules.game_store.toggle()
     end
 end
 
