@@ -16,6 +16,7 @@ local topLeftYoutubeLink
 local topLeftDiscordLink
 local url_discord = ""
 local url_youtube = ""
+local isExtendedView = false
 local lastSyncValue = -1
 local fpsEvent = nil
 local fpsMin = -1;
@@ -112,6 +113,7 @@ function init()
 
     topLeftYoutubeLink = topMenu:recursiveGetChildById('youtubeIcon')
     topLeftDiscordLink = topMenu:recursiveGetChildById('discordIcon')
+    refreshSocialWidgets()
 
     Keybind.new("UI", "Toggle Top Menu", "Ctrl+Shift+T", "")
     Keybind.bind("UI", "Toggle Top Menu", {
@@ -359,26 +361,41 @@ function setYoutubeViewers(value)
     topLeftYoutubeViewersLabel:setText(value)
 end
 
-function setLinkYoutube(value)
+-- discord/youtube badges only make sense when the login server provides their links
+local function setSocialWidgetVisible(widget, visible, width)
+    if not widget then
+        return
+    end
+    widget:setWidth(visible and width or 0)
+    widget:setVisible(visible)
+end
 
-    url_youtube = value
+function refreshSocialWidgets()
+    if not topMenu then
+        return
+    end
+    setSocialWidgetVisible(topMenu.topLeftDiscord, not isExtendedView and url_discord ~= "", 110)
+    setSocialWidgetVisible(topMenu.topLeftYoutube, not isExtendedView and url_youtube ~= "", 100)
+end
+
+function setLinkYoutube(value)
+    url_youtube = type(value) == "string" and value or ""
     topLeftYoutubeLink.onClick = function()
-        if url_youtube then
+        if url_youtube ~= "" then
             g_platform.openUrl(url_youtube)
         end
     end
-
+    refreshSocialWidgets()
 end
 
 function setLinkDiscord(value)
-
-    url_discord = value
+    url_discord = type(value) == "string" and value or ""
     topLeftDiscordLink.onClick = function()
-        if url_discord then
+        if url_discord ~= "" then
             g_platform.openUrl(url_discord)
         end
     end
-
+    refreshSocialWidgets()
 end
 
 function addLeftButton(id, description, icon, callback, front)
@@ -500,6 +517,7 @@ function extendedView(extendedView)
         return
     end
     topMenu:breakAnchors()
+    isExtendedView = extendedView and true or false
     if extendedView then
         topMenu:show()
         topMenu:addAnchor(AnchorLeft, 'parent', AnchorLeft)
@@ -508,10 +526,7 @@ function extendedView(extendedView)
         pingLabel:setVisible(false)
         fpsLabel:setVisible(false)
         topMenu.topLeftOnlinePlayers:hide()
-        topMenu.topLeftDiscord:setWidth(0)
-        topMenu.topLeftYoutube:setWidth(0)
-        topMenu.topLeftDiscord:hide()
-        topMenu.topLeftYoutube:hide()
+        refreshSocialWidgets()
     else
         if g_game.isOnline() then
             topMenu:hide()
@@ -519,10 +534,7 @@ function extendedView(extendedView)
         topMenu:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
         modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
         topMenu:setWidth(1020)
-        topMenu.topLeftDiscord:setWidth(110)
-        topMenu.topLeftYoutube:setWidth(100)
         topMenu.topLeftOnlinePlayers:show()
-        topMenu.topLeftDiscord:show()
-        topMenu.topLeftYoutube:show()
+        refreshSocialWidgets()
     end
 end

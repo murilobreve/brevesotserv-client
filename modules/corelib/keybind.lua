@@ -56,6 +56,9 @@ function Keybind.init()
     Keybind.currentPreset = "Druid"
   else
     Keybind.currentPreset = g_settings.getValue("controls-preset-current")
+    if not table.contains(Keybind.presets, Keybind.currentPreset) then
+      Keybind.currentPreset = Keybind.presets[1]
+    end
   end
 
   for index, preset in ipairs(Keybind.presets) do
@@ -102,17 +105,35 @@ function Keybind.init()
   end
 end
 
-function Keybind.terminate()
-  disconnect(g_game, { onGameStart = Keybind.online, onGameEnd = Keybind.offline })
-
+-- writes every preset (keybinds + hotkeys) and the preset list to disk
+function Keybind.save()
   for _, preset in ipairs(Keybind.presets) do
-    Keybind.configs.keybinds[preset]:save()
-    Keybind.configs.hotkeys[preset]:save()
+    if Keybind.configs.keybinds[preset] then
+      Keybind.configs.keybinds[preset]:save()
+    end
+    if Keybind.configs.hotkeys[preset] then
+      Keybind.configs.hotkeys[preset]:save()
+    end
   end
 
   g_settings.setList("controls-presets", Keybind.presets)
-  g_settings.setValue("controls-preset-current", Keybind.currentPreset)
+  if Keybind.currentPreset then
+    g_settings.setValue("controls-preset-current", Keybind.currentPreset)
+  end
   g_settings.save()
+end
+
+function Keybind.terminate()
+  disconnect(g_game, { onGameStart = Keybind.online, onGameEnd = Keybind.offline })
+
+  Keybind.save()
+end
+
+local function rebuildPresetIndex()
+  Keybind.presetToIndex = {}
+  for index, preset in ipairs(Keybind.presets) do
+    Keybind.presetToIndex[preset] = index
+  end
 end
 
 function Keybind.online()
@@ -445,6 +466,7 @@ function Keybind.renamePreset(oldPresetName, newPresetName)
   Keybind.configs.keybinds[oldPresetName] = nil
 
   local keybindsConfigContent = g_resources.readFileContents(keybindsConfigPath)
+  g_configs.unload(keybindsConfigPath)
   g_resources.deleteFile(keybindsConfigPath)
   g_resources.writeFileContents("/controls/keybinds/" .. newPresetName .. ".otml", keybindsConfigContent)
   Keybind.configs.keybinds[newPresetName] = g_configs.create("/controls/keybinds/" .. newPresetName .. ".otml")
@@ -454,24 +476,37 @@ function Keybind.renamePreset(oldPresetName, newPresetName)
   Keybind.configs.hotkeys[oldPresetName] = nil
 
   local hotkeysConfigContent = g_resources.readFileContents(hotkeysConfigPath)
+  g_configs.unload(hotkeysConfigPath)
   g_resources.deleteFile(hotkeysConfigPath)
   g_resources.writeFileContents("/controls/hotkeys/" .. newPresetName .. ".otml", hotkeysConfigContent)
   Keybind.configs.hotkeys[newPresetName] = g_configs.create("/controls/hotkeys/" .. newPresetName .. ".otml")
 
   Keybind.hotkeys[CHAT_MODE.ON][newPresetName] = Keybind.hotkeys[CHAT_MODE.ON][oldPresetName]
   Keybind.hotkeys[CHAT_MODE.OFF][newPresetName] = Keybind.hotkeys[CHAT_MODE.OFF][oldPresetName]
+  Keybind.hotkeys[CHAT_MODE.ON][oldPresetName] = nil
+  Keybind.hotkeys[CHAT_MODE.OFF][oldPresetName] = nil
 
   g_settings.setList("controls-presets", Keybind.presets)
+  g_settings.setValue("controls-preset-current", Keybind.currentPreset)
   g_settings.save()
 end
 
 function Keybind.removePreset(presetName)
-  if #Keybind.presets == 1 then
+  if #Keybind.presets == 1 or not Keybind.presetToIndex[presetName] then
     return false
   end
 
+  if Keybind.currentPreset == presetName then
+    for _, preset in ipairs(Keybind.presets) do
+      if preset ~= presetName then
+        Keybind.selectPreset(preset)
+        break
+      end
+    end
+  end
+
   table.remove(Keybind.presets, Keybind.presetToIndex[presetName])
-  Keybind.presetToIndex[presetName] = nil
+  rebuildPresetIndex()
 
   Keybind.configs.keybinds[presetName] = nil
   g_configs.unload("/controls/keybinds/" .. presetName .. ".otml")
@@ -481,11 +516,11 @@ function Keybind.removePreset(presetName)
   g_configs.unload("/controls/hotkeys/" .. presetName .. ".otml")
   g_resources.deleteFile("/controls/hotkeys/" .. presetName .. ".otml")
 
-  if Keybind.currentPreset == presetName then
-    Keybind.currentPreset = Keybind.presets[1]
-  end
+  Keybind.hotkeys[CHAT_MODE.ON][presetName] = nil
+  Keybind.hotkeys[CHAT_MODE.OFF][presetName] = nil
 
   g_settings.setList("controls-presets", Keybind.presets)
+  g_settings.setValue("controls-preset-current", Keybind.currentPreset)
   g_settings.save()
 
   return true
@@ -521,6 +556,9 @@ function Keybind.selectPreset(presetName)
   for _, hotkey in ipairs(Keybind.hotkeys[Keybind.chatMode][Keybind.currentPreset]) do
     Keybind.bindHotkey(hotkey.hotkeyId, Keybind.chatMode)
   end
+
+  g_settings.setValue("controls-preset-current", Keybind.currentPreset)
+  g_settings.save()
 
   return true
 end
@@ -566,6 +604,7 @@ function Keybind.setPrimaryActionKey(category, action, preset, keyCombo, chatMod
   end
 
   Keybind.configs.keybinds[preset]:setNode(index, keys)
+  Keybind.configs.keybinds[preset]:save()
 
   if keybind.callbacks then
     Keybind.bind(category, action, keybind.callbacks, keybind.widget)
@@ -610,6 +649,7 @@ function Keybind.setSecondaryActionKey(category, action, preset, keyCombo, chatM
   end
 
   Keybind.configs.keybinds[preset]:setNode(index, keys)
+  Keybind.configs.keybinds[preset]:save()
 
   if keybind.callbacks then
     Keybind.bind(category, action, keybind.callbacks, keybind.widget)
@@ -633,6 +673,7 @@ function Keybind.resetKeybindsToDefault(presetName, chatMode)
     local index = keybind.category .. '_' .. keybind.action
     Keybind.configs.keybinds[presetName]:setNode(index, keybind.keys)
   end
+  Keybind.configs.keybinds[presetName]:save()
 
   for _, keybind in pairs(Keybind.defaultKeybinds) do
     if keybind.callbacks then
@@ -742,18 +783,33 @@ function Keybind.removeHotkey(hotkeyId, chatMode)
     return
   end
 
-  Keybind.unbindHotkey(hotkeyId, chatMode)
-
-  table.remove(Keybind.hotkeys[chatMode][Keybind.currentPreset], hotkeyId)
-
-  Keybind.configs.hotkeys[Keybind.currentPreset]:clear()
-
-  for id, hotkey in ipairs(Keybind.hotkeys[chatMode][Keybind.currentPreset]) do
-    hotkey.hotkeyId = id
-    Keybind.configs.hotkeys[Keybind.currentPreset]:setNode(id, hotkey)
+  local hotkeys = Keybind.hotkeys[chatMode][Keybind.currentPreset]
+  if not hotkeys[hotkeyId] then
+    return
   end
 
-  Keybind.configs.hotkeys[Keybind.currentPreset]:save()
+  -- ids shift after removal, so every binding (which captures its id) is rebuilt
+  for _, hotkey in ipairs(hotkeys) do
+    Keybind.unbindHotkey(hotkey.hotkeyId, chatMode)
+  end
+
+  table.remove(hotkeys, hotkeyId)
+
+  for id, hotkey in ipairs(hotkeys) do
+    hotkey.hotkeyId = id
+  end
+
+  local config = Keybind.configs.hotkeys[Keybind.currentPreset]
+  if #hotkeys > 0 then
+    config:setNode(chatMode, hotkeys)
+  else
+    config:remove(chatMode)
+  end
+  config:save()
+
+  for _, hotkey in ipairs(hotkeys) do
+    Keybind.bindHotkey(hotkey.hotkeyId, chatMode)
+  end
 end
 
 function Keybind.editHotkey(hotkeyId, action, data, chatMode)
@@ -805,8 +861,8 @@ function Keybind.removeAllHotkeys(chatMode)
     chatMode = Keybind.chatMode
   end
 
-  for _, hotkey in ipairs(Keybind.hotkeys[chatMode][Keybind.currentPreset]) do
-    Keybind.unbindHotkey(hotkey.hotkeyId)
+  for _, hotkey in ipairs(Keybind.hotkeys[chatMode][Keybind.currentPreset] or {}) do
+    Keybind.unbindHotkey(hotkey.hotkeyId, chatMode)
   end
 
   Keybind.hotkeys[chatMode][Keybind.currentPreset] = {}

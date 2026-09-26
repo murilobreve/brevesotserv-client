@@ -508,7 +508,27 @@ function ApiJson.loadData(file)
     return true
 end
 
+local SAVE_DELAY = 1000
+local pendingSaveEvent = nil
+
+-- coalesces bursts of edits (drag & drop, multi-slot changes) into a single disk write
+function ApiJson.scheduleSave()
+    if pendingSaveEvent then
+        return
+    end
+
+    pendingSaveEvent = scheduleEvent(function()
+        pendingSaveEvent = nil
+        ApiJson.saveData()
+    end, SAVE_DELAY)
+end
+
 function ApiJson.saveData()
+    if pendingSaveEvent then
+        removeEvent(pendingSaveEvent)
+        pendingSaveEvent = nil
+    end
+
     if not state.array then
         ApiJson.bootstrap()
     end
@@ -1123,6 +1143,31 @@ function ApiJson.getHotkeyEntries(chatMode)
     end
 
     return entries
+end
+
+-- every mutation is persisted shortly after it happens, so action bars and
+-- hotkeys survive a crash or a forced close instead of only a clean exit
+local PERSISTED_MUTATIONS = {
+    'createOrUpdateText', 'createOrUpdateAction', 'createOrUpdatePassive', 'createOrUpdateSpecialAction',
+    'removeAction', 'createOrUpdateMultiAction', 'createOrUpdateMultiText', 'removeMultiAction',
+    'removeHotkey', 'clearHotkey', 'updateActionBarHotkey', 'setBarLocked', 'setBarVisibility',
+    'setClientOption', 'setCurrentHotkeySetName', 'createHotkeySet', 'renameHotkeySet', 'removeHotkeySet',
+    'toggleLockGroup'
+}
+
+local function packResults(...)
+    return { n = select('#', ...), ... }
+end
+
+for _, name in ipairs(PERSISTED_MUTATIONS) do
+    local original = ApiJson[name]
+    if original then
+        ApiJson[name] = function(...)
+            local results = packResults(original(...))
+            ApiJson.scheduleSave()
+            return unpack(results, 1, results.n)
+        end
+    end
 end
 
 return ApiJson

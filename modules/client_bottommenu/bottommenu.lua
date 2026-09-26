@@ -27,8 +27,8 @@ local default_info = {
     -- hint 1
     {
         image = "images/randomhint",
-        Title = "Enabling Boosted Creature Panel",
-        description = "Boosted creatures panel requires configuring a webservice (init.lua) and preloading a client version by either setting one server in Servers_init (init.lua) or by altering entergame.lua.\n\nFor more hints, visit:\t\t https://github.com/mehah/otclient/wiki"
+        Title = "Welcome",
+        description = "Welcome to %s!\n\nUse the Options menu to set up your hotkeys and action bars. Your settings are saved automatically."
     },
 
     -- hint 2
@@ -38,6 +38,7 @@ local default_info = {
 function init()
     g_ui.importStyle('calendar')
     bottomMenu = g_ui.displayUI('bottommenu')
+    bottomMenu:recursiveGetChildById('serverNameLabel'):setText(g_app.getName())
 
     calendarWindow = g_ui.createWidget('CalendarGrid', rootWidget)
     calendarCurrentMonth = calendarWindow:recursiveGetChildById('calendarCurrentMonth')
@@ -70,7 +71,7 @@ function init()
         local randomItem = default_info[randomIndex]
         showOffWindow.title:setText(tr(randomItem.Title))
         image:setImageSource(randomItem.image)
-        description:setText(tr(randomItem.description))
+        description:setText(tr(randomItem.description):format(g_app.getName()))
         monsterOutfit:setVisible(false)
         bossOutfit:setVisible(false)
         widget:resize(widget:getWidth(), description:getHeight())

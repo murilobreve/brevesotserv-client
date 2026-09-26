@@ -676,7 +676,8 @@ function applyChangedOptions()
                         keybind.primary.keyCombo, getChatMode()) then
                     needKeybindsUpdate = true
                 end
-            elseif keybind.secondary then
+            end
+            if keybind.secondary then
                 if Keybind.setSecondaryActionKey(keybind.secondary.category, keybind.secondary.action, preset,
                         keybind.secondary.keyCombo, getChatMode()) then
                     needKeybindsUpdate = true
