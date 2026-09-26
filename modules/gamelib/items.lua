@@ -87,8 +87,87 @@ function ItemsDatabase.getClipAndImagePath(item)
     return clip, imagePath, clipObject
 end
 
+-- Server rarity grades (Baiak rarity system). The server sends them in the item
+-- tooltip as a "#rarity:<grade>" first line; see ItemsDatabase.getItemRarityGrade.
+ItemsDatabase.itemRarity = {
+    uncommon  = { frame = 0, label = "Uncommon",  color = "#3ddc2e" },
+    rare      = { frame = 1, label = "Rare",      color = "#3d9bff" },
+    epic      = { frame = 2, label = "Epic",      color = "#b45cff" },
+    legendary = { frame = 3, label = "Legendary", color = "#ff9a1f" },
+    mythic    = { frame = 4, label = "Mythic",    color = "#66f0ff" },
+}
+
+function ItemsDatabase.getItemRarityGrade(item)
+    if type(item) ~= "userdata" or not item.getTooltip then
+        return nil
+    end
+    local grade = item:getTooltip():match("^#rarity:(%a+)")
+    if grade and ItemsDatabase.itemRarity[grade] then
+        return grade
+    end
+    return nil
+end
+
+-- Hover text without the "#rarity:" tag line; rarity items lead with their grade.
+function ItemsDatabase.getItemTooltipText(item)
+    if type(item) ~= "userdata" or not item.getTooltip then
+        return ""
+    end
+    local text = item:getTooltip():gsub("^#rarity:%a+\n?", "")
+    local grade = ItemsDatabase.getItemRarityGrade(item)
+    if grade then
+        local label = ItemsDatabase.itemRarity[grade].label .. " item"
+        text = text:len() > 0 and (label .. "\n" .. text) or label
+    end
+    return text
+end
+
+-- Draws (or hides) the rarity frame over an item widget. It is a child overlay,
+-- so it never replaces the widget's own background (inventory slot icons etc).
+function ItemsDatabase.setItemRarityFrame(widget, item)
+    if not widget then
+        return false
+    end
+    local grade = ItemsDatabase.getItemRarityGrade(item)
+    local frame = widget.rarityFrame
+    if not grade then
+        if frame then
+            frame:setVisible(false)
+        end
+        return false
+    end
+    if not frame then
+        frame = g_ui.createWidget('UIWidget', widget)
+        frame:setId('rarityFrame')
+        frame:setPhantom(true)
+        frame:setFocusable(false)
+        frame:fill('parent')
+        frame:setImageSource('/images/ui/item_rarity_frames')
+        -- keep it below the other overlays (tier stars, counters)
+        widget:moveChildToIndex(frame, 1)
+        widget.rarityFrame = frame
+    end
+    frame:setImageClip({ x = ItemsDatabase.itemRarity[grade].frame * 34, y = 0, width = 34, height = 34 })
+    frame:setVisible(true)
+    return true
+end
+
 function ItemsDatabase.setRarityItem(widget, item, style)
-    if not g_game.getFeature(GameColorizedLootValue) or not widget then
+    if not widget then
+        return
+    end
+
+    if ItemsDatabase.setItemRarityFrame(widget, item) then
+        -- the rarity frame takes the place of the price frame
+        local currentSource = widget:getImageSource()
+        if currentSource == "/images/ui/rarity_frames" or currentSource == "/images/ui/containerslot-coloredges" then
+            widget:setImageClip(nil)
+            widget:setImageSource('/images/ui/item')
+        end
+        return
+    end
+
+    if not g_game.getFeature(GameColorizedLootValue) then
         return
     end
 
@@ -118,6 +197,13 @@ end
 
 function ItemsDatabase.setColorLootMessage(text)
     local function coloringLootName(match)
+        -- {id|name|grade}: a rarity drop, painted in its rarity colour
+        local rId, rName, rGrade = match:match("^(%d+)|(.+)|(%a+)$")
+        local rarity = rGrade and ItemsDatabase.itemRarity[rGrade]
+        if rarity then
+            return "{" .. rName .. " [" .. rarity.label .. "], " .. rarity.color .. "}"
+        end
+
         local id, itemName = match:match("(%d+)|(.+)")
         if not id or not itemName then
             -- If pattern doesn't match itemId|itemName format, return the original match with braces

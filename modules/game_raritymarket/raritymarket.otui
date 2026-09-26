@@ -1,7 +1,7 @@
 RarityFrame < UIWidget
   size: 36 36
   image-source: /game_raritymarket/images/frames
-  image-clip: 0 0 32 32
+  image-clip: 0 0 34 34
   phantom: true
 
   UIItem
@@ -395,9 +395,12 @@ MainWindow
         id: rarity
         anchors.top: name.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        margin-top: 5
-        text-auto-resize: true
-        padding: 2 8 2 8
+        margin-top: 6
+        size: 112 18
+        text-auto-resize: false
+        text-align: center
+        text-offset: 0 1
+        border-width: 1
         font: verdana-11px-rounded
 
       Label
