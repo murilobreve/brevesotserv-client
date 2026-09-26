@@ -737,3 +737,32 @@ end
 function LoadedPlayer:setVocation(vocationId)
   self.playerVocation = vocationId
 end
+
+-- LuaObject::callLuaField caches "nobody listens to this event" the first
+-- time an event fires with no Lua handler, and then never calls it again for
+-- that object. The server sends the equipment (and capacity, soul, ...) while
+-- logging in, before modules connect their handlers in onGameStart, so e.g.
+-- onInventoryChange got switched off for the whole session and equipped items
+-- never showed in the inventory slots. A permanent no-op handler registered
+-- at load time keeps every LocalPlayer event "listened to" from the start.
+-- (onManaChange is left out: modules also connect it on Player/Creature, and a
+-- LocalPlayer-level handler would hide those.)
+do
+    local localPlayerEvents = {
+        'onAttackInfoChange', 'onAutoWalkFail', 'onBaseCapacityChange', 'onBaseMagicLevelChange',
+        'onBaseSkillChange', 'onBlessingsChange', 'onCancelWalk', 'onCombatAbsorbValuesChange',
+        'onConvertedDamageChange', 'onDefenseInfoChange', 'onExperienceChange', 'onExperienceRateChange',
+        'onFlatDamageHealingChange', 'onForgeBonusesChange', 'onFreeCapacityChange', 'onHarmonyChange',
+        'onHealthChange', 'onImbuementsChange', 'onInventoryChange', 'onLevelChange',
+        'onMagicLevelChange', 'onManaShieldChange', 'onMultiOfflineTrainingDialog',
+        'onOfflineTrainingChange', 'onPremiumChange', 'onRegenerationChange', 'onSereneChange',
+        'onSkillChange', 'onSoulChange', 'onSpellsChange', 'onStaminaChange', 'onStatesChange',
+        'onTakeScreenshot', 'onTotalCapacityChange', 'onVocationChange', 'onWalkFinish',
+    }
+    local function keepEventAlive() end
+    local slots = {}
+    for _, name in ipairs(localPlayerEvents) do
+        slots[name] = keepEventAlive
+    end
+    connect(LocalPlayer, slots)
+end
