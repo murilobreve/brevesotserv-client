@@ -363,9 +363,10 @@ InactivePreyPanel < Panel
 
     Label
       id: placeholder
-      anchors.centerIn: parent
+      anchors.fill: parent
       font: verdana-11px-rounded
       text-align: center
+      text-wrap: true
       !text: tr('No creature selected')
       color: #cfcfcf
 
@@ -390,6 +391,18 @@ InactivePreyPanel < Panel
       cell-spacing: 3
       num-columns: 3
 
+  Label
+    id: emptyList
+    anchors.fill: list
+    margin: 20
+    font: verdana-11px-rounded
+    text-align: center
+    text-wrap: true
+    color: #cfcfcf
+    phantom: true
+    visible: false
+    !text: tr('No creatures available.\nUse the reroll button to get a new list.')
+
   FlatPanel
     id: fullList
     anchors.left: parent.left
@@ -408,7 +421,6 @@ InactivePreyPanel < Panel
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: parent.right
-      margin-top: 20
       height: 20
       padding-left: 4
       padding-right: 18
@@ -686,6 +698,8 @@ MainWindow
     margin-bottom: 10
     margin-top: 10
     text-wrap: true
+    padding: 6
+    !text: tr('Move the mouse over a button to see what it does.')
 
   HorizontalSeparator
     id: bottomSep

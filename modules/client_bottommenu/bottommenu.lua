@@ -71,7 +71,7 @@ function init()
         local randomItem = default_info[randomIndex]
         showOffWindow.title:setText(tr(randomItem.Title))
         image:setImageSource(randomItem.image)
-        description:setText(tr(randomItem.description):format(g_app.getName()))
+        description:setText(tr(randomItem.description, g_app.getName()))
         monsterOutfit:setVisible(false)
         bossOutfit:setVisible(false)
         widget:resize(widget:getWidth(), description:getHeight())
