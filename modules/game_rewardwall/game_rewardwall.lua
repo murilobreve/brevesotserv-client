@@ -499,7 +499,7 @@ function rewardWallController:onClickshowHistory()
         g_game.requestOpenRewardHistory()
     end
     rewardWallController.ui.footerPanel.historyButton:setText(
-    rewardWallController.ui.historyPanel:isVisible() and "back" or "history")
+    rewardWallController.ui.historyPanel:isVisible() and "Back" or "History")
 end
 
 function rewardWallController:onClickToggle()
