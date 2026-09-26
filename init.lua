@@ -1,13 +1,18 @@
 -- this is the first file executed when the application starts
 -- we have to load the first modules form here
 
--- updater
+-- =====================================================================
+-- CONFIGURACAO DO SERVIDOR (edite apenas este bloco para trocar o IP)
+-- =====================================================================
+local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
+local SERVER_PORT     = 80                                -- porta HTTP do login
+local CLIENT_VERSION  = 1525                              -- versao do client (15.25)
+-- =====================================================================
+
 Services = {
-    --updater = "http://localhost/api/updater.php", --./updater
-    --status = "http://localhost/login.php", --./client_entergame | ./client_topmenu
-    --websites = "http://localhost/?subtopic=accountmanagement", --./client_entergame "Forgot password and/or email"
-    --createAccount = "http://localhost/clientcreateaccount.php", --./client_entergame -- createAccount.lua
-    --getCoinsUrl = "http://localhost/?subtopic=shop&step=terms", --./game_market
+    status = SERVER_HOST, --./client_entergame | ./client_topmenu
+    --websites = "http://SEU-SITE/?subtopic=accountmanagement", --./client_entergame "Forgot password and/or email"
+    --getCoinsUrl = "http://SEU-SITE/?subtopic=shop&step=terms", --./game_market
     clientAssets = {
         enabled = true,
         repository = "dudantas/tibia-client",
@@ -23,86 +28,23 @@ Services = {
     }, -- ./client_assets
 }
 
---- Enables or disables the entire server configuration block.
--- Set to `false` to disable all configuration below.
-local ENABLE_SERVERS = true
-
----
--- @module Servers_init
--- Configuration table for all servers used by the system.
---
--- This entire block is conditionally enabled based on ENABLE_SERVERS.
--- When ENABLE_SERVERS == false, everything is ignored/disabled.
---
-
----
--- Server configuration system for multi-server or multi-world clients.
---
--- This structure allows a single client build to connect to multiple servers
--- without requiring duplicate client folders.
---
--- A server that hosts several worlds, or that provides a separate test environment,
--- can simply define additional entries inside this configuration table.
---
--- Instead of maintaining multiple client installations (one per world/server),
--- the client can switch between servers by selecting the desired configuration entry.
--- This simplifies testing, avoids redundant directories, and centralizes connection settings.
---
--- The ENABLE_SERVERS flag allows the entire configuration block to be enabled or disabled
--- without deleting or commenting out individual entries.
---
-
-Servers_init = {}
-
-if ENABLE_SERVERS then
-
-    ---
-    -- List of servers and their configuration parameters.
-    -- Each entry defines port, protocol, and authentication options.
-    -- @table Servers_init
-    --
-    Servers_init = {
-
-        -- Local login server
-        ---
-        -- Configuration for local login server.
-        -- @class table
-        -- @name local_login
-        -- @field port Port used for HTTP connection
-        -- @field protocol Protocol identifier used by the application
-        -- @field httpLogin Enables HTTP-based login on the server
-        -- @field useAuthenticator Enables additional authentication layer
-        --
-        ["http://127.0.0.1/login.php"] = {
-            port = 80,
-            protocol = 1511,
-            httpLogin = true,
-            useAuthenticator = false
-        },
-
-        -- External server
-        ---
-        -- Configuration for external server ip.net.
-        -- @class table
-        -- @name ip_net
-        -- @field port TCP port used for connection
-        -- @field protocol Protocol identifier used by the server
-        -- @field httpLogin Indicates if the server allows HTTP login
-        --
-        ["ip.net"] = {
-            port = 7171,
-            protocol = 860,
-            httpLogin = false
-        }
+-- Um unico servidor: a tela de login ja abre apontando para ele
+-- (campos de IP/porta/versao ficam ocultos).
+Servers_init = {
+    [SERVER_HOST] = {
+        port = SERVER_PORT,
+        protocol = CLIENT_VERSION,
+        httpLogin = true,
+        useAuthenticator = false
     }
-end
+}
 
 g_app.setName("OTClient - Redemption");
 g_app.setCompactName("otclient");
 g_app.setOrganizationName("otcr");
 
 g_app.hasUpdater = function()
-    return (Services.updater and Services.updater ~= "" and g_modules.getModule("updater"))
+    return false
 end
 
 -- setup logger
@@ -180,12 +122,6 @@ local function loadModules()
 
     -- uncomment the line below so that modules are reloaded when modified. (Note: Use only mod dev)
     -- g_modules.enableAutoReload()
-end
-
--- run updater, must use data.zip
-if g_app.hasUpdater() then
-    g_modules.ensureModuleLoaded("updater")
-    return Updater.init(loadModules)
 end
 
 loadModules()
