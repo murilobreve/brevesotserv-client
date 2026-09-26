@@ -4,6 +4,7 @@
 -- =====================================================================
 -- CONFIGURACAO DO SERVIDOR (edite apenas este bloco para trocar o IP)
 -- =====================================================================
+local SERVER_NAME     = "Baiak Reborn"                    -- nome exibido na janela e no client
 local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
 local SERVER_PORT     = 80                                -- porta HTTP do login
 local CLIENT_VERSION  = 1525                              -- versao do client (15.25)
@@ -39,9 +40,11 @@ Servers_init = {
     }
 }
 
-g_app.setName("OTClient - Redemption");
-g_app.setCompactName("otclient");
-g_app.setOrganizationName("otcr");
+g_app.setName(SERVER_NAME)
+-- also names the settings folder (%APPDATA%/baiakreborn) and the log file
+-- (keep it short: at most 15 characters)
+g_app.setCompactName("baiakreborn")
+g_app.setOrganizationName("baiakreborn")
 
 g_app.hasUpdater = function()
     return false

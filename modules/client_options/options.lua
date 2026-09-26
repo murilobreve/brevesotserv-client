@@ -489,12 +489,48 @@ function show()
 end
 
 function hide()
-    -- Save all settings when closing the options window
-    g_settings.save()
+    -- Save all settings (and keybind presets) when closing the options window
+    if Keybind and Keybind.save then
+        Keybind.save()
+    else
+        g_settings.save()
+    end
     controller.ui:hide()
     if extraWidgets.optionsButton then
         extraWidgets.optionsButton:setOn(false)
     end
+end
+
+local resetSettingsWindow = nil
+
+function confirmResetSettings()
+    if resetSettingsWindow then
+        return
+    end
+
+    local function close()
+        if resetSettingsWindow then
+            resetSettingsWindow:destroy()
+            resetSettingsWindow = nil
+        end
+    end
+
+    local function reset()
+        close()
+        g_settings.clear()
+        g_settings.save()
+        scheduleEvent(function()
+            g_app.restart()
+        end, 500)
+    end
+
+    resetSettingsWindow = displayGeneralBox(tr('Reset Settings'),
+        tr('All client options will be restored to their defaults and the client will restart.\nDo you want to continue?'),
+        {
+            { text = tr('No'), callback = close },
+            { text = tr('Yes'), callback = reset },
+            anchor = AnchorHorizontalCenter
+        }, reset, close)
 end
 
 function saveOptions()

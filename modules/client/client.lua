@@ -1,13 +1,45 @@
 local musicFilename = 'sounds/startup'
 local musicChannel = nil
-if g_sounds then
+
+-- settings are only flushed on a clean exit by default; keep them on disk
+-- periodically and on logout so a crash or forced close loses nothing
+local AUTOSAVE_INTERVAL = 60 * 1000
+local autosaveEvent = nil
+
+local function hasStartupMusic()
+    for _, ext in ipairs({ '.ogg', '.wav' }) do
+        if g_resources.fileExists('/' .. musicFilename .. ext) then
+            return true
+        end
+    end
+    return false
+end
+
+if g_sounds and hasStartupMusic() then
     musicChannel = g_sounds.getChannel(SoundChannels.Music)
+end
+
+function saveClientData()
+    if Keybind and Keybind.save then
+        Keybind.save()
+    else
+        g_settings.save()
+    end
+end
+
+local function onGameStartMusic()
+    musicChannel:stop(3)
+end
+
+local function onGameEndMusic()
+    g_sounds.stopAll()
+    musicChannel:enqueue(musicFilename, 3)
 end
 
 function setMusic(filename)
     musicFilename = filename
 
-    if not g_game.isOnline() then
+    if musicChannel and not g_game.isOnline() then
         musicChannel:stop()
         musicChannel:enqueue(musicFilename, 3)
     end
@@ -17,15 +49,8 @@ function startup()
     if musicChannel then
         musicChannel:enqueue(musicFilename, 3)
         connect(g_game, {
-            onGameStart = function()
-                musicChannel:stop(3)
-            end
-        })
-        connect(g_game, {
-            onGameEnd = function()
-                g_sounds.stopAll()
-                musicChannel:enqueue(musicFilename, 3)
-            end
+            onGameStart = onGameStartMusic,
+            onGameEnd = onGameEndMusic
         })
     end
 
@@ -48,35 +73,40 @@ function startup()
     else
         EnterGame.firstShow()
     end
-    if g_app.hasUpdater() and g_sounds then
-        g_sounds.setAudioEnabled(g_settings.getBoolean('enableAudio'))
-    end
 end
 
 function init()
-    if g_app.hasUpdater() then
-        connect(g_app, {
-            onUpdateFinished = startup,
-        })
-    else
-        connect(g_app, {
-            onRun = startup,
-        })
-    end
+    connect(g_app, {
+        onRun = startup
+    })
+    connect(g_game, {
+        onGameEnd = saveClientData
+    })
 
     if musicChannel then
         g_sounds.preload(musicFilename)
     end
+
+    autosaveEvent = cycleEvent(saveClientData, AUTOSAVE_INTERVAL)
 end
 
 function terminate()
-    if g_app.hasUpdater() then
-        disconnect(g_app, {
-            onUpdateFinished = startup,
+    disconnect(g_app, {
+        onRun = startup
+    })
+    disconnect(g_game, {
+        onGameEnd = saveClientData
+    })
+
+    if musicChannel then
+        disconnect(g_game, {
+            onGameStart = onGameStartMusic,
+            onGameEnd = onGameEndMusic
         })
-    else
-        disconnect(g_app, {
-            onRun = startup,
-        })
+    end
+
+    if autosaveEvent then
+        removeEvent(autosaveEvent)
+        autosaveEvent = nil
     end
 end
