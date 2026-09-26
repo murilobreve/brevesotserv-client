@@ -204,7 +204,7 @@ return function(context)
   end
 
   function imbuementApi.onMessageDialog(type, content)
-    if type > imbuementApi.MessageDialog.ImbuingStationNotFound or not self.window or not self.window:isVisible() then
+    if type > imbuementApi.MessageDialog.ImbuingStationNotFound or not self.window then
       return
     end
 

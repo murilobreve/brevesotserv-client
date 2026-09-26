@@ -4,7 +4,7 @@
 -- =====================================================================
 -- CONFIGURACAO DO SERVIDOR (edite apenas este bloco para trocar o IP)
 -- =====================================================================
-local SERVER_NAME     = "Baiak Reborn"                    -- nome exibido na janela e no client
+local SERVER_NAME     = "Baiak Breves"                    -- nome exibido na janela e no client
 local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
 local SERVER_PORT     = 80                                -- porta HTTP do login
 local CLIENT_VERSION  = 1525                              -- versao do client (15.25)

@@ -137,13 +137,15 @@ local function rebuildPresetIndex()
 end
 
 function Keybind.online()
-  for _, hotkey in ipairs(Keybind.hotkeys[Keybind.chatMode][Keybind.currentPreset]) do
+  local chatHotkeys = Keybind.hotkeys[Keybind.chatMode] or {}
+  for _, hotkey in ipairs(chatHotkeys[Keybind.currentPreset] or {}) do
     Keybind.bindHotkey(hotkey.hotkeyId, Keybind.chatMode)
   end
 end
 
 function Keybind.offline()
-  for _, hotkey in ipairs(Keybind.hotkeys[Keybind.chatMode][Keybind.currentPreset]) do
+  local chatHotkeys = Keybind.hotkeys[Keybind.chatMode] or {}
+  for _, hotkey in ipairs(chatHotkeys[Keybind.currentPreset] or {}) do
     Keybind.unbindHotkey(hotkey.hotkeyId, Keybind.chatMode)
   end
 end
