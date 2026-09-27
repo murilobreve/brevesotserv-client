@@ -1,0 +1,441 @@
+TaskTab < ButtonBox
+  size: 150 23
+  anchors.top: parent.top
+
+// progress bar: dark track, coloured fill, text on top
+TaskBar < UIWidget
+  height: 18
+  background-color: #00000080
+  border-width: 1
+  border-color: #3a3a3a
+  phantom: true
+
+  UIWidget
+    id: fill
+    anchors.left: parent.left
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    margin: 1
+    width: 1
+    background-color: #4f9e36
+    phantom: true
+
+  Label
+    id: value
+    anchors.fill: parent
+    text-align: center
+    font: verdana-11px-rounded
+    color: #ffffff
+    phantom: true
+
+TaskCard < UIWidget
+  background-color: #00000055
+  border-width: 1
+  border-color: #c9a227
+  padding: 8
+
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 20
+    text-align: center
+    font: verdana-11px-rounded
+    color: #ffe9a0
+    background-color: #c9a22730
+
+  UICreature
+    id: creature
+    anchors.top: title.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    size: 80 80
+    creature-size: 80
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: creature.top
+    anchors.left: creature.right
+    anchors.right: parent.right
+    margin-top: 10
+    margin-left: 10
+    height: 16
+    font: verdana-11px-rounded
+    color: #ffffff
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 14
+    color: #9a9a9a
+
+  Label
+    id: badge
+    anchors.top: info.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 14
+    color: #ffb020
+
+  TaskBar
+    id: bar
+    anchors.top: creature.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  Label
+    id: reward
+    anchors.top: bar.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 48
+    text-wrap: true
+    color: #d8d8d8
+
+  Label
+    id: extra
+    anchors.top: reward.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    height: 30
+    text-wrap: true
+    color: #8a8a8a
+
+  Button
+    id: action
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    size: 150 24
+
+  Button
+    id: action2
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    size: 150 24
+    visible: false
+
+TrailRow < UIWidget
+  height: 40
+  background-color: alpha
+  padding: 2
+
+  Label
+    id: index
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 34
+    text-align: center
+    color: #8a8a8a
+    phantom: true
+
+  UICreature
+    id: creature
+    anchors.left: index.right
+    anchors.verticalCenter: parent.verticalCenter
+    size: 36 36
+    creature-size: 36
+    phantom: true
+
+  Label
+    id: status
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    width: 200
+    text-align: right
+    color: #7a7a7a
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: creature.right
+    anchors.right: status.left
+    margin-top: 4
+    margin-left: 8
+    height: 14
+    color: #e8e8e8
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 3
+    height: 14
+    color: #7a7a7a
+    phantom: true
+
+ShopRow < UIWidget
+  height: 62
+  background-color: #00000040
+  border-width: 1
+  border-color: #3a3a3a
+  padding: 4
+
+  UIItem
+    id: item
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    size: 40 40
+    virtual: true
+    phantom: true
+
+  UIWidget
+    id: icon
+    anchors.centerIn: item
+    size: 32 32
+    phantom: true
+    visible: false
+
+  UICreature
+    id: creature
+    anchors.centerIn: item
+    size: 56 56
+    creature-size: 56
+    phantom: true
+    visible: false
+
+  Button
+    id: buy
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    size: 90 24
+    !text: tr('Comprar')
+
+  Label
+    id: price
+    anchors.right: buy.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 12
+    width: 90
+    text-align: right
+    font: verdana-11px-rounded
+    color: #ffe9a0
+
+  Label
+    id: label
+    anchors.top: parent.top
+    anchors.left: item.right
+    anchors.right: price.left
+    margin-top: 6
+    margin-left: 14
+    height: 30
+    text-wrap: true
+    color: #e8e8e8
+
+  ComboBox
+    id: mounts
+    anchors.top: label.bottom
+    anchors.left: label.left
+    margin-top: -6
+    size: 220 20
+    visible: false
+
+TaskList < TextList
+  padding: 1
+  focusable: false
+  background-color: #1c1c1cee
+  layout:
+    type: verticalBox
+
+MainWindow
+  id: huntTasksWindow
+  size: 760 560
+  @onEscape: modules.game_hunttasks.hide()
+
+  TaskTab
+    id: tasksTab
+    anchors.left: parent.left
+    !text: tr('Tasks')
+    @onClick: modules.game_hunttasks.selectTab('tasks')
+
+  TaskTab
+    id: trailTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Trilha completa')
+    @onClick: modules.game_hunttasks.selectTab('trail')
+
+  TaskTab
+    id: shopTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Loja')
+    @onClick: modules.game_hunttasks.selectTab('shop')
+
+  Label
+    id: points
+    anchors.right: parent.right
+    anchors.verticalCenter: tasksTab.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #ffe9a0
+
+  HorizontalSeparator
+    id: topSep
+    anchors.top: tasksTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  // ---------------------------------------------------------------- tasks
+  Panel
+    id: tasksPanel
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: message.top
+    margin-top: 8
+    margin-bottom: 6
+
+    TaskCard
+      id: dailyCard
+      anchors.top: parent.top
+      anchors.left: parent.left
+      size: 354 300
+
+    TaskCard
+      id: trailCard
+      anchors.top: parent.top
+      anchors.right: parent.right
+      size: 354 300
+
+    Label
+      id: streakTitle
+      anchors.top: dailyCard.bottom
+      anchors.left: parent.left
+      margin-top: 10
+      text-auto-resize: true
+      color: #ffe9a0
+
+    Panel
+      id: streakDots
+      anchors.top: streakTitle.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      height: 22
+      layout:
+        type: horizontalBox
+        spacing: 4
+
+    Label
+      id: help
+      anchors.top: streakDots.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      margin-top: 8
+      text-wrap: true
+      color: #8a8a8a
+
+  // ---------------------------------------------------------------- trail
+  Panel
+    id: trailPanel
+    anchors.fill: tasksPanel
+    visible: false
+
+    Label
+      id: summary
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 16
+      color: #b0b0b0
+
+    TaskList
+      id: list
+      anchors.top: summary.bottom
+      anchors.left: parent.left
+      anchors.right: scroll.left
+      anchors.bottom: parent.bottom
+      margin-top: 4
+      vertical-scrollbar: scroll
+
+    VerticalScrollBar
+      id: scroll
+      anchors.top: summary.bottom
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      margin-top: 4
+      step: 40
+      pixel-scroll: true
+
+  // ---------------------------------------------------------------- shop
+  Panel
+    id: shopPanel
+    anchors.fill: tasksPanel
+    visible: false
+
+    Label
+      id: summary
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 30
+      text-wrap: true
+      color: #b0b0b0
+
+    Panel
+      id: list
+      anchors.top: summary.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      margin-top: 4
+      layout:
+        type: verticalBox
+        spacing: 6
+
+  Label
+    id: message
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-bottom: 6
+    height: 16
+    text-align: center
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Label
+    id: footer
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    color: #7a7a7a
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Fechar')
+    @onClick: modules.game_hunttasks.hide()
+
+StreakDot < UIWidget
+  size: 44 22
+  text-align: center
+  font: verdana-11px-rounded
+  border-width: 1
+  border-color: #3a3a3a
+  background-color: #00000060
+  color: #6a6a6a

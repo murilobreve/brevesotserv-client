@@ -53,6 +53,7 @@ Module
     - game_rewardwall
     - game_raritymarket
     - game_huntboard
+    - game_hunttasks
     - game_forge
     - game_inspect
     - game_taskboard
