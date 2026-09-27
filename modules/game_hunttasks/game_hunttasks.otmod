@@ -1,0 +1,9 @@
+Module
+  name: game_hunttasks
+  description: Szuszkin hunting tasks - daily task, Hunter's Trail and the Hunt Points shop
+  author: Baiak Breves
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ hunttasks ]
+  @onLoad: init()
+  @onUnload: terminate()
