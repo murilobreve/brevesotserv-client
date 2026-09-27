@@ -2,13 +2,44 @@
 -- we have to load the first modules form here
 
 -- =====================================================================
--- CONFIGURACAO DO SERVIDOR (edite apenas este bloco para trocar o IP)
+-- CONFIGURACAO DO SERVIDOR
+-- O IP fica no arquivo servidor.ini, ao lado do executavel: e so editar
+-- esse arquivo para apontar o client para outro servidor. Os valores
+-- abaixo so valem se o servidor.ini nao existir ou estiver incompleto.
 -- =====================================================================
-local SERVER_NAME     = "Baiak Breves"                    -- nome exibido na janela e no client
-local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
-local SERVER_PORT     = 80                                -- porta HTTP do login
-local CLIENT_VERSION  = 1525                              -- versao do client (15.25)
-local SITE_URL        = "http://25.18.172.192:8080"       -- site (criar conta / esqueci a senha)
+local SERVER_NAME     = "Baiak Breves"   -- nome exibido na janela e no client
+local CLIENT_VERSION  = 1525             -- versao do client (15.25)
+local SERVER_IP       = "25.18.172.192"  -- IP ou dominio do site/login
+local SERVER_PORT     = 80               -- porta HTTP do login.php
+local SITE_URL        = ""               -- vazio = http://<ip>
+
+local function readServerIni()
+    local ok, contents = pcall(g_resources.readFileContents, '/servidor.ini')
+    if not ok or type(contents) ~= 'string' then
+        return
+    end
+    for line in contents:gmatch('[^\r\n]+') do
+        local key, value = line:match('^%s*([%w_]+)%s*=%s*(.-)%s*$')
+        if key and value and value ~= '' and not line:match('^%s*[;#]') then
+            key = key:lower()
+            if key == 'ip' then
+                -- tolerate "http://1.2.3.4/login.php" pasted into the ip line
+                SERVER_IP = value:gsub('^%a+://', ''):gsub('/.*$', ''):gsub(':%d+$', '')
+            elseif key == 'porta_login' and tonumber(value) then
+                SERVER_PORT = tonumber(value)
+            elseif key == 'site' then
+                SITE_URL = value
+            end
+        end
+    end
+end
+readServerIni()
+
+if SITE_URL == '' then
+    SITE_URL = 'http://' .. SERVER_IP
+end
+-- the login port goes in Servers_init below, not in this URL
+local SERVER_HOST = ('http://%s/login.php'):format(SERVER_IP)
 -- =====================================================================
 
 Services = {

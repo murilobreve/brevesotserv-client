@@ -335,3 +335,6 @@ luajit-src/
 CMakeUserPresets.json
 **/.canary-shared-cache/
 *.zip
+
+# client package (empacotar-cliente.bat)
+/dist/
