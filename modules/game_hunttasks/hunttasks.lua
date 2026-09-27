@@ -200,9 +200,8 @@ local function renderTrailCard()
         card.info:setText(tr('Level recomendado: %d', step.level or 0))
         card.bar:setVisible(true)
         setBar(card.bar, trail.kills, step.need, '#3d7fd6')
-        local points = trail.points or 0
+        local points = step.points or 0
         if step.milestone then
-            points = points + (trail.milestonePoints or 0)
             card.badge:setText(tr('Etapa de marco: +%d pontos de bônus!', trail.milestonePoints or 0))
         else
             local every = math.max(1, trail.milestoneEvery or 5)
@@ -245,7 +244,7 @@ local function renderStreak()
     panel.help:setText(tr(
         'Task diária: um monstro do seu level por dia. Se ele estiver com XP x2.0 ou mais no Hunt Board, os pontos dobram.\n' ..
         'Trilha do Caçador: %d monstros em ordem, do mais fraco ao mais forte. A cada %d etapas tem um bônus.\n' ..
-        'Os Hunt Points compram poção de XP, pergaminho de raridade, Breves Coins, Loot Pouch e montarias na aba Loja.',
+        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Breves Coins, Loot Pouch e montarias na aba Loja.',
         #(state.trail.steps or {}), state.trail.milestoneEvery or 5))
 end
 
@@ -256,8 +255,8 @@ local function renderTrailList()
     local trail = state.trail
     local steps = trail.steps or {}
     local done = trail.finished and #steps or trail.index - 1
-    panel.summary:setText(tr('%d de %d etapas completas. Cada etapa: +%s de experiência e +%d pontos; a cada %d etapas, +%d pontos de bônus.', done, #steps,
-        formatNumber(trail.exp), trail.points or 0, trail.milestoneEvery or 5, trail.milestonePoints or 0))
+    panel.summary:setText(tr('%d de %d etapas completas. Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.', done, #steps,
+        formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0)))
 
     if not trailBuilt then
         panel.list:destroyChildren()
@@ -267,7 +266,7 @@ local function renderTrailList()
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
             row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
-            row.info:setText(tr('Level %d  -  mate %d  -  %s exp cada', step.level, step.need, formatNumber(step.experience)))
+            row.info:setText(tr('Level %d  -  mate %s  -  %s exp cada  -  +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0))
         end
         trailBuilt = true
     end
@@ -310,7 +309,7 @@ end
 
 local function renderShop()
     local panel = window.shopPanel
-    panel.summary:setText(tr('Você tem %s Hunt Points. Os itens vão para a sua mochila; a Loot Pouch vai para a Store Inbox e a montaria já sai liberada.',
+    panel.summary:setText(tr('Você tem %s Hunt Points. Os itens vão para a sua mochila; a Loot Pouch vai para a Store Inbox e a montaria já sai liberada. Bag of Mythical: use para abrir um item aleatório já Mythicus. Pergaminho de Ascensão: use em um item com raridade para subir um grau.',
         formatNumber(state.points)))
     panel.list:destroyChildren()
     for _, offer in ipairs(state.shop or {}) do
@@ -359,6 +358,26 @@ local function renderShop()
                 local option = row.mounts:getCurrentOption()
                 if option and option.data then
                     send({ action = 'buy', key = offer.key, mount = option.data[1] })
+                end
+            end
+        elseif offer.options and #offer.options > 0 then
+            -- pick the kind (exercise weapons): { key, label, item }
+            row.mounts:setVisible(true)
+            row.mounts:clearOptions()
+            for _, option in ipairs(offer.options) do
+                row.mounts:addOption(option[2], option)
+            end
+            row.mounts.onOptionChange = function()
+                local option = row.mounts:getCurrentOption()
+                if option and option.data and option.data[3] then
+                    row.item:setItemId(option.data[3])
+                end
+            end
+            row.mounts:setCurrentIndex(1, true)
+            row.buy.onClick = function()
+                local option = row.mounts:getCurrentOption()
+                if option and option.data then
+                    send({ action = 'buy', key = offer.key, option = option.data[1] })
                 end
             end
         else
