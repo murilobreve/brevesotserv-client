@@ -353,7 +353,8 @@ MainWindow
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: parent.right
-      height: 16
+      height: 30
+      text-wrap: true
       color: #b0b0b0
 
     TaskList
@@ -385,7 +386,7 @@ MainWindow
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: parent.right
-      height: 30
+      height: 44
       text-wrap: true
       color: #b0b0b0
 
