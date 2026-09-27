@@ -23,7 +23,20 @@
 #include "application.h"
 
 #include "asyncdispatcher.h"
+// gitinfo.h is generated locally and is not in the repository, so a source
+// zip (or a fresh clone) builds without it
+#if __has_include(<gitinfo.h>)
 #include <gitinfo.h>
+#endif
+#ifndef GIT_COMMITS
+#define GIT_COMMITS 0
+#endif
+#ifndef GIT_VERSION
+#define GIT_VERSION 1.0
+#endif
+#ifndef GIT_BRANCH
+#define GIT_BRANCH local
+#endif
 
 #define ADD_QUOTES_HELPER(s) #s
 #define ADD_QUOTES(s) ADD_QUOTES_HELPER(s)
