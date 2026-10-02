@@ -1,0 +1,205 @@
+HealSection < Label
+  anchors.left: parent.left
+  anchors.right: parent.right
+  margin-top: 12
+  color: #e6b85e
+
+HealRow < Panel
+  height: 24
+  margin-top: 4
+
+  CheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 16
+
+  TextEdit
+    id: action
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 170
+    !tooltip: tr('Spell words, or the item id of a potion')
+
+  Button
+    id: stat
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 40
+    text: HP
+    !tooltip: tr('Click to switch between health and mana')
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    text: <
+
+  TextEdit
+    id: below
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 36
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    text: %
+
+FriendRow < Panel
+  height: 24
+  margin-top: 4
+
+  CheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 16
+
+  TextEdit
+    id: action
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 170
+    !tooltip: tr('{name} is replaced by the friend name')
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    !text: tr('life <')
+
+  TextEdit
+    id: below
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 36
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    text: %
+
+  CheckBox
+    id: partyOnly
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 10
+    width: 80
+    !text: tr('party only')
+
+BuffRow < Panel
+  height: 24
+  margin-top: 4
+
+  CheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 16
+
+  TextEdit
+    id: action
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 170
+    !tooltip: tr('utamo vita and haste spells are recast when they run out')
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    !text: tr('every')
+
+  TextEdit
+    id: every
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 36
+
+  Label
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    text: s
+
+MainWindow
+  id: healBotWindow
+  !text: tr('Heal Bot')
+  size: 400 500
+  @onEscape: modules.game_healbot.hide()
+
+  CheckBox
+    id: master
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 200
+    !text: tr('Bot on')
+    @onCheckChange: modules.game_healbot.setRunning(self:isChecked())
+
+  Label
+    id: hint
+    anchors.top: master.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+    text-wrap: true
+    text-auto-resize: true
+    color: #a69d8c
+    !text: tr('The first ticked line that matches is used. Spells and potions run on their own timers, so a spell and a potion can go off together.')
+
+  HealSection
+    id: healTitle
+    anchors.top: hint.bottom
+    !text: tr('Heal and potions')
+
+  Panel
+    id: healRows
+    anchors.top: healTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 168
+    layout: verticalBox
+
+  HealSection
+    id: friendTitle
+    anchors.top: healRows.bottom
+    !text: tr('Heal friends')
+
+  Panel
+    id: friendRows
+    anchors.top: friendTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 56
+    layout: verticalBox
+
+  HealSection
+    id: buffTitle
+    anchors.top: friendRows.bottom
+    !text: tr('Buffs')
+
+  Panel
+    id: buffRows
+    anchors.top: buffTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 84
+    layout: verticalBox
+
+  Button
+    id: close
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: 64
+    !text: tr('Close')
+    @onClick: modules.game_healbot.hide()

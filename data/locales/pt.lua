@@ -553,6 +553,21 @@ locale = {
     ["Rates up to x4, new roll every 2h"] = "Rates até x4, sorteio a cada 2h",
     ["Leaderboard prizes, 1 per hour online"] = "Prêmios no ranking e 1 por hora",
     ["Trade rare gear with other players"] = "Negocie itens raros com jogadores",
+    ["Heal Bot"] = "Heal Bot",
+    ["Heal Bot (on)"] = "Heal Bot (ligado)",
+    ["Heal Bot (off)"] = "Heal Bot (desligado)",
+    ["Bot on"] = "Bot ligado",
+    ["The first ticked line that matches is used. Spells and potions run on their own timers, so a spell and a potion can go off together."] = "Vale a primeira linha marcada que bater. Magia e poção têm tempos separados, então dá pra usar uma magia e uma poção juntas.",
+    ["Heal and potions"] = "Cura e poções",
+    ["Heal friends"] = "Curar amigos",
+    ["Buffs"] = "Buffs",
+    ["life <"] = "vida <",
+    ["party only"] = "só party",
+    ["every"] = "a cada",
+    ["Spell words, or the item id of a potion"] = "Palavras da magia, ou o id da poção",
+    ["Click to switch between health and mana"] = "Clique para trocar entre vida (HP) e mana (MP)",
+    ["{name} is replaced by the friend name"] = "{name} vira o nome do amigo",
+    ["utamo vita and haste spells are recast when they run out"] = "utamo vita e haste são usadas de novo quando acabam",
   }
 }
 
