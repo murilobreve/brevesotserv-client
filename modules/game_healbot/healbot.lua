@@ -1,62 +1,138 @@
--- Heal bot: casts healing spells and uses potions when health or mana drop
--- below a percent, heals friends and keeps buffs up. Settings are saved per
--- character. The server still applies its own exhaust, so this never heals
--- faster than a player pressing hotkeys.
+-- Heal bot window and settings. What to cast or drink is decided in
+-- engine.lua; the spell and potion lists come from data.lua. Settings are
+-- saved per character.
 
-local window, toolbarButton, tickEvent
-local running = false
+local window, toolbarButton, countEvent
 local cfg
-local nextSpell, nextPotion = 0, 0
-local buffCast = {}
+local CONFIG_VERSION = 2
+local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
+local PAGES = { 'healing', 'potions', 'friends', 'support' }
 
-local TICK = 100
-local SPELL_DELAY = 1000
-local POTION_DELAY = 1000
-
-local function defaults()
-    return {
-        heal = {
-            { on = false, action = 'exura vita', stat = 'hp', below = 60 },
-            { on = false, action = 'exura med ico', stat = 'hp', below = 75 },
-            { on = false, action = '7643', stat = 'hp', below = 45 },
-            { on = false, action = '23373', stat = 'mp', below = 40 },
-            { on = false, action = '', stat = 'hp', below = 0 },
-            { on = false, action = '', stat = 'mp', below = 0 },
-        },
-        friends = {
-            { on = false, action = 'exura sio "{name}"', below = 60, party = true },
-            { on = false, action = '', below = 0, party = true },
-        },
-        buffs = {
-            { on = false, action = 'utamo vita', every = 0 },
-            { on = false, action = 'utani hur', every = 0 },
-            { on = false, action = '', every = 60 },
-        },
-    }
-end
+-- ---------------------------------------------------------------------------
+-- settings
+-- ---------------------------------------------------------------------------
 
 local function characterKey()
     local player = g_game.getLocalPlayer()
     return player and player:getName() or ''
 end
 
-local function load()
-    local all = g_settings.getNode('healbot') or {}
-    cfg = defaults()
-    local saved = all[characterKey()]
-    if type(saved) == 'table' then
-        for _, group in ipairs({ 'heal', 'friends', 'buffs' }) do
-            for i, row in ipairs(cfg[group]) do
-                local s = saved[group] and saved[group][tostring(i)] or saved[group] and saved[group][i]
-                if type(s) == 'table' then
-                    for k in pairs(row) do
-                        if s[k] ~= nil then
-                            row[k] = s[k]
-                        end
-                    end
-                end
+local function defaults(player)
+    local vocation, level = HealData.vocation(player), player:getLevel()
+    local function bestSpell(list)
+        local spell = HealData.best(list, level)
+        return spell and spell.id or 0
+    end
+    local function bestPotion(stat)
+        local potion = HealData.best(HealData.potionsFor(vocation), level, function(p)
+            return p.stat == stat
+        end)
+        return potion and potion.id or 0
+    end
+
+    local config = { version = CONFIG_VERSION, spells = {}, potions = {}, friends = {} }
+    for i = 1, SPELL_RULES do
+        config.spells[i] = { on = false, spell = 0, stat = 'hp', below = 70 }
+    end
+    -- mass healing costs much more mana, so the default is the best single heal
+    local single = {}
+    for _, spell in ipairs(HealData.healSpells(vocation)) do
+        if not spell.words:find(' mas ') then
+            single[#single + 1] = spell
+        end
+    end
+    config.spells[1].spell = bestSpell(single)
+    for i = 1, POTION_RULES do
+        config.potions[i] = { on = false, item = 0, stat = 'hp', below = 50 }
+    end
+    config.potions[1].item = bestPotion('hp')
+    config.potions[2].item, config.potions[2].stat, config.potions[2].below = bestPotion('mp'), 'mp', 40
+    for i = 1, FRIEND_RULES do
+        config.friends[i] = { on = false, spell = 0, below = 60, party = true }
+    end
+    config.friends[1].spell = bestSpell(HealData.friendSpells(vocation))
+    config.support = {
+        shield = { on = false, spell = bestSpell(HealData.shieldSpells(vocation)) },
+        haste = { on = false, spell = bestSpell(HealData.hasteSpells(vocation)) },
+        cures = false,
+        antiIdle = false,
+    }
+    return config
+end
+
+-- g_settings stores everything as text with string keys, so read each field
+-- back with the type the default has
+local function merge(into, saved)
+    if type(saved) ~= 'table' then
+        return into
+    end
+    for key, value in pairs(into) do
+        local s = saved[key]
+        if s == nil then
+            s = saved[tostring(key)]
+        end
+        if type(value) == 'table' then
+            merge(value, s)
+        elseif s ~= nil then
+            if type(value) == 'boolean' then
+                into[key] = s == true or s == 'true'
+            elseif type(value) == 'number' then
+                into[key] = tonumber(s) or value
+            else
+                into[key] = tostring(s)
             end
         end
+    end
+    return into
+end
+
+local function toNode(value)
+    if type(value) ~= 'table' then
+        return value
+    end
+    local out = {}
+    for key, v in pairs(value) do
+        out[tostring(key)] = toNode(v)
+    end
+    return out
+end
+
+-- drop choices this vocation can't use (a config saved before a vocation
+-- change, or edited by hand)
+local function sanitize(config, vocation)
+    local function check(rule, field, list)
+        for _, entry in ipairs(list) do
+            if entry.id == rule[field] then
+                return
+            end
+        end
+        rule[field] = 0
+    end
+    local heal, friend = HealData.healSpells(vocation), HealData.friendSpells(vocation)
+    local potions = HealData.potionsFor(vocation)
+    for _, rule in ipairs(config.spells) do
+        check(rule, 'spell', heal)
+    end
+    for _, rule in ipairs(config.potions) do
+        check(rule, 'item', potions)
+    end
+    for _, rule in ipairs(config.friends) do
+        check(rule, 'spell', friend)
+    end
+    check(config.support.shield, 'spell', HealData.shieldSpells(vocation))
+    check(config.support.haste, 'spell', HealData.hasteSpells(vocation))
+end
+
+local function load()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return
+    end
+    local saved = (g_settings.getNode('healbot') or {})[characterKey()]
+    cfg = defaults(player)
+    if type(saved) == 'table' and tonumber(saved.version) == CONFIG_VERSION then
+        merge(cfg, saved)
+        sanitize(cfg, HealData.vocation(player))
     end
 end
 
@@ -65,197 +141,251 @@ local function save()
         return
     end
     local all = g_settings.getNode('healbot') or {}
-    local out = {}
-    for _, group in ipairs({ 'heal', 'friends', 'buffs' }) do
-        out[group] = {}
-        for i, row in ipairs(cfg[group]) do
-            out[group][tostring(i)] = row
-        end
-    end
-    all[characterKey()] = out
+    all[characterKey()] = toNode(cfg)
     g_settings.setNode('healbot', all)
 end
 
 -- ---------------------------------------------------------------------------
--- the bot
+-- rule rows
 -- ---------------------------------------------------------------------------
 
-local function percent(value, max)
-    if not max or max <= 0 then
-        return 100
-    end
-    return value * 100 / max
-end
-
-local function isManaShieldSpell(words)
-    return words:find('^utamo vita') ~= nil
-end
-
-local function isHasteSpell(words)
-    return words:find('^utani') ~= nil
-end
-
-local function hasState(player, state)
-    return bit.band(player:getStates(), state) ~= 0
-end
-
-local function friendToHeal(player, row)
-    local mapPanel = modules.game_interface and modules.game_interface.getMapPanel()
-    if not mapPanel then
-        return nil
-    end
-    local best
-    for _, creature in ipairs(mapPanel:getSpectators()) do
-        if creature:isPlayer() and not creature:isLocalPlayer() and creature:getHealthPercent() < row.below
-            and (not row.party or creature:isPartyMember()) then
-            if not best or creature:getHealthPercent() < best:getHealthPercent() then
-                best = creature
-            end
-        end
-    end
-    return best
-end
-
-local function tick()
-    if not running or not g_game.isOnline() or not cfg then
-        return
-    end
-    local player = g_game.getLocalPlayer()
-    if not player or player:getHealth() <= 0 then
-        return
-    end
-    local now = g_clock.millis()
-    local hp = percent(player:getHealth(), player:getMaxHealth())
-    local mp = percent(player:getMana(), player:getMaxMana())
-    local spellUsed, potionUsed = now < nextSpell, now < nextPotion
-
-    for _, row in ipairs(cfg.heal) do
-        local action = (row.action or ''):trim()
-        local value = row.stat == 'mp' and mp or hp
-        if row.on and action ~= '' and value < (tonumber(row.below) or 0) then
-            local itemId = tonumber(action)
-            if itemId and not potionUsed then
-                g_game.useInventoryItemWith(itemId, player)
-                nextPotion, potionUsed = now + POTION_DELAY, true
-            elseif not itemId and not spellUsed then
-                g_game.talk(action)
-                nextSpell, spellUsed = now + SPELL_DELAY, true
-            end
-        end
-    end
-
-    if not spellUsed then
-        for _, row in ipairs(cfg.friends) do
-            local action = (row.action or ''):trim()
-            if row.on and action ~= '' then
-                local friend = friendToHeal(player, row)
-                if friend then
-                    g_game.talk((action:gsub('{name}', friend:getName())))
-                    nextSpell, spellUsed = now + SPELL_DELAY, true
-                    break
-                end
-            end
-        end
-    end
-
-    if not spellUsed then
-        for i, row in ipairs(cfg.buffs) do
-            local action = (row.action or ''):trim()
-            if row.on and action ~= '' then
-                local words = action:lower()
-                local due
-                if isManaShieldSpell(words) then
-                    due = not hasState(player, PlayerStates.ManaShield) and not hasState(player, PlayerStates.NewManaShield)
-                elseif isHasteSpell(words) then
-                    due = not hasState(player, PlayerStates.Haste)
-                else
-                    local every = (tonumber(row.every) or 0) * 1000
-                    due = every > 0 and now - (buffCast[i] or 0) >= every
-                end
-                if due then
-                    g_game.talk(action)
-                    buffCast[i] = now
-                    nextSpell = now + SPELL_DELAY
-                    break
-                end
-            end
-        end
+local function setSpellIcon(icon, spell)
+    if spell then
+        icon:setImageSource(SpelllistSettings.Default.iconFile)
+        icon:setImageClip(Spells.getImageClip(tonumber(spell.clientId) or 0, 'Default'))
+        icon:setTooltip(string.format('%s\n%s: %d   %s: %d', spell.name, tr('Level'), spell.level, tr('Mana'), spell.mana))
+    else
+        icon:setImageSource('')
+        icon:removeTooltip()
     end
 end
 
--- ---------------------------------------------------------------------------
--- window
--- ---------------------------------------------------------------------------
-
-local function bindRow(widget, row)
-    widget.enabled:setChecked(row.on)
-    widget.action:setText(row.action or '')
-    widget.enabled.onCheckChange = function(_, checked)
-        row.on = checked
+local function fillCombo(combo, entries, selected, label, onChange)
+    combo:clearOptions()
+    combo:addOption(tr('None'), 0)
+    for _, entry in ipairs(entries) do
+        combo:addOption(label(entry), entry.id)
+    end
+    combo:setCurrentOptionByData(selected, true)
+    combo.onOptionChange = function(_, _, data)
+        onChange(data)
         save()
     end
-    widget.action.onTextChange = function(_, text)
-        row.action = text
+end
+
+local function spellLabel(spell)
+    return spell.words
+end
+
+local function bindCheck(check, rule, field)
+    check:setChecked(rule[field])
+    check.onCheckChange = function(_, checked)
+        rule[field] = checked
         save()
     end
-    if widget.below then
-        widget.below:setText(tostring(row.below or 0))
-        widget.below.onTextChange = function(_, text)
-            row.below = tonumber(text) or 0
-            save()
-        end
+end
+
+local function bindSlider(widget, rule)
+    local function show(value)
+        widget.belowLabel:setText(value .. '%')
     end
-    if widget.every then
-        widget.every:setText(tostring(row.every or 0))
-        widget.every.onTextChange = function(_, text)
-            row.every = tonumber(text) or 0
-            save()
-        end
+    widget.below:setValue(rule.below)
+    show(rule.below)
+    widget.below.onValueChange = function(_, value)
+        rule.below = value
+        show(value)
+        save()
     end
-    if widget.stat then
-        widget.stat:setText(row.stat == 'mp' and 'MP' or 'HP')
-        widget.stat.onClick = function(self)
-            row.stat = row.stat == 'mp' and 'hp' or 'mp'
-            self:setText(row.stat == 'mp' and 'MP' or 'HP')
-            save()
-        end
+end
+
+local function bindStat(combo, rule)
+    combo:clearOptions()
+    combo:addOption(tr('Health'), 'hp')
+    combo:addOption(tr('Mana'), 'mp')
+    combo:setCurrentOptionByData(rule.stat, true)
+    combo.onOptionChange = function(_, _, data)
+        rule.stat = data
+        save()
     end
-    if widget.partyOnly then
-        widget.partyOnly:setChecked(row.party)
-        widget.partyOnly.onCheckChange = function(_, checked)
-            row.party = checked
-            save()
+end
+
+local function showPotion(widget, id)
+    widget.item:setItemId(id)
+    if id > 0 then
+        local count = HealEngine.potionCount(id)
+        widget.item:setItemCount(math.max(count, 1))
+        widget.item:setShowCount(true)
+        widget.item:setTooltip(string.format('%s\n%s', HealData.potion(id).name, tr('You have %d.', count)))
+        widget.item:setOpacity(count > 0 and 1 or 0.4)
+    else
+        widget.item:removeTooltip()
+    end
+end
+
+local function addSpellRule(panel, rule, spells)
+    local widget = g_ui.createWidget('SpellRule', panel)
+    bindCheck(widget.enabled, rule, 'on')
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    bindStat(widget.stat, rule)
+    bindSlider(widget, rule)
+end
+
+local function addPotionRule(panel, rule, potions)
+    local widget = g_ui.createWidget('PotionRule', panel)
+    widget.icon:hide()
+    bindCheck(widget.enabled, rule, 'on')
+    showPotion(widget, rule.item)
+    fillCombo(widget.choice, potions, rule.item, function(p)
+        return p.name
+    end, function(id)
+        rule.item = id
+        local potion = HealData.potion(id)
+        if potion then
+            rule.stat = potion.stat
+            widget.stat:setCurrentOptionByData(rule.stat, true)
         end
+        showPotion(widget, id)
+    end)
+    bindStat(widget.stat, rule)
+    bindSlider(widget, rule)
+    widget.potionRule = rule
+end
+
+local function addFriendRule(panel, rule, spells)
+    local widget = g_ui.createWidget('FriendRule', panel)
+    bindCheck(widget.enabled, rule, 'on')
+    bindCheck(widget.party, rule, 'party')
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    bindSlider(widget, rule)
+end
+
+local function addSupportRule(panel, rule, spells, note)
+    local widget = g_ui.createWidget('SupportRule', panel)
+    bindCheck(widget.enabled, rule, 'on')
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    widget.note:setText(note)
+end
+
+local function addCureRule(panel, vocation)
+    local widget = g_ui.createWidget('CureRule', panel)
+    local words = {}
+    for _, cure in ipairs(HealData.curesFor(vocation)) do
+        words[#words + 1] = cure.spell.words
+    end
+    bindCheck(widget.enabled, cfg.support, 'cures')
+    if #words == 0 then
+        widget.enabled:setEnabled(false)
+        widget.note:setText(tr('Your vocation has no spell that cures conditions.'))
+    else
+        widget.note:setText(tr('Cure conditions with %s', table.concat(words, ', ')))
+    end
+end
+
+local function clearRules(page)
+    for i = page:getChildCount(), 2, -1 do
+        page:getChildByIndex(i):destroy()
     end
 end
 
 local function fill()
-    for _, part in ipairs({ { 'healRows', 'heal', 'HealRow' }, { 'friendRows', 'friends', 'FriendRow' }, { 'buffRows', 'buffs', 'BuffRow' } }) do
-        local panel = window:getChildById(part[1])
-        panel:destroyChildren()
-        for _, row in ipairs(cfg[part[2]]) do
-            bindRow(g_ui.createWidget(part[3], panel), row)
+    local player = g_game.getLocalPlayer()
+    if not player or not cfg then
+        return
+    end
+    local vocation = HealData.vocation(player)
+
+    local page = window.content.healingPage
+    clearRules(page)
+    local healSpells = HealData.healSpells(vocation)
+    for _, rule in ipairs(cfg.spells) do
+        addSpellRule(page, rule, healSpells)
+    end
+
+    page = window.content.potionsPage
+    clearRules(page)
+    local potions = HealData.potionsFor(vocation)
+    for _, rule in ipairs(cfg.potions) do
+        addPotionRule(page, rule, potions)
+    end
+
+    page = window.content.friendsPage
+    clearRules(page)
+    local friendSpells = HealData.friendSpells(vocation)
+    for _, rule in ipairs(cfg.friends) do
+        addFriendRule(page, rule, friendSpells)
+    end
+
+    page = window.content.supportPage
+    clearRules(page)
+    addSupportRule(page, cfg.support.shield, HealData.shieldSpells(vocation), tr('Magic shield: cast again when it runs out.'))
+    addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation),
+        tr('Haste: cast again when it runs out or when you get paralyzed.'))
+    addCureRule(page, vocation)
+    local idle = g_ui.createWidget('CureRule', page)
+    bindCheck(idle.enabled, cfg.support, 'antiIdle')
+    idle.note:setText(tr('Anti idle: turns your character every 5 minutes so the server does not log you out.'))
+end
+
+local function refreshCounts()
+    if not window or not window:isVisible() then
+        return
+    end
+    for _, widget in ipairs(window.content.potionsPage:getChildren()) do
+        if widget.potionRule then
+            showPotion(widget, widget.potionRule.item)
         end
     end
 end
 
+local function selectPage(id)
+    for _, name in ipairs(PAGES) do
+        window.categories[name]:setChecked(name == id)
+        window.content[name .. 'Page']:setVisible(name == id)
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- module
+-- ---------------------------------------------------------------------------
+
 local function updateButton()
     if toolbarButton then
-        toolbarButton:setOn(running)
-        toolbarButton:setTooltip(running and tr('Heal Bot (on)') or tr('Heal Bot (off)'))
+        toolbarButton:setOn(HealEngine.isRunning())
+        toolbarButton:setTooltip(HealEngine.isRunning() and tr('Heal Bot (on)') or tr('Heal Bot (off)'))
+    end
+end
+
+local function onAction(message)
+    if window then
+        window.status:setText(message)
     end
 end
 
 function setRunning(value)
-    running = value and true or false
-    if window then
-        window.master:setChecked(running)
+    HealEngine.setRunning(value)
+    if window and window.master:isChecked() ~= HealEngine.isRunning() then
+        window.master:setChecked(HealEngine.isRunning())
     end
     updateButton()
 end
 
 function show()
-    if not window then
+    if not window or not g_game.isOnline() then
         return
     end
     fill()
@@ -281,26 +411,38 @@ end
 
 local function onGameStart()
     load()
-    running = false
-    nextSpell, nextPotion, buffCast = 0, 0, {}
+    HealEngine.reset()
+    setRunning(false)
+    window.status:setText('')
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('healBotButton', tr('Heal Bot (off)'),
             '/game_healbot/images/button', toggle, false, 22)
     end
-    setRunning(false)
+    updateButton()
 end
 
 local function onGameEnd()
     save()
     setRunning(false)
     hide()
+    cfg = nil
 end
 
 function init()
     window = g_ui.displayUI('healbot')
     window:hide()
+    for _, name in ipairs(PAGES) do
+        window.categories[name].onClick = function()
+            selectPage(name)
+        end
+    end
+    selectPage('healing')
+
+    HealEngine.init(function()
+        return cfg
+    end, onAction)
+    countEvent = cycleEvent(refreshCounts, 1000)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
-    tickEvent = cycleEvent(tick, TICK)
     if g_game.isOnline() then
         onGameStart()
     end
@@ -309,9 +451,10 @@ end
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     save()
-    if tickEvent then
-        removeEvent(tickEvent)
-        tickEvent = nil
+    HealEngine.terminate()
+    if countEvent then
+        removeEvent(countEvent)
+        countEvent = nil
     end
     if toolbarButton then
         toolbarButton:destroy()

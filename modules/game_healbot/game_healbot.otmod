@@ -1,9 +1,9 @@
 Module
   name: game_healbot
-  description: Heal bot - spells and potions by health / mana percent, friend heal and buffs
+  description: Heal bot - healing spells, potions, friend heal and support spells
   author: Baiak Breves
   website: http://25.18.172.192
   sandboxed: true
-  scripts: [ healbot ]
+  scripts: [ data, engine, healbot ]
   @onLoad: init()
   @onUnload: terminate()
