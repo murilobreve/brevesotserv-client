@@ -1,16 +1,16 @@
-HuntTab < ButtonBox
-  size: 130 23
+HuntTab < BrevesTab
+  size: 130 20
   anchors.top: parent.top
 
-PeriodTab < ButtonBox
-  size: 150 22
+PeriodTab < BrevesTab
+  size: 130 20
 
 // multiplier bar: dark track, coloured fill, value on top
 MultBar < UIWidget
   size: 118 14
-  background-color: #00000070
+  background-color: #00000080
   border-width: 1
-  border-color: #3a3a3a
+  border-color: #000000
   phantom: true
 
   UIWidget
@@ -39,22 +39,20 @@ MultBar < UIWidget
     color: #ffffff
     phantom: true
 
-HotCard < UIWidget
-  size: 200 84
-  background-color: #00000055
-  border-width: 1
-  border-color: #c9a227
+HotCard < BrevesCell
+  size: 200 76
   padding: 4
+  $hover:
+    background-color: #ffffff14
 
-  UIWidget
+  Label
     id: medal
     anchors.top: parent.top
     anchors.left: parent.left
-    size: 22 16
-    text-align: center
-    font: verdana-11px-rounded
-    background-color: #c9a22760
-    color: #ffe9a0
+    size: 22 14
+    text-align: left
+    font: verdana-11px-monochrome
+    color: #909090
     phantom: true
 
   UICreature
@@ -74,7 +72,7 @@ HotCard < UIWidget
     margin-left: 6
     margin-top: 4
     height: 14
-    color: #ffe9a0
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -111,17 +109,9 @@ HotCard < UIWidget
     text-auto-resize: true
     phantom: true
 
-RateRow < UIWidget
+RateRow < BrevesRow
   height: 46
-  focusable: true
-  background-color: alpha
   padding: 2
-
-  $hover !focus:
-    background-color: #ffffff10
-
-  $focus:
-    background-color: #ffffff22
 
   Label
     id: rank
@@ -179,7 +169,7 @@ RateRow < UIWidget
     margin-right: 4
     width: 96
     text-align: right
-    color: #d8d8d8
+    color: #bfbfbf
     phantom: true
 
   Label
@@ -190,7 +180,7 @@ RateRow < UIWidget
     margin-top: 6
     margin-left: 8
     height: 14
-    color: #e8e8e8
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -200,12 +190,15 @@ RateRow < UIWidget
     anchors.right: name.right
     margin-top: 5
     height: 14
+    font: verdana-11px-monochrome
     color: #8a8a8a
     phantom: true
 
-BoardRow < UIWidget
+RateRowEven < RateRow
+  background-color: #ffffff12
+
+BoardRow < BrevesRow
   height: 33
-  background-color: alpha
   padding: 2
 
   UIWidget
@@ -214,8 +207,7 @@ BoardRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     size: 24 20
     text-align: center
-    font: verdana-11px-rounded
-    color: #b0b0b0
+    color: #909090
     phantom: true
 
   Label
@@ -225,7 +217,7 @@ BoardRow < UIWidget
     margin-right: 6
     width: 110
     text-align: right
-    color: #ffe9a0
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -236,7 +228,7 @@ BoardRow < UIWidget
     margin-left: 8
     margin-top: 1
     height: 14
-    color: #e8e8e8
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -246,43 +238,42 @@ BoardRow < UIWidget
     anchors.right: name.right
     margin-top: 1
     height: 14
+    font: verdana-11px-monochrome
     color: #7a7a7a
     phantom: true
 
+BoardRowEven < BoardRow
+  background-color: #ffffff12
+
 HistoryLine < Label
   height: 16
-  color: #b0b0b0
+  font: verdana-11px-monochrome
+  color: #bfbfbf
   text-align: left
+  text-offset: 4 0
 
-HuntList < TextList
-  padding: 1
+HuntList < BrevesList
   focusable: false
-  layout:
-    type: verticalBox
 
-BoardColumn < Panel
+// the section strip carries the title; the lua sets it through title
+BoardColumn < BrevesSection
+  padding: 22 4 4 4
+
   Label
     id: title
-    anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: 20
-    text-align: center
-    font: verdana-11px-rounded
-    color: #ffe9a0
-    background-color: #c9a22728
+    visible: false
 
   HuntList
     id: list
-    anchors.top: title.bottom
+    anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 4
-    height: 334
+    height: 324
 
   Label
     id: empty
     anchors.centerIn: list
+    font: verdana-11px-monochrome
     color: #7a7a7a
     text-auto-resize: true
     !text: tr('Nobody yet - be the first!')
@@ -292,8 +283,8 @@ BoardColumn < Panel
     anchors.top: list.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 4
-    height: 18
+    margin-top: 6
+    height: 16
     text-align: center
     color: #7fd35a
 
@@ -322,9 +313,9 @@ MainWindow
     anchors.right: parent.right
     anchors.verticalCenter: ratesTab.verticalCenter
     size: 150 16
-    background-color: #00000070
+    background-color: #00000080
     border-width: 1
-    border-color: #3a3a3a
+    border-color: #000000
 
     UIWidget
       id: fill
@@ -356,7 +347,8 @@ MainWindow
     anchors.verticalCenter: onlineBar.verticalCenter
     margin-right: 5
     text-auto-resize: true
-    color: #b0b0b0
+    font: verdana-11px-monochrome
+    color: #bfbfbf
     !text: tr('Online reward')
 
   HorizontalSeparator
@@ -376,40 +368,43 @@ MainWindow
     margin-top: 6
     margin-bottom: 6
 
-    Label
-      id: hotTitle
+    BrevesSection
+      id: hotSection
       anchors.top: parent.top
       anchors.left: parent.left
-      text-auto-resize: true
-      color: #ffe9a0
+      anchors.right: parent.right
+      height: 108
       !text: tr('Hottest hunts right now')
+
+      Panel
+        id: hotPanel
+        anchors.fill: parent
+        layout:
+          type: horizontalBox
+          spacing: 6
+          fit-children: false
+
+    Label
+      id: hotTitle
+      visible: false
 
     Label
       id: countdown
-      anchors.top: parent.top
-      anchors.right: parent.right
+      anchors.top: hotSection.top
+      anchors.right: hotSection.right
+      margin-top: 3
+      margin-right: 8
       text-auto-resize: true
+      font: verdana-11px-monochrome
       color: #7fd35a
-
-    Panel
-      id: hotPanel
-      anchors.top: hotTitle.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      margin-top: 4
-      height: 84
-      layout:
-        type: horizontalBox
-        spacing: 8
-        fit-children: false
 
     TextEdit
       id: searchEdit
-      anchors.top: hotPanel.bottom
+      anchors.top: hotSection.bottom
       anchors.left: parent.left
       margin-top: 8
       size: 180 22
-      placeholder: Search monster...
+      !placeholder: tr('Search monster...')
       placeholder-color: #6e706f
       @onTextChange: modules.game_huntboard.onFilterChanged()
 
@@ -436,29 +431,45 @@ MainWindow
       !text: tr('Hide bosses')
       @onCheckChange: modules.game_huntboard.onFilterChanged()
 
-    Label
-      id: legend
-      anchors.right: parent.right
-      anchors.verticalCenter: searchEdit.verticalCenter
-      text-auto-resize: true
-      color: #7a7a7a
-      !text: tr('XP / kill')
-
-    HuntList
-      id: rateList
+    BrevesHeader
+      id: rateHeader
       anchors.top: searchEdit.bottom
       anchors.left: parent.left
       anchors.right: rateScroll.left
-      anchors.bottom: prevPage.top
       margin-top: 6
+      !text: tr('Monster')
+
+      Label
+        id: legend
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 8
+        text-auto-resize: true
+        color: #dfdfdf88
+        !text: tr('XP / kill')
+
+      Label
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 150
+        text-auto-resize: true
+        color: #dfdfdf88
+        !text: tr('XP and loot rate')
+
+    HuntList
+      id: rateList
+      anchors.top: rateHeader.bottom
+      anchors.left: parent.left
+      anchors.right: rateScroll.left
+      anchors.bottom: prevPage.top
       margin-bottom: 6
       vertical-scrollbar: rateScroll
 
     VerticalScrollBar
       id: rateScroll
       anchors.top: searchEdit.bottom
+      margin-top: 26
       anchors.bottom: prevPage.top
-      margin-top: 6
       margin-bottom: 6
       anchors.right: parent.right
       step: 46
@@ -493,7 +504,8 @@ MainWindow
       anchors.right: nextPage.left
       anchors.verticalCenter: prevPage.verticalCenter
       text-align: center
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
 
   // ---------------------------------------------------------------- leaderboard
   Panel
@@ -529,6 +541,7 @@ MainWindow
       anchors.top: parent.top
       anchors.right: parent.right
       text-auto-resize: true
+      font: verdana-11px-monochrome
       color: #7fd35a
 
     UIWidget
@@ -545,30 +558,31 @@ MainWindow
       anchors.verticalCenter: prizeCoin.verticalCenter
       margin-right: 4
       text-auto-resize: true
-      color: #ffe9a0
+      color: #dfdfdf
 
     BoardColumn
       id: killsColumn
       anchors.top: hourTab.bottom
       anchors.left: parent.left
       margin-top: 14
-      width: 392
-      height: 380
+      width: 390
+      height: 374
 
     BoardColumn
       id: expColumn
       anchors.top: killsColumn.top
       anchors.right: parent.right
-      width: 392
-      height: 380
+      width: 390
+      height: 374
 
     Label
       id: historyTitle
       anchors.top: killsColumn.bottom
       anchors.left: parent.left
-      margin-top: 6
+      margin-top: 8
       text-auto-resize: true
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
       !text: tr('Recent winners')
 
     HuntList
@@ -601,7 +615,8 @@ MainWindow
     anchors.left: parent.left
     anchors.right: closeButton.left
     anchors.verticalCenter: closeButton.verticalCenter
-    color: #7a7a7a
+    font: verdana-11px-monochrome
+    color: #909090
     !text: tr('Rates re-roll every 2 hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.')
 
   Button

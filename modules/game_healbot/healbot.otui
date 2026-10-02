@@ -1,0 +1,238 @@
+HealBotCategory < BrevesTab
+  margin-top: 2
+  text-align: left
+  text-offset: 30 1
+  $checked:
+    text-offset: 31 2
+
+  UIWidget
+    id: icon
+    size: 13 13
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 10
+    phantom: true
+
+HealBotHint < BrevesNote
+  margin-bottom: 4
+
+HealBotPage < UIWidget
+  anchors.fill: parent
+  layout:
+    type: verticalBox
+    spacing: 6
+  visible: false
+
+HealBotSlider < HorizontalQtScrollBar
+  width: 110
+  minimum: 5
+  maximum: 95
+  step: 1
+
+HealBotRule < SmallReversedQtPanel
+  height: 42
+
+  QtCheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  UIWidget
+    id: icon
+    size: 32 32
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    background-color: #00000066
+    border-width: 1
+    border-color: #1a1a1a
+
+  QtComboBox
+    id: choice
+    width: 150
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+
+HealBotStatRule < HealBotRule
+  QtComboBox
+    id: stat
+    width: 64
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+
+  HealBotSlider
+    id: below
+    anchors.left: stat.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 10
+
+  Label
+    id: belowLabel
+    width: 34
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    color: #dfdfdf
+
+SpellRule < HealBotStatRule
+
+PotionRule < HealBotStatRule
+  Item
+    id: item
+    size: 32 32
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    virtual: true
+
+FriendRule < HealBotRule
+  HealBotSlider
+    id: below
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 10
+
+  Label
+    id: belowLabel
+    width: 34
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    color: #dfdfdf
+
+  QtCheckBox
+    id: party
+    width: 80
+    anchors.left: belowLabel.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    !text: tr('party only')
+
+SupportRule < HealBotRule
+  Label
+    id: note
+    anchors.left: choice.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 10
+    font: verdana-11px-monochrome
+    color: #909090
+    text-wrap: true
+    text-auto-resize: true
+
+CureRule < SmallReversedQtPanel
+  height: 42
+
+  QtCheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  Label
+    id: note
+    anchors.left: enabled.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-monochrome
+    color: #bfbfbf
+    text-wrap: true
+    text-auto-resize: true
+
+MainWindow
+  id: healBotWindow
+  !text: tr('Heal Bot')
+  size: 640 380
+  @onEscape: modules.game_healbot.hide()
+
+  UIWidget
+    id: categories
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.bottom: separator.top
+    width: 128
+    margin-bottom: 8
+    padding: 3 5 3 5
+    image-source: /images/ui/2pixel_up_frame_borderimage_dark
+    image-border: 3
+    layout: verticalBox
+
+    HealBotCategory
+      id: healing
+      !text: tr('Heal spells')
+    HealBotCategory
+      id: potions
+      !text: tr('Potions')
+    HealBotCategory
+      id: friends
+      !text: tr('Friends')
+    HealBotCategory
+      id: support
+      !text: tr('Support')
+
+  QtPanel
+    id: content
+    anchors.top: parent.top
+    anchors.left: categories.right
+    anchors.right: parent.right
+    anchors.bottom: separator.top
+    margin-left: 8
+    margin-bottom: 8
+
+    HealBotPage
+      id: healingPage
+      HealBotHint
+        !text: tr('Rules higher on the list go first. A spell is only cast when you have the level and the mana for it.')
+
+    HealBotPage
+      id: potionsPage
+      HealBotHint
+        !text: tr('Potions and spells have separate exhausts, so the bot can drink and cast in the same second.')
+
+    HealBotPage
+      id: friendsPage
+      HealBotHint
+        !text: tr('Heals the player on screen with the lowest health. Your own healing always comes first.')
+
+    HealBotPage
+      id: supportPage
+      HealBotHint
+        !text: tr('Magic shield and haste are not cast in protection zones.')
+
+  HorizontalSeparator
+    id: separator
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: ok.top
+    margin-bottom: 8
+
+  QtCheckBox
+    id: master
+    anchors.left: parent.left
+    anchors.verticalCenter: ok.verticalCenter
+    width: 100
+    !text: tr('Bot on')
+    @onCheckChange: modules.game_healbot.setRunning(self:isChecked())
+
+  Label
+    id: status
+    anchors.left: master.right
+    anchors.right: ok.left
+    anchors.verticalCenter: ok.verticalCenter
+    margin-left: 12
+    margin-right: 12
+    font: verdana-11px-monochrome
+    color: #909090
+    text-auto-resize: false
+
+  QtButton
+    id: ok
+    size: 64 20
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    !text: tr('Ok')
+    @onClick: modules.game_healbot.hide()

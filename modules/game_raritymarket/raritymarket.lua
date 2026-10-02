@@ -255,7 +255,7 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
     local previousId = selected and selected.kind == kind and (selected.data.id or selected.data.token)
     local reselect
     for index, entry in ipairs(entries or {}) do
-        local row = g_ui.createWidget('MarketRow', list)
+        local row = g_ui.createWidget(index % 2 == 0 and 'MarketRowEven' or 'MarketRow', list)
         local rarity = rarityOf(entry.rarity)
         applyFrame(row.frame, entry)
         row.name:setText(shorten(entry.name or '', 40))
