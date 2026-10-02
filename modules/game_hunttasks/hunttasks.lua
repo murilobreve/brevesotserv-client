@@ -193,7 +193,7 @@ local function renderTrailCard()
         card.extra:setText('')
     else
         local step = steps[trail.index] or {}
-        card.title:setText(tr('Trilha do Caçador - etapa %d de %d', trail.index, #steps))
+        card.title:setText(tr('Trilha do Caçador, etapa %d de %d', trail.index, #steps))
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
         card.name:setText(step.name or '?')
@@ -228,7 +228,7 @@ local function renderStreak()
     local streak = state.streak or 0
     local max = state.streakMax or 6
     local bonus = state.streakBonus or 5
-    panel.streakTitle:setText(tr('Sequência diária: %d dia%s  -  cada dia seguido dá +%d pontos na task diária (até +%d)', streak, streak == 1 and '' or 's',
+    panel.streakTitle:setText(tr('Sequência diária: %d dia%s. Cada dia seguido dá +%d pontos na task diária (até +%d)', streak, streak == 1 and '' or 's',
         bonus, bonus * max))
     panel.streakDots:destroyChildren()
     for day = 1, max + 1 do
@@ -266,7 +266,7 @@ local function renderTrailList()
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
             row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
-            row.info:setText(tr('Level %d  -  mate %s  -  %s exp cada  -  +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0))
+            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0))
         end
         trailBuilt = true
     end
@@ -288,7 +288,7 @@ local function renderTrailList()
                 row.status:setText(tr('Bloqueada'))
                 row.status:setColor('#8a8a8a')
                 row.name:setColor('#c8c8c8')
-                row:setBackgroundColor('#00000000')
+                row:setBackgroundColor(i % 2 == 0 and '#ffffff12' or '#00000012')
             end
         end
     end
@@ -411,7 +411,7 @@ local function tick()
     end
     if state and state.resetAt then
         local left = state.resetAt - (os.time() + timeOffset)
-        window.tasksPanel.dailyCard.title:setText(tr('Task diária  -  nova em %s', formatDuration(left)))
+        window.tasksPanel.dailyCard.title:setText(tr('Task diária, nova em %s', formatDuration(left)))
         if left < -3 and left > -15 then
             state.resetAt = nil
             send({ action = 'open' })

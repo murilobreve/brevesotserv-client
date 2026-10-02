@@ -7,6 +7,12 @@ local cfg
 local CONFIG_VERSION = 2
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
 local PAGES = { 'healing', 'potions', 'friends', 'support' }
+local PAGE_ICONS = {
+    healing = '/images/icons/icon-healing',
+    potions = '/images/icons/icon_health',
+    friends = '/images/icons/icon_players',
+    support = '/images/icons/icon_magic',
+}
 
 -- ---------------------------------------------------------------------------
 -- settings
@@ -421,6 +427,15 @@ local function onGameStart()
     updateButton()
 end
 
+-- the vocation arrives after onGameStart, so defaults and the saved rules
+-- are checked again once it is known
+local function onVocationChange()
+    load()
+    if window and window:isVisible() then
+        fill()
+    end
+end
+
 local function onGameEnd()
     save()
     setRunning(false)
@@ -432,6 +447,7 @@ function init()
     window = g_ui.displayUI('healbot')
     window:hide()
     for _, name in ipairs(PAGES) do
+        window.categories[name].icon:setImageSource(PAGE_ICONS[name])
         window.categories[name].onClick = function()
             selectPage(name)
         end
@@ -443,6 +459,7 @@ function init()
     end, onAction)
     countEvent = cycleEvent(refreshCounts, 1000)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    connect(LocalPlayer, { onVocationChange = onVocationChange })
     if g_game.isOnline() then
         onGameStart()
     end
@@ -450,6 +467,7 @@ end
 
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    disconnect(LocalPlayer, { onVocationChange = onVocationChange })
     save()
     HealEngine.terminate()
     if countEvent then

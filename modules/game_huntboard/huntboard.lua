@@ -27,9 +27,9 @@ local SORTS = {
 
 local PERIOD_LABELS = { hour = 'Hourly', day = 'Daily', month = 'Monthly' }
 local MEDALS = {
-    { text = '#ffe066', bg = '#c9a22790' },
-    { text = '#f0f0f0', bg = '#9a9a9a80' },
-    { text = '#ffc08a', bg = '#a0582880' },
+    { text = '#ffe066' },
+    { text = '#f0f0f0' },
+    { text = '#ffc08a' },
 }
 
 local window
@@ -216,7 +216,7 @@ local function renderPage()
     local last = math.min(#filtered, page * PAGE_SIZE)
     for i = first, last do
         local monster = filtered[i]
-        local row = g_ui.createWidget('RateRow', list)
+        local row = g_ui.createWidget(i % 2 == 0 and 'RateRowEven' or 'RateRow', list)
         row.rank:setText('#' .. i)
         if i <= 3 and panel.sortBox:getCurrentOption().data ~= 'name' then
             row.rank:setColor(MEDALS[i].text)
@@ -272,7 +272,7 @@ local function renderHot()
     if not window then
         return
     end
-    local hotPanel = window.ratesPanel.hotPanel
+    local hotPanel = window.ratesPanel.hotSection.hotPanel
     hotPanel:destroyChildren()
     local list = {}
     for _, monster in ipairs(rates.monsters) do
@@ -284,11 +284,9 @@ local function renderHot()
     for i = 1, math.min(4, #list) do
         local monster = list[i]
         local card = g_ui.createWidget('HotCard', hotPanel)
-        card:setWidth(math.max(180, math.floor((hotPanel:getWidth() - 24) / 4)))
+        card:setWidth(math.max(170, math.floor((hotPanel:getWidth() - 18) / 4)))
         card.medal:setText('#' .. i)
         card.medal:setColor((MEDALS[i] or MEDALS[3]).text)
-        card.medal:setBackgroundColor((MEDALS[i] or MEDALS[3]).bg)
-        card:setBorderColor(multColor(math.max(monster.xp, monster.loot)))
         card.creature:setOutfit(outfitOf(monster))
         card.name:setText(monster.name)
         card.xp:setText(tr('XP %s', multText(monster.xp)))
@@ -314,12 +312,11 @@ end
 local function fillColumn(column, category, entries, mine)
     column.list:destroyChildren()
     for i, entry in ipairs(entries or {}) do
-        local row = g_ui.createWidget('BoardRow', column.list)
+        local row = g_ui.createWidget(i % 2 == 0 and 'BoardRowEven' or 'BoardRow', column.list)
         row.position:setText(tostring(i))
         local medal = MEDALS[i]
         if medal then
             row.position:setColor(medal.text)
-            row.position:setBackgroundColor(medal.bg)
         end
         row.name:setText(entry.name)
         row.info:setText(tr('Level %d %s', entry.level or 0, entry.vocation or ''))
@@ -356,8 +353,8 @@ local function renderBoard()
     end
     panel.prize:setText(#prizeParts > 0 and tr('Prize per category  %s Breves Coins', table.concat(prizeParts, '  ')) or '')
 
-    panel.killsColumn.title:setText(tr('Most Monsters Killed - %s', PERIOD_LABELS[currentPeriod]))
-    panel.expColumn.title:setText(tr('Most Experience - %s', PERIOD_LABELS[currentPeriod]))
+    panel.killsColumn:setText(tr('Most Monsters Killed - %s', tr(PERIOD_LABELS[currentPeriod])))
+    panel.expColumn:setText(tr('Most Experience - %s', tr(PERIOD_LABELS[currentPeriod])))
     if not board then
         fillColumn(panel.killsColumn, 'kills', {}, nil)
         fillColumn(panel.expColumn, 'experience', {}, nil)
@@ -369,9 +366,9 @@ local function renderBoard()
     panel.history:destroyChildren()
     for _, entry in ipairs(board.recent or {}) do
         local line = g_ui.createWidget('HistoryLine', panel.history)
-        line:setText(string.format('%s  %s  -  %s  #%d most %s  (%s)  +%s TC', PERIOD_LABELS[entry.period] or '', entry.when or '',
-            entry.name or '?', entry.position or 1, entry.category == 'kills' and 'kills' or 'XP', valueText(entry.category, entry.value),
-            formatNumber(entry.coins)))
+        line:setText(tr('%s, %s: %s was #%d in %s with %s and won %s Breves Coins', tr(PERIOD_LABELS[entry.period] or ''), entry.when or '',
+            entry.name or '?', entry.position or 1, entry.category == 'kills' and tr('kills') or tr('experience'),
+            valueText(entry.category, entry.value), formatNumber(entry.coins)))
         if entry.period == 'month' then
             line:setColor('#ffb020')
         elseif entry.period == 'day' then
@@ -420,7 +417,7 @@ local function tick()
     local board = boards[currentPeriod]
     if board and board.endsAt then
         local left = board.endsAt - now
-        window.boardPanel.ends:setText(left > 0 and tr('%s leaderboard ends in %s', PERIOD_LABELS[currentPeriod], formatDuration(left)) or tr('Paying the winners...'))
+        window.boardPanel.ends:setText(left > 0 and tr('%s leaderboard ends in %s', tr(PERIOD_LABELS[currentPeriod]), formatDuration(left)) or tr('Paying the winners...'))
     end
     tickEvent = scheduleEvent(tick, 1000)
 end

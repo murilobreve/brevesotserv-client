@@ -11,17 +11,9 @@ RarityFrame < UIWidget
     virtual: true
     phantom: true
 
-MarketRow < UIWidget
+MarketRow < BrevesRow
   height: 42
-  focusable: true
-  background-color: alpha
   padding: 3
-
-  $hover !focus:
-    background-color: #ffffff10
-
-  $focus:
-    background-color: #ffffff24
 
   RarityFrame
     id: frame
@@ -58,6 +50,7 @@ MarketRow < UIWidget
     width: 126
     height: 14
     text-align: right
+    font: verdana-11px-monochrome
     color: #8a8a8a
     phantom: true
 
@@ -78,11 +71,15 @@ MarketRow < UIWidget
     anchors.right: seller.left
     margin-top: 4
     height: 14
+    font: verdana-11px-monochrome
     color: #9a9a9a
     phantom: true
 
-MarketTab < ButtonBox
-  size: 110 23
+MarketRowEven < MarketRow
+  background-color: #ffffff12
+
+MarketTab < BrevesTab
+  size: 110 20
   anchors.top: parent.top
 
 AffixLine < Label
@@ -90,11 +87,8 @@ AffixLine < Label
   color: #7fd35a
   text-align: left
 
-MarketList < TextList
-  padding: 1
+MarketList < BrevesList
   focusable: false
-  layout:
-    type: verticalBox
 
 MainWindow
   id: rarityMarketWindow
@@ -158,28 +152,29 @@ MainWindow
       id: searchEdit
       anchors.top: parent.top
       anchors.left: parent.left
-      size: 170 22
-      placeholder: Search by name...
+      anchors.right: parent.right
+      height: 22
+      !placeholder: tr('Search by name...')
       placeholder-color: #6e706f
       @onTextChange: modules.game_raritymarket.onSearchChanged()
 
     ComboBox
       id: categoryBox
-      anchors.top: parent.top
-      anchors.left: searchEdit.right
-      margin-left: 5
-      size: 102 22
+      anchors.top: searchEdit.bottom
+      anchors.left: parent.left
+      margin-top: 5
+      size: 155 22
 
     ComboBox
       id: rarityBox
-      anchors.top: parent.top
+      anchors.top: categoryBox.top
       anchors.left: categoryBox.right
       margin-left: 5
-      size: 102 22
+      size: 170 22
 
     ComboBox
       id: sortBox
-      anchors.top: parent.top
+      anchors.top: categoryBox.top
       anchors.left: rarityBox.right
       anchors.right: parent.right
       margin-left: 5
@@ -187,7 +182,7 @@ MainWindow
 
     MarketList
       id: offersList
-      anchors.top: searchEdit.bottom
+      anchors.top: categoryBox.bottom
       anchors.left: parent.left
       anchors.right: offersScroll.left
       anchors.bottom: prevPage.top
@@ -197,7 +192,7 @@ MainWindow
 
     VerticalScrollBar
       id: offersScroll
-      anchors.top: searchEdit.bottom
+      anchors.top: categoryBox.bottom
       anchors.bottom: prevPage.top
       margin-top: 6
       margin-bottom: 6
@@ -208,6 +203,7 @@ MainWindow
     Label
       id: offersEmpty
       anchors.centerIn: offersList
+      font: verdana-11px-monochrome
       color: #8a8a8a
       text-auto-resize: true
       visible: false
@@ -234,7 +230,8 @@ MainWindow
       anchors.right: nextPage.left
       anchors.verticalCenter: prevPage.verticalCenter
       text-align: center
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
 
   // ---------------------------------------------------------------- sell
   Panel
@@ -248,7 +245,8 @@ MainWindow
       anchors.left: parent.left
       anchors.right: parent.right
       height: 22
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
       !text: tr('Rarity items you are carrying (hands and backpack):')
 
     MarketList
@@ -272,6 +270,7 @@ MainWindow
     Label
       id: sellEmpty
       anchors.centerIn: sellList
+      font: verdana-11px-monochrome
       color: #8a8a8a
       text-auto-resize: true
       visible: false
@@ -289,7 +288,8 @@ MainWindow
       anchors.left: parent.left
       anchors.right: parent.right
       height: 18
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
       !text: tr('Your active listings')
 
     MarketList
@@ -311,6 +311,7 @@ MainWindow
     Label
       id: activeEmpty
       anchors.centerIn: activeList
+      font: verdana-11px-monochrome
       color: #8a8a8a
       text-auto-resize: true
       visible: false
@@ -323,7 +324,8 @@ MainWindow
       anchors.right: parent.right
       margin-top: 10
       height: 18
-      color: #b0b0b0
+      font: verdana-11px-monochrome
+      color: #bfbfbf
       !text: tr('Recently sold')
 
     MarketList
@@ -345,13 +347,14 @@ MainWindow
     Label
       id: soldEmpty
       anchors.centerIn: soldList
+      font: verdana-11px-monochrome
       color: #8a8a8a
       text-auto-resize: true
       visible: false
       !text: tr('Nothing sold yet.')
 
   // ---------------------------------------------------------------- details
-  FlatPanel
+  BrevesSection
     id: details
     anchors.top: topSep.bottom
     anchors.left: browsePanel.right
@@ -360,11 +363,13 @@ MainWindow
     margin-top: 8
     margin-bottom: 8
     margin-left: 10
-    padding: 10
+    padding: 24 10 10 10
+    !text: tr('Details')
 
     Label
       id: placeholder
       anchors.centerIn: parent
+      font: verdana-11px-monochrome
       color: #8a8a8a
       text-auto-resize: true
       !text: tr('Select an item to see its details.')
