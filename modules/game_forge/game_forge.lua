@@ -483,6 +483,7 @@ function forgeResultData(rawData)
 
 
     ForgeController.result.label = ""
+    ForgeController.result.title = "Fusion Result"
     if ForgeController.fusion.selected and ForgeController.fusion.selected.id ~= -1 then
         if ForgeController.fusion.isConvergence then
             ForgeController.result.title = "Convergence Fusion Result"
