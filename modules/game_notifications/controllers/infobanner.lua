@@ -74,15 +74,16 @@ local skinType = {
     mount = 3
 }
 
+-- the ids the server sends (CipbiaSkills_t), the same the Cyclopedia uses
 local SkillId = {
     Magic = 1,
-    Sword = 2,
-    Club = 3,
-    Axe = 4,
-    Fist = 5,
-    Distance = 6,
-    Shielding = 7,
-    Fishing = 8
+    Shielding = 6,
+    Distance = 7,
+    Sword = 8,
+    Club = 9,
+    Axe = 10,
+    Fist = 11,
+    Fishing = 13
 }
 
 local skillNames = {
@@ -217,6 +218,10 @@ notificationsController.widgets = {}
 function notificationsController:onClientEvent(eventCat, ...)
     if not modules.client_options.getOption("showInfoBanner") then
         g_logger.debug("The server has sent infobaner, but the checkbox in client_options is disabled..")
+        return
+    end
+    -- skill advances already show in the game window text; no banner for them
+    if eventCat == eventCategory.CLIENT_EVENT_TYPE_SKILL then
         return
     end
     local args = {...}

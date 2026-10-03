@@ -190,6 +190,14 @@ void LoginHttp::Logger(const auto& req, const auto& res) {
     g_logger.debug("=========");
 }
 
+// The login field takes an e-mail or an account name; the website's login.php
+// looks an account up by "email" or by "accountname", so send the one it is.
+static json loginBody(const std::string& login, const std::string& password) {
+    json body = { {"password", password}, {"stayloggedin", true}, {"type", "login"} };
+    body[login.find('@') != std::string::npos ? "email" : "accountname"] = login;
+    return body;
+}
+
 void LoginHttp::startHttpLogin(const std::string& host, const std::string& path,
                                const uint16_t port, const std::string& email,
                                const std::string& password) {
@@ -198,7 +206,7 @@ void LoginHttp::startHttpLogin(const std::string& host, const std::string& path,
     cli.set_logger(
         [this](const auto& req, const auto& res) { LoginHttp::Logger(req, res); });
 
-    const auto body = json{ {"email", email}, {"password", password}, {"stayloggedin", true}, {"type", "login"} };
+    const auto body = loginBody(email, password);
     const httplib::Headers headers = { {"User-Agent", "Mozilla/5.0"} };
 
     if (auto res = cli.Post(path, headers, body.dump(1), "application/json")) {
@@ -302,12 +310,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
             attr.requestHeaders = headers;
             attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS;
 
-            json body = {
-                {"email", email},
-                {"password", password},
-                {"stayloggedin", true},
-                {"type", "login"}
-            };
+            json body = loginBody(email, password);
 
             if (!token.empty()) {
                 body["token"] = token;
@@ -384,12 +387,7 @@ LoginHttp::HttpResponse LoginHttp::loginHttpsJson(const std::string& host,
     client.enable_server_certificate_verification(false);
     client.enable_server_hostname_verification(false);
 
-    json body = {
-        {"email", email},
-        {"password", password},
-        {"stayloggedin", true},
-        {"type", "login"}
-    };
+    json body = loginBody(email, password);
 
     if (!token.empty()) {
         body["token"] = token;
@@ -430,12 +428,7 @@ LoginHttp::HttpResponse LoginHttp::loginHttpJson(const std::string& host,
         [this](const auto& req, const auto& res) { LoginHttp::Logger(req, res); });
 
     const httplib::Headers headers = { {"User-Agent", "Mozilla/5.0"} };
-    json body = {
-        {"email", email},
-        {"password", password},
-        {"stayloggedin", true},
-        {"type", "login"}
-    };
+    json body = loginBody(email, password);
 
     if (!token.empty()) {
         body["token"] = token;
