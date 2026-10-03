@@ -12,6 +12,8 @@ local CLIENT_VERSION  = 1525             -- versao do client (15.25)
 local SERVER_IP       = "82.38.28.137"   -- IP ou dominio do site/login
 local SERVER_PORT     = 80               -- porta HTTP do login.php
 local SITE_URL        = ""               -- vazio = http://<ip>
+local SERVER_SCHEME   = "http"           -- "https" quando o ip do servidor.ini comeca com https://
+local PORT_FROM_INI   = false
 
 local function readServerIni()
     local ok, contents = pcall(g_resources.readFileContents, '/servidor.ini')
@@ -23,10 +25,14 @@ local function readServerIni()
         if key and value and value ~= '' and not line:match('^%s*[;#]') then
             key = key:lower()
             if key == 'ip' then
-                -- tolerate "http://1.2.3.4/login.php" pasted into the ip line
+                -- tolerate "http://1.2.3.4/login.php" pasted into the ip line;
+                -- "https://" is kept, so a site with a certificate gets an
+                -- encrypted login
+                SERVER_SCHEME = value:lower():match('^https://') and 'https' or 'http'
                 SERVER_IP = value:gsub('^%a+://', ''):gsub('/.*$', ''):gsub(':%d+$', '')
             elseif key == 'porta_login' and tonumber(value) then
                 SERVER_PORT = tonumber(value)
+                PORT_FROM_INI = true
             elseif key == 'site' then
                 SITE_URL = value
             end
@@ -35,17 +41,25 @@ local function readServerIni()
 end
 readServerIni()
 
+-- the shipped servidor.ini says "porta_login = 80": with https:// that would
+-- try TLS on the HTTP port and every login would fail
+if SERVER_SCHEME == 'https' and (not PORT_FROM_INI or SERVER_PORT == 80) then
+    SERVER_PORT = 443
+end
 if SITE_URL == '' then
-    SITE_URL = 'http://' .. SERVER_IP
+    SITE_URL = SERVER_SCHEME .. '://' .. SERVER_IP
 end
 -- the login port goes in Servers_init below, not in this URL
-local SERVER_HOST = ('http://%s/login.php'):format(SERVER_IP)
+local SERVER_HOST = ('%s://%s/login.php'):format(SERVER_SCHEME, SERVER_IP)
 -- =====================================================================
 
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
     website = SITE_URL, --./client_entergame "Create a free account"
-    --getCoinsUrl = "http://SEU-SITE/?subtopic=shop&step=terms", --./game_market
+    -- Breves Coins are earned in game, not bought: the store "Get" button and
+    -- the market "Get coins" button open the site page that explains how
+    getCoinsUrl = SITE_URL:gsub('/+$', '') .. '/index.php/leaderboard', --./game_store | ./game_market
+    premiumUrl = '', --./client_entergame "Get Premium" (none: the server gives free premium)
     clientAssets = {
         enabled = true,
         repository = "dudantas/tibia-client",
@@ -67,7 +81,8 @@ Servers_init = {
     [SERVER_HOST] = {
         port = SERVER_PORT,
         protocol = CLIENT_VERSION,
-        httpLogin = true,
+        -- false = HTTPS (LoginHttp::loginHttpsJson)
+        httpLogin = SERVER_SCHEME ~= 'https',
         useAuthenticator = false
     }
 }

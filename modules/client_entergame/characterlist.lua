@@ -563,8 +563,9 @@ function onPinCharacter(widget, isChecked)
 end
 
 function onPremiumButtonClick(widget)
-    if Services and Services.getCoinsUrl and Services.getCoinsUrl ~= '' then
-        g_platform.openUrl(Services.getCoinsUrl)
+    -- its own key: getCoinsUrl is the Breves Coins page, not a premium page
+    if Services and Services.premiumUrl and Services.premiumUrl ~= '' then
+        g_platform.openUrl(Services.premiumUrl)
         return
     end
     local info = debug.getinfo(1, "Slfn")
