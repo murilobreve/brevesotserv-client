@@ -67,13 +67,22 @@ end
 
 local spellCache = {}
 
--- 0 means "none": SpellInfo has a real spell with id 0
+-- 0 means "none": SpellInfo has a real spell with id 0. Two spells can share
+-- an id (Magic Patch "exura infir" and Mud Attack "exori infir tera" are both
+-- 174, on the server too), so the healing one wins: rules only hold spells
+-- from the lists below, never an attack
 function HealData.spell(id)
     if not id or id == 0 then
         return nil
     end
     if spellCache[id] == nil then
-        spellCache[id] = Spells.getSpellDataById(id) or false
+        local found
+        for _, spell in pairs(SpellInfo.Default) do
+            if spell.id == id and (not found or Spells.getPrimaryGroup(spell) == HEALING_GROUP) then
+                found = spell
+            end
+        end
+        spellCache[id] = found or false
     end
     return spellCache[id] or nil
 end

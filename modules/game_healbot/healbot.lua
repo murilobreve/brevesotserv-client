@@ -23,10 +23,23 @@ local function characterKey()
     return player and player:getName() or ''
 end
 
+-- never preselected: the regeneration buffs and the long-cooldown heals cast
+-- once a minute or less, and Charge is a 5 second haste for 100 mana. They
+-- stay in the lists, so a player can still pick them by hand
+local NOT_DEFAULT = {
+    ['utura'] = true,
+    ['utura gran'] = true,
+    ['exura gran ico'] = true,
+    ['exura gran sio'] = true,
+    ['utani tempo hur'] = true,
+}
+
 local function defaults(player)
     local vocation, level = HealData.vocation(player), player:getLevel()
     local function bestSpell(list)
-        local spell = HealData.best(list, level)
+        local spell = HealData.best(list, level, function(s)
+            return not NOT_DEFAULT[s.words]
+        end)
         return spell and spell.id or 0
     end
     local function bestPotion(stat)
