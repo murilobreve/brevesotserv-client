@@ -25,20 +25,22 @@
 
 #include <windows.h>
 
-#ifdef _MSC_VER
+#include <framework/core/graphicalapplication.h>
 
+#ifdef _MSC_VER
 #pragma warning (push)
 #pragma warning (disable:4091) // warning C4091: 'typedef ': ignored on left of '' when no variable is declared
-#include <imagehlp.h>
+#include <dbghelp.h>
 #pragma warning (pop)
-
 #else
-
-#include <imagehlp.h>
-
+#include <dbghelp.h>
 #endif
-
-#include <framework/core/graphicalapplication.h>
+#include <atomic>
+#include <csignal>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#include <sstream>
 
 const char* getExceptionName(const DWORD exceptionCode)
 {
@@ -65,78 +67,114 @@ const char* getExceptionName(const DWORD exceptionCode)
         case EXCEPTION_INVALID_DISPOSITION:      return "Invalid disposition";
         case EXCEPTION_GUARD_PAGE:               return "Guard page";
         case EXCEPTION_INVALID_HANDLE:           return "Invalid handle";
+        case 0xC0000409:                         return "Fail fast / stack buffer overrun";
+        case 0xC0000374:                         return "Heap corruption";
+        case 0xE0000001:                         return "abort()";
+        case 0xE0000002:                         return "Uncaught C++ exception (std::terminate)";
+        case 0xE0000003:                         return "Invalid parameter to a CRT function";
+        case 0xE0000004:                         return "Pure virtual function call";
     }
     return "Unknown exception";
 }
 
 void Stacktrace(LPEXCEPTION_POINTERS e, std::stringstream& ss)
 {
-    STACKFRAME sf;
-    HANDLE process, thread;
-    ULONG_PTR dwModBase, Disp;
-    BOOL more = FALSE;
-    DWORD machineType;
-    int count = 0;
-    char modname[MAX_PATH];
-    char symBuffer[sizeof(IMAGEHLP_SYMBOL) + 255];
-
-    auto* pSym = (PIMAGEHLP_SYMBOL)symBuffer;
-
+    STACKFRAME64 sf;
     ZeroMemory(&sf, sizeof(sf));
+    // StackWalk64 may change the context, so walk a copy
+    CONTEXT context = *e->ContextRecord;
 #ifdef _WIN64
-    sf.AddrPC.Offset = e->ContextRecord->Rip;
-    sf.AddrStack.Offset = e->ContextRecord->Rsp;
-    sf.AddrFrame.Offset = e->ContextRecord->Rbp;
-    machineType = IMAGE_FILE_MACHINE_AMD64;
+    sf.AddrPC.Offset = context.Rip;
+    sf.AddrStack.Offset = context.Rsp;
+    sf.AddrFrame.Offset = context.Rbp;
+    const DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
 #else
-    sf.AddrPC.Offset = e->ContextRecord->Eip;
-    sf.AddrStack.Offset = e->ContextRecord->Esp;
-    sf.AddrFrame.Offset = e->ContextRecord->Ebp;
-    machineType = IMAGE_FILE_MACHINE_I386;
+    sf.AddrPC.Offset = context.Eip;
+    sf.AddrStack.Offset = context.Esp;
+    sf.AddrFrame.Offset = context.Ebp;
+    const DWORD machineType = IMAGE_FILE_MACHINE_I386;
 #endif
-
     sf.AddrPC.Mode = AddrModeFlat;
     sf.AddrStack.Mode = AddrModeFlat;
     sf.AddrFrame.Mode = AddrModeFlat;
 
-    process = GetCurrentProcess();
-    thread = GetCurrentThread();
+    const HANDLE process = GetCurrentProcess();
+    const HANDLE thread = GetCurrentThread();
 
-    while (true) {
-        more = StackWalk(machineType, process, thread, &sf, e->ContextRecord, nullptr, SymFunctionTableAccess, SymGetModuleBase, nullptr);
-        if (!more || sf.AddrFrame.Offset == 0)
+    // the symbol buffer lives on the stack: never free it
+    char symBuffer[sizeof(IMAGEHLP_SYMBOL64) + 256];
+    auto* pSym = reinterpret_cast<PIMAGEHLP_SYMBOL64>(symBuffer);
+
+    for (int count = 0; count < 64; ++count) {
+        if (!StackWalk64(machineType, process, thread, &sf, &context, nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
+            break;
+        if (sf.AddrPC.Offset == 0)
             break;
 
-        dwModBase = SymGetModuleBase(process, sf.AddrPC.Offset);
-        if (dwModBase)
-            GetModuleFileName(reinterpret_cast<HINSTANCE>(dwModBase), modname, MAX_PATH);
-        else {
-#ifdef _MSC_VER
-            strcpy_s(modname, sizeof(modname), "Unknown");
-#else
-            strncpy(modname, "Unknown", sizeof(modname));
-            modname[sizeof(modname) - 1] = '\0';
-#endif
+        char modname[MAX_PATH] = "unknown";
+        const DWORD64 modBase = SymGetModuleBase64(process, sf.AddrPC.Offset);
+        if (modBase) {
+            char path[MAX_PATH];
+            if (GetModuleFileNameA(reinterpret_cast<HMODULE>(modBase), path, MAX_PATH)) {
+                const char* slash = strrchr(path, '\\');
+                strncpy_s(modname, slash ? slash + 1 : path, _TRUNCATE);
+            }
         }
 
-        Disp = 0;
-        pSym->SizeOfStruct = sizeof(symBuffer);
-        pSym->MaxNameLength = 254;
-
-        if (SymGetSymFromAddr(process, sf.AddrPC.Offset, &Disp, pSym))
-            ss << fmt::format("    {}: {}({}+%#0lx) [0x%016lX]\n", count, modname, pSym->Name, Disp, sf.AddrPC.Offset);
-        else
-            ss << fmt::format("    {}: {} [0x%016lX]\n", count, modname, sf.AddrPC.Offset);
-        ++count;
+        // module+offset can be resolved later with the release's .pdb
+        ss << fmt::format("    {}: {}+0x{:x}", count, modname, sf.AddrPC.Offset - modBase);
+        DWORD64 disp = 0;
+        pSym->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL64);
+        pSym->MaxNameLength = 255;
+        if (SymGetSymFromAddr64(process, sf.AddrPC.Offset, &disp, pSym))
+            ss << fmt::format(" {}+0x{:x}", pSym->Name, disp);
+        ss << "\n";
     }
-    GlobalFree(pSym);
+}
+
+namespace {
+    std::string crashDir()
+    {
+        char dir[MAX_PATH];
+        const DWORD len = GetCurrentDirectoryA(sizeof(dir), dir);
+        if (len == 0 || len >= sizeof(dir))
+            return ".";
+        return dir;
+    }
+
+    void writeMiniDump(const LPEXCEPTION_POINTERS e, const std::string& fileName)
+    {
+        const HANDLE file = CreateFileA(fileName.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return;
+        MINIDUMP_EXCEPTION_INFORMATION info;
+        info.ThreadId = GetCurrentThreadId();
+        info.ExceptionPointers = e;
+        info.ClientPointers = FALSE;
+        const auto type = static_cast<MINIDUMP_TYPE>(MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules);
+        MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file, type, &info, nullptr, nullptr);
+        CloseHandle(file);
+    }
+
+    std::atomic_bool crashing{ false };
 }
 
 LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
 {
-    SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+    // a second crash while reporting the first one: let Windows end it
+    if (crashing.exchange(true))
+        return EXCEPTION_CONTINUE_SEARCH;
 
-    std::string crashReport = fmt::format(
+    const std::string dir = crashDir();
+    const std::string stamp = stdext::date_time_string("%Y%m%d-%H%M%S");
+    const std::string dumpName = fmt::format("{}\\crash-{}.dmp", dir, stamp);
+    const std::string fileName = fmt::format("{}\\crashreport.log", dir);
+
+    // the dump first: it does not depend on anything the crash may have broken
+    writeMiniDump(e, dumpName);
+
+    std::stringstream oss;
+    oss << fmt::format(
         "== application crashed\n"
         "app name: {}\n"
         "app version: {}\n"
@@ -146,7 +184,8 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
         "build revision: {} ({})\n"
         "crash date: {}\n"
         "exception: {} (0x{:08X})\n"
-        "exception address: 0x{:08X}\n"
+        "exception address: 0x{:X}\n"
+        "dump: {}\n"
         "  backtrace:\n",
         g_app.getName(),
         g_app.getVersion(),
@@ -156,49 +195,77 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
         g_app.getBuildRevision(), g_app.getBuildCommit(),
         stdext::date_time_string(),
         getExceptionName(e->ExceptionRecord->ExceptionCode), e->ExceptionRecord->ExceptionCode,
-        reinterpret_cast<std::uintptr_t>(e->ExceptionRecord->ExceptionAddress)
+        reinterpret_cast<std::uintptr_t>(e->ExceptionRecord->ExceptionAddress),
+        dumpName
     );
 
-    std::stringstream oss;
-    oss << crashReport;
+    SymSetOptions(SymGetOptions() | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
+    SymInitialize(GetCurrentProcess(), nullptr, TRUE);
     Stacktrace(e, oss);
-    oss << "\n";
-
     SymCleanup(GetCurrentProcess());
-
-    g_logger.info(oss.str());
-
-    char dir[MAX_PATH];
-    DWORD len = GetCurrentDirectory(sizeof(dir), dir);
-    if (len == 0 || len >= sizeof(dir)) {
-        g_logger.error("Failed to get current directory for crash report");
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-
-    std::string fileName = fmt::format("{}\\crashreport.log", dir);
+    oss << "\n";
 
     std::ofstream fout(fileName, std::ios::out | std::ios::app);
     if (fout.is_open()) {
         fout << oss.str();
         fout.close();
-        g_logger.info("Crash report saved to file {}", fileName);
-    } else {
-        g_logger.error("Failed to save crash report to {}", fileName);
     }
+    g_logger.info(oss.str());
 
-    std::string msg = fmt::format(
-        "The application has crashed.\n\n"
-        "A crash report has been written to:\n{}",
-        fileName
+    const std::string msg = fmt::format(
+        "The game has crashed.\n\n"
+        "Please send these two files to the server staff:\n{}\n{}",
+        fileName, dumpName
     );
     MessageBoxA(nullptr, msg.c_str(), "Application crashed", MB_OK | MB_ICONERROR);
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
+namespace {
+    // Errors the C runtime reports without raising an SEH exception (abort,
+    // an uncaught C++ exception, a bad CRT argument, a pure virtual call)
+    // end the process silently in a release build: turn them into a report.
+    [[noreturn]] void reportAndExit(const DWORD code)
+    {
+        CONTEXT context;
+        RtlCaptureContext(&context);
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = code;
+#ifdef _WIN64
+        record.ExceptionAddress = reinterpret_cast<PVOID>(context.Rip);
+#else
+        record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
+#endif
+        EXCEPTION_POINTERS pointers{ &record, &context };
+        ExceptionHandler(&pointers);
+        TerminateProcess(GetCurrentProcess(), code);
+        for (;;) {}
+    }
+
+    // custom codes, shown as "Unknown exception" plus the code in the report
+    constexpr DWORD CODE_ABORT = 0xE0000001;
+    constexpr DWORD CODE_TERMINATE = 0xE0000002;
+    constexpr DWORD CODE_INVALID_PARAMETER = 0xE0000003;
+    constexpr DWORD CODE_PURE_CALL = 0xE0000004;
+}
+
 void installCrashHandler()
 {
     SetUnhandledExceptionFilter(ExceptionHandler);
+
+    // room for the handler to run after a stack overflow on this thread
+    ULONG guarantee = 64 * 1024;
+    SetThreadStackGuarantee(&guarantee);
+
+    signal(SIGABRT, [](int) { reportAndExit(CODE_ABORT); });
+    std::set_terminate([] { reportAndExit(CODE_TERMINATE); });
+    _set_invalid_parameter_handler([](const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t) { reportAndExit(CODE_INVALID_PARAMETER); });
+    _set_purecall_handler([] { reportAndExit(CODE_PURE_CALL); });
+#ifdef _MSC_VER
+    // abort() would otherwise show its own dialog or skip the handler
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
 }
 
 #endif

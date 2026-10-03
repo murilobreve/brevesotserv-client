@@ -683,6 +683,11 @@ if(MSVC)
     string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
   endif()
 
+  # Release builds carry debug info too: the .pdb is published next to the
+  # zip (not inside it) so crash dumps from players can be read
+  string(APPEND CMAKE_CXX_FLAGS_RELEASE " /Z7")
+  string(APPEND CMAKE_C_FLAGS_RELEASE " /Z7")
+
   if(BUILD_STATIC_LIBRARY)
     log_option_enabled("STATIC_LIBRARY")
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
@@ -1094,7 +1099,7 @@ if(WIN32)
   set_target_properties(${PROJECT_NAME}
           PROPERTIES
           LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
-          LINK_FLAGS_RELEASE "/SUBSYSTEM:windows /ENTRY:mainCRTStartup"
+          LINK_FLAGS_RELEASE "/SUBSYSTEM:windows /ENTRY:mainCRTStartup /DEBUG:FULL /OPT:REF /OPT:ICF"
           LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE"
           LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:windows /ENTRY:mainCRTStartup"
   )

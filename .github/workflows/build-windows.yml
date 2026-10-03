@@ -87,6 +87,9 @@ jobs:
           if (-not $exe) { throw "otclient.exe was not built" }
           ./tools/empacotar-cliente.ps1 -Exe $exe.FullName
           "${{ github.sha }}" | Out-File -Encoding ascii dist/client.commit
+          # debug symbols for reading crash dumps, kept out of the game zip
+          $pdb = Join-Path $exe.DirectoryName ($exe.BaseName + ".pdb")
+          if (Test-Path $pdb) { Compress-Archive -Path $pdb -DestinationPath dist/BaiakBreves-symbols.zip -Force }
 
       - uses: actions/upload-artifact@v4
         with:
@@ -102,4 +105,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             gh release create client-latest --title "Client (latest build)" --notes "Windows client built from main by the Build client workflow. Download BaiakBreves.zip, extract it and open Baiak Breves.exe."
           }
-          gh release upload client-latest dist/BaiakBreves.zip dist/client.commit --clobber
+          $files = @("dist/BaiakBreves.zip", "dist/client.commit")
+          if (Test-Path dist/BaiakBreves-symbols.zip) { $files += "dist/BaiakBreves-symbols.zip" }
+          gh release upload client-latest @files --clobber
