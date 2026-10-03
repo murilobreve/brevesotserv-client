@@ -109,6 +109,19 @@ end
 
 -- ---------------------------------------------------------------- tasks tab
 
+-- "Level recomendado: 120" plus the teleport rooms that lead to the hunt
+local function levelAndRooms(level, rooms)
+    local text = tr('Level recomendado: %d', level or 0)
+    if type(rooms) == 'table' and #rooms > 0 then
+        local names = rooms[1]
+        if #rooms > 1 then
+            names = table.concat(rooms, ', ', 1, #rooms - 1) .. tr(' ou ') .. rooms[#rooms]
+        end
+        text = text .. '\n' .. tr('Teleporte: %s', names)
+    end
+    return text
+end
+
 local function renderDaily()
     local card = window.tasksPanel.dailyCard
     local daily = state.daily
@@ -119,7 +132,7 @@ local function renderDaily()
     if not daily then
         card.creature:setVisible(false)
         card.name:setText(tr('Nenhuma task hoje ainda'))
-        card.info:setText(tr('Um monstro do seu level, sorteado para você.'))
+        card.info:setText(tr('Um monstro do seu level com hunt na sala de teleporte de uma cidade.'))
         card.badge:setText('')
         card.bar:setVisible(false)
         card.reward:setText(tr('Recompensa: +%s de experiência e %d+ Hunt Points.', formatNumber(state.dailyExp), state.dailyBase or 20))
@@ -134,7 +147,7 @@ local function renderDaily()
     card.creature:setVisible(true)
     card.creature:setOutfit(outfitOf(daily.outfit))
     card.name:setText(daily.monster)
-    card.info:setText(tr('Level recomendado: %d', daily.level or 0))
+    card.info:setText(levelAndRooms(daily.level, daily.rooms))
     card.badge:setText(daily.hot and tr('Em alta no Hunt Board: pontos dobrados!') or '')
     card.bar:setVisible(true)
 
@@ -197,7 +210,7 @@ local function renderTrailCard()
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
         card.name:setText(step.name or '?')
-        card.info:setText(tr('Level recomendado: %d', step.level or 0))
+        card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
         setBar(card.bar, trail.kills, step.need, '#3d7fd6')
         local points = step.points or 0
