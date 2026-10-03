@@ -233,13 +233,11 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
     g_asyncDispatcher->detach_task(
         [this, host, path, port, email, password, token, request_id, httpLogin] {
         if (cancelled.load()) return;
+        // no plain HTTP retry when HTTPS fails: it would send the password
+        // unencrypted to a server that was set up for HTTPS
         HttpResponse result = httpLogin
             ? this->loginHttpJson(host, path, port, email, password, token)
             : this->loginHttpsJson(host, path, port, email, password, token);
-        if (!httpLogin && (!result || result.status != Success)) {
-            if (cancelled.load()) return;
-            result = loginHttpJson(host, path, port, email, password, token);
-        }
 
         if (result && result.status == Success && parseJsonResponse(result.body)) {
             g_dispatcher.addEvent([this, request_id] {
@@ -340,10 +338,8 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
             return response;
         };
 
+        // no plain HTTP retry when HTTPS fails (see the native branch above)
         HttpResponse result = httpLogin ? doRequest(true) : doRequest(false);
-        if (!httpLogin && (!result || result.status != Success) && !cancelled.load()) {
-            result = doRequest(true);
-        }
 
         if (cancelled.load()) return;
         if (result && result.status == Success && !parseJsonResponse(result.body)) {
