@@ -42,6 +42,7 @@
 #include "framework/core/eventdispatcher.h"
 #include "framework/core/scheduledevent.h"
 #include "framework/graphics/drawpoolmanager.h"
+#include "framework/graphics/fontmanager.h"
 #include "framework/graphics/painter.h"
 #include "framework/graphics/shadermanager.h"
 #include "framework/ui/uiwidget.h"
@@ -332,12 +333,13 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         g_drawPool.addTexturedPos(m_skullTexture, backgroundRect.x() + 15.5 + 12, backgroundRect.y() + 5);
 
     if (!m_rateText.getText().empty()) {
-        // right of the health bar, after the skull and the status icons
-        float x = backgroundRect.x() + 15.5 + 12;
+        // small and faded, just right of the health bar (after the skull and
+        // the status icons when the creature has them)
+        float x = backgroundRect.right() + 3;
         if ((m_skull != Otc::SkullNone && m_skullTexture) || (g_game.getClientVersion() >= 1281 && m_icons && !m_icons->atlasGroups.empty()))
             x += 12;
         const auto size = m_rateText.getTextSize();
-        m_rateText.draw(Rect(x, backgroundRect.y() + 5, size), Color::white);
+        m_rateText.draw(Rect(x, backgroundRect.center().y - size.height() / 2, size), Color(220, 220, 220, 150));
     }
 
     if (m_shield != Otc::ShieldNone && m_shieldTexture && m_showShieldTexture)
@@ -1403,8 +1405,10 @@ void Creature::setCovered(bool covered) {
 
 void Creature::setRateText(const std::string& text)
 {
-    if (m_rateText.getText().empty())
-        m_rateText.setFont(g_gameConfig.getStaticTextFont());
+    if (m_rateText.getText().empty()) {
+        const auto& font = g_fonts.getFont("small-9px");
+        m_rateText.setFont(font ? font : g_gameConfig.getStaticTextFont());
+    }
     m_rateText.setText(text);
 }
 
