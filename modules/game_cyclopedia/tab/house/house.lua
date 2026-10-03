@@ -69,26 +69,22 @@ Cyclopedia.StateList = {
     { Title = "Rented" }
 }
 
+-- the towns of the Zorva map (Zorva_converted.otbm); the server finds a
+-- town's houses by this name
 Cyclopedia.CityList = {
     [0] = { Title = "Own Houses" },
-    { Title = "Ab'Dendriel" },
-    { Title = "Ankrahmun" },
+    { Title = "Astier" },
+    { Title = "Avante" },
+    { Title = "Basco" },
     { Title = "Carlin" },
-    { Title = "Darashia" },
-    { Title = "Edron" },
-    { Title = "Farmine" },
-    { Title = "Gray Beach" },
-    { Title = "Issavi" },
-    { Title = "Kazordoon" },
-    { Title = "Liberty Bay" },
-    { Title = "Moonfall" },
-    { Title = "Port Hope" },
-    { Title = "Rathleton" },
-    { Title = "Silvertides" },
-    { Title = "Svargrond" },
-    { Title = "Thais" },
-    { Title = "Venore" },
-    { Title = "Yalahar" }
+    { Title = "Cidade Real" },
+    { Title = "Melrose" },
+    { Title = "Namrah" },
+    { Title = "Paw Port" },
+    { Title = "Pinegarden" },
+    { Title = "Storvik" },
+    { Title = "Torvena" },
+    { Title = "Ventera" }
 }
 
 Cyclopedia.SortList = {
