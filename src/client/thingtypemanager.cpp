@@ -163,6 +163,71 @@ bool ThingTypeManager::loadOtml(std::string file)
     }
 }
 
+// Server-made assets (a custom mount, ...) that are not in the official client
+// files. The official assets are downloaded and replaced by client_assets, so
+// these live in their own folder with their own catalog-content.json, sprite
+// sheets (ids far above the official ones) and appearances.dat, and are merged
+// over the official ones: an id present in both is replaced.
+void ThingTypeManager::loadCustomAppearances()
+{
+#ifdef FRAMEWORK_PROTOBUF
+    static const std::string dir = "/things/custom/";
+    if (!g_resources.fileExists(dir + "catalog-content.json"))
+        return;
+
+    try {
+        const auto document = nlohmann::json::parse(g_resources.readFileContents(dir + "catalog-content.json"));
+        std::string appearancesFile;
+        int spritesCount = g_spriteAppearances.getSpritesCount();
+        for (const auto& obj : document) {
+            const auto& type = obj["type"];
+            if (type == "appearances") {
+                appearancesFile = obj["file"];
+            } else if (type == "sprite") {
+                // a full path: the sheet is not in the official assets folder
+                const auto& sheet = std::make_shared<SpriteSheet>(obj["firstspriteid"].get<int>(), obj["lastspriteid"].get<int>(), static_cast<SpriteLayout>(obj["spritetype"].get<int>()), dir + obj["file"].get<std::string>());
+                g_spriteAppearances.addSpriteSheet(sheet);
+                spritesCount = std::max<int>(spritesCount, sheet->lastId + 1);
+            }
+        }
+        g_spriteAppearances.setSpritesCount(spritesCount);
+        if (appearancesFile.empty())
+            return;
+
+        std::stringstream fin;
+        g_resources.readFileStream(dir + appearancesFile, fin);
+        auto appearancesLib = appearances::Appearances();
+        if (!appearancesLib.ParseFromIstream(&fin))
+            throw stdext::exception("Couldn't parse the custom appearances.");
+
+        int count = 0;
+        for (int category = ThingCategoryItem; category < ThingLastCategory; ++category) {
+            const google::protobuf::RepeatedPtrField<appearances::Appearance>* appearances = nullptr;
+            switch (category) {
+                case ThingCategoryItem: appearances = &appearancesLib.object(); break;
+                case ThingCategoryCreature: appearances = &appearancesLib.outfit(); break;
+                case ThingCategoryEffect: appearances = &appearancesLib.effect(); break;
+                case ThingCategoryMissile: appearances = &appearancesLib.missile(); break;
+                default: continue;
+            }
+            auto& things = m_thingTypes[category];
+            for (const auto& appearance : *appearances) {
+                const uint16_t id = appearance.id();
+                if (id >= things.size())
+                    things.resize(id + 1, m_nullThingType);
+                const auto& thing = std::make_shared<ThingType>();
+                thing->unserializeAppearance(id, static_cast<ThingCategory>(category), appearance);
+                things[id] = thing;
+                ++count;
+            }
+        }
+        g_logger.info("Loaded {} custom appearances from {}", count, dir);
+    } catch (const std::exception& e) {
+        g_logger.error("Failed to load the custom assets in {}: {}", dir, e.what());
+    }
+#endif
+}
+
 bool ThingTypeManager::loadAppearances(const std::string& file)
 {
 #ifdef FRAMEWORK_PROTOBUF
@@ -231,6 +296,7 @@ bool ThingTypeManager::loadAppearances(const std::string& file)
                     m_thingTypes[category][id] = type;
                 }
             }
+            loadCustomAppearances();
             m_datLoaded = true;
             m_proficiencyThingsCacheDirty = true;
         } else {
