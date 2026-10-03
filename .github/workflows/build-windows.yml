@@ -62,12 +62,14 @@ jobs:
           vcpkgGitURL: "https://github.com/microsoft/vcpkg.git"
           vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
 
+      # Release links the window subsystem (no console window behind the
+      # game); the preset's RelWithDebInfo links a console program
       - name: Build
         uses: lukka/run-cmake@v10
         with:
           configurePreset: windows-release
           buildPreset: windows-release
-          configurePresetAdditionalArgs: "['-DTOGGLE_BIN_FOLDER=ON', '-DOPTIONS_ENABLE_IPO=OFF', '-DOTCLIENT_BUILD_TESTS=OFF']"
+          configurePresetAdditionalArgs: "['-DCMAKE_BUILD_TYPE=Release', '-DTOGGLE_BIN_FOLDER=ON', '-DOPTIONS_ENABLE_IPO=OFF', '-DOTCLIENT_BUILD_TESTS=OFF']"
 
       # saved even when a later step fails, so the next build skips the
       # dependencies
