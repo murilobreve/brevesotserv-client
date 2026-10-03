@@ -276,6 +276,13 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
                 showDetails(kind, entry)
             end
         end
+        -- a list with one row focuses it as soon as it is created, before
+        -- onFocusChange is set: clicking it then changes no focus
+        row.onClick = function()
+            if not selected or selected.data ~= entry then
+                showDetails(kind, entry)
+            end
+        end
         if previousId and (entry.id or entry.token) == previousId then
             reselect = row
         end

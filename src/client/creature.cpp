@@ -331,6 +331,15 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
     if (m_skull != Otc::SkullNone && m_skullTexture)
         g_drawPool.addTexturedPos(m_skullTexture, backgroundRect.x() + 15.5 + 12, backgroundRect.y() + 5);
 
+    if (!m_rateText.getText().empty()) {
+        // right of the health bar, after the skull and the status icons
+        float x = backgroundRect.x() + 15.5 + 12;
+        if ((m_skull != Otc::SkullNone && m_skullTexture) || (g_game.getClientVersion() >= 1281 && m_icons && !m_icons->atlasGroups.empty()))
+            x += 12;
+        const auto size = m_rateText.getTextSize();
+        m_rateText.draw(Rect(x, backgroundRect.y() + 5, size), Color::white);
+    }
+
     if (m_shield != Otc::ShieldNone && m_shieldTexture && m_showShieldTexture)
         g_drawPool.addTexturedPos(m_shieldTexture, backgroundRect.x() + 15.5, backgroundRect.y() + 5);
 
@@ -1390,6 +1399,13 @@ void Creature::setCovered(bool covered) {
     g_dispatcher.addEvent([self = static_self_cast<Creature>(), covered, oldCovered] {
         self->callLuaField("onCovered", covered, oldCovered);
     });
+}
+
+void Creature::setRateText(const std::string& text)
+{
+    if (m_rateText.getText().empty())
+        m_rateText.setFont(g_gameConfig.getStaticTextFont());
+    m_rateText.setText(text);
 }
 
 void Creature::setText(const std::string& text, const Color& color)

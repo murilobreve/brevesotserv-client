@@ -464,6 +464,29 @@ local function showToast(title, text, iconSetup, seconds)
     toastEvent = scheduleEvent(hideToast, (seconds or 12) * 1000)
 end
 
+-- ---------------------------------------------------------------- rate next to the monsters
+
+-- experience rate (tenths) of each monster, by lower-case name
+local rateByName = {}
+
+local function labelCreature(creature)
+    if not creature or not creature.setRateText or not creature:isMonster() then
+        return
+    end
+    local tenths = rateByName[creature:getName():lower()]
+    creature:setRateText(tenths and string.format('%.1fx', tenths / 10) or '')
+end
+
+local function labelAll()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return
+    end
+    for _, creature in ipairs(g_map.getSpectators(player:getPosition(), true)) do
+        labelCreature(creature)
+    end
+end
+
 -- ---------------------------------------------------------------- server messages
 
 local handlers = {}
@@ -496,6 +519,11 @@ function handlers.rates(data)
         monsters[#monsters + 1] = monster
     end
     rates.monsters = monsters
+    rateByName = {}
+    for _, monster in ipairs(monsters) do
+        rateByName[monster.lname] = monster.xp
+    end
+    labelAll()
     if window then
         window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.', math.floor(rates.interval / 3600)))
         renderHot()
@@ -525,11 +553,8 @@ function handlers.ratesChanged(data)
         icon:setImageSource('/images/game/prey/prey_bigxp')
         icon:setImageClip('0 0 44 44')
     end, 15)
-    if window and window:isVisible() then
-        send({ action = 'rates' })
-    else
-        rates.monsters = {}
-    end
+    -- the labels on the monsters need the new rates too
+    send({ action = 'rates' })
 end
 
 function handlers.coins(data)
@@ -645,6 +670,12 @@ local function setupCombo(combo, options)
 end
 
 local function onGameStart()
+    connect(Creature, { onAppear = labelCreature })
+    scheduleEvent(function()
+        if g_game.isOnline() then
+            send({ action = 'rates' })
+        end
+    end, 1000)
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntBoardButton', tr('Hunt Board (rates & leaderboard)'),
             '/game_huntboard/images/button', toggle, false, 21)
@@ -652,6 +683,8 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    disconnect(Creature, { onAppear = labelCreature })
+    rateByName = {}
     hide()
     hideToast()
     rates.monsters = {}
@@ -676,6 +709,7 @@ end
 
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    disconnect(Creature, { onAppear = labelCreature })
     ProtocolGame.unregisterExtendedJSONOpcode(HUNT_OPCODE)
     hideToast()
     if tickEvent then
