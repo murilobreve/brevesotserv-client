@@ -339,7 +339,7 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         if ((m_skull != Otc::SkullNone && m_skullTexture) || (g_game.getClientVersion() >= 1281 && m_icons && !m_icons->atlasGroups.empty()))
             x += 12;
         const auto size = m_rateText.getTextSize();
-        m_rateText.draw(Rect(x, backgroundRect.center().y - size.height() / 2, size), Color(220, 220, 220, 150));
+        m_rateText.draw(Rect(x, backgroundRect.center().y - size.height() / 2, size), Color(235, 235, 235, 220));
     }
 
     if (m_shield != Otc::ShieldNone && m_shieldTexture && m_showShieldTexture)
@@ -1406,7 +1406,7 @@ void Creature::setCovered(bool covered) {
 void Creature::setRateText(const std::string& text)
 {
     if (m_rateText.getText().empty()) {
-        const auto& font = g_fonts.getFont("small-9px");
+        const auto& font = g_fonts.getFont("verdana-8px-rounded");
         m_rateText.setFont(font ? font : g_gameConfig.getStaticTextFont());
     }
     m_rateText.setText(text);
