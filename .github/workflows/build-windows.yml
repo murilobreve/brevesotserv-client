@@ -1,0 +1,103 @@
+---
+# Builds the Windows client on GitHub's machines and publishes the ready to
+# play zip (tools/empacotar-cliente.ps1) on the "client-latest" release.
+name: Build client (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - "vcpkg-configuration.json"
+      - "overlay-ports/**"
+      - "data/**"
+      - "modules/**"
+      - "mods/**"
+      - "init.lua"
+      - "config.ini"
+      - "servidor.ini"
+      - "tools/empacotar-cliente.ps1"
+      - ".github/workflows/build-windows.yml"
+
+concurrency:
+  group: build-windows
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 240
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}\\.vcpkg-cache,readwrite"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: vcpkg baseline
+        shell: pwsh
+        run: |
+          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          "VCPKG_GIT_COMMIT_ID=$($json.'builtin-baseline')" | Out-File -FilePath $env:GITHUB_ENV -Append
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Restore vcpkg packages
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-windows-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'overlay-ports/**', 'cmake/triplets/**') }}
+          restore-keys: vcpkg-windows-
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitURL: "https://github.com/microsoft/vcpkg.git"
+          vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
+
+      - name: Build
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: windows-release
+          buildPreset: windows-release
+          configurePresetAdditionalArgs: "['-DTOGGLE_BIN_FOLDER=ON', '-DOPTIONS_ENABLE_IPO=OFF', '-DOTCLIENT_BUILD_TESTS=OFF']"
+
+      # saved even when a later step fails, so the next build skips the
+      # dependencies
+      - name: Save vcpkg packages
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-windows-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'overlay-ports/**', 'cmake/triplets/**') }}
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path build/windows-release/bin -Filter "otclient*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "otclient.exe was not built" }
+          ./tools/empacotar-cliente.ps1 -Exe $exe.FullName
+          "${{ github.sha }}" | Out-File -Encoding ascii dist/client.commit
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BaiakBreves-windows
+          path: dist/BaiakBreves.zip
+
+      - name: Publish on the client-latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view client-latest *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create client-latest --title "Client (latest build)" --notes "Windows client built from main by the Build client workflow. Download BaiakBreves.zip, extract it and open Baiak Breves.exe."
+          }
+          gh release upload client-latest dist/BaiakBreves.zip dist/client.commit --clobber
