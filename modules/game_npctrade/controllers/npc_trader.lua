@@ -102,11 +102,14 @@ function controllerNpcTrader:setTradeMode(mode)
     local buyTab = self:findWidget("#tabBuy")
     local sellTab = self:findWidget("#tabSell")
 
+    -- both tabs stay clickable: the active one is marked by its colour
     if buyTab then
-        buyTab:setEnabled(mode ~= controllerNpcTrader.BUY)
+        buyTab:setOn(mode == controllerNpcTrader.BUY)
+        buyTab:setColor(mode == controllerNpcTrader.BUY and '#f2c94c' or '#8a8a8a')
     end
     if sellTab then
-        sellTab:setEnabled(mode ~= controllerNpcTrader.SELL)
+        sellTab:setOn(mode == controllerNpcTrader.SELL)
+        sellTab:setColor(mode == controllerNpcTrader.SELL and '#f2c94c' or '#8a8a8a')
     end
     local toggleButton = self:findWidget("#toggleButton")
     if toggleButton then
@@ -183,17 +186,17 @@ function controllerNpcTrader:onTradeListRendered()
             local item = self:getRowItem(child)
             if item then
                 local canTrade = self:canTradeItem(item, equippedCounts)
-                local color = canTrade and '#c0c0c0' or '#707070'
-                local infoBlock = child:getChildByIndex(2)
-                if infoBlock then
-                    local nameLabel = infoBlock:getChildById("nameLabel")
-                    local infoLabel = infoBlock:getChildById("infoLabel")
-                    if nameLabel then
-                        nameLabel:setColor(color)
-                    end
-                    if infoLabel then
-                        infoLabel:setColor(color)
-                    end
+                local nameLabel = child:recursiveGetChildById("nameLabel")
+                local infoLabel = child:recursiveGetChildById("infoLabel")
+                if nameLabel then
+                    nameLabel:setColor(canTrade and '#e8e8e8' or '#7a7a7a')
+                end
+                if infoLabel then
+                    infoLabel:setColor(canTrade and '#f2c94c' or '#86744a')
+                end
+                local sideLabel = child:recursiveGetChildById("sideLabel")
+                if sideLabel then
+                    sideLabel:setColor(self.tradeMode == controllerNpcTrader.SELL and '#9fd16b' or '#8c8c8c')
                 end
 
                 child.onMouseRelease = function(widget, mousePos, mouseButton)
@@ -436,6 +439,32 @@ function controllerNpcTrader:getSellQuantity(itemPtr, equippedCounts)
     return inventoryTotal
 end
 
+-- 52131501 -> 52,131,501
+function controllerNpcTrader:formatGold(value)
+    local text = tostring(math.floor(tonumber(value) or 0))
+    local formatted = text:reverse():gsub('(%d%d%d)', '%1,'):reverse()
+    return (formatted:gsub('^,', ''))
+end
+
+-- the server sends some names capitalised and some not: show them all alike
+function controllerNpcTrader:displayName(item)
+    local name = item and item.name or ''
+    return short_text(name:sub(1, 1):upper() .. name:sub(2), 22)
+end
+
+-- right side of a row: how many the player carries when selling, the
+-- weight when buying
+function controllerNpcTrader:sideText(item)
+    if not item then
+        return ''
+    end
+    if self.tradeMode == controllerNpcTrader.SELL then
+        local quantity = self:getSellQuantity(item.ptr)
+        return quantity > 0 and ('you have ' .. quantity) or ''
+    end
+    return item.weight .. ' oz'
+end
+
 function controllerNpcTrader:canTradeItem(item, equippedCounts)
     if self.tradeMode == controllerNpcTrader.BUY then
         local playerMoney = self:getPlayerMoney()
@@ -476,7 +505,7 @@ function controllerNpcTrader:refreshPlayerGoods(skipFilter)
     local money = self:getPlayerMoney()
     local display = self:findWidget("#playerMoneyDisplay")
     if display then
-        display:setText(tostring(money))
+        display:setText(self:formatGold(money))
     end
     if not skipFilter and self.tradeMode == controllerNpcTrader.SELL then
         self:filterTradeList(self.searchText or "")

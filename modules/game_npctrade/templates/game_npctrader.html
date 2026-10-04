@@ -35,7 +35,7 @@
        ============================================================================================== */
     .modal-message { width: 400px; height: 400px; display: block; --image-source: /images/ui/window_new; --image-border: 6; --image-border-top: 27; }
     .leftPanel {width: 395px; height: 400px; float: left;}
-    .rightPanel { width: 195px; height: 368px; margin-top: 27px; margin-left: 10px; float: left;}
+    .rightPanel { width: 240px; height: 366px; margin-top: 30px; margin-left: 12px; float: left;}
     .verticalSep { height: 340px; margin-top: 25px; float: left;  margin-left: -10px;}
     .dragHandle { height: 27px; background-color: alpha; }
     .closeButton { --image-clip: 28 0 14 14; margin-right: 10px; }
@@ -65,48 +65,45 @@
 
     /* ==============================================================================================
        TRADE INTERFACE (RIGHT PANEL)
+       Baiak Breves: stone panel, gold for money, white for names
        ============================================================================================== */
-    /* Trade Header */
-    .tradeHeader { padding: 5px; height: 50px; }
-    .currencySection { display: block; width: 100px; }
-    .tradeCurrencyName { margin-top: 2px; }
-    .tradeCurrencyIcon { margin-right: 5px; }
-    .tradeTabs { width: 50px; height: 34px; display: block; margin-left: auto; }
-    .sellLootButton { width: 62px; height: 20px; margin-top: 7px; margin-left: 8px; }
-    .tradeTab { width: 30px; height: -5px;  }
-    .bottonTrade { --image-clip: 28 0 14 14; margin-right: 40px; }
-    .bottonTrade:hover { --image-clip: 28 14 14 14; }
-    .bottonTrade:active { --image-clip: 28 28 14 14; }
-
-    /* Item List */
-    .tradeListScroll { height: 220; margin: 2 0; background-color: #404040; overflow: scroll; }
-    .tradeScrollBar { width: 15px; height: 215px; margin-right: 2px; background-color: #222222; }
-    .itemListContainer { width: 175px; height: 215px; }
-    .tradeListItem { height: 48; padding: 4 4; border: 1 transparent; margin-left: 2px; margin-top: 2px; }
-    .tradeListItem:nth-child(odd) { background-color: #383838; }
-    .tradeListItem:hover { background-color: #505050; }
-    .tradeListItem:focus { background-color: #585858; }
-    .tradeListItemSelected { background-color: #224466; border: 1 #336699; }
-    .itemInfoBlock { display: block; margin-left: 5px; flex-grow: 1; flex-shrink: 1; overflow: hidden; }
-    .tradeItemName { display: block; width: 100%; --text-offset: 0 2; }
-    .tradeItemInfo { display: block; width: 100%; }
+    /* Tabs */
+    .tradeTabs { height: 22px; width: 100%; }
+    .tradeTab { width: 50%; height: -3px; font: verdana-11px-rounded; color: #9a9a9a; }
+    .tradeTabActive { color: #f2c94c; }
 
     /* Search Bar */
-    .tradeSearchRow { height: 21px; margin: 2px 5px; }
-    .tradeSearchInput {  margin-left: -5px; --placeholder: "Type to search"; --placeholder-color: #6E706F; width: 100%;display: block; float: left;}
-    .tradeSearchClear { --image-source: /game_cyclopedia/images/button_clear_search; float: right; margin-right: 5px; }
+    .tradeSearchRow { height: 20px; margin-top: 5px; }
+    .tradeSearchInput { --placeholder: "Search"; --placeholder-color: #6E706F; width: 100%; display: block; float: left; font: verdana-11px-antialised; }
+    .tradeSearchClear { --image-source: /game_cyclopedia/images/button_clear_search; float: right; margin-right: 3px; margin-top: 2px; }
 
-    /* Trade Footer & Controls */
-    .tradeFooter { height: 60px; padding: 4px; position: relative; }
-    .tradeTopRow { padding-right: 56px; height: 14px; }
-    #amountScrollBar { width: 130px; }
-    .tradePreviewBox { background: #1a1a1a; position: absolute; right: 4px; top: 4px; }
-    .tradeBuyButton { width: 29px; height: -15px; position: absolute; right: 2px; bottom: 0px; }
-    .tradeRows { margin-top: 2px; padding-right: 56px; }
-    .tradeRow { height: 14px; }
-    .tradeFooterLabel { width: 55px; }
-    .tradeFooterValue { width: 70px; text-align: right; }
-    .tradeFooterAmountInput { width: 68px; height: 16px; text-align: right; padding-right: 2px; }
+    /* Item List */
+    .tradeListScroll { height: 196px; margin-top: 5px; background-color: #2b2b2b; overflow: scroll; }
+    .tradeListItem { height: 40px; padding: 3 4; border: 1 transparent; }
+    .tradeListItem:nth-child(odd) { background-color: #323232; }
+    .tradeListItem:hover { background-color: #3d3d3d; }
+    .tradeListItem:focus { background-color: #4a3d1c; border: 1 #a8842c; }
+    .tradeListItemSelected { background-color: #4a3d1c; border: 1 #a8842c; }
+    .itemIcon { width: 34px; height: 34px; flex-shrink: 0; min-width: 34px; }
+    .itemInfoBlock { display: block; margin-left: 6px; width: 166px; overflow: hidden; }
+    .tradeItemName { display: block; width: 100%; font: verdana-11px-antialised; color: #e8e8e8; margin-top: 2px; }
+    .tradeItemLine { width: 100%; height: 14px; margin-top: 3px; }
+    .tradeItemPrice { font: verdana-11px-antialised; color: #f2c94c; width: 78px; }
+    .tradeItemSide { font: verdana-11px-antialised; color: #8c8c8c; width: 86px; text-align: right; }
+
+    /* Footer */
+    .tradeFooter { margin-top: 6px; }
+    #amountScrollBar { width: 238px; }
+    .tradeRow { height: 16px; margin-top: 3px; }
+    .tradeFooterLabel { width: 80px; font: verdana-11px-antialised; color: #a8a8a8; float: left; }
+    .tradeFooterValue { width: 130px; float: right; text-align: right; font: verdana-11px-antialised; color: #e8e8e8; }
+    .tradeTotalValue { font: verdana-11px-rounded; color: #f2c94c; }
+    .tradeFooterAmountInput { width: 70px; height: 16px; float: right; text-align: right; padding-right: 3px; font: verdana-11px-antialised; }
+    .tradeCurrencyIcon { width: 16px; height: 16px; float: left; margin-right: 4px; }
+    .tradeCurrencyName { font: verdana-11px-antialised; color: #a8a8a8; float: left; }
+    .tradeButtons { height: 24px; margin-top: 8px; }
+    .tradeBuyButton { width: 96px; height: -3px; float: right; font: verdana-11px-rounded; color: #ffffff; }
+    .sellLootButton { width: 96px; height: -3px; float: left; font: verdana-11px-rounded; color: #f2c94c; }
 </style>
 
 
@@ -148,78 +145,62 @@
 
     <!-- Right Panel (Trade) -->
     <div class="rightPanel" *visible="self.isTradeOpen">
-        <!-- Header -->
-        <div class="tradeHeader flex">
-            <div class="currencySection">
-                <label class="fontText colorGrey" text="Currency:"></label>
-                <label class="tradeCurrencyName fontText colorWhite" text="Gold Coin"></label>
-            </div>
-            <UIItem class="tradeCurrencyIcon iconBox sunkenBorder" item-id="3031" item-count="100" always-show-count="false" />
-            <!-- Baiak Breves: sells the whole loot pouch in one go -->
-            <button id="sellLootButton" class="sellLootButton fontText" text="Sell loot"
-                *visible="self.tradeMode == self.SELL"
-                tooltip="Sells everything in your loot pouch that this NPC buys. Rarity items stay in the pouch."
-                onclick="self:confirmSellLoot()"></button>
-            <div class="tradeTabs">
-                <button id="tabBuy" class="tradeTab fontTitle" text="Buy" onclick="self:setTradeMode(self.BUY)"></button>
-                <button id="tabSell" class="tradeTab fontTitle" style="display:block;margin-top: 5px;" text="Sell" onclick="self:setTradeMode(self.SELL)"></button>
-            </div>
-        </div>
-
-        <!-- List Container -->
-        <div id="tradeListScroll" class="tradeListScroll borderGrey fullWidth sunkenBorder" layout="type: verticalBox">
-            <div *for="local item in self.tradeItems" *for-finished="self:onTradeListRendered()" class="tradeListItem flex fullWidth"
-                *trade-item="item"
-                *class-tradeListItemSelected="self.selectedItem == item">
-                <UIItem class="iconBox item" *item="item.ptr" />
-                <div class="itemInfoBlock">
-                    <label id="nameLabel" class="tradeItemName fontText" *text="short_text(item.name, 18)"></label>
-                    <label id="infoLabel" class="tradeItemInfo fontText" *text="short_text('Price ' .. item.price .. ', ' .. item.weight .. ' oz', 22)"></label>
-                </div>
-            </div>
+        <!-- Buy / Sell -->
+        <div class="tradeTabs flex">
+            <button id="tabBuy" class="tradeTab" text="Buy" *class-tradeTabActive="self.tradeMode == self.BUY" onclick="self:setTradeMode(self.BUY)"></button>
+            <button id="tabSell" class="tradeTab" text="Sell" *class-tradeTabActive="self.tradeMode == self.SELL" onclick="self:setTradeMode(self.SELL)"></button>
         </div>
 
         <!-- Search -->
-
         <div class="tradeSearchRow borderGrey bgDark">
-            <input class="tradeSearchInput fontText colorLightGrey" onchange="self:filterTradeList(event.value)"/>
+            <input class="tradeSearchInput colorLightGrey" onchange="self:filterTradeList(event.value)"/>
             <uibutton class="tradeSearchClear" onclick="self:clearSearch()"></uibutton>
         </div>
-        <!-- Footer -->
-        <div class="tradeFooter">
 
-            <!-- Scrollbar (top left) -->
-            <div class="tradeTopRow">
-                <HorizontalScrollBar id="amountScrollBar" minimum="1" maximum="100" step="1"
-                    onchange="self:onAmountScrollBarChange(event.value)" disabled />
-            </div>
-
-            <!-- Preview (right) -->
-            <UIItem class="tradePreviewBox item borderGrey iconBox sunkenBorder" *item="self.selectedItem and self.selectedItem.ptr or nil" />
-
-            <!-- Buy button (bottom right) -->
-            <button id="toggleButton" class="tradeBuyButton fontTitle" text="Buy" onclick="self:executeTrade()"></button>
-
-            <!-- Rows (left) -->
-            <div class="tradeRows">
-                <div class="tradeRow">
-                    <div class="tradeFooterLabel fontText colorGrey inlineBlock">Amount:</div>
-                    <input id="amountInput" class="tradeFooterAmountInput fontText colorWhite bgDark borderGrey inlineBlock" *text="self.amount" onchange="self:onAmountInputChange(event)" />
-                </div>
-
-                <div class="tradeRow">
-                    <div class="tradeFooterLabel fontText colorGrey inlineBlock">Price:</div>
-                    <label class="tradeFooterValue fontText colorWhite inlineBlock">{{self.totalPrice}}</label>
-                </div>
-
-                <div class="tradeRow">
-                    <div class="tradeFooterLabel fontText colorGrey inlineBlock">Gold:</div>
-                    <label id="playerMoneyDisplay" class="tradeFooterValue fontText colorWhite inlineBlock" text="0"></label>
+        <!-- List -->
+        <div id="tradeListScroll" class="tradeListScroll fullWidth sunkenBorder" layout="type: verticalBox">
+            <div *for="local item in self.tradeItems" *for-finished="self:onTradeListRendered()" class="tradeListItem flex fullWidth"
+                *trade-item="item"
+                *class-tradeListItemSelected="self.selectedItem == item">
+                <UIItem class="itemIcon item" *item="item.ptr" />
+                <div class="itemInfoBlock">
+                    <label id="nameLabel" class="tradeItemName" *text="self:displayName(item)"></label>
+                    <div class="tradeItemLine flex">
+                        <label id="infoLabel" class="tradeItemPrice" *text="self:formatGold(item.price) .. ' gp'"></label>
+                        <label id="sideLabel" class="tradeItemSide" *text="self:sideText(item)"></label>
+                    </div>
                 </div>
             </div>
-
         </div>
 
+        <!-- Footer -->
+        <div class="tradeFooter">
+            <HorizontalScrollBar id="amountScrollBar" minimum="1" maximum="100" step="1"
+                onchange="self:onAmountScrollBarChange(event.value)" disabled />
+
+            <div class="tradeRow">
+                <label class="tradeFooterLabel" text="Amount"></label>
+                <input id="amountInput" class="tradeFooterAmountInput colorWhite bgDark borderGrey" *text="self.amount" onchange="self:onAmountInputChange(event)" />
+            </div>
+            <div class="tradeRow">
+                <label class="tradeFooterLabel" text="Total"></label>
+                <label class="tradeFooterValue tradeTotalValue" *text="self:formatGold(self.totalPrice) .. ' gp'"></label>
+            </div>
+            <div class="tradeRow">
+                <UIItem class="tradeCurrencyIcon" item-id="3031" item-count="1" />
+                <label class="tradeCurrencyName" text="Gold Coin"></label>
+                <label id="playerMoneyDisplay" class="tradeFooterValue" text="0"></label>
+            </div>
+
+            <div class="tradeButtons">
+                <!-- Baiak Breves: sells the whole loot pouch in one go -->
+                <button id="sellLootButton" class="sellLootButton" text="Sell loot"
+                    *visible="self.tradeMode == self.SELL"
+                    tooltip="Sells everything in your loot pouch that this NPC buys. Rarity items stay in the pouch."
+                    onclick="self:confirmSellLoot()"></button>
+                <button id="toggleButton" class="tradeBuyButton" text="Buy" onclick="self:executeTrade()"></button>
+            </div>
+        </div>
     </div>
 
     <div id="dragHandle" class="dragHandle" placement="top-left" *width="self.widthConsole" focusable="false"></div>
