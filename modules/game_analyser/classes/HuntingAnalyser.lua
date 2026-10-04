@@ -579,6 +579,8 @@ function HuntingAnalyser:addLootedItems(item, name)
 			price = 100
 		elseif itemId == 3043 then  -- Crystal coin (worth 10,000 gold)
 			price = 10000
+		elseif itemId == 60000 then  -- Ruby coin (Baiak Breves, worth 1,000,000 gold)
+			price = 1000000
 		else
 			-- Get all pricing values for non-coin items
 			local npcBuyValue = 0

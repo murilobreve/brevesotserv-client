@@ -50,5 +50,13 @@
     "firstspriteid": 1000181,
     "lastspriteid": 1000216,
     "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-items-cfc4e297b4c1ed14.bmp.lzma",
+    "spritetype": 0,
+    "firstspriteid": 1000217,
+    "lastspriteid": 1000224,
+    "area": 32
   }
 ]

@@ -1,4 +1,5 @@
-"""Builds the custom asset pack with the server's own mounts (cars).
+"""Builds the custom asset pack with the server's own mounts (cars) and items
+(the ruby coin).
 
 Usage (needs numpy, scipy, pillow, protobuf):
   protoc --python_out=. -I ../../src/protobuf appearances.proto
@@ -8,7 +9,7 @@ Usage (needs numpy, scipy, pillow, protobuf):
 Writes data/things/custom/ for the client (catalog-content.json, the sprite
 sheets, appearances-custom.dat) and adds the outfits to the server's
 data/items/appearances.dat (the server only lets a mount use a registered
-looktype).
+looktype, and reads the items' flags from there).
 """
 import json, lzma, struct, sys, hashlib
 import numpy as np
@@ -46,6 +47,14 @@ MOUNTS = [
 ]
 FRAMES_PER_MOUNT = 8 * (1 + PHASES)
 
+# Stackable items: art/<folder>/0.png .. 7.png, 32x32, one per stack size
+# (1, 2, 3, 4, 5, 6-10, 11-25, 26+), drawn like the official coins.
+COINS = [
+    {'id': 60000, 'name': 'ruby coin', 'folder': 'ruby_coin',
+     # the crystal coin's boxes: the art is the crystal coin recoloured
+     'boxes': [(1, 11, 30, 15), (5, 7, 24, 16), (2, 7, 29, 19), (1, 6, 31, 22)]},
+]
+
 
 def car(mount, d, bob=0):
     art = np.array(Image.open(os.path.join(ART, mount['folder'], NAMES[d] + '.png')).convert('RGBA'))
@@ -72,11 +81,12 @@ def mount_frames(mount):
     return frames
 
 
-def sheet_bytes(chunk):
+def sheet_bytes(chunk, size=64):
     sheet = Image.new('RGBA', (384, 384), (255, 0, 255, 255))
+    cols = 384 // size
     for i, f in enumerate(chunk):
-        x, y = (i % 6) * 64, (i // 6) * 64
-        region = Image.new('RGBA', (64, 64), (255, 0, 255, 255))
+        x, y = (i % cols) * size, (i // cols) * size
+        region = Image.new('RGBA', (size, size), (255, 0, 255, 255))
         region.paste(f, (0, 0), f)
         sheet.paste(region, (x, y))
     # BMP (32 bit BGRA, bottom-up) wrapped in CIP's LZMA container
@@ -138,6 +148,25 @@ def make_outfit(mount, frames, first):
     return o
 
 
+def make_coin(coin, first):
+    o = A.Appearance()
+    o.id = coin['id']
+    o.name = coin['name']
+    fg = o.frame_group.add()
+    si = fg.sprite_info
+    si.pattern_width, si.pattern_height, si.pattern_depth, si.layers = 4, 2, 1, 1
+    si.sprite_id.extend(range(first, first + 8))
+    si.is_opaque = False
+    for x, y, w, h in coin['boxes']:
+        bb = si.bounding_box_per_direction.add()
+        bb.x, bb.y, bb.width, bb.height = x, y, w, h
+    o.flags.cumulative = True
+    o.flags.usable = True
+    o.flags.multiuse = True
+    o.flags.take = True
+    return o
+
+
 frames, outfits = [], []
 for mount in MOUNTS:
     mf = mount_frames(mount)
@@ -149,20 +178,35 @@ for first in range(0, len(frames), 36):
     cip = sheet_bytes(frames[first:first + 36])
     sheets.append(('sprites-mounts-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, FIRST_SPRITE + first, FIRST_SPRITE + min(first + 36, len(frames)) - 1))
 
+# the items go on 32x32 sheets after the mount sprites
+small, objects = [], []
+first_small = FIRST_SPRITE + len(frames)
+for coin in COINS:
+    objects.append(make_coin(coin, first_small + len(small)))
+    small += [Image.open(os.path.join(ART, coin['folder'], f'{i}.png')).convert('RGBA') for i in range(8)]
+small_sheets = []
+for first in range(0, len(small), 144):
+    cip = sheet_bytes(small[first:first + 144], 32)
+    small_sheets.append(('sprites-items-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, first_small + first, first_small + min(first + 144, len(small)) - 1))
+
 custom = A.Appearances()
 custom.outfit.extend(outfits)
+custom.object.extend(objects)
 dat_name = 'appearances-custom.dat'
 
 os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
     if f.startswith('sprites-'):
         os.remove(os.path.join(CLIENT_DIR, f))
-for name, cip, first, last in sheets:
+for name, cip, first, last in sheets + small_sheets:
     open(os.path.join(CLIENT_DIR, name), 'wb').write(cip)
 open(os.path.join(CLIENT_DIR, dat_name), 'wb').write(custom.SerializeToString())
 json.dump([{'type': 'appearances', 'file': dat_name}] + [
     {'type': 'sprite', 'file': name, 'spritetype': 3, 'firstspriteid': first, 'lastspriteid': last, 'area': 64}
     for name, cip, first, last in sheets
+] + [
+    {'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first, 'lastspriteid': last, 'area': 32}
+    for name, cip, first, last in small_sheets
 ], open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w'), indent=2)
 
 # server: register the looktypes (replace older copies of them)
@@ -173,5 +217,10 @@ keep = [x for x in srv.outfit if x.id not in ids]
 del srv.outfit[:]
 srv.outfit.extend(keep)
 srv.outfit.extend(outfits)
+ids = {c['id'] for c in COINS}
+keep = [x for x in srv.object if x.id not in ids]
+del srv.object[:]
+srv.object.extend(keep)
+srv.object.extend(objects)
 open(SERVER_DAT, 'wb').write(srv.SerializeToString())
-print('ok', len(outfits), 'mounts,', len(frames), 'sprites,', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets))
+print('ok', len(outfits), 'mounts,', len(objects), 'items,', len(frames) + len(small), 'sprites,', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets + small_sheets))

@@ -534,7 +534,7 @@ end
 -- Coins are "use with" items in the 15.x assets; using them only changes the
 -- stack (100 gold -> 1 platinum, 1 crystal -> 100 platinum...), so skip the
 -- target cursor and use them on themselves.
-local CHANGEABLE_COINS = { [3031] = true, [3035] = true, [3043] = true }
+local CHANGEABLE_COINS = { [3031] = true, [3035] = true, [3043] = true, [60000] = true } -- 60000: ruby coin
 
 function isChangeableCoin(thing)
     return thing and thing.isItem and thing:isItem() and CHANGEABLE_COINS[thing:getId()] == true
