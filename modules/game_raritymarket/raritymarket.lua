@@ -31,6 +31,7 @@ local CATEGORIES = {
     { key = 'weapon', label = 'Weapons' },
     { key = 'shield', label = 'Shields' },
     { key = 'armor', label = 'Armor' },
+    { key = 'jewelry', label = 'Rings & Amulets' },
     { key = 'other', label = 'Other' },
 }
 
