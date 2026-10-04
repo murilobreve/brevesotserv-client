@@ -177,11 +177,12 @@ function controllerNpcTrader:onTradeListRendered()
             end
             list.onScrollEventConnected = true
         end
+        local equippedCounts = self:getEquippedCounts()
         for i = 1, list:getChildCount() do
             local child = list:getChildByIndex(i)
             local item = self:getRowItem(child)
             if item then
-                local canTrade = self:canTradeItem(item)
+                local canTrade = self:canTradeItem(item, equippedCounts)
                 local color = canTrade and '#c0c0c0' or '#707070'
                 local infoBlock = child:getChildByIndex(2)
                 if infoBlock then
@@ -398,38 +399,50 @@ function controllerNpcTrader:stopEquippedImbuementsTracking()
     g_game.imbuementDurations(trackerOn)
 end
 
-function controllerNpcTrader:getSellQuantity(itemPtr)
+-- count of each id_subType in the equipment slots, read once per call site
+function controllerNpcTrader:getEquippedCounts()
+    local counts = {}
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return counts
+    end
+    for i = 1, 10 do
+        local item = player:getInventoryItem(i)
+        if item then
+            local key = item:getId() .. "_" .. item:getSubType()
+            counts[key] = (counts[key] or 0) + item:getCount()
+        end
+    end
+    return counts
+end
+
+function controllerNpcTrader:getSellQuantity(itemPtr, equippedCounts)
     if not itemPtr then
         return 0
     end
     local id = itemPtr:getId()
-    local subType = itemPtr:getSubType()
-    local key = id .. "_" .. subType
+    local key = id .. "_" .. itemPtr:getSubType()
     local inventoryTotal = self.playerItems and self.playerItems[key] or 0
+    if inventoryTotal == 0 then
+        return 0
+    end
 
     if self.ignoreEquipped then
-        local player = g_game.getLocalPlayer()
-        local equippedCount = 0
-        for i = 1, 10 do
-            local item = player:getInventoryItem(i)
-            if item and item:getId() == id and item:getSubType() == subType then
-                equippedCount = equippedCount + item:getCount()
-            end
-        end
-        equippedCount = math.max(0, equippedCount - self:getEquippedImbuedCount(id))
+        equippedCounts = equippedCounts or self:getEquippedCounts()
+        local equippedCount = math.max(0, (equippedCounts[key] or 0) - self:getEquippedImbuedCount(id))
         return math.max(0, inventoryTotal - equippedCount)
     end
 
     return inventoryTotal
 end
 
-function controllerNpcTrader:canTradeItem(item)
+function controllerNpcTrader:canTradeItem(item, equippedCounts)
     if self.tradeMode == controllerNpcTrader.BUY then
         local playerMoney = self:getPlayerMoney()
         -- Add capacity check if needed, but for now we'll just check price
         return playerMoney >= item.price
     else
-        return self:getSellQuantity(item.ptr) > 0
+        return self:getSellQuantity(item.ptr, equippedCounts) > 0
     end
 end
 
@@ -446,7 +459,17 @@ function controllerNpcTrader:onPlayerGoods(money, items)
         newPlayerItems[key] = (newPlayerItems[key] or 0) + count
     end
     self.playerItems = newPlayerItems
-    self:refreshPlayerGoods()
+    -- every sale sends a new goods list; a Sell All of many items sends one
+    -- per item, so rebuild the list once after they stop coming
+    if self.goodsRefreshEvent then
+        removeEvent(self.goodsRefreshEvent)
+    end
+    self.goodsRefreshEvent = scheduleEvent(function()
+        self.goodsRefreshEvent = nil
+        if self.isTradeOpen then
+            self:refreshPlayerGoods()
+        end
+    end, 100)
 end
 
 function controllerNpcTrader:refreshPlayerGoods(skipFilter)
@@ -503,9 +526,16 @@ function controllerNpcTrader:filterTradeList(searchText)
     end
 
     if self.tradeMode == controllerNpcTrader.SELL then
+        -- big shops (Gersao buys ~1700 items): work out each quantity once,
+        -- not twice per comparison of the sort
+        local equippedCounts = self:getEquippedCounts()
+        local quantity = {}
+        for _, item in ipairs(filteredItems) do
+            quantity[item] = self:getSellQuantity(item.ptr, equippedCounts)
+        end
         table.sort(filteredItems, function(a, b)
-            local qtyA = self:getSellQuantity(a.ptr)
-            local qtyB = self:getSellQuantity(b.ptr)
+            local qtyA = quantity[a]
+            local qtyB = quantity[b]
             if qtyA ~= qtyB then
                 return qtyA > qtyB
             end
@@ -569,10 +599,11 @@ function controllerNpcTrader:sellAll(delayed, exceptions)
         return
     end
 
+    local equippedCounts = self:getEquippedCounts()
     for _, entry in ipairs(self.sellItems or {}) do
         local id = entry.ptr:getId()
         if not table.find(exceptions, id) then
-            local sellQuantity = self:getSellQuantity(entry.ptr)
+            local sellQuantity = self:getSellQuantity(entry.ptr, equippedCounts)
             while sellQuantity > 0 do
                 local maxPossible = g_game.getFeature(GameDoubleShopSellAmount) and 10000 or 100
                 local maxAmount = math.min(sellQuantity, maxPossible)
