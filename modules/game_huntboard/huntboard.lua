@@ -41,7 +41,7 @@ local tickEvent
 
 local currentTab = 'rates'
 local currentPeriod = 'hour'
-local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 40, slot = -1 }
+local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 20, slot = -1 }
 local filtered = {}
 local page = 1
 local boards = {}
@@ -104,6 +104,18 @@ local function multColor(tenths)
     return '#ffb020'
 end
 
+-- loot only goes from 0.5x to 2x, so its colours step sooner
+local function lootColor(tenths)
+    if tenths < 10 then
+        return '#e0564a'
+    elseif tenths < 13 then
+        return '#c8c8c8'
+    elseif tenths < 17 then
+        return '#7fd35a'
+    end
+    return '#ffb020'
+end
+
 local function multText(tenths)
     return string.format('x%.1f', tenths / 10)
 end
@@ -128,10 +140,10 @@ local function outfitOf(monster)
     }
 end
 
-local function setBar(bar, tenths)
-    local maxTenths = math.max(rates.max or 40, 10)
+local function setBar(bar, tenths, maxTenths, colorOf)
+    maxTenths = math.max(maxTenths or rates.max or 100, 10)
     local inner = bar:getWidth() - 2
-    local color = multColor(tenths)
+    local color = (colorOf or multColor)(tenths)
     bar.fill:setWidth(math.max(1, math.floor(inner * math.min(tenths, maxTenths) / maxTenths)))
     bar.fill:setBackgroundColor(color .. 'b0')
     bar.mark:setMarginLeft(1 + math.floor(inner * 10 / maxTenths))
@@ -224,7 +236,7 @@ local function renderPage()
         end
         row.creature:setOutfit(outfitOf(monster))
         row.name:setText(monster.boss == 1 and (monster.name .. '  [boss]') or monster.name)
-        if monster.xp >= 60 or monster.loot >= 60 then
+        if monster.xp >= 60 or monster.loot >= 18 then
             row.name:setColor('#ffb020')
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
@@ -236,7 +248,7 @@ local function renderPage()
             row.info:setText(tr('Exp %s  -  HP %s  -  %d spawns', formatNumber(monster.exp), formatNumber(monster.hp), monster.spawns))
         end
         setBar(row.xpBar, monster.xp)
-        setBar(row.lootBar, monster.loot)
+        setBar(row.lootBar, monster.loot, rates.lootMax, lootColor)
         row.perKill:setText(formatShort(monster.perKill) .. ' xp')
         row.perKill:setColor(multColor(monster.xp))
         local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
@@ -302,7 +314,7 @@ local function renderHot()
         card.xp:setText(tr('XP %s', multText(monster.xp)))
         card.xp:setColor(multColor(monster.xp))
         card.loot:setText(tr('Loot %s', multText(monster.loot)))
-        card.loot:setColor(multColor(monster.loot))
+        card.loot:setColor(lootColor(monster.loot))
         card.onClick = function()
             window.ratesPanel.searchEdit:setText(monster.name)
         end
@@ -506,7 +518,8 @@ function handlers.rates(data)
     rates.slot = data.slot or -1
     rates.nextAt = data.nextAt or 0
     rates.interval = data.interval or 7200
-    rates.max = data.max or 40
+    rates.max = data.max or 100
+    rates.lootMax = data.lootMax or data.max or 20
     local fields = data.fields or {}
     local index = {}
     for i, name in ipairs(fields) do
@@ -526,10 +539,11 @@ function handlers.rates(data)
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
-        -- a monster rolled above 1x is tougher (server: huntboard strength)
+        -- a monster with an experience rate above 1x is tougher (server:
+        -- huntboard strength)
         monster.hpMult, monster.dmgMult = 1, 1
         local strength = data.strength
-        local rate = math.max(monster.xp, monster.loot) / 10
+        local rate = monster.xp / 10
         if strength and rate > 1 and (monster.boss ~= 1 or strength.bosses == 1) then
             monster.hpMult = 1 + (rate - 1) * (tonumber(strength.hp) or 0) / 100
             monster.dmgMult = 1 + (rate - 1) * (tonumber(strength.dmg) or 0) / 100
