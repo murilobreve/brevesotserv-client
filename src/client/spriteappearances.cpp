@@ -120,7 +120,8 @@ bool SpriteAppearances::loadSpriteSheet(const SpriteSheetPtr& sheet) const
         return false;
 
     try {
-        const auto& path = fmt::format("{}{}", g_spriteAppearances.getPath(), sheet->file);
+        // custom sheets (ThingTypeManager::loadCustomAppearances) carry a full path
+        const auto& path = sheet->file.starts_with('/') ? sheet->file : fmt::format("{}{}", g_spriteAppearances.getPath(), sheet->file);
         if (!g_resources.fileExists(path))
             return false;
 

@@ -1,3 +1,6 @@
 *
 !.gitignore
 !README.md
+# server-made assets (custom mount...), loaded over the official ones
+!custom/
+!custom/**

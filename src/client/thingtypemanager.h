@@ -38,6 +38,7 @@ public:
     bool loadDat(std::string file);
     bool loadOtml(std::string file);
     bool loadAppearances(const std::string& file);
+    void loadCustomAppearances();
     bool loadStaticData(const std::string& file);
     bool resolveProficienciesFile(const std::string& file);
 

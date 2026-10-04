@@ -1,0 +1,54 @@
+[
+  {
+    "type": "appearances",
+    "file": "appearances-custom.dat"
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-9038832c89232485.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000001,
+    "lastspriteid": 1000036,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-1c423efc28b763b7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000037,
+    "lastspriteid": 1000072,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-074a11084c757fb1.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000073,
+    "lastspriteid": 1000108,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-749856eca8feb076.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000109,
+    "lastspriteid": 1000144,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-804045242e5415b3.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000145,
+    "lastspriteid": 1000180,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-mounts-62ef73f49bdfec51.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000181,
+    "lastspriteid": 1000216,
+    "area": 64
+  }
+]

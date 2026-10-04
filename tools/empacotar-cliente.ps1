@@ -92,12 +92,14 @@ $things = Join-Path $Pasta "data\things"
 $sounds = Join-Path $Pasta "data\sounds"
 if ($SemAssets) {
     foreach ($d in @($things, $sounds)) {
-        Get-ChildItem -Path $d -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+        # data\things\custom holds the server's own assets (custom mount): keep it
+        Get-ChildItem -Path $d -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne "custom" } | Remove-Item -Recurse -Force
     }
     Info "assets fora do pacote (o client baixa na primeira vez)"
 } else {
     $temAssets = @(Get-ChildItem -Path $things -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -ne "README.md" }).Count -gt 0
+        Where-Object { $_.Name -ne "README.md" -and $_.FullName -notlike "*\things\custom\*" }).Count -gt 0
     if ($temAssets) {
         Info "assets incluidos (data\things)"
     } else {
