@@ -56,6 +56,7 @@ Module
     - game_huntboard
     - game_healbot
     - game_hunttasks
+    - game_grimorio
     - game_forge
     - game_inspect
     - game_taskboard

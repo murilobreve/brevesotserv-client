@@ -1,0 +1,8 @@
+Module
+  name: game_grimorio
+  description: Grimorio - spend the points earned after level 250 changing how your spells work
+  author: Baiak Breves
+  sandboxed: true
+  scripts: [ grimorio ]
+  @onLoad: init()
+  @onUnload: terminate()
