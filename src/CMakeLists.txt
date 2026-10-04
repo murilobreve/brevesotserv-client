@@ -1102,13 +1102,15 @@ endif()
 
 # *****************************************************************************
 # Enable otclient console only for debug build
+# (windows-release builds RelWithDebInfo: players get no console window, the
+# .pdb still comes out for reading crash dumps)
 # *****************************************************************************
 if(WIN32)
   set_target_properties(${PROJECT_NAME}
           PROPERTIES
           LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
           LINK_FLAGS_RELEASE "/SUBSYSTEM:windows /ENTRY:mainCRTStartup /DEBUG:FULL /OPT:REF /OPT:ICF"
-          LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE"
+          LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:windows /ENTRY:mainCRTStartup /DEBUG:FULL"
           LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:windows /ENTRY:mainCRTStartup"
   )
 endif(WIN32)
