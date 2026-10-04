@@ -307,6 +307,16 @@ MainWindow
     !text: tr('Leaderboard')
     @onClick: modules.game_huntboard.selectTab('board')
 
+  // section name when Hunt Rates and Leaderboard open as separate windows
+  Label
+    id: sectionIntro
+    anchors.left: parent.left
+    anchors.verticalCenter: ratesTab.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #dfdfdf
+    visible: false
+
   // online reward progress (top right)
   UIWidget
     id: onlineBar

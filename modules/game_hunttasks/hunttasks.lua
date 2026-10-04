@@ -541,6 +541,9 @@ end
 -- ---------------------------------------------------------------- lifecycle
 
 local function onGameStart()
+    if not toolbarButton and modules.game_brevespanel then
+        toolbarButton = modules.game_brevespanel.addFeature('tasks', toggle)
+    end
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntTasksButton', tr('Tasks do Caçador (task diária, trilha e loja)'),
             '/game_hunttasks/images/button', toggle, false, 22)

@@ -33,7 +33,8 @@ local MEDALS = {
 }
 
 local window
-local toolbarButton
+local toolbarButton -- old single button, when game_brevespanel is missing
+local sectionButtons = {} -- rates / board rows in the Baiak Breves panel
 local toast
 local toastEvent
 local tickEvent
@@ -456,8 +457,8 @@ local function showToast(title, text, iconSetup, seconds)
     end
     toast.open.onClick = function()
         hideToast()
-        if not window:isVisible() then
-            toggle()
+        if not window:isVisible() or currentTab ~= 'rates' then
+            openSection('rates')
         end
     end
     toast.onClick = hideToast
@@ -525,7 +526,7 @@ function handlers.rates(data)
     end
     labelAll()
     if window then
-        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.', math.floor(rates.interval / 3600)))
+        updateFooter()
         renderHot()
         applyFilters()
     end
@@ -602,12 +603,50 @@ function changePage(delta)
     renderPage()
 end
 
+-- with the Baiak Breves panel, Hunt Rates and Leaderboard open as two windows
+-- (the same window showing one section, without the tabs)
+local SECTIONS = {
+    rates = { title = 'Hunt Rates', intro = 'XP and loot rate of every monster' },
+    board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
+}
+
+function updateFooter()
+    if not window then
+        return
+    end
+    local hours = math.floor(rates.interval / 3600)
+    if not next(sectionButtons) then
+        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.', hours))
+    elseif currentTab == 'rates' then
+        window.footer:setText(tr('Rates re-roll every %d hours for every monster.', hours))
+    else
+        window.footer:setText(tr('Leaderboard winners are paid in Breves Coins when the period ends.'))
+    end
+end
+
+local function updateSectionButtons()
+    local visible = window and window:isVisible()
+    for tab, button in pairs(sectionButtons) do
+        button:setOn(visible and currentTab == tab)
+    end
+end
+
 function selectTab(tab)
     currentTab = tab
     window.ratesTab:setChecked(tab == 'rates')
     window.boardTab:setChecked(tab == 'board')
     window.ratesPanel:setVisible(tab == 'rates')
     window.boardPanel:setVisible(tab == 'board')
+    local split = next(sectionButtons) ~= nil
+    window.ratesTab:setVisible(not split)
+    window.boardTab:setVisible(not split)
+    window.sectionIntro:setVisible(split)
+    if split then
+        window:setText(tr(SECTIONS[tab].title))
+        window.sectionIntro:setText(tr(SECTIONS[tab].intro))
+    end
+    updateFooter()
+    updateSectionButtons()
     if tab == 'board' then
         renderBoard()
         send({ action = 'board', period = currentPeriod })
@@ -630,6 +669,7 @@ function show()
     if toolbarButton then
         toolbarButton:setOn(true)
     end
+    updateSectionButtons()
     startTick()
 end
 
@@ -641,6 +681,7 @@ function hide()
     if toolbarButton then
         toolbarButton:setOn(false)
     end
+    updateSectionButtons()
 end
 
 function toggle()
@@ -654,6 +695,33 @@ function toggle()
     show()
     selectTab(currentTab)
     send({ action = 'open', period = currentPeriod })
+end
+
+-- open the window on one section, or close it when that section is showing
+function openSection(tab)
+    if not window then
+        return
+    end
+    if window:isVisible() then
+        if currentTab == tab then
+            hide()
+        else
+            selectTab(tab)
+            window:raise()
+            window:focus()
+        end
+        return
+    end
+    currentTab = tab
+    toggle()
+end
+
+function toggleRates()
+    openSection('rates')
+end
+
+function toggleBoard()
+    openSection('board')
 end
 
 -- ---------------------------------------------------------------- lifecycle
@@ -676,7 +744,11 @@ local function onGameStart()
             send({ action = 'rates' })
         end
     end, 1000)
-    if not toolbarButton and modules.game_mainpanel then
+    if not next(sectionButtons) and modules.game_brevespanel then
+        sectionButtons.rates = modules.game_brevespanel.addFeature('rates', toggleRates)
+        sectionButtons.board = modules.game_brevespanel.addFeature('board', toggleBoard)
+    end
+    if not next(sectionButtons) and not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntBoardButton', tr('Hunt Board (rates & leaderboard)'),
             '/game_huntboard/images/button', toggle, false, 21)
     end
@@ -724,6 +796,10 @@ function terminate()
         toolbarButton:destroy()
         toolbarButton = nil
     end
+    for _, button in pairs(sectionButtons) do
+        button:destroy()
+    end
+    sectionButtons = {}
     if window then
         window:destroy()
         window = nil

@@ -1,0 +1,8 @@
+Module
+  name: game_brevespanel
+  description: Baiak Breves panel - one labelled button per server feature, NEW badges and the news window
+  author: Baiak Breves
+  sandboxed: true
+  scripts: [ brevespanel ]
+  @onLoad: init()
+  @onUnload: terminate()

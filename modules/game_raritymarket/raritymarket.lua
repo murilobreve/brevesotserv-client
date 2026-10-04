@@ -537,6 +537,9 @@ function toggle()
 end
 
 local function onGameStart()
+    if not marketButton and modules.game_brevespanel then
+        marketButton = modules.game_brevespanel.addFeature('rarity', toggle)
+    end
     if not marketButton and modules.game_mainpanel then
         marketButton = modules.game_mainpanel.addToggleButton('rarityMarketButton', tr('Rarity Market'),
             '/game_raritymarket/images/button', toggle, false, 20)

@@ -51,6 +51,7 @@ Module
     - game_cyclopedia
     - game_creatureinformation
     - game_rewardwall
+    - game_brevespanel
     - game_raritymarket
     - game_huntboard
     - game_healbot

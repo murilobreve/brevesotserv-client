@@ -1,0 +1,145 @@
+// one row per server feature, under the store and control buttons
+BrevesFeatureButton < UIButton
+  height: 20
+  image-source: /images/ui/button-grey-up
+  image-border: 5
+  font: verdana-11px-rounded
+  color: #dfdfdf
+  text-align: left
+  text-offset: 25 0
+  $hover !on:
+    color: #ffffff
+  $pressed:
+    image-source: /images/ui/button-grey-down
+  $on:
+    image-source: /images/ui/button-grey-down
+    color: #ffd27a
+    text-offset: 26 1
+
+  UIWidget
+    id: icon
+    size: 16 16
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 5
+    phantom: true
+
+  // "NEW" until the player opens it once, or a state such as ON / OFF
+  Label
+    id: badge
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 5
+    height: 12
+    text-auto-resize: true
+    text-align: center
+    padding: 0 3 0 3
+    font: verdana-9px-bold
+    phantom: true
+    visible: false
+
+BrevesPanel < PhantomMiniWindow
+  id: brevespanel
+  height: 120
+  &panelHeight: 120
+
+  UIWidget
+    id: list
+    anchors.fill: parent
+    margin: 6 8 4 8
+    phantom: true
+    layout:
+      type: verticalBox
+      spacing: 2
+
+// ---------------------------------------------------------------- news window
+
+BrevesNewsRow < UIWidget
+  height: 62
+
+  UIWidget
+    id: icon
+    size: 32 32
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-top: 4
+    phantom: true
+
+  Label
+    id: name
+    anchors.left: icon.right
+    anchors.top: parent.top
+    margin-left: 10
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #ffd27a
+
+  Label
+    id: text
+    anchors.left: name.left
+    anchors.right: open.left
+    anchors.top: name.bottom
+    margin-top: 3
+    margin-right: 10
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #bfbfbf
+
+  Button
+    id: open
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-top: 8
+    size: 60 22
+    !text: tr('Open')
+
+BrevesNewsWindow < MainWindow
+  id: brevesNewsWindow
+  !text: tr('New on Baiak Breves')
+  size: 470 440
+  @onEscape: modules.game_brevespanel.hideNews()
+
+  Label
+    id: intro
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #dfdfdf
+    !text: tr('The server has new systems. They are all in the right panel, under the Store button, and each one says NEW until you open it.')
+
+  HorizontalSeparator
+    id: topSep
+    anchors.top: intro.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  UIWidget
+    id: rows
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-top: 8
+    layout:
+      type: verticalBox
+      spacing: 4
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Close')
+    @onClick: modules.game_brevespanel.hideNews()

@@ -387,6 +387,10 @@ local function updateButton()
         toolbarButton:setOn(HealEngine.isRunning())
         toolbarButton:setTooltip(HealEngine.isRunning() and tr('Heal Bot (on)') or tr('Heal Bot (off)'))
     end
+    if modules.game_brevespanel then
+        modules.game_brevespanel.setFeatureState('healbot', HealEngine.isRunning() and 'ON' or 'OFF',
+            HealEngine.isRunning() and '#7fd35a' or '#909090')
+    end
 end
 
 local function onAction(message)
@@ -433,6 +437,9 @@ local function onGameStart()
     HealEngine.reset()
     setRunning(false)
     window.status:setText('')
+    if not toolbarButton and modules.game_brevespanel then
+        toolbarButton = modules.game_brevespanel.addFeature('healbot', toggle)
+    end
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('healBotButton', tr('Heal Bot (off)'),
             '/game_healbot/images/button', toggle, false, 22)
