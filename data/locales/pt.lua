@@ -9,8 +9,7 @@ locale = {
 
   translation = {
     ["New on Baiak Breves"] = "Novidades no Baiak Breves",
-    ["The server has new systems. They are all in the right panel, under the Store button, and each one says NEW until you open it."] = "O servidor ganhou sistemas novos. Todos ficam no painel da direita, abaixo do botão da Store, e cada um mostra NOVO até você abrir.",
-    ["NEW"] = "NOVO",
+    ["The server has new systems. They are all in the right panel, under the Store button."] = "O servidor ganhou sistemas novos. Todos ficam no painel da direita, abaixo do botão da Store.",
     ["Hunt Tasks"] = "Hunt Tasks",
     ["Hunt Rates"] = "Hunt Rates",
     ["A daily task and the Hunter's Trail, with 70 steps. The points buy items in the task shop, such as the Bag of Mythical."] = "Task diária e a Trilha do Caçador, com 70 etapas. Os pontos compram itens na loja de tasks, como a Bag of Mythical.",

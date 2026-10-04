@@ -24,7 +24,7 @@ BrevesFeatureButton < UIButton
     margin-left: 5
     phantom: true
 
-  // "NEW" until the player opens it once, or a state such as ON / OFF
+  // a state such as ON / OFF
   Label
     id: badge
     anchors.right: parent.right
@@ -109,7 +109,7 @@ BrevesNewsWindow < MainWindow
     text-auto-resize: true
     font: verdana-11px-monochrome
     color: #dfdfdf
-    !text: tr('The server has new systems. They are all in the right panel, under the Store button, and each one says NEW until you open it.')
+    !text: tr('The server has new systems. They are all in the right panel, under the Store button.')
 
   HorizontalSeparator
     id: topSep

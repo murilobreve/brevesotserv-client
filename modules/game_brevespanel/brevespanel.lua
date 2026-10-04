@@ -1,8 +1,7 @@
 -- Baiak Breves panel: the server's own systems (tasks, hunt rates, leaderboard,
 -- rarity market, heal bot) as labelled rows in the right panel, instead of
--- 20px icons lost among the client's buttons. Each row says NEW until the
--- player opens it once, and the news window lists them on the first login
--- after an update.
+-- 20px icons lost among the client's buttons. The news window lists them on
+-- the first login after an update.
 --
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
@@ -27,7 +26,6 @@ local panel, newsWindow
 local buttons = {}
 local callbacks = {}
 local states = {}
-local pulseEvent
 
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
@@ -41,10 +39,6 @@ local function iconPath(feature)
     return '/game_brevespanel/images/' .. feature.icon
 end
 
-local function isSeen(id)
-    return g_settings.getBoolean('breves_seen_' .. id)
-end
-
 local function refreshBadge(id)
     local button = buttons[id]
     if not button then
@@ -52,46 +46,13 @@ local function refreshBadge(id)
     end
     local badge = button.badge
     local state = states[id]
-    if not isSeen(id) then
-        badge:setText(tr('NEW'))
-        badge:setColor('#1a1200')
-        badge:setBackgroundColor('#f2b632')
-        badge:show()
-    elseif state then
+    if state then
         badge:setText(state.text)
         badge:setColor(state.color)
         badge:setBackgroundColor('#00000080')
         badge:show()
     else
         badge:hide()
-    end
-end
-
--- the NEW badges blink between two golds until every row was opened once
-local function pulse(bright)
-    pulseEvent = nil
-    local any = false
-    for id, button in pairs(buttons) do
-        if not isSeen(id) then
-            any = true
-            button.badge:setBackgroundColor(bright and '#ffd76a' or '#f2b632')
-        end
-    end
-    if any then
-        pulseEvent = scheduleEvent(function() pulse(not bright) end, 700)
-    end
-end
-
-local function startPulse()
-    if not pulseEvent then
-        pulse(true)
-    end
-end
-
-local function markSeen(id)
-    if not isSeen(id) then
-        g_settings.set('breves_seen_' .. id, true)
-        refreshBadge(id)
     end
 end
 
@@ -139,7 +100,6 @@ local function sortRows()
 end
 
 function open(id)
-    markSeen(id)
     if callbacks[id] then
         callbacks[id]()
     end
@@ -173,14 +133,11 @@ function addFeature(id, callback)
     button:setTooltip(tr(feature.label))
     sortRows()
     refreshBadge(id)
-    if not isSeen(id) then
-        startPulse()
-    end
     resize()
     return button
 end
 
--- a short state on the right of a row once it is no longer NEW, e.g. ON / OFF
+-- a short state on the right of a row, e.g. ON / OFF
 function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
     refreshBadge(id)
@@ -218,6 +175,8 @@ local function onGameStart()
     resize()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
+        -- written now: a client that crashes never saves its settings on exit
+        g_settings.save()
         -- after the feature modules added their rows
         scheduleEvent(showNews, 1500)
     end
@@ -240,10 +199,6 @@ end
 
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
-    if pulseEvent then
-        removeEvent(pulseEvent)
-        pulseEvent = nil
-    end
     hideNews()
     if panel then
         panel:destroy()
