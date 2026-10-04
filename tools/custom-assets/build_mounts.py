@@ -30,11 +30,13 @@ ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art')
 # Tibia's angle. It goes in two layers: y pattern 0 is the whole car, under
 # the rider; y pattern 1 is the part from `cut` down (doors, hood, rear), which
 # the client draws over the rider so he sits in the car. `offset` moves the
-# art so the seat is under the rider. Outfit ids are far above the official.
+# art so the seat is under the rider; a cut of 64 leaves the front layer empty
+# (the Fusca is open with a saddle, the rider sits on top). Outfit ids are far
+# above the official.
 MOUNTS = [
     {'id': 2900, 'name': 'Blue Fusca', 'folder': 'fusca',
-     'offset': {'N': (-3, 2), 'E': (-2, 0), 'S': (-4, 0), 'W': (2, 0)},
-     'cut': {'N': 36, 'E': 44, 'S': 34, 'W': 44}},
+     'offset': {'N': (0, 0), 'E': (0, 0), 'S': (0, 0), 'W': (0, 0)},
+     'cut': {'N': 64, 'E': 64, 'S': 64, 'W': 64}},
     {'id': 2901, 'name': 'Uno with Ladder', 'folder': 'uno',
      'offset': {'N': (-5, 0), 'E': (-2, 0), 'S': (-3, 0), 'W': (2, 0)},
      'cut': {'N': 48, 'E': 45, 'S': 41, 'W': 45}},
