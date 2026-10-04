@@ -1,12 +1,12 @@
-"""Builds the custom asset pack with the blue Fusca mount.
+"""Builds the custom asset pack with the server's own mounts (cars).
 
 Usage (needs numpy, scipy, pillow, protobuf):
   protoc --python_out=. -I ../../src/protobuf appearances.proto
-  python3 build_fusca.py ../../data/things/custom <server>/data/items/appearances.dat
+  python3 build_mounts.py ../../data/things/custom <server>/data/items/appearances.dat
 
 
 Writes data/things/custom/ for the client (catalog-content.json, the sprite
-sheets, appearances-custom.dat) and adds the outfit to the server's
+sheets, appearances-custom.dat) and adds the outfits to the server's
 data/items/appearances.dat (the server only lets a mount use a registered
 looktype).
 """
@@ -17,46 +17,57 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import appearances_pb2 as A  # protoc --python_out=. ../../src/protobuf/appearances.proto
 
-OUTFIT_ID = 2900          # far above the official outfits
 FIRST_SPRITE = 1_000_001  # far above the official sprite ids
 CLIENT_DIR = sys.argv[1]
 SERVER_DAT = sys.argv[2]
 DIRS = 'NESW'
-BOBS = [0, 0, 1, 1, 0, 0, 1, 1]
-
-# The car art is fusca_art/fusca_<direction>_64x64.png (one 64x64 frame per
-# direction, Tibia's angle). It goes in two layers: y pattern 0 is the whole
-# car, under the rider; y pattern 1 is the part from CUT down (doors, hood,
-# rear deck), which the client draws over the rider so he sits inside.
-ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fusca_art')
 NAMES = {'N': 'norte', 'E': 'leste', 'S': 'sul', 'W': 'oeste'}
-OFFSET = {'N': (-3, 2), 'E': (-2, 0), 'S': (-4, 0), 'W': (2, 0)}  # cockpit under the rider
-CUT = {'N': 36, 'E': 44, 'S': 34, 'W': 44}                       # art rows, front layer from here down
 PHASES = 8
+BOBS = [0, 0, 1, 1, 0, 0, 1, 1]
+ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art')
+
+# Each car is art/<folder>/<direction>.png, one 64x64 frame per direction in
+# Tibia's angle. It goes in two layers: y pattern 0 is the whole car, under
+# the rider; y pattern 1 is the part from `cut` down (doors, hood, rear), which
+# the client draws over the rider so he sits in the car. `offset` moves the
+# art so the seat is under the rider. Outfit ids are far above the official.
+MOUNTS = [
+    {'id': 2900, 'name': 'Blue Fusca', 'folder': 'fusca',
+     'offset': {'N': (-3, 2), 'E': (-2, 0), 'S': (-4, 0), 'W': (2, 0)},
+     'cut': {'N': 36, 'E': 44, 'S': 34, 'W': 44}},
+    {'id': 2901, 'name': 'Uno with Ladder', 'folder': 'uno',
+     'offset': {'N': (-5, 0), 'E': (-2, 0), 'S': (-3, 0), 'W': (2, 0)},
+     'cut': {'N': 48, 'E': 45, 'S': 41, 'W': 45}},
+    {'id': 2902, 'name': 'Gol Bolinha', 'folder': 'gol',
+     'offset': {'N': (-3, 0), 'E': (-1, 0), 'S': (-3, 0), 'W': (-4, 0)},
+     'cut': {'N': 44, 'E': 45, 'S': 40, 'W': 45}},
+]
+FRAMES_PER_MOUNT = 8 * (1 + PHASES)
 
 
-def car(d, phase=0, bob=0):
-    art = np.array(Image.open(os.path.join(ART, f'fusca_{NAMES[d]}_64x64.png')).convert('RGBA'))
+def car(mount, d, bob=0):
+    art = np.array(Image.open(os.path.join(ART, mount['folder'], NAMES[d] + '.png')).convert('RGBA'))
     back, front = np.zeros_like(art), np.zeros_like(art)
-    dx, dy = OFFSET[d][0], OFFSET[d][1] - bob
+    dx, dy = mount['offset'][d][0], mount['offset'][d][1] - bob
     for y, x in np.argwhere(art[..., 3] > 0):
         X, Y = x + dx, y + dy
         if 0 <= X < 64 and 0 <= Y < 64:
             back[Y, X] = art[y, x]
-            if y >= CUT[d]:
+            if y >= mount['cut'][d]:
                 front[Y, X] = art[y, x]
     return [Image.fromarray(back), Image.fromarray(front)]
 
 
-# order: idle (y0: N E S W, y1: N E S W), then the same for each moving phase
-frames = []
-for group in [[(0, 0)]] + [[(p * np.pi / 4, BOBS[p]) for p in range(PHASES)]]:
-    for wheel, bob in group:
-        layers = {d: car(d, wheel, bob) for d in DIRS}
+def mount_frames(mount):
+    """idle (y0: N E S W, y1: N E S W), then the same for each moving phase"""
+    frames = []
+    for bob in [0] + BOBS:
+        layers = {d: car(mount, d, bob) for d in DIRS}
         for y in range(2):
             for d in DIRS:
                 frames.append(layers[d][y])
-assert len(frames) == 8 * (1 + PHASES)
+    assert len(frames) == FRAMES_PER_MOUNT
+    return frames
 
 
 def sheet_bytes(chunk):
@@ -89,21 +100,16 @@ def sheet_bytes(chunk):
     return cip
 
 
-sheets = []
-for first in range(0, len(frames), 36):
-    cip = sheet_bytes(frames[first:first + 36])
-    sheets.append(('sprites-fusca-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, FIRST_SPRITE + first, FIRST_SPRITE + min(first + 36, len(frames)) - 1))
-
 
 def bbox(img):
     b = img.getbbox() or (0, 0, 1, 1)
     return b[0], b[1], b[2] - b[0], b[3] - b[1]
 
 
-def make_outfit():
+def make_outfit(mount, frames, first):
     o = A.Appearance()
-    o.id = OUTFIT_ID
-    o.name = 'Blue Fusca'
+    o.id = mount['id']
+    o.name = mount['name']
     for group, (fixed, start, phases) in enumerate([(A.FIXED_FRAME_GROUP_OUTFIT_IDLE, 0, 1), (A.FIXED_FRAME_GROUP_OUTFIT_MOVING, 8, PHASES)]):
         fg = o.frame_group.add()
         fg.fixed_frame_group = fixed
@@ -111,7 +117,7 @@ def make_outfit():
         si = fg.sprite_info
         si.pattern_width, si.pattern_height, si.pattern_depth, si.layers = 4, 2, 1, 1
         for i in range(phases * 8):
-            si.sprite_id.append(FIRST_SPRITE + start + i)
+            si.sprite_id.append(first + start + i)
         if phases > 1:
             si.animation.synchronized = False
             si.animation.loop_type = A.ANIMATION_LOOP_TYPE_INFINITE
@@ -130,15 +136,24 @@ def make_outfit():
     return o
 
 
-outfit = make_outfit()
+frames, outfits = [], []
+for mount in MOUNTS:
+    mf = mount_frames(mount)
+    outfits.append(make_outfit(mount, mf, FIRST_SPRITE + len(frames)))
+    frames += mf
+
+sheets = []
+for first in range(0, len(frames), 36):
+    cip = sheet_bytes(frames[first:first + 36])
+    sheets.append(('sprites-mounts-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, FIRST_SPRITE + first, FIRST_SPRITE + min(first + 36, len(frames)) - 1))
+
 custom = A.Appearances()
-custom.outfit.append(outfit)
+custom.outfit.extend(outfits)
 dat_name = 'appearances-custom.dat'
 
-import os
 os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
-    if f.startswith('sprites-fusca-'):
+    if f.startswith('sprites-'):
         os.remove(os.path.join(CLIENT_DIR, f))
 for name, cip, first, last in sheets:
     open(os.path.join(CLIENT_DIR, name), 'wb').write(cip)
@@ -148,12 +163,13 @@ json.dump([{'type': 'appearances', 'file': dat_name}] + [
     for name, cip, first, last in sheets
 ], open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w'), indent=2)
 
-# server: register the looktype (replace an older copy of it)
+# server: register the looktypes (replace older copies of them)
 srv = A.Appearances()
 srv.ParseFromString(open(SERVER_DAT, 'rb').read())
-keep = [x for x in srv.outfit if x.id != OUTFIT_ID]
+ids = {m['id'] for m in MOUNTS}
+keep = [x for x in srv.outfit if x.id not in ids]
 del srv.outfit[:]
 srv.outfit.extend(keep)
-srv.outfit.append(outfit)
+srv.outfit.extend(outfits)
 open(SERVER_DAT, 'wb').write(srv.SerializeToString())
-print('ok', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets))
+print('ok', len(outfits), 'mounts,', len(frames), 'sprites,', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets))
