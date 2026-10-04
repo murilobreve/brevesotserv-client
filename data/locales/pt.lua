@@ -9,6 +9,8 @@ locale = {
 
   translation = {
     ["New on Baiak Breves"] = "Novidades no Baiak Breves",
+    ["Sell loot"] = "Vender loot",
+    ["Sell everything in your loot pouch that this NPC buys?\nRarity items stay in the pouch."] = "Vender tudo da sua loot pouch que este NPC compra?\nOs itens com raridade ficam na pouch.",
     ["The server has new systems. They are all in the right panel, under the Store button."] = "O servidor ganhou sistemas novos. Todos ficam no painel da direita, abaixo do botão da Store.",
     ["Hunt Tasks"] = "Hunt Tasks",
     ["Hunt Rates"] = "Hunt Rates",

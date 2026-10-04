@@ -582,6 +582,36 @@ function controllerNpcTrader:filterTradeList(searchText)
     end
 end
 
+-- the server sells every item of the loot pouch the NPC buys in one go when
+-- it is asked to sell the pouch itself; rarity, tiered and imbued items stay
+local LOOT_POUCH_ID = 23721
+
+function controllerNpcTrader:sellLoot()
+    local pouch = Item.create(LOOT_POUCH_ID)
+    if pouch then
+        g_game.sellItem(pouch, 1, self.ignoreEquipped)
+    end
+end
+
+function controllerNpcTrader:confirmSellLoot()
+    if self.sellLootBox then
+        return
+    end
+    local function close()
+        if self.sellLootBox then
+            self.sellLootBox:destroy()
+            self.sellLootBox = nil
+        end
+    end
+    local function yes()
+        close()
+        self:sellLoot()
+    end
+    self.sellLootBox = displayGeneralBox(tr('Sell loot'),
+        tr('Sell everything in your loot pouch that this NPC buys?\nRarity items stay in the pouch.'),
+        { { text = tr('Yes'), callback = yes }, { text = tr('No'), callback = close } }, yes, close)
+end
+
 function controllerNpcTrader:sellAll(delayed, exceptions)
     if type(delayed) == "table" then
         exceptions = delayed

@@ -72,6 +72,7 @@
     .tradeCurrencyName { margin-top: 2px; }
     .tradeCurrencyIcon { margin-right: 5px; }
     .tradeTabs { width: 50px; height: 34px; display: block; margin-left: auto; }
+    .sellLootButton { width: 62px; height: 20px; margin-top: 7px; margin-left: 8px; }
     .tradeTab { width: 30px; height: -5px;  }
     .bottonTrade { --image-clip: 28 0 14 14; margin-right: 40px; }
     .bottonTrade:hover { --image-clip: 28 14 14 14; }
@@ -154,6 +155,11 @@
                 <label class="tradeCurrencyName fontText colorWhite" text="Gold Coin"></label>
             </div>
             <UIItem class="tradeCurrencyIcon iconBox sunkenBorder" item-id="3031" item-count="100" always-show-count="false" />
+            <!-- Baiak Breves: sells the whole loot pouch in one go -->
+            <button id="sellLootButton" class="sellLootButton fontText" text="Sell loot"
+                *visible="self.tradeMode == self.SELL"
+                tooltip="Sells everything in your loot pouch that this NPC buys. Rarity items stay in the pouch."
+                onclick="self:confirmSellLoot()"></button>
             <div class="tradeTabs">
                 <button id="tabBuy" class="tradeTab fontTitle" text="Buy" onclick="self:setTradeMode(self.BUY)"></button>
                 <button id="tabSell" class="tradeTab fontTitle" style="display:block;margin-top: 5px;" text="Sell" onclick="self:setTradeMode(self.SELL)"></button>

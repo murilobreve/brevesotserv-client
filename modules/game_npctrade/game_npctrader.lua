@@ -113,6 +113,10 @@ function controllerNpcTrader:onCloseNpcTrade()
             removeEvent(controllerNpcTrader.sellAllWithDelayEvent)
             controllerNpcTrader.sellAllWithDelayEvent = nil
         end
+        if controllerNpcTrader.sellLootBox then
+            controllerNpcTrader.sellLootBox:destroy()
+            controllerNpcTrader.sellLootBox = nil
+        end
         if controllerNpcTrader.goodsRefreshEvent then
             removeEvent(controllerNpcTrader.goodsRefreshEvent)
             controllerNpcTrader.goodsRefreshEvent = nil
