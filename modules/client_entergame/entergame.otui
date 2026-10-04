@@ -154,7 +154,7 @@ EnterGameWindow
       margin-top: 8
       @onSetup: |
         self.title:setText(tr('Hunt Board'))
-        self.desc:setText(tr('Rates up to x4, new roll every 2h'))
+        self.desc:setText(tr('Rates up to x10, new roll every 2h'))
 
     BrevesFeature
       id: featCoins

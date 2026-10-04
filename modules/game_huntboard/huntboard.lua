@@ -96,9 +96,9 @@ local function multColor(tenths)
         return '#e0564a'
     elseif tenths < 15 then
         return '#c8c8c8'
-    elseif tenths < 25 then
+    elseif tenths < 30 then
         return '#7fd35a'
-    elseif tenths < 35 then
+    elseif tenths < 60 then
         return '#3d9bff'
     end
     return '#ffb020'
@@ -224,18 +224,27 @@ local function renderPage()
         end
         row.creature:setOutfit(outfitOf(monster))
         row.name:setText(monster.boss == 1 and (monster.name .. '  [boss]') or monster.name)
-        if monster.xp >= 35 or monster.loot >= 35 then
+        if monster.xp >= 60 or monster.loot >= 60 then
             row.name:setColor('#ffb020')
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
         end
-        row.info:setText(tr('Exp %s  -  HP %s  -  %d spawns', formatNumber(monster.exp), formatNumber(monster.hp), monster.spawns))
+        if monster.dmgMult > 1 then
+            row.info:setText(tr('Exp %s  -  HP %s  -  damage x%.1f  -  %d spawns', formatNumber(monster.exp),
+                formatNumber(math.floor(monster.hp * monster.hpMult)), monster.dmgMult, monster.spawns))
+        else
+            row.info:setText(tr('Exp %s  -  HP %s  -  %d spawns', formatNumber(monster.exp), formatNumber(monster.hp), monster.spawns))
+        end
         setBar(row.xpBar, monster.xp)
         setBar(row.lootBar, monster.loot)
         row.perKill:setText(formatShort(monster.perKill) .. ' xp')
         row.perKill:setColor(multColor(monster.xp))
-        row:setTooltip(tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
-            formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10))
+        local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
+            formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
+        if monster.dmgMult > 1 then
+            tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
+        end
+        row:setTooltip(tooltip)
     end
 
     panel.rateEmpty:setVisible(#filtered == 0)
@@ -517,6 +526,14 @@ function handlers.rates(data)
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
+        -- a monster rolled above 1x is tougher (server: huntboard strength)
+        monster.hpMult, monster.dmgMult = 1, 1
+        local strength = data.strength
+        local rate = math.max(monster.xp, monster.loot) / 10
+        if strength and rate > 1 and (monster.boss ~= 1 or strength.bosses == 1) then
+            monster.hpMult = 1 + (rate - 1) * (tonumber(strength.hp) or 0) / 100
+            monster.dmgMult = 1 + (rate - 1) * (tonumber(strength.dmg) or 0) / 100
+        end
         monsters[#monsters + 1] = monster
     end
     rates.monsters = monsters
