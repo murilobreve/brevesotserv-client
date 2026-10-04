@@ -534,6 +534,14 @@ endif()
 
 if(WIN32)
   set(SOURCE_FILES ${SOURCE_FILES} framework/platform/win32window.cpp)
+  # <dbghelp.h> (crash handler) and <ImageHlp.h> (demangle) declare the same
+  # types and cannot meet in one unity chunk: compile these two on their own
+  set_source_files_properties(
+    framework/platform/win32crashhandler.cpp
+    framework/stdext/demangle.cpp
+    PROPERTIES
+    SKIP_UNITY_BUILD_INCLUSION ON
+  )
 elseif(APPLE AND NOT ANDROID AND NOT WASM)
   set(SOURCE_FILES ${SOURCE_FILES}
           framework/platform/cocoawindow.mm
