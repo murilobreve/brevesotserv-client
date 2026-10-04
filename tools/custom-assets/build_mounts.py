@@ -31,18 +31,18 @@ ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art')
 # the rider; y pattern 1 is the part from `cut` down (doors, hood, rear), which
 # the client draws over the rider so he sits in the car. `offset` moves the
 # art so the seat is under the rider; a cut of 64 leaves the front layer empty
-# (the Fusca is open with a saddle, the rider sits on top). Outfit ids are far
+# (the cars are open with a saddle, the rider sits on top). Outfit ids are far
 # above the official.
 MOUNTS = [
     {'id': 2900, 'name': 'Blue Fusca', 'folder': 'fusca',
      'offset': {'N': (0, 0), 'E': (0, 0), 'S': (0, 0), 'W': (0, 0)},
      'cut': {'N': 64, 'E': 64, 'S': 64, 'W': 64}},
     {'id': 2901, 'name': 'Uno with Ladder', 'folder': 'uno',
-     'offset': {'N': (-5, 0), 'E': (-2, 0), 'S': (-3, 0), 'W': (2, 0)},
-     'cut': {'N': 48, 'E': 45, 'S': 41, 'W': 45}},
+     'offset': {'N': (0, 0), 'E': (0, 0), 'S': (0, 0), 'W': (0, 0)},
+     'cut': {'N': 64, 'E': 64, 'S': 64, 'W': 64}},
     {'id': 2902, 'name': 'Gol Bolinha', 'folder': 'gol',
-     'offset': {'N': (-3, 0), 'E': (-1, 0), 'S': (-3, 0), 'W': (-4, 0)},
-     'cut': {'N': 44, 'E': 45, 'S': 40, 'W': 45}},
+     'offset': {'N': (0, 0), 'E': (0, 0), 'S': (0, 0), 'W': (0, 0)},
+     'cut': {'N': 64, 'E': 64, 'S': 64, 'W': 64}},
 ]
 FRAMES_PER_MOUNT = 8 * (1 + PHASES)
 
