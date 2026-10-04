@@ -19,7 +19,8 @@ if errorlevel 1 (
     echo A pasta tem mudancas locais que nao estao no GitHub.
     goto :falhou
 )
-for /f "usebackq tokens=*" %%c in (`git log -1 --format^="%%h %%s"`) do echo versao: %%c
+echo versao:
+git log -1 --oneline
 
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if not exist "%VSWHERE%" (
