@@ -233,6 +233,7 @@ protected:
 
     ThingType* getThingType() const override;
     ThingType* getMountThingType() const;
+    bool hasDrawableMount() const { return getMountThingType() != nullptr; }
 
     void onDeath();
     void onPositionChange(const Position& newPos, const Position& oldPos) override;

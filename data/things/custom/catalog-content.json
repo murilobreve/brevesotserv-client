@@ -5,10 +5,18 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-fusca-498e65abb5ce7113.bmp.lzma",
+    "file": "sprites-fusca-bc914dae091d25e6.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1000001,
     "lastspriteid": 1000036,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-fusca-8eb4c4f008ab8bd6.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000037,
+    "lastspriteid": 1000072,
     "area": 64
   }
 ]

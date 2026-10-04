@@ -134,7 +134,7 @@ void Creature::drawLight(const Point& dest, LightView* lightView) {
     drawAttachedLightEffect(dest + m_walkOffset * g_drawPool.getScaleFactor(), lightView);
 
     for (const auto& paperdoll : m_paperdolls)
-        paperdoll->drawLight(dest, m_outfit.hasMount(), lightView);
+        paperdoll->drawLight(dest, hasDrawableMount(), lightView);
 }
 
 void Creature::draw(const Rect& destRect, const uint8_t size, const bool center)
@@ -408,12 +408,14 @@ void Creature::internalDraw(Point dest, const Color& color)
         const int animationPhase = getCurrentAnimationPhase();
 
         for (const auto& paperdoll : m_paperdolls)
-            paperdoll->draw(dest, animationPhase, m_outfit.hasMount(), false, true, color);
+            paperdoll->draw(dest, animationPhase, hasDrawableMount(), false, true, color);
 
         // outfit is a real creature
         if (m_outfit.isCreature()) {
-            if (m_outfit.hasMount()) {
+            Point mountDest;
+            if (hasDrawableMount()) {
                 dest -= getMountThingType()->getDisplacement() * g_drawPool.getScaleFactor();
+                mountDest = dest;
 
                 if (!replaceColorShader && hasMountShader()) {
                     g_drawPool.setShaderProgram(g_shaders.getShaderById(m_mountShaderId), true/*, [this]()-> void {
@@ -467,7 +469,12 @@ void Creature::internalDraw(Point dest, const Color& color)
             } else drawCreature(dest);
 
             for (const auto& paperdoll : m_paperdolls)
-                paperdoll->draw(dest, animationPhase, m_outfit.hasMount(), true, true, color);
+                paperdoll->draw(dest, animationPhase, hasDrawableMount(), true, true, color);
+
+            // a mount with two y patterns has a front layer (doors, hood) drawn
+            // over the rider, so the rider sits inside it
+            if (const auto mountType = getMountThingType(); mountType && mountType->getNumPatternY() > 1)
+                mountType->draw(mountDest, 0, m_numPatternX, 1, 0, getCurrentAnimationPhase(true), color);
 
             // outfit is a creature imitating an item or the invisible effect
         } else {
@@ -691,7 +698,7 @@ void Creature::updateWalkAnimation()
     if (!m_outfit.isCreature())
         return;
 
-    int footAnimPhases = m_outfit.hasMount() ? getMountThingType()->getAnimationPhases() : getAnimationPhases();
+    int footAnimPhases = hasDrawableMount() ? getMountThingType()->getAnimationPhases() : getAnimationPhases();
     if (!g_game.getFeature(Otc::GameEnhancedAnimations) && footAnimPhases > 2) {
         --footAnimPhases;
     }
@@ -946,7 +953,7 @@ void Creature::setOutfit(const Outfit& outfit, bool fireEvent)
 
     m_clientId = thingType->getId();
 
-    if (m_outfit.hasMount()) {
+    if (hasDrawableMount()) {
         m_numPatternZ = std::min<int>(1, getNumPatternZ() - 1);
     }
 
@@ -1183,7 +1190,7 @@ int Creature::getDisplacementX() const
     if (m_outfit.isItem())
         return 0;
 
-    if (m_outfit.hasMount())
+    if (hasDrawableMount())
         return getMountThingType()->getDisplacementX();
 
     return Thing::getDisplacementX();
@@ -1197,7 +1204,7 @@ int Creature::getDisplacementY() const
     if (m_outfit.isItem())
         return 0;
 
-    if (m_outfit.hasMount())
+    if (hasDrawableMount())
         return getMountThingType()->getDisplacementY();
 
     return Thing::getDisplacementY();
@@ -1214,7 +1221,12 @@ ThingType* Creature::getThingType() const {
 }
 
 ThingType* Creature::getMountThingType() const {
-    return m_outfit.hasMount() ? g_things.getRawThingType(m_outfit.getMount(), ThingCategoryCreature) : nullptr;
+    // a mount this client has no sprites for (e.g. a custom one with an older
+    // asset pack) is drawn as no mount instead of crashing
+    if (!m_outfit.hasMount() || !g_things.isValidDatId(m_outfit.getMount(), ThingCategoryCreature))
+        return nullptr;
+    const auto type = g_things.getRawThingType(m_outfit.getMount(), ThingCategoryCreature);
+    return type && !type->isNull() ? type : nullptr;
 }
 
 uint16_t Creature::getCurrentAnimationPhase(const bool mount)
@@ -1259,7 +1271,7 @@ int Creature::getExactSize(int layer, int /*xPattern*/, int yPattern, int zPatte
     if (m_outfit.isCreature()) {
         const int layers = getLayers();
 
-        zPattern = m_outfit.hasMount() ? 1 : 0;
+        zPattern = hasDrawableMount() ? 1 : 0;
 
         if (yPattern > 0) {
             for (int pattern = 0; pattern < yPattern; ++pattern) {
