@@ -7,13 +7,26 @@ rem Studio e carregado aqui mesmo.
 rem   compilar-cliente-directx.bat         sincroniza, compila e empacota
 rem   compilar-cliente-directx.bat limpo   apaga a configuracao do CMake antes
 setlocal
-cd /d "%~dp0"
+
+rem roda uma copia de si mesmo a partir da pasta temporaria: assim o git
+rem pode trocar de branch e substituir este .bat sem quebrar o cmd
+if /i not "%~1"=="--rodando" (
+    copy /y "%~f0" "%TEMP%\baiak-directx.bat" >nul
+    call "%TEMP%\baiak-directx.bat" --rodando "%~dp0." %1
+    exit /b
+)
+cd /d "%~2"
+set "OPCAO=%~3"
+set "PASTA=%CD%"
 
 if not defined VCPKG_ROOT set "VCPKG_ROOT=C:\vcpkg"
 
 echo == sincronizando com a branch de teste claude/funny-maxwell-kpy7sn
 git fetch origin claude/funny-maxwell-kpy7sn
 if errorlevel 1 goto :falhou
+rem uma copia solta deste .bat (baixada a parte) travaria a troca de branch
+git ls-files --error-unmatch compilar-cliente-directx.bat >nul 2>&1
+if errorlevel 1 if exist compilar-cliente-directx.bat del compilar-cliente-directx.bat
 git checkout claude/funny-maxwell-kpy7sn
 if errorlevel 1 goto :falhou
 git pull --ff-only origin claude/funny-maxwell-kpy7sn
@@ -40,7 +53,7 @@ echo == carregando o ambiente do Visual Studio
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 goto :falhou
 
-if /i "%~1"=="limpo" (
+if /i "%OPCAO%"=="limpo" (
     echo == apagando a configuracao antiga
     if exist "build\windows-release-directx\CMakeCache.txt" del "build\windows-release-directx\CMakeCache.txt"
 )
@@ -54,7 +67,7 @@ cmake --build --preset windows-release-directx
 if errorlevel 1 goto :falhou
 
 echo == empacotando
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\empacotar-cliente.ps1" -Exe "%~dp0build\windows-release-directx\bin\otclient.exe" -Nome "Baiak Breves DirectX" -ZipNome "BaiakBreves-DirectX.zip"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cliente.ps1" -Exe "%PASTA%\build\windows-release-directx\bin\otclient.exe" -Nome "Baiak Breves DirectX" -ZipNome "BaiakBreves-DirectX.zip"
 if errorlevel 1 goto :falhou
 
 echo.
