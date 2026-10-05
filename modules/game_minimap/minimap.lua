@@ -130,6 +130,13 @@ function mapController:onGameStart()
         loadFnc(minimapFile)
     end
 
+    -- the whole server map ships with the client (data/minimap/zorva.otmm).
+    -- It is loaded after the player's own file, so map changes always show.
+    local fullMap = '/minimap/zorva.otmm'
+    if otmm and g_resources.fileExists(fullMap) then
+        g_minimap.loadOtmm(fullMap)
+    end
+
     self.ui.minimapBorder.minimap:load()
 end
 
