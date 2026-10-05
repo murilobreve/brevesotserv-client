@@ -152,6 +152,7 @@ end
 -- the bottom menu (news, event schedule, boosted creature) needs data the
 -- website does not serve, so the login card shows the server features instead
 local SHOW_BOTTOM_MENU = false
+local cacheInfoEvent
 
 function EnterGame.createAccount()
     if Services and Services.createAccount then
@@ -347,13 +348,22 @@ function EnterGame.firstShow()
         end)
     end
 
+    -- the players online count in the top bar comes from the site's
+    -- login.php, so ask for it even with the bottom menu hidden, and
+    -- refresh it every minute
+    if Services and Services.status then
+        EnterGame.postCacheInfo()
+        if not cacheInfoEvent then
+            cacheInfoEvent = cycleEvent(EnterGame.postCacheInfo, 60000)
+        end
+    end
+
     if not SHOW_BOTTOM_MENU then
         if g_modules.getModule("client_bottommenu"):isLoaded() then
             modules.client_bottommenu.hide()
         end
     elseif Services and Services.status then
         if g_modules.getModule("client_bottommenu"):isLoaded()  then
-            EnterGame.postCacheInfo()
             EnterGame.postEventScheduler()
             -- EnterGame.postShowOff() -- myacc/znote no send login.php
             EnterGame.postShowCreatureBoost()
@@ -363,6 +373,10 @@ end
 
 function EnterGame.terminate()
     Keybind.delete("Misc.", "Change Character")
+    if cacheInfoEvent then
+        removeEvent(cacheInfoEvent)
+        cacheInfoEvent = nil
+    end
 
     disconnect(clientBox, {
         onOptionChange = EnterGame.onClientVersionChange
@@ -412,7 +426,7 @@ function EnterGame.postCacheInfo()
 
         if err then
             -- onError(nil, 'Bad Request. Game_entergame postCacheInfo1 ', 400)
-            reportRequestWarning(requestType, "Bad Request. Game_entergame postCacheInfo1")
+            reportRequestWarning(requestType, "Bad Request. Game_entergame postCacheInfo1 " .. tostring(err))
             return
         end
 
@@ -433,10 +447,13 @@ function EnterGame.postCacheInfo()
             return
         end
 
-        modules.client_topmenu.setPlayersOnline(response.playersonline)
-        modules.client_topmenu.setDiscordStreams(response.discord_online)
-        modules.client_topmenu.setYoutubeStreams(response.gamingyoutubestreams)
-        modules.client_topmenu.setYoutubeViewers(response.gamingyoutubeviewer)
+        if not modules.client_topmenu then
+            return
+        end
+        modules.client_topmenu.setPlayersOnline(response.playersonline or 0)
+        modules.client_topmenu.setDiscordStreams(response.discord_online or 0)
+        modules.client_topmenu.setYoutubeStreams(response.gamingyoutubestreams or 0)
+        modules.client_topmenu.setYoutubeViewers(response.gamingyoutubeviewer or 0)
         modules.client_topmenu.setLinkYoutube(response.youtube_link)
         modules.client_topmenu.setLinkDiscord(response.discord_link)
 
