@@ -7,3 +7,5 @@
 *.cpp eol=lf 
 *.h   eol=lf 
 *.otmm binary
+data/things/1525/** binary
+data/sounds/1525/** binary
