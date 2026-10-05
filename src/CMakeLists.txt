@@ -755,6 +755,13 @@ if(MSVC)
           ${NLOHMANN_JSON_INCLUDE_DIR}
           ${CPPCODEC_INCLUDE_DIRS}
   )
+  # ANGLE (USE_OPENGL_ES) exports the same gl* functions as opengl32, so the
+  # desktop OpenGL libraries are linked only by the regular build
+  if(USE_OPENGL_ES)
+    set(OTCLIENT_DESKTOP_GL_LIBRARIES "")
+  else()
+    set(OTCLIENT_DESKTOP_GL_LIBRARIES ${OPENGL_LIBRARIES} GLEW::GLEW)
+  endif()
   target_link_libraries(otclient_core
           PUBLIC
           ${LUAJIT_LIBRARY}
@@ -763,7 +770,7 @@ if(MSVC)
           ZLIB::ZLIB
           PNG::PNG
           ${NLOHMANN_JSON_LIBRARY}
-          ${OPENGL_LIBRARIES}
+          ${OTCLIENT_DESKTOP_GL_LIBRARIES}
           ${DirectX_LIBRARY}
           ${DirectX_LIBRARIES}
           ${OGG_LIBRARY}
@@ -775,7 +782,6 @@ if(MSVC)
           ${STDUUID}
           absl::log_internal_check_op
           Threads::Threads
-          GLEW::GLEW
           asio::asio
           OpenAL::OpenAL
           LibLZMA::LibLZMA
