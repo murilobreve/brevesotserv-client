@@ -6,19 +6,21 @@
 #   -Exe <caminho>   executavel a usar (padrao: otclient.exe da raiz)
 #   -SemAssets       nao inclui data\things e data\sounds (o client baixa
 #                    os assets sozinho na primeira vez que abrir)
+#   -Nome <texto>    nome da pasta e do .exe (padrao: Baiak Breves)
+#   -ZipNome <arq>   nome do .zip (padrao: BaiakBreves.zip)
 #
 # Resultado:
 #   dist\Baiak Breves\    pasta pronta para jogar
 #   dist\BaiakBreves.zip  essa mesma pasta zipada, para o site
 param(
     [string]$Exe = "",
-    [switch]$SemAssets
+    [switch]$SemAssets,
+    [string]$Nome = "Baiak Breves",
+    [string]$ZipNome = "BaiakBreves.zip"
 )
 
 $ErrorActionPreference = "Stop"
 
-$Nome = "Baiak Breves"
-$ZipNome = "BaiakBreves.zip"
 
 $Raiz = Split-Path -Parent $PSScriptRoot
 $Dist = Join-Path $Raiz "dist"

@@ -28,6 +28,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+// glx.h pulls these in for desktop GL; the EGL build needs them directly
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
 
 inline constexpr auto X11None = None;
 

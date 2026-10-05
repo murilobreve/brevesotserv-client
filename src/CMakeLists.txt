@@ -11,6 +11,11 @@ option(TOGGLE_FRAMEWORK_NET "Use NET " ON)
 option(TOGGLE_FRAMEWORK_PROTOBUF "Use Protobuf" ON)
 option(TOGGLE_FRAMEWORK_EDITOR "Use Editor " OFF)
 option(TOGGLE_DIRECTX "Use DX9 support" OFF)
+# Draw with OpenGL ES 3 instead of desktop OpenGL. On Windows this links
+# ANGLE, which translates OpenGL ES to Direct3D 11 (the "DirectX" client).
+# On Linux it uses the system EGL + GLESv2, which is how the ES path is
+# tested without Windows.
+option(USE_OPENGL_ES "Render with OpenGL ES 3 (Windows: ANGLE over Direct3D 11)" OFF)
 option(ENABLE_DISCORD_RPC "Use Discord Rich Presence" OFF)
 option(TOGGLE_BIN_FOLDER "Use build/bin folder for generate compilation files" OFF)
 option(DEBUG_LOG "Enable Debug Log" OFF)
@@ -91,6 +96,8 @@ if (ANDROID)
   set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DOPENGL_ES=3)
 elseif(WASM)
   set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DOPENGL_ES=2)
+elseif(USE_OPENGL_ES)
+  set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DOPENGL_ES=3)
 endif()
 
 set(VERSION "1.0.0")
@@ -316,6 +323,17 @@ else()
       endif()
     endif()
     find_package(LuaJIT REQUIRED)
+    if(USE_OPENGL_ES)
+      if(WIN32)
+        find_package(unofficial-angle CONFIG REQUIRED)
+        set(OPENGL_ES_LIBRARIES unofficial::angle::libEGL unofficial::angle::libGLESv2 d3d11 dxgi dxguid)
+        log_option_enabled("OpenGL ES via ANGLE (Direct3D 11)")
+      else()
+        pkg_check_modules(GLES REQUIRED IMPORTED_TARGET egl glesv2)
+        set(OPENGL_ES_LIBRARIES PkgConfig::GLES)
+        log_option_enabled("OpenGL ES via system EGL")
+      endif()
+    endif()
   else()
     set(LUA_LIBRARY ${LUA_LIBRARY} ${CMAKE_SOURCE_DIR}/browser/include/lua51/liblua.a)
     set(BROWSER_INCLUDE_DIR ${BROWSER_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/browser/include)
@@ -737,6 +755,13 @@ if(MSVC)
           ${NLOHMANN_JSON_INCLUDE_DIR}
           ${CPPCODEC_INCLUDE_DIRS}
   )
+  # ANGLE (USE_OPENGL_ES) exports the same gl* functions as opengl32, so the
+  # desktop OpenGL libraries are linked only by the regular build
+  if(USE_OPENGL_ES)
+    set(OTCLIENT_DESKTOP_GL_LIBRARIES "")
+  else()
+    set(OTCLIENT_DESKTOP_GL_LIBRARIES ${OPENGL_LIBRARIES} GLEW::GLEW)
+  endif()
   target_link_libraries(otclient_core
           PUBLIC
           ${LUAJIT_LIBRARY}
@@ -745,7 +770,7 @@ if(MSVC)
           ZLIB::ZLIB
           PNG::PNG
           ${NLOHMANN_JSON_LIBRARY}
-          ${OPENGL_LIBRARIES}
+          ${OTCLIENT_DESKTOP_GL_LIBRARIES}
           ${DirectX_LIBRARY}
           ${DirectX_LIBRARIES}
           ${OGG_LIBRARY}
@@ -757,11 +782,11 @@ if(MSVC)
           ${STDUUID}
           absl::log_internal_check_op
           Threads::Threads
-          GLEW::GLEW
           asio::asio
           OpenAL::OpenAL
           LibLZMA::LibLZMA
           ${LIBARCHIVE_LIBRARY}
+          ${OPENGL_ES_LIBRARIES}
           winmm.lib
           bcrypt.lib
           pugixml::pugixml
@@ -1034,6 +1059,7 @@ else() # Linux
           Vorbis::vorbisfile
           Vorbis::vorbis
           Freetype::Freetype
+          ${OPENGL_ES_LIBRARIES}
   )
 
   if (TOGGLE_FRAMEWORK_PROTOBUF)

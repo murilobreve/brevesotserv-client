@@ -57,6 +57,16 @@
       }
     },
     {
+      "name": "windows-release-directx",
+      "inherits": "windows-release",
+      "displayName": "Windows - Release (DirectX)",
+      "description": "Same as windows-release, but draws with OpenGL ES through ANGLE, which runs on Direct3D 11",
+      "cacheVariables": {
+        "USE_OPENGL_ES": "ON",
+        "TOGGLE_BIN_FOLDER": "ON"
+      }
+    },
+    {
       "name": "windows-release-asan",
       "inherits": "windows-release",
       "displayName": "Windows - Release + ASAN",
@@ -201,6 +211,10 @@
     {
       "name": "windows-release",
       "configurePreset": "windows-release"
+    },
+    {
+      "name": "windows-release-directx",
+      "configurePreset": "windows-release-directx"
     },
     {
       "name": "windows-release-asan",
