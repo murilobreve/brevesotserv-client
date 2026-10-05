@@ -603,7 +603,9 @@ void X11Window::internalChooseGLVisual()
 {
 #ifdef OPENGL_ES
     static int attrList[] = {
-#if OPENGL_ES==2
+#if OPENGL_ES>=3
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+#elif OPENGL_ES==2
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
 #else
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
@@ -664,7 +666,9 @@ void X11Window::internalCreateGLContext()
 {
 #ifdef OPENGL_ES
     EGLint attrList[] = {
-#if OPENGL_ES==2
+#if OPENGL_ES>=3
+        EGL_CONTEXT_CLIENT_VERSION, 3,
+#elif OPENGL_ES==2
         EGL_CONTEXT_CLIENT_VERSION, 2,
 #else
         EGL_CONTEXT_CLIENT_VERSION, 1,
