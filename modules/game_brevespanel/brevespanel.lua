@@ -18,8 +18,6 @@ local FEATURES = {
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Breves Coins.' },
     { id = 'rarity', label = 'Rarity Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
-    { id = 'grimorio', label = 'Grim\243rio', icon = 'grimorio',
-      news = 'From level 250 on you earn 1 point every 10 levels and change how your spells work. Testing with the knight.' },
     { id = 'healbot', label = 'Heal Bot', icon = 'healbot',
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
 }
