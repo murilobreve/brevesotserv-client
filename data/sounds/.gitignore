@@ -1,3 +1,6 @@
 *
 !.gitignore
 !README.md
+# official 15.25 sounds, shipped so a fresh build needs no download
+!1525/
+!1525/**

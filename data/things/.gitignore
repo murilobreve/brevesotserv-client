@@ -4,3 +4,6 @@
 # server-made assets (custom mount...), loaded over the official ones
 !custom/
 !custom/**
+# official 15.25 assets, shipped so a fresh build needs no download
+!1525/
+!1525/**
