@@ -170,9 +170,15 @@ try {
 }
 
 $tamanhoMb = [math]::Round((Get-Item $Zip).Length / 1MB, 1)
+# impressao digital do zip: vai para o site, ao lado do link, para o jogador conferir
+$sha256 = (Get-FileHash -Path $Zip -Algorithm SHA256).Hash.ToLower()
+Set-Content -Path "$Zip.sha256.txt" -Value "$sha256  $ZipNome" -Encoding ascii
 Write-Host ""
 Write-Host "Pronto!" -ForegroundColor Green
 Info "pasta: $Pasta"
 Info "zip  : $Zip ($tamanhoMb MB)"
+Info "sha256: $sha256"
 Write-Host ""
 Write-Host "Suba o $ZipNome na pagina de downloads do site."
+Write-Host "Mande o sha256 acima junto com o link novo, para ele aparecer no site."
+
