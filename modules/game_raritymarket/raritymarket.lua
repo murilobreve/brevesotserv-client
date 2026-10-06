@@ -113,6 +113,11 @@ local function applyFrame(frame, entry, size)
     end
 end
 
+-- every word of an item name capitalised ("wand of vortex Mythicus" -> "Wand Of Vortex Mythicus")
+local function titleCase(text)
+    return (text:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end))
+end
+
 local function shorten(text, maxLen)
     if #text <= maxLen then
         return text
@@ -148,7 +153,7 @@ local function showDetails(kind, entry)
     local rarity = rarityOf(entry.rarity)
     applyFrame(content.bigFrame, entry, 64)
 
-    content.name:setText(entry.name or '')
+    content.name:setText(titleCase(entry.name or ''))
     content.name:setColor(rarity.color)
 
     -- pill badge: rarity-coloured text and outline on a soft tint of the same colour
@@ -259,7 +264,7 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
         local row = g_ui.createWidget(index % 2 == 0 and 'MarketRowEven' or 'MarketRow', list)
         local rarity = rarityOf(entry.rarity)
         applyFrame(row.frame, entry)
-        row.name:setText(shorten(entry.name or '', 40))
+        row.name:setText(shorten(titleCase(entry.name or ''), 40))
         row.name:setColor(rarity.color)
         row.info:setText(shorten(affixSummary(entry), 48))
         row:setBackgroundColor(index % 2 == 1 and '#00000030' or '#00000000')
