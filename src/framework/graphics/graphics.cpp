@@ -57,6 +57,18 @@ void Graphics::init()
     if (err != GLEW_OK)
         g_logger.fatal("Unable to init GLEW: {}", glString(err));
 
+    // without OpenGL 2.0 (Remote Desktop, a virtual machine, Windows' basic
+    // display driver) the shader functions are null and the first shader would
+    // crash the client: say so instead (the message box is latin1, no accents)
+    if (!GLEW_VERSION_2_0 || !glCreateProgram || !glCreateShader)
+        g_logger.fatal(fmt::format(
+            "Seu driver de video nao tem OpenGL 2.0, que o client precisa.\n"
+            "Placa: {} / OpenGL: {}\n\n"
+            "Atualize o driver da placa de video (NVIDIA, AMD ou Intel) ou use o client DirectX.\n\n"
+            "Your video driver has no OpenGL 2.0, which the client needs.\n"
+            "Update the video card driver or use the DirectX client.",
+            m_renderer.empty() ? "?" : m_renderer, m_version.empty() ? "?" : m_version));
+
     // overwrite framebuffer API if needed
     if (GLEW_EXT_framebuffer_object && !GLEW_ARB_framebuffer_object) {
         glGenFramebuffers = glGenFramebuffersEXT;
