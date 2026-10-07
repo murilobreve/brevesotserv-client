@@ -611,8 +611,9 @@ function controllerNpcTrader:filterTradeList(searchText)
     end
 end
 
--- the server sells every item of the loot pouch the NPC buys in one go when
--- it is asked to sell the pouch itself; rarity, tiered and imbued items stay
+-- asked to sell the loot pouch itself, the server sells everything the NPC
+-- buys from every bag the player carries; equipped, rarity, tiered and imbued
+-- items, tools and the supplies the NPC sells stay
 local LOOT_POUCH_ID = 23721
 
 function controllerNpcTrader:sellLoot()
@@ -636,8 +637,8 @@ function controllerNpcTrader:confirmSellLoot()
         close()
         self:sellLoot()
     end
-    self.sellLootBox = displayGeneralBox(tr('Sell loot'),
-        tr('Sell everything in your loot pouch that this NPC buys?\nRarity items stay in the pouch.'),
+    self.sellLootBox = displayGeneralBox(tr('Sell all'),
+        tr('Sell everything in your bags that this NPC buys?\nEquipped items, rarity items, tools and the supplies this NPC sells are kept.'),
         { { text = tr('Yes'), callback = yes }, { text = tr('No'), callback = close } }, yes, close)
 end
 

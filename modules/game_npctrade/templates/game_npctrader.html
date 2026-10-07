@@ -193,10 +193,10 @@
             </div>
 
             <div class="tradeButtons">
-                <!-- Baiak Breves: sells the whole loot pouch in one go -->
-                <button id="sellLootButton" class="sellLootButton" text="Sell loot"
+                <!-- Baiak Breves: sells everything the NPC buys from every bag in one go -->
+                <button id="sellLootButton" class="sellLootButton" text="Sell all"
                     *visible="self.tradeMode == self.SELL"
-                    tooltip="Sells everything in your loot pouch that this NPC buys. Rarity items stay in the pouch."
+                    tooltip="Sells everything in your bags that this NPC buys. Equipped items, rarity items, tools and the supplies this NPC sells are kept."
                     onclick="self:confirmSellLoot()"></button>
                 <button id="toggleButton" class="tradeBuyButton" text="Buy" onclick="self:executeTrade()"></button>
             </div>

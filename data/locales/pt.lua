@@ -9,8 +9,9 @@ locale = {
 
   translation = {
     ["New on Baiak Breves"] = "Novidades no Baiak Breves",
-    ["Sell loot"] = "Vender loot",
-    ["Sell everything in your loot pouch that this NPC buys?\nRarity items stay in the pouch."] = "Vender tudo da sua loot pouch que este NPC compra?\nOs itens com raridade ficam na pouch.",
+    ["Sell all"] = "Vender tudo",
+    ["Sell everything in your bags that this NPC buys?\nEquipped items, rarity items, tools and the supplies this NPC sells are kept."] = "Vender tudo das suas bolsas que este NPC compra?\nItens equipados, itens com raridade, ferramentas e os suprimentos que este NPC vende ficam com você.",
+    ["Sells everything in your bags that this NPC buys. Equipped items, rarity items, tools and the supplies this NPC sells are kept."] = "Vende tudo das suas bolsas que este NPC compra. Itens equipados, itens com raridade, ferramentas e os suprimentos que este NPC vende ficam com você.",
     ["The server has new systems. They are all in the right panel, under the Store button."] = "O servidor ganhou sistemas novos. Todos ficam no painel da direita, abaixo do botão da Store.",
     ["Hunt Tasks"] = "Hunt Tasks",
     ["Hunt Rates"] = "Hunt Rates",
