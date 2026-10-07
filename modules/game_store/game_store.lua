@@ -120,7 +120,58 @@ local function getPageLabelHistory()
     return tonumber(currentPage), tonumber(pageCount)
 end
 
+-- category icons drawn from item sprites of the game, so the list does not
+-- depend on the website having the Tibia store images
+local CATEGORY_ITEMS = {
+    ['Category_PremiumTime.png'] = 14758,
+    ['Category_Consumables.png'] = 239,
+    ['Category_Blessings.png'] = 3077,
+    ['Category_Casks.png'] = 2874,
+    ['Category_ExerciseWeapons.png'] = 35285,
+    ['Category_Kegs.png'] = 25903,
+    ['Category_Potions.png'] = 7643,
+    ['Category_Runes.png'] = 3155,
+    ['Category_Cosmetics.png'] = 5911,
+    ['Category_Mounts.png'] = 12308,
+    ['Category_Outfits.png'] = 894,
+    ['Category_HouseTools.png'] = 2972,
+    ['Category_HouseDecorations.png'] = 316,
+    ['Category_HouseFurniture.png'] = 2378,
+    ['Category_Beds.png'] = 2394,
+    ['Category_HouseUpgrades.png'] = 3460,
+    ['Category_HouseTools_NPCApprenticeships.png'] = 29432,
+    ['Category_HouseTools_NPCDresses.png'] = 3568,
+    ['Category_Boosts.png'] = 9173,
+    ['Category_Extras.png'] = 173,
+    ['Category_ExtraServices.png'] = 3505,
+    ['Category_UsefulThings.png'] = 23721,
+    ['Category_Tournament.png'] = 22721,
+    ['Category_Tickets.png'] = 22722,
+    ['Category_ExclusiveOffers.png'] = 3381,
+    ['Category_Rarity.png'] = 39546,
+}
+
+local function setCategoryItem(widget, itemId)
+    widget:setIcon('')
+    local item = widget:getChildById('categoryItem')
+    if not item then
+        item = g_ui.createWidget('UIItem', widget)
+        item:setId('categoryItem')
+        item:setVirtual(true)
+        item:setPhantom(true)
+        item:setSize({ width = 20, height = 20 })
+        item:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+        item:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+    end
+    item:setItemId(itemId)
+end
+
 local function setImagenHttp(widget, url, isIcon)
+    local categoryItem = isIcon and CATEGORY_ITEMS[url:match('([^/]+)$') or '']
+    if categoryItem then
+        setCategoryItem(widget, categoryItem)
+        return
+    end
     -- images shipped with the client (the Home banners) win over the website
     local localPath = "/game_store/images/" .. url
     if url:find("^home/") and g_resources.fileExists(localPath) then
