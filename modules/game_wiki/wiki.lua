@@ -158,6 +158,34 @@ function builders.table(parent, block)
             x = x + widths[i]
         end
         line:setHeight(height)
+        if row.link then
+            line:setTooltip(T('Abrir %s', cellText(row[1])))
+            line.onClick = function() show(row.link) end
+        end
+    end
+end
+
+-- the hunts of one teleport room: monster, recommended level, what else lives there
+function builders.hunts(parent, block)
+    local tbl = g_ui.createWidget('WikiTable', parent)
+    local head = g_ui.createWidget('WikiHuntHead', tbl)
+    head.c1:setText('Hunt')
+    head.c2:setText(T('Nível'))
+    head.c3:setText(T('Também tem'))
+    for i, hunt in ipairs(block[2]) do
+        local row = g_ui.createWidget(i % 2 == 0 and 'WikiHuntRowEven' or 'WikiHuntRow', tbl)
+        local look = hunt[5]
+        if look and look.type and look.type > 0 then
+            row.creature:setOutfit(look)
+        end
+        row.name:setText(hunt[1])
+        if hunt[4] > 1 then
+            row.count:setText(T('%d teleports', hunt[4]))
+        else
+            row.name:setMarginTop(12)
+        end
+        row.level:setText(tostring(hunt[2]))
+        row.also:setText(hunt[3] ~= '' and hunt[3] or '-')
     end
 end
 

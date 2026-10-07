@@ -3,6 +3,6 @@ Module
   description: Breves Wiki - monster tiers, item rarities and how the bonuses work
   author: Baiak Breves
   sandboxed: true
-  scripts: [ pages, wiki ]
+  scripts: [ teleports, pages, wiki ]
   @onLoad: init()
   @onUnload: terminate()

@@ -75,6 +75,7 @@ WIKI_GROUPS = {
     { title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { title = 'Itens raros', pages = { 'items', 'grades', 'pools' } },
     { title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
+    { title = 'Teleports', pages = { 'tp' } },
 }
 
 WIKI_PAGES = {}
@@ -392,5 +393,53 @@ WIKI_PAGES.experience = {
         { 'p', '700 x 1,9 x 2 x 1,1 x 2 = 5.852, e depois a stamina e a rate do servidor.' },
         { 'p', 'Monstros invocados por outros monstros não recebem a rate do Hunt Board.' },
         { 'links', { 'huntboard', 'stacking' } },
+    },
+}
+
+-- ---------------------------------------------------------------- teleports
+-- one page per city, from teleports.lua (generated from the map)
+
+local tpGroup = WIKI_GROUPS[#WIKI_GROUPS]
+local overviewRows = {}
+
+for _, entry in ipairs(WIKI_TELEPORTS) do
+    local id = 'tp_' .. entry.city:lower():gsub(' ', '_')
+    local total, low, high = 0, math.huge, 0
+    local blocks = {}
+    for _, room in ipairs(entry.rooms) do
+        total = total + room.teleports
+        for _, hunt in ipairs(room.hunts) do
+            low, high = math.min(low, hunt[2]), math.max(high, hunt[2])
+        end
+    end
+    if #entry.rooms == 1 then
+        table.insert(blocks, { 'lead', string.format('A sala de teleports de %s fica ao lado do templo, %s. São %d teleports, e a cela ao lado de cada um mostra o monstro da hunt.',
+            entry.city, entry.rooms[1].floor, total) })
+    else
+        table.insert(blocks, { 'lead', string.format('%s tem %d salas de teleports perto do templo, com %d teleports ao todo. A cela ao lado de cada teleport mostra o monstro da hunt.',
+            entry.city, #entry.rooms, total) })
+    end
+    for i, room in ipairs(entry.rooms) do
+        if #entry.rooms > 1 then
+            table.insert(blocks, { 'h', string.format('Sala %d, %s (%d teleports)', i, room.floor, room.teleports) })
+        end
+        table.insert(blocks, { 'hunts', room.hunts })
+    end
+    table.insert(blocks, { 'p', 'Nível sugerido é o mesmo que as hunt tasks usam. "Também tem" são os outros monstros mais comuns no caminho a partir de onde o teleport deixa você.' })
+    table.insert(blocks, { 'links', { 'tp', 'huntboard' } })
+    WIKI_PAGES[id] = { menu = entry.city, title = 'Teleports de ' .. entry.city, blocks = blocks }
+    table.insert(tpGroup.pages, id)
+    table.insert(overviewRows, { { entry.city, '#ffd27a' }, tostring(#entry.rooms), tostring(total), string.format('%d a %d', low, high), link = id })
+end
+
+WIKI_PAGES.tp = {
+    menu = 'Salas de teleport',
+    title = 'Salas de teleport',
+    blocks = {
+        { 'lead', 'Toda cidade tem uma sala de teleports perto do templo. Cada teleport leva direto para uma hunt, e o monstro na cela ao lado do teleport mostra qual é.' },
+        { 'p', 'Clique numa cidade para ver todas as hunts dela, do nível mais baixo ao mais alto.' },
+        { 'table', widths = { 150, 70, 100, 150 }, head = { 'Cidade', 'Salas', 'Teleports', 'Nível sugerido' }, rows = overviewRows },
+        { 'p', 'Para quem está começando, Avante tem as hunts mais fracas (trolls, orcs, minotauros). Monstros com rate alta no Hunt Board valem mais XP e viram raros com mais frequência.' },
+        { 'links', { 'tp_avante', 'huntboard' } },
     },
 }

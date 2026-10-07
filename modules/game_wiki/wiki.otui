@@ -75,6 +75,89 @@ WikiTableHead < UIWidget
 
 WikiTableRow < UIWidget
   background-color: #00000012
+  $hover:
+    background-color: #ffffff12
+
+WikiHuntHead < WikiTableHead
+  WikiHeadCell
+    anchors.left: parent.left
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    margin-left: 44
+    width: 170
+    id: c1
+  WikiHeadCell
+    anchors.left: prev.right
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    width: 60
+    id: c2
+  WikiHeadCell
+    anchors.left: prev.right
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    id: c3
+
+WikiHuntRow < WikiTableRow
+  height: 38
+
+  UICreature
+    id: creature
+    size: 36 36
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    creature-size: 36
+    phantom: true
+
+  Label
+    id: name
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-left: 50
+    margin-top: 5
+    width: 164
+    height: 14
+    font: verdana-11px-rounded
+    color: #ffd27a
+    phantom: true
+
+  Label
+    id: count
+    anchors.left: name.left
+    anchors.top: name.bottom
+    margin-top: 2
+    width: 164
+    height: 13
+    font: verdana-11px-monochrome
+    color: #7a7a7a
+    phantom: true
+
+  Label
+    id: level
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 220
+    width: 54
+    font: verdana-11px-rounded
+    color: #e8e8e8
+    phantom: true
+
+  Label
+    id: also
+    anchors.left: level.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    font: verdana-11px-monochrome
+    color: #a8a8a8
+    text-wrap: true
+    text-auto-resize: true
+    phantom: true
+
+WikiHuntRowEven < WikiHuntRow
+  background-color: #ffffff0d
 
 WikiTableRowEven < WikiTableRow
   background-color: #ffffff0d
@@ -360,13 +443,22 @@ MainWindow
     anchors.bottom: closeButton.top
     margin-top: 6
     margin-bottom: 8
-    width: 176
+    width: 164
+    vertical-scrollbar: topicsScroll
     border-width: 1
     border-color: #000000
     background-color: #00000040
     padding: 1 1 4 1
     layout:
       type: verticalBox
+
+  VerticalScrollBar
+    id: topicsScroll
+    anchors.top: topics.top
+    anchors.bottom: topics.bottom
+    anchors.left: topics.right
+    step: 20
+    pixels-scroll: true
 
   Label
     id: noResults
@@ -384,9 +476,9 @@ MainWindow
   Label
     id: group
     anchors.top: parent.top
-    anchors.left: topics.right
+    anchors.left: topicsScroll.right
     anchors.right: parent.right
-    margin-left: 14
+    margin-left: 12
     height: 14
     font: verdana-11px-monochrome
     color: #8a7d5c
