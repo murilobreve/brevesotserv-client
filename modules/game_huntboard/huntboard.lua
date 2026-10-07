@@ -41,7 +41,7 @@ local tickEvent
 
 local currentTab = 'rates'
 local currentPeriod = 'hour'
-local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 20, slot = -1 }
+local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 40, slot = -1 }
 local filtered = {}
 local page = 1
 local boards = {}
@@ -104,13 +104,13 @@ local function multColor(tenths)
     return '#ffb020'
 end
 
--- loot only goes from 0.5x to 2x, so its colours step sooner
+-- loot follows the XP rate (0.8x to 4x), so its colours step sooner
 local function lootColor(tenths)
     if tenths < 10 then
         return '#e0564a'
-    elseif tenths < 13 then
+    elseif tenths < 15 then
         return '#c8c8c8'
-    elseif tenths < 17 then
+    elseif tenths < 25 then
         return '#7fd35a'
     end
     return '#ffb020'
@@ -519,7 +519,7 @@ function handlers.rates(data)
     rates.nextAt = data.nextAt or 0
     rates.interval = data.interval or 7200
     rates.max = data.max or 100
-    rates.lootMax = data.lootMax or data.max or 20
+    rates.lootMax = data.lootMax or 40
     local fields = data.fields or {}
     local index = {}
     for i, name in ipairs(fields) do

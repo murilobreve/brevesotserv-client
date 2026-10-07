@@ -4,7 +4,7 @@
 
 local window, toolbarButton, countEvent
 local cfg
-local CONFIG_VERSION = 2
+local CONFIG_VERSION = 3
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
 local PAGES = { 'healing', 'potions', 'friends', 'support' }
 local PAGE_ICONS = {
@@ -61,11 +61,14 @@ local function defaults(player)
         end
     end
     config.spells[1].spell = bestSpell(single)
+    config.spells[1].on = config.spells[1].spell ~= 0
     for i = 1, POTION_RULES do
         config.potions[i] = { on = false, item = 0, stat = 'hp', below = 50 }
     end
     config.potions[1].item = bestPotion('hp')
     config.potions[2].item, config.potions[2].stat, config.potions[2].below = bestPotion('mp'), 'mp', 40
+    config.potions[1].on = config.potions[1].item ~= 0
+    config.potions[2].on = config.potions[2].item ~= 0
     for i = 1, FRIEND_RULES do
         config.friends[i] = { on = false, spell = 0, below = 60, party = true }
     end
@@ -76,6 +79,9 @@ local function defaults(player)
         cures = false,
         antiIdle = false,
     }
+    -- the bot starts on with the best heal and potions; turning it off is
+    -- remembered per character
+    config.running = true
     return config
 end
 
@@ -149,8 +155,29 @@ local function load()
     end
     local saved = (g_settings.getNode('healbot') or {})[characterKey()]
     cfg = defaults(player)
-    if type(saved) == 'table' and tonumber(saved.version) == CONFIG_VERSION then
+    if type(saved) ~= 'table' then
+        return
+    end
+    local version = tonumber(saved.version)
+    if version == CONFIG_VERSION then
         merge(cfg, saved)
+        sanitize(cfg, HealData.vocation(player))
+    elseif version == 2 then
+        -- version 2 started with every rule off: keep what the player turned
+        -- on, and give the defaults to who never turned anything on
+        local fresh = defaults(player)
+        merge(cfg, saved)
+        local any = false
+        for _, list in ipairs({ cfg.spells, cfg.potions }) do
+            for _, rule in ipairs(list) do
+                any = any or rule.on
+            end
+        end
+        if not any then
+            cfg.spells[1].on = fresh.spells[1].on
+            cfg.potions[1].on, cfg.potions[2].on = fresh.potions[1].on, fresh.potions[2].on
+        end
+        cfg.version = CONFIG_VERSION
         sanitize(cfg, HealData.vocation(player))
     end
 end
@@ -399,8 +426,12 @@ local function onAction(message)
     end
 end
 
-function setRunning(value)
+function setRunning(value, keep)
     HealEngine.setRunning(value)
+    if cfg and not keep and cfg.running ~= HealEngine.isRunning() then
+        cfg.running = HealEngine.isRunning()
+        save()
+    end
     if window and window.master:isChecked() ~= HealEngine.isRunning() then
         window.master:setChecked(HealEngine.isRunning())
     end
@@ -435,7 +466,7 @@ end
 local function onGameStart()
     load()
     HealEngine.reset()
-    setRunning(false)
+    setRunning(cfg and cfg.running, true)
     window.status:setText('')
     if not toolbarButton and modules.game_brevespanel then
         toolbarButton = modules.game_brevespanel.addFeature('healbot', toggle)
@@ -451,6 +482,7 @@ end
 -- are checked again once it is known
 local function onVocationChange()
     load()
+    setRunning(cfg and cfg.running, true)
     if window and window:isVisible() then
         fill()
     end
@@ -458,7 +490,7 @@ end
 
 local function onGameEnd()
     save()
-    setRunning(false)
+    setRunning(false, true)
     hide()
     cfg = nil
 end
