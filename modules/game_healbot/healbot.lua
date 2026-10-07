@@ -470,6 +470,11 @@ local function onGameStart()
     window.status:setText('')
     if not toolbarButton and modules.game_brevespanel then
         toolbarButton = modules.game_brevespanel.addFeature('healbot', toggle)
+        if toolbarButton and modules.game_brevespanel.setFeatureToggle then
+            modules.game_brevespanel.setFeatureToggle('healbot', function()
+                setRunning(not HealEngine.isRunning())
+            end)
+        end
     end
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('healBotButton', tr('Heal Bot (off)'),

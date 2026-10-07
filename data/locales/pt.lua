@@ -575,6 +575,7 @@ locale = {
     ["Heal Bot"] = "Heal Bot",
     ["Heal Bot (on)"] = "Heal Bot (ligado)",
     ["Heal Bot (off)"] = "Heal Bot (desligado)",
+    ["Click to turn it on or off"] = "Clique para ligar ou desligar",
     ["Bot on"] = "Bot ligado",
     ["Heal spells"] = "Cura",
     ["Potions"] = "Poções",

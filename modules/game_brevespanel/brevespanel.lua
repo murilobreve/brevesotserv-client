@@ -28,6 +28,7 @@ local panel, newsWindow
 local buttons = {}
 local callbacks = {}
 local states = {}
+local toggles = {}
 
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
@@ -52,6 +53,17 @@ local function refreshBadge(id)
         badge:setText(state.text)
         badge:setColor(state.color)
         badge:setBackgroundColor('#00000080')
+        -- a feature with a toggle switches on a click on its badge, without
+        -- opening the window
+        badge:setPhantom(toggles[id] == nil)
+        badge:setBorderWidth(toggles[id] and 1 or 0)
+        badge:setTooltip(toggles[id] and tr('Click to turn it on or off') or '')
+        badge.onClick = function()
+            if toggles[id] then
+                toggles[id]()
+            end
+            return true
+        end
         badge:show()
     else
         badge:hide()
@@ -142,6 +154,12 @@ end
 -- a short state on the right of a row, e.g. ON / OFF
 function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
+    refreshBadge(id)
+end
+
+-- makes the state badge of a row a switch: a click runs `callback`
+function setFeatureToggle(id, callback)
+    toggles[id] = callback
     refreshBadge(id)
 end
 

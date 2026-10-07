@@ -30,13 +30,16 @@ BrevesFeatureButton < UIButton
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 5
-    height: 12
+    height: 14
     text-auto-resize: true
     text-align: center
-    padding: 0 3 0 3
+    padding: 1 5 0 5
     font: verdana-9px-bold
+    border-color: #6e6e6e
     phantom: true
     visible: false
+    $hover:
+      border-color: #dfdfdf
 
 BrevesPanel < PhantomMiniWindow
   id: brevespanel
