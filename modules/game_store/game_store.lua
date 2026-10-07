@@ -121,6 +121,16 @@ local function getPageLabelHistory()
 end
 
 local function setImagenHttp(widget, url, isIcon)
+    -- images shipped with the client (the Home banners) win over the website
+    local localPath = "/game_store/images/" .. url
+    if url:find("^home/") and g_resources.fileExists(localPath) then
+        if isIcon then
+            widget:setIcon(localPath)
+        else
+            widget:setImageSource(localPath)
+        end
+        return
+    end
     if GameStore.website.IMAGES_URL then
         HTTP.downloadImage(GameStore.website.IMAGES_URL .. url, function(path, err)
             if err then
