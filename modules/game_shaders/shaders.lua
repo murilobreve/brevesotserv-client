@@ -100,6 +100,9 @@ local OUTFIT_SHADERS = { {
     name = 'Rarity - Obsidian',
     frag = 'shaders/fragment/rarity_obsidian.frag'
 }, {
+    name = 'Rarity - Lord of Death',
+    frag = 'shaders/fragment/rarity_lord_of_death.frag'
+}, {
     -- Baiak Rarity System: item-rarity tints, one per grade. Assigned
     -- server-side (item:setShader(...) in scripts/rarity/loot.lua), not
     -- selectable from this module's own UI, same reasoning as the three
