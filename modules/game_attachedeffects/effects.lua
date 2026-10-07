@@ -99,6 +99,13 @@ AttachedEffectManager.register(7, 'Pentagram Aura', '/images/game/effects/pentag
     offset = { 50, 45 }
 })
 
+-- Baiak Rarity System: the pentagram of effect 7 in black, under every
+-- "Lord of Death" monster (attached by the server, RarityConfig.tiers)
+AttachedEffectManager.register(20, 'Lord of Death Aura', '/images/game/effects/pentagram_black', ThingExternalTexture, {
+    size = { 128, 128 },
+    offset = { 50, 45 }
+})
+
 AttachedEffectManager.register(8, 'Ki', '/images/game/effects/ki', ThingExternalTexture, {
     size = { 140, 110 },
     offset = { 60, 75, true },
