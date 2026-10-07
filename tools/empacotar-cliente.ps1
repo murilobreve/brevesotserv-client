@@ -173,11 +173,25 @@ $tamanhoMb = [math]::Round((Get-Item $Zip).Length / 1MB, 1)
 # impressao digital do zip: vai para o site, ao lado do link, para o jogador conferir
 $sha256 = (Get-FileHash -Path $Zip -Algorithm SHA256).Hash.ToLower()
 Set-Content -Path "$Zip.sha256.txt" -Value "$sha256  $ZipNome" -Encoding ascii
+# ---------------------------------------------------------------- simbolos
+# o .pdb fica fora do zip (e grande e o jogador nao precisa dele), guardado
+# por versao: com ele os crash-*.dmp que os jogadores mandam mostram a linha
+# exata do codigo que quebrou
+$pdbs = @(Get-ChildItem -Path (Split-Path -Parent $Exe) -File -Filter "*.pdb" -ErrorAction SilentlyContinue)
+$PastaSimbolos = ""
+if ($pdbs.Count -gt 0) {
+    $PastaSimbolos = Join-Path $Dist ("simbolos\" + (Get-Date -Format "yyyyMMdd-HHmm") + "-" + $sha256.Substring(0, 8))
+    New-Item -ItemType Directory -Path $PastaSimbolos -Force | Out-Null
+    foreach ($pdb in $pdbs) { Copy-Item -Path $pdb.FullName -Destination $PastaSimbolos }
+    Copy-Item -Path $Exe -Destination $PastaSimbolos
+}
+
 Write-Host ""
 Write-Host "Pronto!" -ForegroundColor Green
 Info "pasta: $Pasta"
 Info "zip  : $Zip ($tamanhoMb MB)"
 Info "sha256: $sha256"
+if ($PastaSimbolos -ne "") { Info "simbolos: $PastaSimbolos (guarde: serve para ler os crashes desta versao)" }
 Write-Host ""
 Write-Host "Suba o $ZipNome na pagina de downloads do site."
 Write-Host "Mande o sha256 acima junto com o link novo, para ele aparecer no site."

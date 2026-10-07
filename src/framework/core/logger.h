@@ -129,6 +129,8 @@ public:
 
     void fireOldMessages();
     void setLogFile(std::string_view file);
+    // path of the log file (empty until setLogFile), read by the crash handler
+    const std::string& getLogFile() const { return m_logFile; }
     void setOnLog(const OnLogCallback& onLog) { m_onLog = onLog; }
     void setLevel(const Fw::LogLevel level) { m_level = level; }
     Fw::LogLevel getLevel() { return m_level; }
@@ -137,6 +139,7 @@ private:
     std::deque<LogMessage> m_logMessages;
     OnLogCallback m_onLog;
     std::ofstream m_outFile;
+    std::string m_logFile;
     Fw::LogLevel m_level{ Fw::LogDebug };
 };
 

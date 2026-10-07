@@ -13,7 +13,9 @@ Module
     dofile 'entergame'
     dofile 'characterlist'
     dofile 'createAccount'
+    dofile 'crashreport'
     EnterGame.init()
+    CrashReport.init()
     CharacterList.init()
 
   @onUnload: |

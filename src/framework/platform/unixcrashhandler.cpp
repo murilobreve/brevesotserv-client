@@ -25,6 +25,7 @@
 #include "crashhandler.h"
 #include <framework/global.h>
 #include <framework/core/application.h>
+#include <framework/core/resourcemanager.h>
 
 #ifndef __USE_GNU
 #define __USE_GNU
@@ -105,12 +106,27 @@ void crashHandler(int signum, siginfo_t* info, void* secret)
 
     g_logger.info(ss.str());
 
-    std::string fileName = "crash_report.log";
+    // same file and layout as the Windows handler: the next start sends it
+    ss << "  log (last lines):\n";
+    if (const std::string& logFile = g_logger.getLogFile(); !logFile.empty()) {
+        std::ifstream in(logFile, std::ios::binary);
+        if (in.is_open()) {
+            in.seekg(0, std::ios::end);
+            const std::streamoff size = in.tellg();
+            const std::streamoff start = size > 24 * 1024 ? size - 24 * 1024 : 0;
+            in.seekg(start);
+            std::string text(static_cast<std::size_t>(size - start), '\0');
+            in.read(text.data(), static_cast<std::streamsize>(text.size()));
+            ss << text;
+        }
+    }
+
+    std::string fileName = g_resources.getWorkDir() + "crashreport.log";
     std::ofstream fout(fileName.c_str(), std::ios::out | std::ios::app);
     if(fout.is_open() && fout.good()) {
         fout << "== application crashed\n";
         fout << ss.str();
-        fout << "\n";
+        fout << "== end of report\n\n";
         fout.close();
         g_logger.info("Crash report saved to file {}", fileName);
     } else

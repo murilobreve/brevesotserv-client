@@ -24,8 +24,14 @@
 #if defined(WIN32) && defined(CRASH_HANDLER)
 
 #include <windows.h>
+#include <psapi.h>
+#ifdef _MSC_VER
+#pragma comment(lib, "psapi.lib")
+#endif
 
 #include <framework/core/graphicalapplication.h>
+#include <framework/core/resourcemanager.h>
+#include <framework/graphics/graphics.h>
 
 #ifdef _MSC_VER
 #pragma warning (push)
@@ -35,8 +41,10 @@
 #else
 #include <dbghelp.h>
 #endif
+#include <algorithm>
 #include <atomic>
 #include <csignal>
+#include <filesystem>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -128,18 +136,95 @@ void Stacktrace(LPEXCEPTION_POINTERS e, std::stringstream& ss)
         pSym->MaxNameLength = 255;
         if (SymGetSymFromAddr64(process, sf.AddrPC.Offset, &disp, pSym))
             ss << fmt::format(" {}+0x{:x}", pSym->Name, disp);
+        IMAGEHLP_LINE64 line;
+        ZeroMemory(&line, sizeof(line));
+        line.SizeOfStruct = sizeof(line);
+        DWORD lineDisp = 0;
+        if (SymGetLineFromAddr64(process, sf.AddrPC.Offset, &lineDisp, &line) && line.FileName)
+            ss << fmt::format(" ({}:{})", line.FileName, line.LineNumber);
         ss << "\n";
     }
 }
 
 namespace {
+    // the client folder: the next start reads the report from there and sends it
     std::string crashDir()
     {
-        char dir[MAX_PATH];
-        const DWORD len = GetCurrentDirectoryA(sizeof(dir), dir);
-        if (len == 0 || len >= sizeof(dir))
+        std::string dir = g_resources.getWorkDir();
+        while (!dir.empty() && (dir.back() == '/' || dir.back() == '\\'))
+            dir.pop_back();
+        if (!dir.empty())
+            return dir;
+        char cwd[MAX_PATH];
+        const DWORD len = GetCurrentDirectoryA(sizeof(cwd), cwd);
+        if (len == 0 || len >= sizeof(cwd))
             return ".";
-        return dir;
+        return cwd;
+    }
+
+    std::string windowsVersion()
+    {
+        using RtlGetVersionFn = LONG(WINAPI*)(PRTL_OSVERSIONINFOW);
+        RTL_OSVERSIONINFOW info{};
+        info.dwOSVersionInfoSize = sizeof(info);
+        if (const HMODULE ntdll = GetModuleHandleA("ntdll.dll")) {
+            if (const auto fn = reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion")); fn && fn(&info) == 0)
+                return fmt::format("Windows {}.{} build {}", info.dwMajorVersion, info.dwMinorVersion, info.dwBuildNumber);
+        }
+        return "Windows (unknown version)";
+    }
+
+    std::string memoryInfo()
+    {
+        MEMORYSTATUSEX mem{};
+        mem.dwLength = sizeof(mem);
+        if (!GlobalMemoryStatusEx(&mem))
+            return "unknown";
+        PROCESS_MEMORY_COUNTERS_EX counters{};
+        std::string process;
+        if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters), sizeof(counters)))
+            process = fmt::format(", game using {} MB", counters.PrivateUsage / (1024 * 1024));
+        return fmt::format("{} MB total, {} MB free{}", mem.ullTotalPhys / (1024 * 1024), mem.ullAvailPhys / (1024 * 1024), process);
+    }
+
+    // the end of the log file (flushed every second), read straight from disk
+    std::string logTail(const std::size_t maxBytes)
+    {
+        const std::string& file = g_logger.getLogFile();
+        if (file.empty())
+            return "(no log file)\n";
+        std::ifstream in(stdext::utf8_to_latin1(file), std::ios::binary);
+        if (!in.is_open())
+            return "(log file not readable)\n";
+        in.seekg(0, std::ios::end);
+        const std::streamoff size = in.tellg();
+        const std::streamoff start = size > static_cast<std::streamoff>(maxBytes) ? size - static_cast<std::streamoff>(maxBytes) : 0;
+        in.seekg(start);
+        std::string text(static_cast<std::size_t>(size - start), '\0');
+        in.read(text.data(), static_cast<std::streamsize>(text.size()));
+        if (start > 0) {
+            const auto newline = text.find('\n');
+            if (newline != std::string::npos)
+                text.erase(0, newline + 1);
+        }
+        return text;
+    }
+
+    // dumps are a few MB each: keep the newest few
+    void pruneDumps(const std::string& dir, const std::size_t keep)
+    {
+        std::error_code ec;
+        std::vector<std::filesystem::path> dumps;
+        for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+            const auto name = entry.path().filename().string();
+            if (name.starts_with("crash-") && entry.path().extension() == ".dmp")
+                dumps.push_back(entry.path());
+        }
+        if (dumps.size() <= keep)
+            return;
+        std::ranges::sort(dumps); // crash-YYYYMMDD-HHMMSS.dmp: oldest first
+        for (std::size_t i = 0; i + keep < dumps.size(); ++i)
+            std::filesystem::remove(dumps[i], ec);
     }
 
     void writeMiniDump(const LPEXCEPTION_POINTERS e, const std::string& fileName)
@@ -186,6 +271,10 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
         "exception: {} (0x{:08X})\n"
         "exception address: 0x{:X}\n"
         "dump: {}\n"
+        "renderer: {}\n"
+        "gpu: {} | {} | {}\n"
+        "system: {}\n"
+        "memory: {}\n"
         "  backtrace:\n",
         g_app.getName(),
         g_app.getVersion(),
@@ -196,25 +285,36 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
         stdext::date_time_string(),
         getExceptionName(e->ExceptionRecord->ExceptionCode), e->ExceptionRecord->ExceptionCode,
         reinterpret_cast<std::uintptr_t>(e->ExceptionRecord->ExceptionAddress),
-        dumpName
+        dumpName,
+#ifdef OPENGL_ES
+        "DirectX (ANGLE)",
+#else
+        "OpenGL",
+#endif
+        g_graphics.getVendor(), g_graphics.getRenderer(), g_graphics.getVersion(),
+        windowsVersion(),
+        memoryInfo()
     );
 
     SymSetOptions(SymGetOptions() | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
     SymInitialize(GetCurrentProcess(), nullptr, TRUE);
     Stacktrace(e, oss);
     SymCleanup(GetCurrentProcess());
-    oss << "\n";
+    oss << "  log (last lines):\n" << logTail(24 * 1024) << "== end of report\n\n";
 
     std::ofstream fout(fileName, std::ios::out | std::ios::app);
     if (fout.is_open()) {
         fout << oss.str();
         fout.close();
     }
-    g_logger.info(oss.str());
+    pruneDumps(dir, 3);
 
     const std::string msg = fmt::format(
-        "The game has crashed.\n\n"
-        "Please send these two files to the server staff:\n{}\n{}",
+        "O jogo fechou por causa de um erro.\n"
+        "O relatorio do erro sera enviado automaticamente para a equipe na proxima vez que voce abrir o jogo.\n\n"
+        "The game has crashed.\n"
+        "The crash report will be sent to the staff automatically the next time you open the game.\n\n"
+        "{}\n{}",
         fileName, dumpName
     );
     MessageBoxA(nullptr, msg.c_str(), "Application crashed", MB_OK | MB_ICONERROR);

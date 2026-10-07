@@ -22,6 +22,8 @@
 
 #include "logger.h"
 
+#include <filesystem>
+
 #include "eventdispatcher.h"
 #include "framework/platform/platform.h"
 
@@ -111,6 +113,9 @@ namespace
             logger->set_level(spdlog::level::trace);
             logger->flush_on(spdlog::level::warn);
             spdlog::set_default_logger(logger);
+            // a crash ends the process without a flush: at most one second of
+            // the log file is lost, so the crash report can include its tail
+            spdlog::flush_every(std::chrono::seconds(1));
 
             return logger;
         } catch (...) {
@@ -244,6 +249,21 @@ void Logger::setLogFile(const std::string_view file)
         });
         return;
     }
+
+    // the log of the last session is kept as <name>-previous<ext>: a player
+    // who reopens the game after a crash would otherwise wipe it
+    static bool rotated = false;
+    if (!rotated) {
+        rotated = true;
+        std::error_code ec;
+        const std::filesystem::path current{ stdext::utf8_to_latin1(file) };
+        if (std::filesystem::exists(current, ec) && std::filesystem::file_size(current, ec) > 0) {
+            auto previous = current;
+            previous.replace_filename(current.stem().string() + "-previous" + current.extension().string());
+            std::filesystem::copy_file(current, previous, std::filesystem::copy_options::overwrite_existing, ec);
+        }
+    }
+    m_logFile = std::string{ file };
 
     auto& spdLogger = getSpdLogger();
     if (spdLogger) {
