@@ -18,6 +18,7 @@ locale = {
     ["A daily task and the Hunter's Trail, with 70 steps. The points buy items in the task shop, such as the Bag of Mythical."] = "Task diária e a Trilha do Caçador, com 70 etapas. Os pontos compram itens na loja de tasks, como a Bag of Mythical.",
     ["The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go."] = "A XP e o loot de cada monstro mudam a cada 2 horas. Veja as hunts mais quentes antes de sair.",
     ["Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Breves Coins."] = "Quem mais mata monstros e quem mais faz XP na hora, no dia e no mês. Os primeiros ganham Breves Coins.",
+    ["Rare monsters, rarity items and every bonus explained, with the real numbers from the server."] = "Monstros raros, itens raros e todos os bônus explicados, com os números reais do servidor.",
     ["Buy and sell the rarity items that drop from monsters, paid with the gold in your bank."] = "Compre e venda os itens de raridade que caem dos monstros, pagando com o gold do banco.",
     ["Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules."] = "Cura com magias e potions sozinho, cura os amigos e mantém os buffs. Você escolhe as regras.",
     ["XP and loot rate of every monster"] = "XP e loot de cada monstro",

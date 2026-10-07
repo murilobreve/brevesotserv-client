@@ -1,0 +1,449 @@
+// Breves Wiki: topics on the left, the page on the right. Built from the
+// Breves window parts (50-breves.otui) so it sits with the other windows.
+
+WikiGroupLabel < Label
+  height: 18
+  font: verdana-11px-rounded
+  color: #8a7d5c
+  text-offset: 4 4
+  margin-top: 6
+
+WikiTopic < UIButton
+  height: 20
+  font: verdana-11px-rounded
+  color: #c8c8c8
+  text-align: left
+  text-offset: 12 0
+  $hover !checked:
+    background-color: #ffffff14
+    color: #ffffff
+  $checked:
+    background-color: #ffffff22
+    color: #ffd27a
+
+// ---------------------------------------------------------------- page blocks
+
+WikiLead < Label
+  font: verdana-11px-rounded
+  color: #e2e2e2
+  text-wrap: true
+  text-auto-resize: true
+  margin-bottom: 4
+
+WikiText < Label
+  font: verdana-11px-monochrome
+  color: #b8b8b8
+  text-wrap: true
+  text-auto-resize: true
+
+WikiHeading < Label
+  height: 24
+  font: verdana-11px-rounded
+  color: #ffd27a
+  text-offset: 0 10
+
+WikiNote < UIWidget
+  background-color: #3a0f0f99
+  border-width: 1
+  border-color: #6b2323
+  padding: 6 8 6 8
+
+  Label
+    id: text
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    font: verdana-11px-monochrome
+    color: #f0c8c8
+    text-wrap: true
+    text-auto-resize: true
+
+WikiTable < UIWidget
+  border-width: 1
+  border-color: #000000
+  background-color: #00000026
+  padding: 1
+  layout:
+    type: verticalBox
+    fit-children: true
+
+WikiTableHead < UIWidget
+  height: 20
+  image-source: /images/ui/button
+  image-clip: 0 0 22 23
+  image-border: 3
+
+WikiTableRow < UIWidget
+  background-color: #00000012
+
+WikiTableRowEven < WikiTableRow
+  background-color: #ffffff0d
+
+WikiCell < Label
+  font: verdana-11px-monochrome
+  color: #c8c8c8
+  text-wrap: true
+  text-auto-resize: true
+  text-align: topLeft
+  padding: 3 6 3 6
+  phantom: true
+
+WikiHeadCell < Label
+  font: verdana-11px-antialised
+  color: #dfdfdf99
+  text-align: left
+  text-offset: 6 0
+  phantom: true
+
+// the four tiers side by side, the same Minotaur under each shader
+WikiStrip < UIWidget
+  height: 134
+  layout:
+    type: horizontalBox
+    spacing: 6
+
+WikiStripCell < UIButton
+  width: 133
+  background-color: #00000059
+  border-width: 1
+  border-color: #000000
+  $hover:
+    background-color: #ffffff12
+    border-color: #6e6e6e
+
+  UICreature
+    id: creature
+    size: 96 96
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 0
+    creature-size: 96
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: creature.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 14
+    text-align: center
+    font: verdana-11px-rounded
+    phantom: true
+
+  Label
+    id: chance
+    anchors.top: name.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    height: 14
+    text-align: center
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+    phantom: true
+
+WikiStat < UIWidget
+  height: 20
+  background-color: #00000066
+  border-width: 1
+  border-color: #000000
+
+  Label
+    id: key
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+    phantom: true
+
+  Label
+    id: value
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #ececec
+    phantom: true
+
+// one tier: a dark stage with the live monster, then its numbers
+WikiTierCard < UIWidget
+  height: 196
+
+  UIWidget
+    id: stage
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 176 176
+    background-color: #24221f
+    border-width: 1
+    border-color: #000000
+
+    UICreature
+      id: creature
+      size: 174 174
+      anchors.centerIn: parent
+      creature-size: 174
+      phantom: true
+
+  Label
+    id: monster
+    anchors.top: stage.bottom
+    anchors.left: stage.left
+    anchors.right: stage.right
+    margin-top: 4
+    height: 14
+    text-align: center
+    font: verdana-11px-monochrome
+    color: #7a7a7a
+
+  Label
+    id: chance
+    anchors.top: parent.top
+    anchors.left: stage.right
+    anchors.right: parent.right
+    margin-left: 14
+    height: 26
+    font: Verdana Bold-13px
+    text-align: left
+
+  Label
+    id: chanceText
+    anchors.top: chance.bottom
+    anchors.left: chance.left
+    anchors.right: parent.right
+    font: verdana-11px-monochrome
+    color: #9a9a9a
+    text-wrap: true
+    text-auto-resize: true
+
+  UIWidget
+    id: stats
+    anchors.top: chanceText.bottom
+    anchors.left: chance.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 86
+    layout:
+      type: grid
+      cell-size: 176 20
+      cell-spacing: 2
+      num-columns: 2
+      flow: true
+
+  Label
+    id: arrival
+    anchors.top: stats.bottom
+    anchors.left: chance.left
+    anchors.right: parent.right
+    margin-top: 2
+    font: verdana-11px-monochrome
+    color: #b8b8b8
+    text-wrap: true
+    text-auto-resize: true
+
+WikiGradeRow < UIWidget
+  height: 46
+  background-color: #00000026
+  border-width: 1
+  border-color: #000000
+
+  UIWidget
+    id: frame
+    size: 36 36
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 5
+    image-source: /game_raritymarket/images/frames
+    image-clip: 0 0 34 34
+    phantom: true
+
+    UIItem
+      id: item
+      size: 32 32
+      anchors.centerIn: parent
+      virtual: true
+      phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: frame.right
+    margin-top: 7
+    margin-left: 10
+    width: 120
+    height: 16
+    font: verdana-11px-rounded
+
+  Label
+    id: bonuses
+    anchors.top: name.bottom
+    anchors.left: name.left
+    width: 120
+    height: 14
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+
+  Label
+    id: bandLabel
+    anchors.top: name.top
+    anchors.left: name.right
+    margin-left: 10
+    height: 16
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+    !text: tr('Faixa dos valores')
+
+  Label
+    id: band
+    anchors.top: bandLabel.bottom
+    anchors.left: bandLabel.left
+    height: 14
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #dfdfdf
+
+  UIWidget
+    id: bar
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 10
+    size: 160 8
+    background-color: #00000099
+    border-width: 1
+    border-color: #000000
+
+    UIWidget
+      id: fill
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      margin: 1
+      phantom: true
+
+WikiLinkButton < BrevesTab
+  size: 150 22
+  font: verdana-11px-rounded
+
+WikiLinks < UIWidget
+  height: 34
+  layout:
+    type: horizontalBox
+    spacing: 4
+
+// ---------------------------------------------------------------- window
+
+MainWindow
+  id: wikiWindow
+  !text: tr('Breves Wiki')
+  size: 800 580
+  @onEscape: modules.game_wiki.hide()
+
+  TextEdit
+    id: searchEdit
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 176
+    height: 22
+    !placeholder: tr('Buscar...')
+    placeholder-color: #6e706f
+    @onTextChange: modules.game_wiki.onSearch(self:getText())
+
+  ScrollablePanel
+    id: topics
+    anchors.top: searchEdit.bottom
+    anchors.left: parent.left
+    anchors.bottom: closeButton.top
+    margin-top: 6
+    margin-bottom: 8
+    width: 176
+    border-width: 1
+    border-color: #000000
+    background-color: #00000040
+    padding: 1 1 4 1
+    layout:
+      type: verticalBox
+
+  Label
+    id: noResults
+    anchors.top: topics.top
+    anchors.left: topics.left
+    anchors.right: topics.right
+    margin: 8 8 0 8
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+    text-wrap: true
+    text-auto-resize: true
+    !text: tr('Nada encontrado. Tente "dodge", "lord" ou "xp".')
+    visible: false
+
+  Label
+    id: group
+    anchors.top: parent.top
+    anchors.left: topics.right
+    anchors.right: parent.right
+    margin-left: 14
+    height: 14
+    font: verdana-11px-monochrome
+    color: #8a7d5c
+
+  Label
+    id: title
+    anchors.top: group.bottom
+    anchors.left: group.left
+    anchors.right: parent.right
+    height: 26
+    font: Verdana Bold-13px
+    color: #f0e2b6
+
+  HorizontalSeparator
+    id: titleSep
+    anchors.top: title.bottom
+    anchors.left: group.left
+    anchors.right: parent.right
+    margin-top: 2
+
+  ScrollablePanel
+    id: page
+    anchors.top: titleSep.bottom
+    anchors.left: group.left
+    anchors.right: pageScroll.left
+    anchors.bottom: closeButton.top
+    margin-top: 8
+    margin-bottom: 8
+    margin-right: 6
+    padding-right: 6
+    vertical-scrollbar: pageScroll
+    layout:
+      type: verticalBox
+      spacing: 6
+
+  VerticalScrollBar
+    id: pageScroll
+    anchors.top: titleSep.bottom
+    anchors.bottom: closeButton.top
+    margin-top: 8
+    margin-bottom: 8
+    anchors.right: parent.right
+    step: 40
+    pixels-scroll: true
+
+  Button
+    id: backButton
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    width: 70
+    !text: tr('Voltar')
+    @onClick: modules.game_wiki.back()
+
+  Button
+    id: closeButton
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    width: 70
+    !text: tr('Fechar')
+    @onClick: modules.game_wiki.hide()

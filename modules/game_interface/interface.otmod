@@ -53,6 +53,7 @@ Module
     - game_rewardwall
     - game_brevespanel
     - game_raritymarket
+    - game_wiki
     - game_huntboard
     - game_healbot
     - game_hunttasks
