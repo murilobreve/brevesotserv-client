@@ -3093,6 +3093,9 @@ void ProtocolGame::parseTextMessage(const InputMessagePtr& msg)
         text = msg->getString();
     }
 
+    // with the full log on, the text too: the last message before a crash
+    // tells what the player was doing
+    g_logger.debug("[ProtocolGame::parseTextMessage] text: {}", text);
     g_game.processTextMessage(mode, text);
 }
 
