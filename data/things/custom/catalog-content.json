@@ -58,5 +58,13 @@
     "firstspriteid": 1000217,
     "lastspriteid": 1000224,
     "area": 32
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-effects-610b8632e11ff210.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000225,
+    "lastspriteid": 1000228,
+    "area": 64
   }
 ]
