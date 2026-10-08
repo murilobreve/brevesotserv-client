@@ -346,6 +346,14 @@ WIKI_PAGES.affixes = {
               { 'Holy', { 'Sacer', '#ffe082' } }, { 'Death', { 'Mortifer', '#b07ad8' } },
               { 'Physical', { 'Corporalis', '#b0bec5' } },
           } },
+        { 'h', 'Rarity XP: refazer bônus' },
+        { 'p', 'Matar um monstro Pale, Ashen, Obsidian ou Lord of Death dá Rarity XP para quem tem o loot: a experiência do monstro dividida por 100, vezes 1 (Pale), 2 (Ashen), 4 (Obsidian) ou 10 (Lord of Death). Um Pale Dragon dá 7, um Obsidian Dragon dá 28.' },
+        { 'p', 'Na janela Rarity Bonuses, cada bônus de um item que você está usando tem dois botões. Reroll sorteia um novo valor para o mesmo bônus. Trocar troca o bônus por outro aleatório do mesmo tipo de item. Os outros bônus do item não mudam.' },
+        { 'table', widths = { 120, 90, 90 }, head = { 'Grau do item', 'Reroll', 'Trocar' },
+          rows = {
+              { 'Communis', '25', '40' }, { 'Rarus', '60', '100' }, { 'Praeclarus', '150', '250' },
+              { 'Legendarius', '350', '600' }, { 'Mythicus', '800', '1400' },
+          } },
         { 'links', { 'stacking', 'pools' } },
     },
 }

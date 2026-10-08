@@ -42,15 +42,44 @@ BonusItemRow < BrevesRow
     color: #9a9a9a
     phantom: true
 
-  Label
+  Panel
     id: bonuses
     anchors.top: info.bottom
     anchors.left: name.left
     anchors.right: parent.right
     margin-top: 3
+    layout:
+      type: verticalBox
+      spacing: 2
+
+// one bonus of an item, with its reroll and change buttons
+BonusLine < Panel
+  height: 18
+
+  Label
+    id: text
+    anchors.left: parent.left
+    anchors.right: rerollButton.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
     font: verdana-11px-monochrome
     color: #7fd35a
-    phantom: true
+    phantom: false
+
+  Button
+    id: changeButton
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    size: 74 17
+    font: verdana-11px-monochrome
+
+  Button
+    id: rerollButton
+    anchors.right: changeButton.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 3
+    size: 74 17
+    font: verdana-11px-monochrome
 
 BonusItemRowEven < BonusItemRow
   background-color: #ffffff12
@@ -95,16 +124,35 @@ BonusTotalRowEven < BonusTotalRow
 MainWindow
   id: rarityBonusWindow
   !text: tr('Rarity Bonuses')
-  size: 760 540
+  size: 900 560
   @onEscape: modules.game_raritybonus.hide()
+
+  Label
+    id: xpLabel
+    anchors.top: parent.top
+    anchors.left: parent.left
+    height: 18
+    text-auto-resize: true
+    color: #ffd84a
+
+  Label
+    id: status
+    anchors.top: parent.top
+    anchors.left: xpLabel.right
+    anchors.right: parent.right
+    margin-left: 16
+    height: 18
+    text-align: right
+    color: #7fd35a
 
   BrevesSection
     id: itemsSection
-    anchors.top: parent.top
+    anchors.top: xpLabel.bottom
     anchors.left: parent.left
     anchors.bottom: bottomSep.top
+    margin-top: 6
     margin-bottom: 8
-    width: 340
+    width: 500
     !text: tr('Rarity items you wear')
 
     BrevesList
@@ -135,7 +183,7 @@ MainWindow
 
   BrevesSection
     id: totalsSection
-    anchors.top: parent.top
+    anchors.top: itemsSection.top
     anchors.left: itemsSection.right
     anchors.right: parent.right
     anchors.bottom: bottomSep.top

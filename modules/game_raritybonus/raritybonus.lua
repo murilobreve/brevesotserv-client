@@ -18,6 +18,8 @@ local GRADES = {
 local window
 local featureButton
 local refreshEvent
+local confirmBox
+local rarityXp = 0
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -47,6 +49,23 @@ local function titleCase(text)
     return (text:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end))
 end
 
+local function confirm(title, message, callback)
+    if confirmBox then
+        confirmBox:destroy()
+    end
+    local function close()
+        if confirmBox then
+            confirmBox:destroy()
+            confirmBox = nil
+        end
+    end
+    confirmBox = displayGeneralBox(title, message, {
+        { text = tr('Yes'), callback = function() close(); callback() end },
+        { text = tr('No'), callback = close },
+        anchor = AnchorHorizontalCenter,
+    }, function() close(); callback() end, close)
+end
+
 local function fillItems(items)
     local list = window.itemsSection.itemsList
     list:destroyChildren()
@@ -70,13 +89,29 @@ local function fillItems(items)
             info = info .. '  ' .. tr('found by you')
         end
         row.info:setText(info)
-        local lines = {}
+        local count = 0
         for _, bonus in ipairs(entry.bonuses or {}) do
-            table.insert(lines, bonusText(bonus))
+            count = count + 1
+            local line = g_ui.createWidget('BonusLine', row.bonuses)
+            line.text:setText(bonusText(bonus))
+            line.rerollButton:setText(tr('Reroll %d', entry.rerollCost or 0))
+            line.rerollButton:setTooltip(tr('Roll a new value for %s (%d Rarity XP).', bonus.label, entry.rerollCost or 0))
+            line.rerollButton:setEnabled(rarityXp >= (entry.rerollCost or 0))
+            line.rerollButton.onClick = function()
+                send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'value' })
+            end
+            line.changeButton:setText(tr('Change %d', entry.changeCost or 0))
+            line.changeButton:setTooltip(tr('Swap %s for another random bonus (%d Rarity XP).', bonus.label, entry.changeCost or 0))
+            line.changeButton:setEnabled(rarityXp >= (entry.changeCost or 0))
+            line.changeButton.onClick = function()
+                confirm(tr('Change bonus'), tr('Swap %s for another random bonus of this item for %d Rarity XP? The current one is lost.', bonusText(bonus), entry.changeCost or 0), function()
+                    send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'change' })
+                end)
+            end
         end
-        row.bonuses:setText(table.concat(lines, '\n'))
-        row.bonuses:setHeight(#lines * LINE)
-        row:setHeight(math.max(42, 3 + 15 + 16 + 3 + #lines * LINE + 6))
+        local linesHeight = count * 20
+        row.bonuses:setHeight(linesHeight)
+        row:setHeight(math.max(42, 3 + 15 + 16 + 3 + linesHeight + 6))
     end
 end
 
@@ -115,6 +150,15 @@ local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' or data.action ~= 'bonuses' or not window then
         return
     end
+    rarityXp = tonumber(data.rarityXp) or 0
+    window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
+    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade cost more.'))
+    -- automatic refreshes (equipment changed) carry no message: keep the
+    -- answer to the last reroll on screen
+    if data.message then
+        window.status:setText(data.message)
+        window.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
+    end
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
     local note = tr('Each item shows its own bonuses; on the right, the total you get of each one and the items it comes from.') .. ' ' ..
@@ -134,6 +178,7 @@ local function onOpcode(protocol, opcode, data)
 end
 
 function request()
+    window.status:setText('')
     send({ action = 'open' })
 end
 
@@ -144,6 +189,10 @@ function hide()
     window:hide()
     if featureButton then
         featureButton:setOn(false)
+    end
+    if confirmBox then
+        confirmBox:destroy()
+        confirmBox = nil
     end
 end
 
@@ -165,7 +214,7 @@ local function onInventoryChange()
     end
     refreshEvent = scheduleEvent(function()
         refreshEvent = nil
-        request()
+        send({ action = 'open' })
     end, 500)
 end
 

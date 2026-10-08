@@ -722,6 +722,14 @@ locale = {
     ["Ring"] = "Anel",
     ["Ammo"] = "Munição",
     ["Backpack"] = "Mochila",
+    ["Reroll %d"] = "Reroll %d",
+    ["Change %d"] = "Trocar %d",
+    ["Roll a new value for %s (%d Rarity XP)."] = "Sorteia um novo valor para %s (%d Rarity XP).",
+    ["Swap %s for another random bonus (%d Rarity XP)."] = "Troca %s por outro bônus aleatório (%d Rarity XP).",
+    ["Change bonus"] = "Trocar bônus",
+    ["Swap %s for another random bonus of this item for %d Rarity XP? The current one is lost."] = "Trocar %s por outro bônus aleatório deste item por %d Rarity XP? O atual é perdido.",
+    ["Rarity XP: %d"] = "Rarity XP: %d",
+    ["Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade cost more."] = "Ganha matando monstros Pale, Ashen, Obsidian e Lord of Death: quanto mais forte o monstro e o tier, mais você ganha. Gaste aqui para refazer os bônus dos itens que você usa; itens de grau mais alto custam mais.",
   }
 }
 
