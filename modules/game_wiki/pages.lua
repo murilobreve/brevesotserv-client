@@ -96,6 +96,7 @@ WIKI_PAGES.tiers = {
               { { 'Lord of Death', '#e04848' }, '0,05%', 'x3,60', 'x2,75', 'x2,5', 'x20' },
           } },
         { 'p', 'A chance é por morte de monstro. O sorteio começa pela camada mais alta, então um mesmo monstro nunca vira duas coisas ao mesmo tempo. Loot multiplica a chance de cada item da lista do próprio monstro; itens muito raros (abaixo de 0,3% de chance) não são multiplicados.' },
+        { 'p', 'O monstro que volta com tier não pertence a nenhum spawn: se ficar 5 minutos sem nenhum jogador a até 10 sqm, ele some.' },
         { 'h', 'Regras' },
         { 'p', 'Um monstro raro que morre pode voltar de novo, com metade da chance. Bosses, summons e monstros de treino nunca voltam.' },
         { 'p', 'Todo o loot de um monstro raro vai para uma Loot Bag dentro do corpo. A bag não sai do corpo, só os itens de dentro.' },
