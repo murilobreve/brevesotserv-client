@@ -1,0 +1,9 @@
+Module
+  name: game_raritybonus
+  description: Rarity Bonuses - every rarity bonus you wear and the item it comes from
+  author: Baiak Breves
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ raritybonus ]
+  @onLoad: init()
+  @onUnload: terminate()

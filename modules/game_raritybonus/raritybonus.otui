@@ -1,0 +1,191 @@
+BonusFrame < UIWidget
+  size: 36 36
+  image-source: /game_raritymarket/images/frames
+  image-clip: 0 0 34 34
+  phantom: true
+
+  UIItem
+    id: item
+    size: 32 32
+    anchors.centerIn: parent
+    virtual: true
+    phantom: true
+
+// one rarity item: frame, name, grade and slot, then its bonuses
+BonusItemRow < BrevesRow
+  focusable: false
+  padding: 3
+
+  BonusFrame
+    id: frame
+    anchors.left: parent.left
+    anchors.top: parent.top
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: frame.right
+    anchors.right: parent.right
+    margin-left: 8
+    margin-top: 1
+    height: 14
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    margin-top: 2
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9a9a9a
+    phantom: true
+
+  Label
+    id: bonuses
+    anchors.top: info.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    margin-top: 3
+    font: verdana-11px-monochrome
+    color: #7fd35a
+    phantom: true
+
+BonusItemRowEven < BonusItemRow
+  background-color: #ffffff12
+
+// one bonus: its total (and cap) on the right, the items it comes from below
+BonusTotalRow < BrevesRow
+  focusable: false
+  padding: 3 6 3 6
+
+  Label
+    id: label
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: total.left
+    height: 14
+    color: #dfdfdf
+    phantom: true
+
+  Label
+    id: total
+    anchors.top: parent.top
+    anchors.right: parent.right
+    width: 140
+    height: 14
+    text-align: right
+    color: #7fd35a
+    phantom: true
+
+  Label
+    id: sources
+    anchors.top: label.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    font: verdana-11px-monochrome
+    color: #9a9a9a
+    phantom: true
+
+BonusTotalRowEven < BonusTotalRow
+  background-color: #ffffff12
+
+MainWindow
+  id: rarityBonusWindow
+  !text: tr('Rarity Bonuses')
+  size: 760 540
+  @onEscape: modules.game_raritybonus.hide()
+
+  BrevesSection
+    id: itemsSection
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.bottom: bottomSep.top
+    margin-bottom: 8
+    width: 340
+    !text: tr('Rarity items you wear')
+
+    BrevesList
+      id: itemsList
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: itemsScroll.left
+      anchors.bottom: parent.bottom
+      vertical-scrollbar: itemsScroll
+
+    VerticalScrollBar
+      id: itemsScroll
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      step: 30
+      pixel-scroll: true
+
+    BrevesNote
+      id: itemsEmpty
+      anchors.top: itemsList.top
+      anchors.left: itemsList.left
+      anchors.right: itemsList.right
+      margin: 10
+      text-align: center
+      !text: tr('You are not wearing any rarity item. Monsters drop them, and the task shop sells scrolls that give an item a rarity.')
+      visible: false
+
+  BrevesSection
+    id: totalsSection
+    anchors.top: parent.top
+    anchors.left: itemsSection.right
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-left: 8
+    margin-bottom: 8
+    !text: tr('Total of each bonus')
+
+    BrevesList
+      id: totalsList
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: totalsScroll.left
+      anchors.bottom: parent.bottom
+      vertical-scrollbar: totalsScroll
+
+    VerticalScrollBar
+      id: totalsScroll
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      step: 30
+      pixel-scroll: true
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: note.top
+    margin-bottom: 6
+
+  BrevesNote
+    id: note
+    anchors.left: parent.left
+    anchors.right: refreshButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 10
+
+  Button
+    id: refreshButton
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    size: 70 22
+    !text: tr('Refresh')
+    @onClick: modules.game_raritybonus.request()
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Close')
+    @onClick: modules.game_raritybonus.hide()
