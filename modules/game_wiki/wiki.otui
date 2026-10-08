@@ -1,4 +1,4 @@
-// Breves Wiki: topics on the left, the page on the right. Built from the
+// Mythicum Wiki: topics on the left, the page on the right. Built from the
 // Breves window parts (50-breves.otui) so it sits with the other windows.
 
 WikiGroupLabel < Label
@@ -422,7 +422,7 @@ WikiLinks < UIWidget
 
 MainWindow
   id: wikiWindow
-  !text: tr('Breves Wiki')
+  !text: tr('Mythicum Wiki')
   size: 800 580
   @onEscape: modules.game_wiki.hide()
 

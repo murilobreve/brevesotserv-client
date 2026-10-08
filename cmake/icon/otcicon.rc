@@ -17,13 +17,13 @@ BEGIN
     BEGIN
         BLOCK "041604b0"
         BEGIN
-            VALUE "CompanyName", "Baiak Breves"
-            VALUE "FileDescription", "Baiak Breves - client do jogo"
+            VALUE "CompanyName", "Baiak Mythicum"
+            VALUE "FileDescription", "Baiak Mythicum - client do jogo"
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "otclient"
-            VALUE "LegalCopyright", "Baiak Breves. Baseado no OTClient (MIT)."
-            VALUE "OriginalFilename", "Baiak Breves.exe"
-            VALUE "ProductName", "Baiak Breves"
+            VALUE "LegalCopyright", "Baiak Mythicum. Baseado no OTClient (MIT)."
+            VALUE "OriginalFilename", "Baiak Mythicum.exe"
+            VALUE "ProductName", "Baiak Mythicum"
             VALUE "ProductVersion", "1.0.0.0"
         END
     END

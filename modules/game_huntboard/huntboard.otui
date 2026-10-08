@@ -627,7 +627,7 @@ MainWindow
     anchors.verticalCenter: closeButton.verticalCenter
     font: verdana-11px-monochrome
     color: #909090
-    !text: tr('Rates re-roll every 2 hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.')
+    !text: tr('Rates re-roll every 2 hours for every monster. Leaderboard winners are paid in Mythicum Coins when the period ends.')
 
   Button
     id: closeButton

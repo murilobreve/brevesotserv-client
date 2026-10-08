@@ -1,17 +1,17 @@
-// Baiak Breves login card: brand + features on the left, sign-in form on the
+// Baiak Mythicum login card (black, white logo, gold accents): brand + features on the left, sign-in form on the
 // right. Every id the entergame.lua logic looks up is still a direct child of
 // the window; the server/version fields stay hidden (single server client).
 
 BrevesInput < UITextEdit
   font: verdana-11px-antialised
-  color: #e8ebf0
+  color: #f2f2f2
   height: 30
   text-offset: 0 1
   padding: 8 10 6 10
   image-source: /images/brevesui/input
   image-border: 7
-  selection-color: #1c1405
-  selection-background-color: #f0b94a
+  selection-color: #0a0a0a
+  selection-background-color: #f2f2f2
   change-cursor-image: false
 
   $focus:
@@ -41,7 +41,7 @@ BrevesPasswordInput < BrevesInput
 
 BrevesGoldButton < UIButton
   font: Verdana Bold-11px
-  color: #1c1405
+  color: #0a0a0a
   height: 36
   image-source: /images/brevesui/button_gold
   image-border: 9
@@ -55,19 +55,19 @@ BrevesGoldButton < UIButton
 
   $disabled:
     image-source: /images/brevesui/button_gold_disabled
-    color: #98a1b0
+    color: #a6a6a6
 
 BrevesLink < UIButton
   font: verdana-11px-antialised
-  color: #f0b94a
+  color: #ffffff
   text-auto-resize: true
 
   $hover:
-    color: #ffd98a
+    color: #bdbdbd
 
 BrevesLabel < Label
   font: verdana-11px-antialised
-  color: #98a1b0
+  color: #a6a6a6
 
 BrevesFeature < Panel
   height: 38
@@ -85,7 +85,7 @@ BrevesFeature < Panel
   Label
     id: title
     font: Verdana Bold-11px
-    color: #e8ebf0
+    color: #f2f2f2
     text-auto-resize: true
     anchors.left: bullet.right
     anchors.top: parent.top
@@ -94,7 +94,7 @@ BrevesFeature < Panel
   Label
     id: desc
     font: verdana-11px-antialised
-    color: #98a1b0
+    color: #a6a6a6
     anchors.left: title.left
     anchors.right: parent.right
     anchors.top: title.bottom
@@ -133,7 +133,7 @@ EnterGameWindow
 
     UIWidget
       id: logo
-      size: 271 58
+      size: 271 64
       image-source: /images/brevesui/logo
       anchors.top: parent.top
       anchors.left: parent.left
@@ -161,7 +161,7 @@ EnterGameWindow
       anchors.top: prev.bottom
       margin-top: 8
       @onSetup: |
-        self.title:setText(tr('Breves Coins'))
+        self.title:setText(tr('Mythicum Coins'))
         self.desc:setText(tr('Leaderboard prizes, 1 per hour online'))
 
     BrevesFeature
@@ -175,7 +175,7 @@ EnterGameWindow
   UIWidget
     id: brandSeparator
     width: 1
-    background-color: #262c36
+    background-color: #2a2a2a
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.left: brandPanel.right
@@ -188,7 +188,7 @@ EnterGameWindow
     id: formTitle
     !text: tr('Welcome back')
     font: Verdana Bold-13px
-    color: #f3f1ea
+    color: #ffffff
     text-auto-resize: true
     anchors.top: parent.top
     anchors.left: brandSeparator.right
@@ -239,7 +239,7 @@ EnterGameWindow
     !text: tr('Remember me')
     !tooltip: tr('Keep your account and password saved on this computer')
     font: verdana-11px-antialised
-    color: #cfd6df
+    color: #d9d9d9
     text-auto-resize: true
     anchors.top: prev.bottom
     anchors.left: prev.left

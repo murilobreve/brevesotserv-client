@@ -7,7 +7,7 @@ StoreWindow
 
   Label
     id: transferPointsLabel
-    !text: tr('Gift Breves Coins')
+    !text: tr('Gift Mythicum Coins')
     text-align: center
     font: verdana-11px-antialised
     anchors.top: parent.top
@@ -17,7 +17,7 @@ StoreWindow
   
   Label
     id: descriptionText
-    !text: tr('Please select the amount of Breves\nCoins you like to gift and enter the\nname of the character that should\nreceive the Breves Coins.')
+    !text: tr('Please select the amount of Mythicum\nCoins you like to gift and enter the\nname of the character that should\nreceive the Mythicum Coins.')
     text-wrap: true
     text-auto-resize:true
     anchors.top: transferPointsLabel.bottom
@@ -47,7 +47,7 @@ StoreWindow
 
   Label
     id: transferableAmount
-    !text: tr('Breves Coins:')
+    !text: tr('Mythicum Coins:')
     anchors.top: recipient.bottom
     anchors.left: parent.left
     size: 155 12

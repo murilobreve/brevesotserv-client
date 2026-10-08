@@ -1,7 +1,7 @@
 Module
   name: game_huntboard
   description: Hunt Board - rotating monster rates, hunting leaderboard and online coins
-  author: Baiak Breves
+  author: Baiak Mythicum
   website: http://25.18.172.192
   sandboxed: true
   scripts: [ huntboard ]

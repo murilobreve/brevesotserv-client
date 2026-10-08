@@ -1,13 +1,13 @@
-# Baiak Breves - Client
+# Baiak Mythicum - Client
 
-Client baseado no [OTClient - Redemption](https://github.com/mehah/otclient), enxugado para conectar direto no servidor Baiak Breves (versao 15.25).
+Client baseado no [OTClient - Redemption](https://github.com/mehah/otclient), enxugado para conectar direto no servidor Baiak Mythicum (versao 15.25).
 
 ## Trocar o IP do servidor
 
 Edite apenas o bloco no topo do `init.lua`:
 
 ```lua
-local SERVER_NAME     = "Baiak Breves"                    -- nome exibido na janela e no client
+local SERVER_NAME     = "Baiak Mythicum"                    -- nome exibido na janela e no client
 local SERVER_HOST     = "http://25.18.172.192/login.php" -- URL do login.php
 local SERVER_PORT     = 80                                -- porta HTTP do login
 local CLIENT_VERSION  = 1525                              -- versao do client (15.25)

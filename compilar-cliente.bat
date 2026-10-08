@@ -1,5 +1,5 @@
 @echo off
-rem Baiak Breves - sincroniza com o main do GitHub, compila e empacota o client.
+rem Baiak Mythicum - sincroniza com o main do GitHub, compila e empacota o client.
 rem Pode abrir com dois cliques ou de qualquer cmd: o ambiente do Visual
 rem Studio e carregado aqui mesmo.
 rem   compilar-cliente.bat         sincroniza, compila e empacota
@@ -56,7 +56,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\empacotar-client
 if errorlevel 1 goto :falhou
 
 echo.
-echo Pronto. O client esta em dist\Baiak Breves\ e o zip em dist\BaiakBreves.zip
+echo Pronto. O client esta em dist\Baiak Mythicum\ e o zip em dist\BaiakMythicum.zip
 pause
 exit /b 0
 

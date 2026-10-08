@@ -1,4 +1,4 @@
--- Breves Wiki content. The numbers come from the server's rarity config
+-- Mythicum Wiki content. The numbers come from the server's rarity config
 -- (data-otservbr-global/scripts/rarity/00_config.lua) and the engine's forge
 -- stack formulas; keep them in sync when that file is rebalanced.
 --
@@ -167,7 +167,7 @@ WIKI_PAGES.huntboard = {
           } },
         { 'h', 'Loot' },
         { 'p', 'O loot segue a mesma conta: loot = 1 + (rate de XP - 1) / 3. Um monstro a 10x dá 4x de loot, a 4x dá 2x, e a 0,5x dá 0,8x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
-        { 'p', 'O Hunt Board (no painel Breves, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
+        { 'p', 'O Hunt Board (no painel Mythicum, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
         { 'links', { 'tiers', 'experience' } },
     },
 }

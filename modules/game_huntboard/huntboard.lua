@@ -34,7 +34,7 @@ local MEDALS = {
 
 local window
 local toolbarButton -- old single button, when game_brevespanel is missing
-local sectionButtons = {} -- rates / board rows in the Baiak Breves panel
+local sectionButtons = {} -- rates / board rows in the Baiak Mythicum panel
 local toast
 local toastEvent
 local tickEvent
@@ -373,7 +373,7 @@ local function renderBoard()
     for position, coins in ipairs(rewards) do
         prizeParts[#prizeParts + 1] = string.format('#%d: %s', position, formatNumber(coins))
     end
-    panel.prize:setText(#prizeParts > 0 and tr('Prize per category  %s Breves Coins', table.concat(prizeParts, '  ')) or '')
+    panel.prize:setText(#prizeParts > 0 and tr('Prize per category  %s Mythicum Coins', table.concat(prizeParts, '  ')) or '')
 
     panel.killsColumn:setText(tr('Most Monsters Killed - %s', tr(PERIOD_LABELS[currentPeriod])))
     panel.expColumn:setText(tr('Most Experience - %s', tr(PERIOD_LABELS[currentPeriod])))
@@ -388,7 +388,7 @@ local function renderBoard()
     panel.history:destroyChildren()
     for _, entry in ipairs(board.recent or {}) do
         local line = g_ui.createWidget('HistoryLine', panel.history)
-        line:setText(tr('%s, %s: %s was #%d in %s with %s and won %s Breves Coins', tr(PERIOD_LABELS[entry.period] or ''), entry.when or '',
+        line:setText(tr('%s, %s: %s was #%d in %s with %s and won %s Mythicum Coins', tr(PERIOD_LABELS[entry.period] or ''), entry.when or '',
             entry.name or '?', entry.position or 1, entry.category == 'kills' and tr('kills') or tr('experience'),
             valueText(entry.category, entry.value), formatNumber(entry.coins)))
         if entry.period == 'month' then
@@ -415,7 +415,7 @@ local function updateOnline()
     local minutes = math.min(online.minutes, goal)
     bar.fill:setWidth(math.max(1, math.floor((bar:getWidth() - 2) * minutes / goal)))
     bar.value:setText(tr('%d / %d min', minutes, goal))
-    bar:setTooltip(tr('You get %d Breves Coin(s) for every %d minutes online.', online.amount, goal))
+    bar:setTooltip(tr('You get %d Mythicum Coin(s) for every %d minutes online.', online.amount, goal))
 end
 
 local function tick()
@@ -594,14 +594,14 @@ function handlers.coins(data)
     if data.reason == 'online' then
         online.minutes = 0
         updateOnline()
-        text = tr('+%d Breves Coin for playing 1 hour. Thanks for playing!', data.amount or 1)
+        text = tr('+%d Mythicum Coin for playing 1 hour. Thanks for playing!', data.amount or 1)
     else
-        text = tr('+%s Breves Coins for winning the leaderboard!', formatNumber(data.amount or 0))
+        text = tr('+%s Mythicum Coins for winning the leaderboard!', formatNumber(data.amount or 0))
     end
     if data.balance then
-        text = text .. '\n' .. tr('Balance: %s Breves Coins', formatNumber(data.balance))
+        text = text .. '\n' .. tr('Balance: %s Mythicum Coins', formatNumber(data.balance))
     end
-    showToast(tr('Breves Coins received'), text, function(icon)
+    showToast(tr('Mythicum Coins received'), text, function(icon)
         icon:setImageSource('/images/store/icon-tibiacoin')
         icon:setImageClip('')
     end, 8)
@@ -634,7 +634,7 @@ function changePage(delta)
     renderPage()
 end
 
--- with the Baiak Breves panel, Hunt Rates and Leaderboard open as two windows
+-- with the Baiak Mythicum panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
     rates = { title = 'Hunt Rates', intro = 'XP and loot rate of every monster' },
@@ -647,11 +647,11 @@ function updateFooter()
     end
     local hours = math.floor(rates.interval / 3600)
     if not next(sectionButtons) then
-        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Breves Coins when the period ends.', hours))
+        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Mythicum Coins when the period ends.', hours))
     elseif currentTab == 'rates' then
         window.footer:setText(tr('Rates re-roll every %d hours for every monster.', hours))
     else
-        window.footer:setText(tr('Leaderboard winners are paid in Breves Coins when the period ends.'))
+        window.footer:setText(tr('Leaderboard winners are paid in Mythicum Coins when the period ends.'))
     end
 end
 

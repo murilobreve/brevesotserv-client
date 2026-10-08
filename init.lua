@@ -7,7 +7,7 @@
 -- esse arquivo para apontar o client para outro servidor. Os valores
 -- abaixo so valem se o servidor.ini nao existir ou estiver incompleto.
 -- =====================================================================
-local SERVER_NAME     = "Baiak Breves"   -- nome exibido na janela e no client
+local SERVER_NAME     = "Baiak Mythicum"   -- nome exibido na janela e no client
 local CLIENT_VERSION  = 1525             -- versao do client (15.25)
 local SERVER_IP       = "82.38.28.137"   -- IP ou dominio do site/login
 local SERVER_PORT     = 80               -- porta HTTP do login.php
@@ -56,7 +56,7 @@ local SERVER_HOST = ('%s://%s/login.php'):format(SERVER_SCHEME, SERVER_IP)
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
     website = SITE_URL, --./client_entergame "Create a free account"
-    -- Breves Coins are earned in game, not bought: the store "Get" button and
+    -- Mythicum Coins are earned in game, not bought: the store "Get" button and
     -- the market "Get coins" button open the site page that explains how
     getCoinsUrl = SITE_URL:gsub('/+$', '') .. '/index.php/leaderboard', --./game_store | ./game_market
     premiumUrl = '', --./client_entergame "Get Premium" (none: the server gives free premium)

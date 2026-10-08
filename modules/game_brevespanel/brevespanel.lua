@@ -1,4 +1,4 @@
--- Baiak Breves panel: the server's own systems (tasks, hunt rates, leaderboard,
+-- Baiak Mythicum panel: the server's own systems (tasks, hunt rates, leaderboard,
 -- rarity market, heal bot) as labelled rows in the right panel, instead of
 -- 20px icons lost among the client's buttons. The news window lists them on
 -- the first login after an update.
@@ -15,7 +15,7 @@ local FEATURES = {
     { id = 'rates', label = 'Hunt Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
     { id = 'board', label = 'Leaderboard', icon = 'board',
-      news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Breves Coins.' },
+      news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythicum Coins.' },
     { id = 'rarity', label = 'Rarity Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', label = 'Rarity Bonuses', icon = 'bonus',

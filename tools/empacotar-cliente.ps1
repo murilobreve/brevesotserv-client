@@ -1,4 +1,4 @@
-# Baiak Breves - monta a pasta do client para download e gera o .zip
+# Baiak Mythicum - monta a pasta do client para download e gera o .zip
 #
 # Uso (normalmente pelo empacotar-cliente.bat, na raiz do projeto):
 #   powershell -ExecutionPolicy Bypass -File tools\empacotar-cliente.ps1
@@ -6,17 +6,17 @@
 #   -Exe <caminho>   executavel a usar (padrao: otclient.exe da raiz)
 #   -SemAssets       nao inclui data\things e data\sounds (o client baixa
 #                    os assets sozinho na primeira vez que abrir)
-#   -Nome <texto>    nome da pasta e do .exe (padrao: Baiak Breves)
-#   -ZipNome <arq>   nome do .zip (padrao: BaiakBreves.zip)
+#   -Nome <texto>    nome da pasta e do .exe (padrao: Baiak Mythicum)
+#   -ZipNome <arq>   nome do .zip (padrao: BaiakMythicum.zip)
 #
 # Resultado:
-#   dist\Baiak Breves\    pasta pronta para jogar
-#   dist\BaiakBreves.zip  essa mesma pasta zipada, para o site
+#   dist\Baiak Mythicum\    pasta pronta para jogar
+#   dist\BaiakMythicum.zip  essa mesma pasta zipada, para o site
 param(
     [string]$Exe = "",
     [switch]$SemAssets,
-    [string]$Nome = "Baiak Breves",
-    [string]$ZipNome = "BaiakBreves.zip"
+    [string]$Nome = "Baiak Mythicum",
+    [string]$ZipNome = "BaiakMythicum.zip"
 )
 
 $ErrorActionPreference = "Stop"

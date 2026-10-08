@@ -99,7 +99,7 @@ BrevesNewsRow < UIWidget
 
 BrevesNewsWindow < MainWindow
   id: brevesNewsWindow
-  !text: tr('New on Baiak Breves')
+  !text: tr('New on Baiak Mythicum')
   size: 470 440
   @onEscape: modules.game_brevespanel.hideNews()
 
