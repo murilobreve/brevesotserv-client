@@ -603,9 +603,12 @@ function handlers.coins(data)
     end
     showToast(tr('Mythicum Coins received'), text, function(icon)
         icon:setImageSource('/images/store/icon-tibiacoin')
-        icon:setImageClip('')
+        icon:setImageClip('0 0 0 0') -- whole image (an empty string is not a rect and threw)
     end, 8)
 end
+
+-- the server sends it under this name (old clients crashed on the toast)
+handlers.coinsToast = handlers.coins
 
 local function onHuntOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
