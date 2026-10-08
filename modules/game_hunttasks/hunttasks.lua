@@ -257,7 +257,7 @@ local function renderStreak()
     panel.help:setText(tr(
         'Task diária: um monstro do seu level por dia. Se ele estiver com XP x2.0 ou mais no Hunt Board, os pontos dobram.\n' ..
         'Trilha do Caçador: %d monstros em ordem, do mais fraco ao mais forte. A cada %d etapas tem um bônus.\n' ..
-        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Breves Coins, Loot Pouch e montarias na aba Loja.',
+        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Rarity XP, Breves Coins, Loot Pouch e montarias na aba Loja.',
         #(state.trail.steps or {}), state.trail.milestoneEvery or 5))
 end
 
@@ -334,6 +334,7 @@ local OFFER_INFO = {
     desire = { name = 'Bag You Desire', lines = { 'Abre um item da Soul War: arma, armadura, calça, bota ou o Soulbastion.' } },
     coins = { name = '25 Breves Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
     pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
+    rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os bônus dos itens raros que você usa, na janela Rarity Bonuses.', 'Reroll: um valor novo para um bônus. Trocar: outro bônus aleatório.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
     montaria = { name = 'Montaria', lines = { 'Qualquer montaria que você ainda não tem.', 'Escolha na lista acima; a montaria já sai liberada.' } },
 }
 
