@@ -355,6 +355,7 @@ WIKI_PAGES.affixes = {
               { 'Legendarius', '350', '600' }, { 'Mythicus', '800', '1400' },
           } },
         { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Um Mythicus de level 400 custa 1600 no Reroll e 2800 no Trocar.' },
+        { 'p', 'A Store também vende Rarity XP na categoria Rarity: 500 por 250 coins, 1500 por 700 e 5000 por 2200.' },
         { 'links', { 'stacking', 'pools' } },
     },
 }
