@@ -300,7 +300,7 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
     SymInitialize(GetCurrentProcess(), nullptr, TRUE);
     Stacktrace(e, oss);
     SymCleanup(GetCurrentProcess());
-    oss << "  log of this session (last lines):\n" << g_logger.getRecentLog(60)
+    oss << "  log of this session (last lines):\n" << g_logger.getRecentLog(g_logger.isFullLog() ? 300 : 60)
         << "  log file (last lines):\n" << logTail(8 * 1024) << "== end of report\n\n";
 
     std::ofstream fout(fileName, std::ios::out | std::ios::app);

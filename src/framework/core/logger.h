@@ -134,6 +134,11 @@ public:
     // the last lines this process logged, newest last, for the crash handler
     // (the file can be rewritten meanwhile by another copy of the game)
     std::string getRecentLog(std::size_t maxLines) const;
+    // log everything (debug lines included, even in release builds) and write
+    // each line to the file at once, so a crash loses nothing ([debug] fullLog
+    // in config.ini)
+    void setFullLog(bool enabled);
+    bool isFullLog() const { return m_fullLog; }
     void setOnLog(const OnLogCallback& onLog) { m_onLog = onLog; }
     void setLevel(const Fw::LogLevel level) { m_level = level; }
     Fw::LogLevel getLevel() { return m_level; }
@@ -144,6 +149,7 @@ private:
     std::ofstream m_outFile;
     std::string m_logFile;
     Fw::LogLevel m_level{ Fw::LogDebug };
+    bool m_fullLog{ false };
 };
 
 extern Logger g_logger;

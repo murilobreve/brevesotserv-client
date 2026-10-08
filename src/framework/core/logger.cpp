@@ -140,7 +140,7 @@ namespace
 void Logger::log(Fw::LogLevel level, const std::string_view message)
 {
 #ifdef NDEBUG
-    if (level == Fw::LogDebug || level == Fw::LogFine)
+    if (!m_fullLog && (level == Fw::LogDebug || level == Fw::LogFine))
         return;
 #endif
 
@@ -239,6 +239,15 @@ void Logger::fireOldMessages()
             m_onLog(logMessage.level, logMessage.message, logMessage.when);
         }
     }
+}
+
+void Logger::setFullLog(const bool enabled)
+{
+    m_fullLog = enabled;
+    if (auto& spdLogger = getSpdLogger())
+        spdLogger->flush_on(enabled ? spdlog::level::trace : spdlog::level::warn);
+    if (enabled)
+        info("Full log enabled ([debug] fullLog in config.ini): every line, debug included, is written at once");
 }
 
 std::string Logger::getRecentLog(const std::size_t maxLines) const
