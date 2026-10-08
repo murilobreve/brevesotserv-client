@@ -320,84 +320,149 @@ end
 
 -- ---------------------------------------------------------------- shop tab
 
+-- name, amount and description of each offer of the server's shop (by key);
+-- the server's own label is the fallback. Shown through tr(), like every
+-- text of this window ("%" written "%%")
+local OFFER_INFO = {
+    pocao = { name = 'Poção de XP', lines = { '+50%% de experiência por 1 hora.', 'Vai para a Store Inbox.' } },
+    arma = { name = 'Arma do Aprendiz', lines = { 'Uma arma aleatória de level baixo, até 28 de ataque.', 'Já vem Communis ou Rarus.', 'Escolha o tipo da arma na lista acima.' } },
+    equipamento = { name = 'Equipamento do Aprendiz', lines = { 'Capacete, armadura, calça, bota ou escudo aleatório de level baixo.', 'Já vem Communis ou Rarus.' } },
+    exercise = { name = 'Lasting Exercise Weapon', count = '14400x', lines = { '14.400 cargas de treino.', 'Escolha o tipo na lista acima.', 'Vai para a Store Inbox.' } },
+    pergaminho = { name = 'Pergaminho de Raridade', lines = { 'Use em uma arma ou armadura para sortear uma raridade nova.', 'Chances: Communis 40%%, Rarus 32%%, Praeclarus 18%%, Legendarius 8%%, Mythicus 2%%.' } },
+    ascensao = { name = 'Pergaminho de Ascensão', lines = { 'Use em um item com raridade: ele sobe um grau e ganha um bônus novo.', 'Os bônus que o item já tem ficam iguais.' } },
+    mitica = { name = 'Bag of Mythical', lines = { 'Abre um item aleatório que já vem Mythicus, o grau mais alto.' } },
+    desire = { name = 'Bag You Desire', lines = { 'Abre um item da Soul War: arma, armadura, calça, bota ou o Soulbastion.' } },
+    coins = { name = '25 Breves Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
+    pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
+    montaria = { name = 'Montaria', lines = { 'Qualquer montaria que você ainda não tem.', 'Escolha na lista acima; a montaria já sai liberada.' } },
+}
+
+local selectedOffer
+
+-- mount picture when the player has every mount (nothing left to preview)
+local FALLBACK_MOUNT_LOOK = 370
+
+local function setOfferImage(box, offer, mountLook)
+    if offer.key == 'montaria' and not (mountLook and mountLook > 0) then
+        mountLook = FALLBACK_MOUNT_LOOK
+    end
+    box.item:setVisible(false)
+    box.icon:setVisible(false)
+    box.creature:setVisible(false)
+    if offer.key == 'montaria' and mountLook and mountLook > 0 then
+        box.creature:setVisible(true)
+        box.creature:setOutfit({ type = mountLook })
+    elseif offer.key == 'coins' then
+        box.icon:setVisible(true)
+        box.icon:setImageSource('/images/store/icon-tibiacoin')
+    elseif offer.item and offer.item > 0 then
+        box.item:setVisible(true)
+        box.item:setItemId(offer.item)
+    end
+end
+
+local function showOfferDetails(offer)
+    selectedOffer = offer
+    local details = window.shopPanel.details
+    local info = OFFER_INFO[offer.key] or {}
+    details.name:setText(info.name and tr(info.name) or offer.label)
+    details.price:setText(formatNumber(offer.price))
+    local affordable = (state.points or 0) >= offer.price
+    details.price:setColor(affordable and '#dfdfdf' or '#ff7a6b')
+    details.buy:setEnabled(affordable)
+    setOfferImage(details.image, offer)
+
+    details.descBox:destroyChildren()
+    for _, line in ipairs(info.lines or { offer.label }) do
+        local label = g_ui.createWidget('ShopDescLine', details.descBox)
+        label:setText(info.lines and tr(line) or line)
+    end
+    if not affordable then
+        local label = g_ui.createWidget('ShopDescLine', details.descBox)
+        label:setColor('#ff7a6b')
+        label:setText(tr('Faltam %s Hunt Points.', formatNumber(offer.price - (state.points or 0))))
+    end
+
+    -- a list to choose from: mounts, or the kind of weapon
+    local combo = details.options
+    combo.onOptionChange = nil
+    combo:clearOptions()
+    combo:setVisible(false)
+    if offer.key == 'montaria' then
+        local mounts = state.mounts or {}
+        for _, mount in ipairs(mounts) do
+            combo:addOption(mount[1], mount)
+        end
+        combo.onOptionChange = function()
+            local option = combo:getCurrentOption()
+            if option and option.data then
+                setOfferImage(details.image, offer, option.data[2])
+            end
+        end
+        if #mounts > 0 then
+            combo:setVisible(true)
+            combo:setCurrentIndex(1, true)
+            combo.onOptionChange()
+        else
+            details.buy:setEnabled(false)
+            local label = g_ui.createWidget('ShopDescLine', details.descBox)
+            label:setText(tr('Você já tem todas as montarias!'))
+        end
+    elseif offer.options and #offer.options > 0 then
+        for _, option in ipairs(offer.options) do
+            combo:addOption(option[2], option)
+        end
+        combo.onOptionChange = function()
+            local option = combo:getCurrentOption()
+            if option and option.data and option.data[3] then
+                details.image.item:setItemId(option.data[3])
+            end
+        end
+        combo:setVisible(true)
+        combo:setCurrentIndex(1, true)
+    end
+
+    details.buy.onClick = function()
+        local option = combo:isVisible() and combo:getCurrentOption()
+        if offer.key == 'montaria' then
+            if option and option.data then
+                send({ action = 'buy', key = offer.key, mount = option.data[1] })
+            end
+        elseif option and option.data then
+            send({ action = 'buy', key = offer.key, option = option.data[1] })
+        else
+            send({ action = 'buy', key = offer.key })
+        end
+    end
+end
+
 local function renderShop()
     local panel = window.shopPanel
-    panel.summary:setText(tr('Você tem %s Hunt Points. Os itens vão para a sua mochila; a Loot Pouch vai para a Store Inbox e a montaria já sai liberada. Bag of Mythical: use para abrir um item aleatório já Mythicus. Pergaminho de Ascensão: use em um item com raridade para subir um grau.',
-        formatNumber(state.points)))
-    panel.list:destroyChildren()
+    panel.summary:setText(tr('Você tem %s Hunt Points.', formatNumber(state.points)))
+    local keepKey = selectedOffer and selectedOffer.key
+    panel.listBox.list:destroyChildren()
+    -- after a purchase the same offer stays chosen
+    local focusRow, focusOffer
     for _, offer in ipairs(state.shop or {}) do
-        local row = g_ui.createWidget('ShopRow', panel.list)
-        row.label:setText(offer.label)
-        row.price:setText(tr('%d pontos', offer.price))
-        local affordable = (state.points or 0) >= offer.price
-        row.price:setColor(affordable and '#ffe9a0' or '#ff7a6b')
-        row.buy:setEnabled(affordable)
-
-        if offer.item and offer.item > 0 then
-            row.item:setItemId(offer.item)
-        elseif offer.key == 'coins' then
-            row.item:setVisible(false)
-            row.icon:setVisible(true)
-            row.icon:setImageSource('/images/store/icon-tibiacoin')
-        end
-
-        if offer.key == 'montaria' then
-            row.item:setVisible(false)
-            row.creature:setVisible(true)
-            row.label:setText(tr('Montaria à sua escolha'))
-            local mounts = state.mounts or {}
-            row.mounts:setVisible(true)
-            row.mounts:clearOptions()
-            for _, mount in ipairs(mounts) do
-                row.mounts:addOption(mount[1], mount)
-            end
-            local function preview()
-                local option = row.mounts:getCurrentOption()
-                local mount = option and option.data
-                if mount and mount[2] and mount[2] > 0 then
-                    row.creature:setOutfit({ type = mount[2] })
-                end
-            end
-            row.mounts.onOptionChange = preview
-            if #mounts > 0 then
-                row.mounts:setCurrentIndex(1, true)
-                preview()
-            else
-                row.mounts:setVisible(false)
-                row.buy:setEnabled(false)
-                row.label:setText(tr('Montaria à sua escolha (você já tem todas!)'))
-            end
-            row.buy.onClick = function()
-                local option = row.mounts:getCurrentOption()
-                if option and option.data then
-                    send({ action = 'buy', key = offer.key, mount = option.data[1] })
-                end
-            end
-        elseif offer.options and #offer.options > 0 then
-            -- pick the kind (exercise weapons): { key, label, item }
-            row.mounts:setVisible(true)
-            row.mounts:clearOptions()
-            for _, option in ipairs(offer.options) do
-                row.mounts:addOption(option[2], option)
-            end
-            row.mounts.onOptionChange = function()
-                local option = row.mounts:getCurrentOption()
-                if option and option.data and option.data[3] then
-                    row.item:setItemId(option.data[3])
-                end
-            end
-            row.mounts:setCurrentIndex(1, true)
-            row.buy.onClick = function()
-                local option = row.mounts:getCurrentOption()
-                if option and option.data then
-                    send({ action = 'buy', key = offer.key, option = option.data[1] })
-                end
-            end
-        else
-            row.buy.onClick = function()
-                send({ action = 'buy', key = offer.key })
+        local info = OFFER_INFO[offer.key] or {}
+        local row = g_ui.createWidget('ShopOffer', panel.listBox.list)
+        row.name:setText(info.name and tr(info.name) or offer.label)
+        row.count:setText(info.count or '1x')
+        row.price:setText(formatNumber(offer.price))
+        row.price:setColor((state.points or 0) >= offer.price and '#dfdfdf' or '#ff7a6b')
+        setOfferImage(row.image, offer, offer.key == 'montaria' and state.mounts and state.mounts[1] and state.mounts[1][2])
+        row.onFocusChange = function(widget, focused)
+            if focused then
+                showOfferDetails(offer)
             end
         end
+        if not focusRow or offer.key == keepKey then
+            focusRow, focusOffer = row, offer
+        end
+    end
+    if focusRow then
+        panel.listBox.list:focusChild(focusRow, KeyboardFocusReason)
+        showOfferDetails(focusOffer)
     end
 end
 

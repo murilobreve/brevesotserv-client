@@ -52,6 +52,27 @@ BonusItemRow < BrevesRow
       type: verticalBox
       spacing: 2
 
+// reroll / change button: Store look, an icon and the price
+BonusActionButton < UIButton
+  size: 66 18
+  font: verdana-11px-antialised
+  color: #dfdfdf
+  image-source: /game_store/images/button
+  image-color: #dfdfdf
+  image-clip: 0 0 22 23
+  image-border: 3
+  icon-align: left
+  icon-offset: 4 0
+  text-offset: 8 0
+  $hover !disabled:
+    image-clip: 0 23 22 23
+  $pressed:
+    image-clip: 0 46 22 23
+    text-offset: 9 1
+  $disabled:
+    color: #dfdfdf66
+    opacity: 0.6
+
 // one bonus of an item, with its reroll and change buttons
 BonusLine < Panel
   height: 18
@@ -66,20 +87,18 @@ BonusLine < Panel
     color: #7fd35a
     phantom: false
 
-  Button
+  BonusActionButton
     id: changeButton
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    size: 74 17
-    font: verdana-11px-monochrome
+    icon: /game_raritybonus/images/change
 
-  Button
+  BonusActionButton
     id: rerollButton
     anchors.right: changeButton.left
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 3
-    size: 74 17
-    font: verdana-11px-monochrome
+    icon: /game_raritybonus/images/reroll
 
 BonusItemRowEven < BonusItemRow
   background-color: #ffffff12

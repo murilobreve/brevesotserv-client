@@ -182,69 +182,108 @@ TrailRow < BrevesRow
     color: #7a7a7a
     phantom: true
 
-ShopRow < BrevesCell
-  height: 54
-  padding: 4
+// task shop, drawn like the Store: offer rows on the left, the chosen
+// offer on the right (images from game_store)
+ShopPanelDark < UIWidget
+  image-source: /game_store/images/panel
+  image-border: 3
+
+ShopPanelLight < UIWidget
+  image-source: /game_store/images/panel_container
+  image-border: 3
+
+ShopImageBox < UIWidget
+  border-width-top: 1
+  border-color-top: black
+  border-width-left: 1
+  border-color-left: black
+  border-width-bottom: 1
+  border-color-bottom: gray
+  border-width-right: 1
+  border-color-right: gray
+  background-color: #00000040
+  phantom: true
 
   UIItem
     id: item
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
-    size: 40 40
+    anchors.centerIn: parent
+    size: 56 56
     virtual: true
     phantom: true
 
   UIWidget
     id: icon
-    anchors.centerIn: item
+    anchors.centerIn: parent
     size: 32 32
     phantom: true
     visible: false
 
   UICreature
     id: creature
-    anchors.centerIn: item
-    size: 56 56
-    creature-size: 56
+    anchors.centerIn: parent
+    size: 64 64
+    creature-size: 64
     phantom: true
     visible: false
 
-  Button
-    id: buy
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 6
-    size: 90 24
-    !text: tr('Comprar')
+// price box with the Hunt Points icon, like the Store's coin box
+ShopPrice < ShopPanelDark
+  size: 104 20
+  phantom: true
+  text-align: center
+  text-offset: -6 0
+  font: verdana-11px-antialised
+  color: #dfdfdf
+  icon: /game_brevespanel/images/tasks
+  icon-align: right
+  icon-offset: -4 0
 
-  Label
-    id: price
-    anchors.right: buy.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 12
-    width: 90
-    text-align: right
-    color: #ffe9a0
+ShopOffer < ShopPanelLight
+  height: 78
+  focusable: true
+  border: 0 white
+  $focus:
+    border: 2 white
 
-  Label
-    id: label
+  ShopImageBox
+    id: image
+    size: 64 64
     anchors.top: parent.top
-    anchors.left: item.right
-    anchors.right: price.left
-    margin-top: 6
-    margin-left: 14
-    height: 30
-    text-wrap: true
-    color: #e8e8e8
+    anchors.left: parent.left
+    margin: 7 0 0 7
 
-  ComboBox
-    id: mounts
-    anchors.top: label.bottom
-    anchors.left: label.left
-    margin-top: -6
-    size: 220 20
-    visible: false
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: image.right
+    anchors.right: parent.right
+    margin: 10 8 0 8
+    text-align: center
+    font: verdana-11px-antialised
+    color: #dfdfdf
+    phantom: true
+
+  Label
+    id: count
+    anchors.left: image.right
+    anchors.verticalCenter: price.verticalCenter
+    margin-left: 12
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #dfdfdf
+    phantom: true
+
+  ShopPrice
+    id: price
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin: 0 8 12 0
+
+ShopDescLine < Label
+  font: verdana-11px-antialised
+  color: #dfdfdf
+  text-wrap: true
+  text-auto-resize: true
 
 TaskList < BrevesList
   focusable: false
@@ -386,32 +425,100 @@ MainWindow
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: parent.right
-      height: 58
-      text-wrap: true
-      font: verdana-11px-monochrome
-      color: #bfbfbf
+      height: 18
+      font: verdana-11px-antialised
+      color: #ffe9a0
 
-    ScrollablePanel
-      id: list
+    ShopPanelDark
+      id: listBox
       anchors.top: summary.bottom
       anchors.left: parent.left
-      anchors.right: shopScroll.left
       anchors.bottom: parent.bottom
       margin-top: 4
-      margin-right: 4
-      vertical-scrollbar: shopScroll
-      layout:
-        type: verticalBox
-        spacing: 4
+      width: 330
+      padding: 4
 
-    VerticalScrollBar
-      id: shopScroll
-      anchors.top: summary.bottom
-      anchors.bottom: parent.bottom
+      ScrollablePanel
+        id: list
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: shopScroll.left
+        anchors.bottom: parent.bottom
+        margin-right: 2
+        vertical-scrollbar: shopScroll
+        layout:
+          type: verticalBox
+          spacing: 3
+
+      VerticalScrollBar
+        id: shopScroll
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        step: 81
+        pixel-scroll: true
+
+    ShopPanelDark
+      id: details
+      anchors.top: listBox.top
+      anchors.left: listBox.right
       anchors.right: parent.right
-      margin-top: 4
-      step: 58
-      pixel-scroll: true
+      anchors.bottom: parent.bottom
+      margin-left: 6
+      padding: 10
+
+      ShopImageBox
+        id: image
+        anchors.top: parent.top
+        anchors.left: parent.left
+        size: 96 96
+
+      Label
+        id: name
+        anchors.top: parent.top
+        anchors.left: image.right
+        anchors.right: parent.right
+        margin-left: 12
+        text-align: center
+        font: verdana-11px-antialised
+        color: #ffffff
+
+      Button
+        id: buy
+        anchors.top: name.bottom
+        anchors.horizontalCenter: name.horizontalCenter
+        margin-top: 10
+        size: 120 24
+        !text: tr('Comprar')
+
+      ShopPrice
+        id: price
+        anchors.top: buy.bottom
+        anchors.horizontalCenter: buy.horizontalCenter
+        margin-top: 6
+        width: 120
+
+      ComboBox
+        id: options
+        anchors.top: price.bottom
+        anchors.left: image.right
+        anchors.right: parent.right
+        margin-top: 8
+        margin-left: 12
+        height: 20
+        visible: false
+
+      ShopPanelLight
+        id: descBox
+        anchors.top: image.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        margin-top: 40
+        padding: 8
+        layout:
+          type: verticalBox
+          spacing: 4
 
   Label
     id: message

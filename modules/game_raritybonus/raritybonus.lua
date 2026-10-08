@@ -37,6 +37,17 @@ local function number(value)
     return string.format('%.1f', value)
 end
 
+-- 2450 -> "2.4k": the buttons are small
+local function formatCost(cost)
+    cost = tonumber(cost) or 0
+    if cost >= 10000 then
+        return string.format('%dk', math.floor(cost / 1000))
+    elseif cost >= 1000 then
+        return string.format('%.1fk', math.floor(cost / 100) / 10)
+    end
+    return tostring(cost)
+end
+
 local function bonusText(bonus)
     local text = string.format('+%s%s %s', number(bonus.value), bonus.unit or '', bonus.label)
     if bonus.range then
@@ -97,14 +108,14 @@ local function fillItems(items)
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
             line.text:setText(bonusText(bonus))
-            line.rerollButton:setText(tr('Reroll %d', entry.rerollCost or 0))
-            line.rerollButton:setTooltip(tr('Roll a new value for %s (%d Rarity XP).', bonus.label, entry.rerollCost or 0))
+            line.rerollButton:setText(formatCost(entry.rerollCost))
+            line.rerollButton:setTooltip(tr('Reroll: roll a new value for %s (%d Rarity XP).', bonus.label, entry.rerollCost or 0))
             line.rerollButton:setEnabled(rarityXp >= (entry.rerollCost or 0))
             line.rerollButton.onClick = function()
                 send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'value' })
             end
-            line.changeButton:setText(tr('Change %d', entry.changeCost or 0))
-            line.changeButton:setTooltip(tr('Swap %s for another random bonus (%d Rarity XP).', bonus.label, entry.changeCost or 0))
+            line.changeButton:setText(formatCost(entry.changeCost))
+            line.changeButton:setTooltip(tr('Change: swap %s for another random bonus (%d Rarity XP).', bonus.label, entry.changeCost or 0))
             line.changeButton:setEnabled(rarityXp >= (entry.changeCost or 0))
             line.changeButton.onClick = function()
                 confirm(tr('Change bonus'), tr('Swap %s for another random bonus of this item for %d Rarity XP? The current one is lost.', bonusText(bonus), entry.changeCost or 0), function()
