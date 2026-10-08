@@ -131,6 +131,9 @@ public:
     void setLogFile(std::string_view file);
     // path of the log file (empty until setLogFile), read by the crash handler
     const std::string& getLogFile() const { return m_logFile; }
+    // the last lines this process logged, newest last, for the crash handler
+    // (the file can be rewritten meanwhile by another copy of the game)
+    std::string getRecentLog(std::size_t maxLines) const;
     void setOnLog(const OnLogCallback& onLog) { m_onLog = onLog; }
     void setLevel(const Fw::LogLevel level) { m_level = level; }
     Fw::LogLevel getLevel() { return m_level; }

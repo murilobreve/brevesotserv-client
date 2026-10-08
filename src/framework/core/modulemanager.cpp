@@ -94,8 +94,10 @@ ModulePtr ModuleManager::discoverModule(const std::string& moduleFile)
 void ModuleManager::ensureModuleLoaded(const std::string_view moduleName)
 {
     const auto& module = g_modules.getModule(moduleName);
-    if (!module || !module->load())
-        g_logger.fatal("Unable to load '{}' module", moduleName);
+    if (!module)
+        g_logger.fatal("Unable to load '{}' module: it is missing from the modules folder (reinstall the game)", moduleName);
+    if (!module->load())
+        g_logger.fatal("Unable to load '{}' module (see the error above in the log)", moduleName);
 }
 
 void ModuleManager::unloadModules()

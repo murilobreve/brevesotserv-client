@@ -35,6 +35,17 @@ public:
     ProxyManager() : m_guard(make_work_guard(m_io))
     {
     }
+    // exit() can run before terminate() (a fatal error at startup): a thread
+    // still joinable here would call std::terminate and turn the error
+    // message into a crash
+    ~ProxyManager()
+    {
+        if (m_thread.joinable()) {
+            m_guard.reset();
+            m_io.stop();
+            m_thread.join();
+        }
+    }
     void init();
     void terminate();
     void clear();

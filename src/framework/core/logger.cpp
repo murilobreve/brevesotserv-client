@@ -22,6 +22,7 @@
 
 #include "logger.h"
 
+#include <ctime>
 #include <filesystem>
 
 #include "eventdispatcher.h"
@@ -238,6 +239,29 @@ void Logger::fireOldMessages()
             m_onLog(logMessage.level, logMessage.message, logMessage.when);
         }
     }
+}
+
+std::string Logger::getRecentLog(const std::size_t maxLines) const
+{
+    std::string out;
+    const std::size_t count = m_logMessages.size();
+    const std::size_t first = count > maxLines ? count - maxLines : 0;
+    for (std::size_t i = first; i < count; ++i) {
+        const auto& entry = m_logMessages[i];
+        const auto when = static_cast<std::time_t>(entry.when);
+        std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &when);
+#else
+        localtime_r(&when, &tm);
+#endif
+        char stamp[16];
+        std::strftime(stamp, sizeof(stamp), "%H:%M:%S ", &tm);
+        out += stamp;
+        out += entry.message;
+        out += '\n';
+    }
+    return out;
 }
 
 void Logger::setLogFile(const std::string_view file)
