@@ -85,6 +85,9 @@ local function fillItems(items)
         row.name:setText(titleCase(entry.name or ''))
         row.name:setColor(grade.color)
         local info = tr(entry.slot or '') .. '  ' .. grade.label
+        if (entry.level or 0) > 0 then
+            info = info .. '  ' .. tr('level %d', entry.level)
+        end
         if entry.finder then
             info = info .. '  ' .. tr('found by you')
         end
@@ -152,7 +155,7 @@ local function onOpcode(protocol, opcode, data)
     end
     rarityXp = tonumber(data.rarityXp) or 0
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
-    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade cost more.'))
+    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade or level cost more.'))
     -- automatic refreshes (equipment changed) carry no message: keep the
     -- answer to the last reroll on screen
     if data.message then

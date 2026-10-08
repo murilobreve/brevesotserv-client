@@ -354,6 +354,7 @@ WIKI_PAGES.affixes = {
               { 'Communis', '25', '40' }, { 'Rarus', '60', '100' }, { 'Praeclarus', '150', '250' },
               { 'Legendarius', '350', '600' }, { 'Mythicus', '800', '1400' },
           } },
+        { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Um Mythicus de level 400 custa 1600 no Reroll e 2800 no Trocar.' },
         { 'links', { 'stacking', 'pools' } },
     },
 }
