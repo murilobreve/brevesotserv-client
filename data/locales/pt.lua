@@ -731,6 +731,18 @@ locale = {
     ["Rarity XP: %d"] = "Rarity XP: %d",
     ["Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade or level cost more."] = "Ganha matando monstros Pale, Ashen, Obsidian e Lord of Death: quanto mais forte o monstro e o tier, mais você ganha. Gaste aqui para refazer os bônus dos itens que você usa; itens de grau ou level mais alto custam mais.",
     ["level %d"] = "level %d",
+    ["Auto Loot"] = "Auto Loot",
+    ["Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box."] = "Escolha o que o auto loot pega sem abrir o corpo: seus drops recentes e uma busca pelo nome, cada um com a caixa Pegar.",
+    ["Take"] = "Pegar",
+    ["Ticked: the auto loot takes this item. Unticked: it stays in the corpse."] = "Marcado: o auto loot pega este item. Desmarcado: ele fica no corpo.",
+    ["Search results"] = "Resultados da busca",
+    ["No item with this name"] = "Nenhum item com esse nome",
+    ["Your recent drops"] = "Seus drops recentes",
+    ["Kill something or search an item by name"] = "Mate algum monstro ou busque um item pelo nome",
+    ["Search an item"] = "Buscar item",
+    ["Search an item by name"] = "Buscar item pelo nome",
+    ["Pick the bag for each kind of loot.\n\nOn the right, tick Take on what the auto loot should pick up."] = "Escolha a bolsa de cada tipo de loot.\n\nNa direita, marque Pegar no que o auto loot deve pegar.",
+    ["Manage Containers"] = "Auto Loot",
   }
 }
 

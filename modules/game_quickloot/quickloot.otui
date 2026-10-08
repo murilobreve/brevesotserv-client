@@ -36,6 +36,33 @@ QuicLootIgnoreItem < UIWidget
     opacity: 1.0
     $pressed:
       opacity: 0.5
+QuickLootPickRow < UIWidget
+  background-color: #484848
+  Item
+    id: item
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.left: parent.left
+    margin-left: 3
+    virtual: true
+  CheckBox
+    id: take
+    !text: tr('Take')
+    !tooltip: tr('Ticked: the auto loot takes this item. Unticked: it stays in the corpse.')
+    width: 52
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.right: parent.right
+    margin-right: 14
+  Label
+    id: label
+    color: #C0C0C0
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.left: item.right
+    anchors.right: take.left
+    margin-left: 6
+    margin-right: 4
+    text-wrap: true
+    text-auto-resize: true
+
 QuicklootBagLabel < UIWidget
   background-color: #484848
 
@@ -229,8 +256,7 @@ Window
       font: small-9px
       anchors.bottom: parent.bottom
       anchors.left: parent.left
-      @onClick: |
-        modules.game_cyclopedia.show("items")
+      @onClick: QuickLoot.focusSearch()
         
   Panel
     id: information
@@ -241,7 +267,7 @@ Window
     color: #C0C0C0
     text-align: left
     text-offset: 5 -50
-    !text: tr('Select containers for your loot!\n\nRefine your Quick Looting by setting objects on your skipped loot or accepted loot list!')
+    !text: tr('Pick the bag for each kind of loot.\n\nOn the right, tick Take on what the auto loot should pick up.')
     anchors.top: filters.bottom
     anchors.bottom: list.bottom
     anchors.left: filters.left
@@ -281,6 +307,7 @@ Window
   TextEdit
     id: search
     height: 22
+    !placeholder: tr('Search an item by name')
     anchors.left: information.right
     anchors.right: parent.right
     anchors.top: parent.top
@@ -294,10 +321,19 @@ Window
     margin-right: 1
     @onClick: QuickLoot.clearSearch()
 
+  Label
+    id: pickTitle
+    color: #f0f0f0
+    anchors.top: search.bottom
+    anchors.left: search.left
+    anchors.right: clearSearch.right
+    margin-top: 5
+    text-auto-resize: true
+
   ScrollablePanel
     id: ignoreList
     focusable: false
-    anchors.top: search.bottom
+    anchors.top: pickTitle.bottom
     anchors.bottom: list.bottom
     anchors.left: search.left
     anchors.right: clearSearch.right
@@ -314,7 +350,6 @@ Window
       cell-size: 244 38
       cell-spacing: 0
       flow: true
-    QuicLootIgnoreItem
   VerticalScrollBar
     id: ignoreScrollbar
     anchors.top: ignoreList.top

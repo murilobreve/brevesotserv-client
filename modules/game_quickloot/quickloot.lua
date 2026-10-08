@@ -25,7 +25,8 @@ function quickLootController:onInit()
     quickLootController.ui:hide()
 
     quickLootController:registerEvents(g_game, {
-        onQuickLootContainers = QuickLoot.start
+        onQuickLootContainers = QuickLoot.start,
+        onTextMessage = QuickLoot.onTextMessage
     })
     Keybind.new("Loot", "Quick Loot Nearby Corpses", "Alt+Q", "")
     Keybind.bind("Loot", "Quick Loot Nearby Corpses", {
@@ -64,6 +65,11 @@ function quickLootController:onGameStart()
     local player = g_game.getLocalPlayer()
     quickLootController.ui.information.vipPanel.premium:setOn(not (player and player:isPremium()))
     QuickLoot.load()
+    QuickLoot.searchText = ''
+
+    if modules.game_brevespanel and modules.game_brevespanel.addFeature then
+        modules.game_brevespanel.addFeature('loot', QuickLoot.toggle)
+    end
 
     g_game.requestQuickLootBlackWhiteList(getFilter(QuickLoot.data.filter),
         #QuickLoot.data.loots[QuickLoot.data.filter], QuickLoot.data.loots[QuickLoot.data.filter])
@@ -88,7 +94,7 @@ function QuickLoot.Define()
 
         local accepted = quickLootController.ui.filters.accepted
         local skipped = quickLootController.ui.filters.skipped
-        local add_text = string.format("Add to %s Loot List", widget:getId():gsub("^%l", string.upper))
+        local add_text = tr("Search an item")
         local clear_text = string.format("Clear %s Loot List", widget:getId():gsub("^%l", string.upper))
 
         if widget == skipped and isChecked then
@@ -302,26 +308,159 @@ function QuickLoot.Define()
         quickLootController.ui.list:getLayout():update()
     end
 
+    -- ------------------------------------------------------------ picker
+    -- The right column lists items with a "Take" box, so the player picks
+    -- what the auto loot takes without opening a corpse: with the search
+    -- empty it shows the items of the last loot messages (and the ones
+    -- already on the list), with text it searches every market item by name.
+    -- "Take" means the same in both filters: on Skipped Loot an unticked
+    -- item goes on the list, on Accepted Loot a ticked one does.
+
+    local MAX_RECENT = 60
+    local MAX_RESULTS = 60
+
+    function QuickLoot.isWanted(itemId)
+        local listed = QuickLoot.lootExists(itemId)
+        if QuickLoot.data.filter == 2 then
+            return listed
+        end
+        return not listed
+    end
+
+    function QuickLoot.setWanted(itemId, wanted)
+        local addToList = (QuickLoot.data.filter == 2) == wanted
+        if addToList then
+            QuickLoot.addLootList(itemId)
+        else
+            QuickLoot.removeLootList(itemId)
+        end
+    end
+
+    -- "Loot of a dragon: {3031|53 gold coins}, {5920|a green dragon scale}."
+    function QuickLoot.onTextMessage(mode, text)
+        if mode ~= MessageModes.Loot and mode ~= MessageModes.ValuableLoot then
+            return
+        end
+        if not text or not text:find('{') then
+            return
+        end
+        QuickLoot.data.recent = QuickLoot.data.recent or {}
+        local recent = QuickLoot.data.recent
+        local changed = false
+        for id in text:gmatch('{(%d+)|') do
+            id = tonumber(id)
+            if id and id > 0 then
+                table.removevalue(recent, id)
+                table.insert(recent, 1, id)
+                changed = true
+            end
+        end
+        while #recent > MAX_RECENT do
+            table.remove(recent)
+        end
+        if changed and quickLootController.ui and quickLootController.ui:isVisible() and (QuickLoot.searchText or '') == '' then
+            QuickLoot.loadFilterItems()
+        end
+    end
+
+    local function itemName(itemId)
+        local thing = g_things.getThingType(itemId, ThingCategoryItem)
+        if not thing then
+            return ''
+        end
+        local market = thing:getMarketData()
+        if market and market.name and market.name ~= '' then
+            return market.name
+        end
+        return thing:getName() or ''
+    end
+
+    -- every item that can be sold on the market, by lower-case name
+    local searchIndex
+    local function buildSearchIndex()
+        searchIndex = {}
+        local seen = {}
+        for _, thing in pairs(g_things.findThingTypeByAttr(ThingAttrMarket, 0) or {}) do
+            local id = thing:getId()
+            local name = itemName(id)
+            if name ~= '' and not seen[name:lower()] then
+                seen[name:lower()] = true
+                table.insert(searchIndex, { id = id, name = name, lower = name:lower() })
+            end
+        end
+        table.sort(searchIndex, function(a, b) return a.lower < b.lower end)
+    end
+
+    local function addRow(list, itemId, name, color)
+        local row = g_ui.createWidget('QuickLootPickRow', list)
+        row:setId(tostring(itemId))
+        row:setBackgroundColor(color)
+        row.item:setItemId(itemId)
+        row.label:setText(name ~= '' and name or tr('Unknown'))
+        row.take:setChecked(QuickLoot.isWanted(itemId))
+        row.take.onCheckChange = function(widget, checked)
+            QuickLoot.setWanted(itemId, checked)
+        end
+    end
+
     function QuickLoot.loadFilterItems()
-        quickLootController.ui.ignoreList:destroyChildren()
+        local ui = quickLootController.ui
+        if not ui or not ui.ignoreList then
+            return
+        end
+        local list = ui.ignoreList
+        list:destroyChildren()
 
-        local color = "#484848"
+        local text = (QuickLoot.searchText or ''):trim():lower()
+        local ids, names = {}, {}
+        if text ~= '' then
+            if not searchIndex then
+                buildSearchIndex()
+            end
+            for _, entry in ipairs(searchIndex) do
+                if entry.lower:find(text, 1, true) then
+                    table.insert(ids, entry.id)
+                    names[entry.id] = entry.name
+                    if #ids >= MAX_RESULTS then
+                        break
+                    end
+                end
+            end
+            ui.pickTitle:setText(#ids > 0 and tr('Search results') or tr('No item with this name'))
+        else
+            local seen = {}
+            for _, id in ipairs(QuickLoot.data.recent or {}) do
+                if not seen[id] then
+                    seen[id] = true
+                    table.insert(ids, id)
+                end
+            end
+            for _, id in ipairs(QuickLoot.data.loots[QuickLoot.data.filter] or {}) do
+                if not seen[id] then
+                    seen[id] = true
+                    table.insert(ids, id)
+                end
+            end
+            ui.pickTitle:setText(#ids > 0 and tr('Your recent drops') or tr('Kill something or search an item by name'))
+        end
 
-        for _, itemId in ipairs(QuickLoot.data.loots[QuickLoot.data.filter]) do
-            local name = g_things.getThingType(itemId, ThingCategoryItem):getName()
-            local widget = g_ui.createWidget("QuicLootIgnoreItem", quickLootController.ui.ignoreList)
-
-            widget:setId(itemId)
-            widget:setBackgroundColor(color)
-            widget.label:setText(name ~= "" and name or "Unknown")
-            widget.item:setItemId(itemId)
-
-            color = color == "#484848" and "#414141" or "#484848"
+        local color = '#484848'
+        for _, id in ipairs(ids) do
+            addRow(list, id, names[id] or itemName(id), color)
+            color = color == '#484848' and '#414141' or '#484848'
         end
     end
 
     function QuickLoot.search(text)
-        return
+        QuickLoot.searchText = text or ''
+        QuickLoot.loadFilterItems()
+    end
+
+    function QuickLoot.focusSearch()
+        local search = quickLootController.ui and quickLootController.ui.search
+        if search then
+            search:focus()
+        end
     end
 
     function QuickLoot.clearSearch()
