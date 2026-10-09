@@ -343,6 +343,48 @@ local function disconnectOnServerError()
     })
 end
 
+-- The server sends the moment (unix time) the streak expires, not seconds:
+-- show what is left, and keep it counting while the window is open.
+local streakDeadline = 0
+local countdownEvent
+
+local function formatTimeLeft(deadline)
+    if deadline == 0 then
+        return tr('Expired')
+    end
+    -- 90001 = no server save recorded yet on the server (0 + 25 hours)
+    if deadline < 1000000000 then
+        return '-'
+    end
+    local left = deadline - os.time()
+    if left <= 0 then
+        return tr('Expired')
+    end
+    if left < 60 then
+        return '< 1 min'
+    end
+    return string.format('%dh %02dm', math.floor(left / 3600), math.floor(left % 3600 / 60))
+end
+
+local function refreshTimeLeft()
+    local ui = rewardWallController.ui
+    if not ui or not ui.restingAreaPanel then
+        return
+    end
+    ui.restingAreaPanel.restingAreaInfo.timeLeft:setText(formatTimeLeft(streakDeadline))
+end
+
+local function startCountdown()
+    if countdownEvent then
+        removeEvent(countdownEvent)
+    end
+    countdownEvent = cycleEvent(function()
+        if rewardWallController.ui and rewardWallController.ui:isVisible() then
+            refreshTimeLeft()
+        end
+    end, 30000)
+end
+
 local function onOpenRewardWall(bonusShrines, nextRewardTime, dayStreakDay, wasDailyRewardTaken, errorMessage, tokens,
     timeLeft, dayStreakLevel)
     if bonusShrines == OPEN_WINDOWS.SHRINE then
@@ -353,8 +395,9 @@ local function onOpenRewardWall(bonusShrines, nextRewardTime, dayStreakDay, wasD
     bonusShrine = bonusShrines
     updateDailyRewards(dayStreakDay, wasDailyRewardTaken)
     rewardWallController.ui.restingAreaPanel.restingAreaInfo.rewardStreakIcon:setText(dayStreakLevel)
-    rewardWallController.ui.restingAreaPanel.restingAreaInfo.timeLeft:setText(
-        (timeLeft == 0 and "Expired") or (timeLeft == 90001 and "< 1 min") or timeLeft)
+    streakDeadline = tonumber(timeLeft) or 0
+    refreshTimeLeft()
+    startCountdown()
     rewardWallController.ui.restingAreaPanel.restingAreaInfo.restingAreaGold.text:setText(tokens)
     rewardWallController.ui.footerPanel.footerGold1.text:setText(tokens)
     rewardWallController.ui.restingAreaPanel.restingAreaInfo.rewardStreakIcon:setImageSource(
@@ -467,6 +510,10 @@ function rewardWallController:onInit()
 end
 
 function rewardWallController:onTerminate()
+    if countdownEvent then
+        removeEvent(countdownEvent)
+        countdownEvent = nil
+    end
     generalBox, windowsPickWindow, ButtonRewardWall = destroyWindows({generalBox, windowsPickWindow, ButtonRewardWall})
 end
 
@@ -566,6 +613,18 @@ end
 -- =            Call onHover css                  =
 -- =============================================*/
 
+-- the info panel shows one thing at a time: its own text or the two
+-- reward columns (free / premium), never both on top of each other
+function clearRewardTexts()
+    local panel = rewardWallController.ui.infoPanel
+    if panel.free then
+        panel.free:setText("")
+    end
+    if panel.premium then
+        panel.premium:setText("")
+    end
+end
+
 function rewardWallController:onhoverBonus(event)
     if not event.value then
         rewardWallController.ui.infoPanel:setText("")
@@ -588,6 +647,7 @@ function rewardWallController:onhoverBonus(event)
         bonus.id,
         isPremium and ("\n\nActive bonuses: [color=#909090]%s[/color]."):format(getBonusStrings(bonuses)) or "")
 
+    clearRewardTexts()
     rewardWallController.ui.infoPanel:parseColoredText(bonusText)
 end
 
@@ -598,15 +658,16 @@ function rewardWallController:onhoverStatusPlayer(event)
     end
 
     local playerStatus = {
-        rewardStreakIcon = "This explains the reward streak system. You need to claim your daily reward between regular server saves to maintain your streak. At a streak of 2+, your character gets resting area bonuses. Free accounts can reach a maximum bonus at streak level 3, while premium players can reach higher levels. Characters on the same account share the streak.",
-        timeLeft = "This is an urgent notification to claim your daily reward within one minute (before the next server save) to raise your reward streak by 1. It mentions that 3 Daily Reward Jokers will be used to prevent resetting your streak. It also encourages raising your streak to benefit from bonuses in resting areas.",
-        restingAreaGold = "This explains how Daily Reward Jokers work. They help you maintain your streak on days when you can't claim your daily reward. Each character receives one Daily Reward Joker on the first day of each month. The message recommends collecting rewards daily to stay safe."
+        rewardStreakIcon = "Your reward streak. Collect the daily reward once between two server saves to raise it by 1. From a streak of 2 your characters get bonuses in resting areas. Characters on the same account share the streak.",
+        timeLeft = "Time left to collect the daily reward without losing your streak. If it runs out, a Daily Reward Joker is used to keep the streak, when you have one.",
+        restingAreaGold = "Daily Reward Jokers. One keeps your streak on a day you could not collect the reward. Every character gets one on the first day of each month."
     }
 
     local DEFAULT_MESSAGE = "Unknown bonus."
 
     local id = event.target:getId()
     local info = playerStatus[id]
+    clearRewardTexts()
     rewardWallController.ui.infoPanel:parseColoredText(info or DEFAULT_MESSAGE)
 end
 
@@ -656,6 +717,7 @@ function rewardWallController:onhoverRewardType(event)
         return
     end
 
+    rewardWallController.ui.infoPanel:setText("")
     rewardWallController.ui.infoPanel.free:setText(rewardTexts.free)
     rewardWallController.ui.infoPanel.premium:setText(rewardTexts.premium)
 end
@@ -670,6 +732,7 @@ function rewardWallController:onhoverStatusReward(event)
         rewardWallController.ui.infoPanel:setText("")
         return
     end
+    clearRewardTexts()
     rewardWallController.ui.infoPanel:setText(statusReward[event.target.status])
 end
 
