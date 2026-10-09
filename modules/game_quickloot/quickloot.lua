@@ -8,6 +8,10 @@ local function getFilter(id)
     return filter[id]
 end
 
+-- Gersao's buy prices (server scripts/quickloot/loot_prices.lua), for the
+-- "take everything Gersao buys for at least X gold" rule
+LOOT_PRICES_OPCODE = 124
+
 quickLootController = Controller:new()
 quickLootController:setUI('quickloot')
 function quickLootController:onInit()
@@ -28,6 +32,7 @@ function quickLootController:onInit()
         onQuickLootContainers = QuickLoot.start,
         onTextMessage = QuickLoot.onTextMessage
     })
+    ProtocolGame.registerExtendedJSONOpcode(LOOT_PRICES_OPCODE, QuickLoot.onPrices)
     Keybind.new("Loot", "Quick Loot Nearby Corpses", "Alt+Q", "")
     Keybind.bind("Loot", "Quick Loot Nearby Corpses", {
       {
@@ -40,6 +45,7 @@ end
 
 function quickLootController:onTerminate()
     Keybind.delete("Loot", "Quick Loot Nearby Corpses")
+    ProtocolGame.unregisterExtendedJSONOpcode(LOOT_PRICES_OPCODE)
     if QuickLoot.mouseGrabberWidget then
         QuickLoot.mouseGrabberWidget:destroy()
         QuickLoot.mouseGrabberWidget = nil
@@ -66,13 +72,15 @@ function quickLootController:onGameStart()
     quickLootController.ui.information.vipPanel.premium:setOn(not (player and player:isPremium()))
     QuickLoot.load()
     QuickLoot.searchText = ''
+    QuickLoot.prices = nil
+    QuickLoot.requestPrices()
+    QuickLoot.refreshPriceRule()
 
     if modules.game_brevespanel and modules.game_brevespanel.addFeature then
         modules.game_brevespanel.addFeature('loot', QuickLoot.toggle)
     end
 
-    g_game.requestQuickLootBlackWhiteList(getFilter(QuickLoot.data.filter),
-        #QuickLoot.data.loots[QuickLoot.data.filter], QuickLoot.data.loots[QuickLoot.data.filter])
+    QuickLoot.sendList()
 end
 
 function quickLootController:onGameEnd()
@@ -113,8 +121,7 @@ function QuickLoot.Define()
             QuickLoot.data.filter = 2
         end
 
-        g_game.requestQuickLootBlackWhiteList(getFilter(QuickLoot.data.filter),
-            #QuickLoot.data.loots[QuickLoot.data.filter], QuickLoot.data.loots[QuickLoot.data.filter])
+        QuickLoot.sendList()
         QuickLoot.loadFilterItems()
     end
 
@@ -135,17 +142,23 @@ function QuickLoot.Define()
 
         table.insert(QuickLoot.data.loots[filter], itemId)
 
-        g_game.requestQuickLootBlackWhiteList(getFilter(filter),
-            #QuickLoot.data.loots[filter], QuickLoot.data.loots[filter])
+        QuickLoot.sendList()
         if quickLootController.ui:isVisible() then
             QuickLoot.loadFilterItems()
         end
     end
     function QuickLoot.clearFilterItems()
+        if QuickLoot.priceRuleActive() then
+            local rule = QuickLoot.priceRule()
+            rule.take = {}
+            rule.skip = {}
+            QuickLoot.sendList()
+            QuickLoot.loadFilterItems()
+            return
+        end
         QuickLoot.data.loots[QuickLoot.data.filter] = {}
 
-        g_game.requestQuickLootBlackWhiteList(getFilter(QuickLoot.data.filter),
-            #QuickLoot.data.loots[QuickLoot.data.filter], QuickLoot.data.loots[QuickLoot.data.filter])
+        QuickLoot.sendList()
         QuickLoot.loadFilterItems()
     end
 
@@ -159,8 +172,7 @@ function QuickLoot.Define()
 
         table.removevalue(QuickLoot.data.loots[filter], itemId)
 
-        g_game.requestQuickLootBlackWhiteList(getFilter(filter),
-            #QuickLoot.data.loots[filter], QuickLoot.data.loots[filter])
+        QuickLoot.sendList()
         if quickLootController.ui:isVisible() then
             QuickLoot.loadFilterItems()
         end
@@ -319,7 +331,164 @@ function QuickLoot.Define()
     local MAX_RECENT = 60
     local MAX_RESULTS = 60
 
+    -- Price rule: every item Gersao buys for at least `min` gold is taken.
+    -- A Take box the player changes by hand overrides it for that item
+    -- (priceRule.take / priceRule.skip). The server gets the result as an
+    -- accepted loot list; rarity items are always taken by the server.
+    function QuickLoot.priceRule()
+        local data = QuickLoot.data
+        data.priceRule = data.priceRule or {}
+        local rule = data.priceRule
+        rule.min = tonumber(rule.min) or 1000
+        rule.take = rule.take or {}
+        rule.skip = rule.skip or {}
+        return rule
+    end
+
+    function QuickLoot.priceRuleActive()
+        return QuickLoot.priceRule().enabled == true and QuickLoot.prices ~= nil
+    end
+
+    local function pays(itemId, rule)
+        return (QuickLoot.prices[itemId] or 0) >= rule.min
+    end
+
+    local function priceRuleIds()
+        local rule = QuickLoot.priceRule()
+        local skip, ids, seen = {}, {}, {}
+        for _, id in ipairs(rule.skip) do
+            skip[id] = true
+        end
+        local function add(id)
+            if not skip[id] and not seen[id] then
+                seen[id] = true
+                table.insert(ids, id)
+            end
+        end
+        for id in pairs(QuickLoot.prices) do
+            if pays(id, rule) then
+                add(id)
+            end
+        end
+        for _, id in ipairs(rule.take) do
+            add(id)
+        end
+        -- coins: always, the price rule is about items
+        for _, id in ipairs(QuickLoot.alwaysTake or {}) do
+            if not seen[id] then
+                seen[id] = true
+                table.insert(ids, id)
+            end
+        end
+        table.sort(ids)
+        return ids
+    end
+
+    function QuickLoot.sendList()
+        if QuickLoot.priceRuleActive() then
+            local ids = priceRuleIds()
+            g_game.requestQuickLootBlackWhiteList(getFilter(2), #ids, ids)
+            return
+        end
+        local list = QuickLoot.data.loots[QuickLoot.data.filter] or {}
+        g_game.requestQuickLootBlackWhiteList(getFilter(QuickLoot.data.filter), #list, list)
+    end
+
+    function QuickLoot.requestPrices()
+        local protocol = g_game.getProtocolGame()
+        if protocol then
+            protocol:sendExtendedJSONOpcode(LOOT_PRICES_OPCODE, { action = 'prices' })
+        end
+    end
+
+    function QuickLoot.onPrices(protocol, opcode, data)
+        if type(data) ~= 'table' or data.action ~= 'prices' or type(data.items) ~= 'table' then
+            return
+        end
+        local prices = {}
+        for _, entry in ipairs(data.items) do
+            local id, price = tonumber(entry[1]), tonumber(entry[2])
+            if id and price then
+                prices[id] = price
+            end
+        end
+        QuickLoot.prices = prices
+        QuickLoot.alwaysTake = {}
+        for _, id in ipairs(type(data.always) == 'table' and data.always or {}) do
+            if tonumber(id) then
+                table.insert(QuickLoot.alwaysTake, tonumber(id))
+            end
+        end
+        if QuickLoot.priceRule().enabled then
+            QuickLoot.sendList()
+        end
+        if quickLootController.ui and quickLootController.ui:isVisible() then
+            QuickLoot.loadFilterItems()
+        end
+    end
+
+    -- the price rule's widgets, from QuickLoot.data
+    function QuickLoot.refreshPriceRule()
+        local ui = quickLootController.ui
+        local panel = ui and ui.priceRule
+        if not panel then
+            return
+        end
+        local rule = QuickLoot.priceRule()
+        QuickLoot.updatingPriceRule = true
+        panel.enabled:setChecked(rule.enabled == true)
+        if panel.min:getText() ~= tostring(rule.min) then
+            panel.min:setText(tostring(rule.min))
+        end
+        QuickLoot.updatingPriceRule = false
+        -- the skipped / accepted lists don't apply while the rule decides
+        ui.filters.skipped:setEnabled(not rule.enabled)
+        ui.filters.accepted:setEnabled(not rule.enabled)
+    end
+
+    function QuickLoot.setPriceRule(enabled)
+        if QuickLoot.updatingPriceRule then
+            return
+        end
+        QuickLoot.priceRule().enabled = enabled
+        if enabled and not QuickLoot.prices then
+            QuickLoot.requestPrices()
+        end
+        QuickLoot.refreshPriceRule()
+        QuickLoot.sendList()
+        QuickLoot.loadFilterItems()
+    end
+
+    function QuickLoot.setPriceMin(text)
+        if QuickLoot.updatingPriceRule then
+            return
+        end
+        local digits = (text or ''):gsub('%D', '')
+        QuickLoot.priceRule().min = tonumber(digits) or 0
+        -- typing a number sends one list, not one per key
+        if QuickLoot.priceMinEvent then
+            removeEvent(QuickLoot.priceMinEvent)
+        end
+        QuickLoot.priceMinEvent = scheduleEvent(function()
+            QuickLoot.priceMinEvent = nil
+            if QuickLoot.priceRule().enabled then
+                QuickLoot.sendList()
+            end
+            QuickLoot.loadFilterItems()
+        end, 400)
+    end
+
     function QuickLoot.isWanted(itemId)
+        if QuickLoot.priceRuleActive() then
+            local rule = QuickLoot.priceRule()
+            if table.contains(QuickLoot.alwaysTake or {}, itemId) then
+                return true
+            end
+            if table.contains(rule.skip, itemId) then
+                return false
+            end
+            return table.contains(rule.take, itemId) or pays(itemId, rule)
+        end
         local listed = QuickLoot.lootExists(itemId)
         if QuickLoot.data.filter == 2 then
             return listed
@@ -328,6 +497,18 @@ function QuickLoot.Define()
     end
 
     function QuickLoot.setWanted(itemId, wanted)
+        if QuickLoot.priceRuleActive() then
+            local rule = QuickLoot.priceRule()
+            table.removevalue(rule.take, itemId)
+            table.removevalue(rule.skip, itemId)
+            if wanted and not pays(itemId, rule) then
+                table.insert(rule.take, itemId)
+            elseif not wanted and pays(itemId, rule) then
+                table.insert(rule.skip, itemId)
+            end
+            QuickLoot.sendList()
+            return
+        end
         local addToList = (QuickLoot.data.filter == 2) == wanted
         if addToList then
             QuickLoot.addLootList(itemId)
@@ -396,7 +577,12 @@ function QuickLoot.Define()
         row:setId(tostring(itemId))
         row:setBackgroundColor(color)
         row.item:setItemId(itemId)
-        row.label:setText(name ~= '' and name or tr('Unknown'))
+        local price = QuickLoot.prices and QuickLoot.prices[itemId]
+        local text = name ~= '' and name or tr('Unknown')
+        if price then
+            text = text .. '\n' .. tr('Gersao pays %s', comma_value and comma_value(price) or tostring(price))
+        end
+        row.label:setText(text)
         row.take:setChecked(QuickLoot.isWanted(itemId))
         row.take.onCheckChange = function(widget, checked)
             QuickLoot.setWanted(itemId, checked)
