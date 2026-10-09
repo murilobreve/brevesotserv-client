@@ -114,6 +114,19 @@ local function fillItems(items)
             line.rerollButton.onClick = function()
                 send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'value' })
             end
+            if bonus.min and bonus.max then
+                line.range:setText(string.format('%s-%s', number(bonus.min), number(bonus.max)))
+                line.range:setTooltip(tr('A reroll gives %s to %s%s on this item. The perfect roll is %s%s.', number(bonus.min), number(bonus.max), bonus.unit or '', number(bonus.perfect or bonus.max), bonus.unit or ''))
+            end
+            local canImprove = bonus.max and (bonus.value or 0) < bonus.max
+            line.improveButton:setText(formatCost(entry.improveCost))
+            line.improveButton:setTooltip(canImprove
+                and tr('Improve: a new value for %s that is always higher than the current one (%d Rarity XP).', bonus.label, entry.improveCost or 0)
+                or tr('%s is already at the top of its range.', bonus.label))
+            line.improveButton:setEnabled(canImprove and rarityXp >= (entry.improveCost or 0) and (entry.improveCost or 0) > 0)
+            line.improveButton.onClick = function()
+                send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'improve' })
+            end
             line.changeButton:setText(formatCost(entry.changeCost))
             line.changeButton:setTooltip(tr('Change: swap %s for another random bonus (%d Rarity XP).', bonus.label, entry.changeCost or 0))
             line.changeButton:setEnabled(rarityXp >= (entry.changeCost or 0))

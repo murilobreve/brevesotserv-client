@@ -20,26 +20,27 @@ WIKI_GRADES = {
 }
 
 -- stack: forge stack the tier gives the monster. The engine turns it into
--- HP x(1 + (15*stack + 35)/100), attack x(1.35 + (stack-1)*0.1),
--- defense x(1 + stack/10) and experience x(stack + 10)/10.
+-- HP x(1 + (15*stack + 35)/100), attack x(1.35 + (stack-1)*0.1) and
+-- experience x(stack + 10)/10; the tier's healthFactor multiplies the HP
+-- again and rarity tiers get no forge defense.
 WIKI_TIERS = {
     pale = {
         name = 'Pale', color = '#c9d6e3', shader = 'Rarity - Pale', outfit = 34, monster = 'Dragon',
-        chance = '2%', hp = 'x2,10', attack = 'x1,75', defense = 'x1,5', xp = 'x1,5',
+        chance = '2%', hp = 'x2,94', attack = 'x1,75', defense = 'x1', xp = 'x1,5',
         loot = 'x3', rolls = '+1', affix = '50%', skull = 'Branca',
         grades = { 60, 29, 9, 1.8, 0.2 },
         arrival = '"You sense something pale stirring..." e um brilho azul no corpo.',
     },
     ashen = {
         name = 'Ashen', color = '#9aa0a8', shader = 'Rarity - Ashen', outfit = 55, monster = 'Behemoth',
-        chance = '1%', hp = 'x2,70', attack = 'x2,15', defense = 'x1,9', xp = 'x1,9',
+        chance = '1%', hp = 'x4,32', attack = 'x2,15', defense = 'x1', xp = 'x1,9',
         loot = 'x6', rolls = '+1', affix = '80%', skull = 'Vermelha',
         grades = { 45, 33, 15, 6, 1 },
         arrival = 'Fogo no chão, fumaça em volta e "*the ground scorches*".',
     },
     obsidian = {
         name = 'Obsidian', color = '#9b7bff', shader = 'Rarity - Obsidian', outfit = 121, monster = 'Hydra',
-        chance = '0,5%', hp = 'x3,45', attack = 'x2,65', defense = 'x2,4', xp = 'x2,4',
+        chance = '0,5%', hp = 'x6,56', attack = 'x2,65', defense = 'x1', xp = 'x2,4',
         loot = 'x12', rolls = '+2', affix = '100%', skull = 'Preta',
         grades = { 27, 30, 25, 12, 6 },
         arrival = 'Explosões, anéis de morte e "IT HAS ARRIVED!".',
@@ -47,7 +48,7 @@ WIKI_TIERS = {
     deathlord = {
         name = 'Lord of Death', color = '#e04848', shader = 'Rarity - Lord of Death', outfit = 25, monster = 'Minotaur',
         effect = 20,
-        chance = '0,05%', hp = 'x3,60', attack = 'x2,75', defense = 'x2,5', xp = 'x2,5',
+        chance = '0,05%', hp = 'x7,20', attack = 'x2,75', defense = 'x1', xp = 'x2,5',
         loot = 'x20', rolls = '+3', affix = '100%', skull = 'Preta',
         grades = { 0, 0, 50, 32, 18 },
         arrival = 'A luz some, o pentagrama preto aparece e tudo em volta morre.',
@@ -91,11 +92,12 @@ WIKI_PAGES.tiers = {
         { 'table', widths = { 110, 70, 60, 60, 60, 80 },
           head = { 'Tier', 'Chance', 'Vida', 'Ataque', 'XP', 'Loot' },
           rows = {
-              { { 'Pale', '#c9d6e3' }, '2%', 'x2,10', 'x1,75', 'x1,5', 'x3' },
-              { { 'Ashen', '#9aa0a8' }, '0,7%', 'x2,70', 'x2,15', 'x1,9', 'x6' },
-              { { 'Obsidian', '#9b7bff' }, '0,5%', 'x3,45', 'x2,65', 'x2,4', 'x12' },
-              { { 'Lord of Death', '#e04848' }, '0,05%', 'x3,60', 'x2,75', 'x2,5', 'x20' },
+              { { 'Pale', '#c9d6e3' }, '2%', 'x2,94', 'x1,75', 'x1,5', 'x3' },
+              { { 'Ashen', '#9aa0a8' }, '0,7%', 'x4,32', 'x2,15', 'x1,9', 'x6' },
+              { { 'Obsidian', '#9b7bff' }, '0,5%', 'x6,56', 'x2,65', 'x2,4', 'x12' },
+              { { 'Lord of Death', '#e04848' }, '0,05%', 'x7,20', 'x2,75', 'x2,5', 'x20' },
           } },
+        { 'p', 'Um monstro raro é mais forte só na vida: armadura e defesa são as do monstro normal, então o seu dano entra inteiro.' },
         { 'p', 'A chance é por morte de monstro. O sorteio começa pela camada mais alta, então um mesmo monstro nunca vira duas coisas ao mesmo tempo. Loot multiplica a chance de cada item da lista do próprio monstro; itens muito raros (abaixo de 0,3% de chance) não são multiplicados.' },
         { 'p', 'O monstro que volta com tier não pertence a nenhum spawn: se ficar 5 minutos sem nenhum jogador a até 10 sqm, ele some.' },
         { 'h', 'Regras' },
@@ -122,7 +124,7 @@ local function tierPage(key, menu, extra)
 end
 
 WIKI_PAGES.pale = tierPage('pale', 'Pale', {
-    { 'p', 'A camada mais comum: 2% das mortes. Tem o dobro da vida e o triplo de loot. Metade das vezes, um item que cair no corpo vira item raro.' },
+    { 'p', 'A camada mais comum: 2% das mortes. Tem quase o triplo da vida e o triplo de loot. Metade das vezes, um item que cair no corpo vira item raro.' },
     { 'p', 'Ele tem caveira branca e uma cor fria, quase sem saturação.' },
     { 'links', { 'tiers', 'ashen' } },
 })
@@ -350,13 +352,13 @@ WIKI_PAGES.affixes = {
           } },
         { 'h', 'Rarity XP: refazer bônus' },
         { 'p', 'Matar um monstro Pale, Ashen, Obsidian ou Lord of Death dá Rarity XP para quem tem o loot: a experiência do monstro dividida por 100, vezes 1 (Pale), 2 (Ashen), 4 (Obsidian) ou 10 (Lord of Death). Um Pale Dragon dá 7, um Obsidian Dragon dá 28.' },
-        { 'p', 'Na janela Rarity Bonuses, cada bônus de um item que você está usando tem dois botões. Reroll sorteia um novo valor para o mesmo bônus. Trocar troca o bônus por outro aleatório do mesmo tipo de item. Os outros bônus do item não mudam.' },
-        { 'table', widths = { 120, 90, 90 }, head = { 'Grau do item', 'Reroll', 'Trocar' },
+        { 'p', 'Na janela Rarity Bonuses, cada bônus de um item que você está usando mostra a faixa de valores possíveis no grau do item (por exemplo 3-11) e tem três botões. Melhorar sorteia um valor novo sempre maior que o atual, até o topo da faixa. Reroll sorteia um novo valor para o mesmo bônus, que pode ser maior ou menor, e é o único jeito de tirar o valor perfeito. Trocar troca o bônus por outro aleatório do mesmo tipo de item. Os outros bônus do item não mudam.' },
+        { 'table', widths = { 120, 90, 90, 90 }, head = { 'Grau do item', 'Melhorar', 'Reroll', 'Trocar' },
           rows = {
-              { 'Communis', '8', '13' }, { 'Rarus', '20', '33' }, { 'Praeclarus', '50', '83' },
-              { 'Legendarius', '117', '200' }, { 'Mythicus', '267', '467' },
+              { 'Communis', '24', '8', '13' }, { 'Rarus', '60', '20', '33' }, { 'Praeclarus', '150', '50', '83' },
+              { 'Legendarius', '350', '117', '200' }, { 'Mythicus', '800', '267', '467' },
           } },
-        { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Um Mythicus de level 400 custa 534 no Reroll e 934 no Trocar.' },
+        { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Um Mythicus de level 400 custa 1600 no Melhorar, 534 no Reroll e 934 no Trocar.' },
         { 'p', 'A Store também vende Rarity XP na categoria Rarity: 500 por 250 coins, 1500 por 700 e 5000 por 2200.' },
         { 'links', { 'stacking', 'pools' } },
     },

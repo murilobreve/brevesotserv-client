@@ -80,12 +80,22 @@ BonusLine < Panel
   Label
     id: text
     anchors.left: parent.left
-    anchors.right: rerollButton.left
+    anchors.right: range.left
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 4
     font: verdana-11px-monochrome
     color: #7fd35a
     phantom: false
+
+  // the values a reroll can give on this item
+  Label
+    id: range
+    anchors.right: improveButton.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #9a9a9a
 
   BonusActionButton
     id: changeButton
@@ -99,6 +109,13 @@ BonusLine < Panel
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 3
     icon: /game_raritybonus/images/reroll
+
+  BonusActionButton
+    id: improveButton
+    anchors.right: rerollButton.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 3
+    icon: /game_raritybonus/images/improve
 
 BonusItemRowEven < BonusItemRow
   background-color: #ffffff12
