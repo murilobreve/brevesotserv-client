@@ -25,6 +25,8 @@ bottomSplitter = nil
 lastManualWalk = 0
 limitedZoom = false
 currentViewMode = 0
+-- tiles shown across: 2 x the viewport in data/setup.otml - 1 (8 -> 15, 11 -> 21)
+MAP_VISIBLE_WIDTH = 21
 leftIncreaseSidePanels = nil
 leftDecreaseSidePanels = nil
 rightIncreaseSidePanels = nil
@@ -460,7 +462,7 @@ end
 function updateStretchShrink()
     if modules.client_options.getOption('dontStretchShrink') and not alternativeView then
         gameMapPanel:setVisibleDimension({
-            width = 15,
+            width = MAP_VISIBLE_WIDTH,
             height = 11
         })
 
@@ -1804,7 +1806,7 @@ function setupViewMode(mode)
         gameMapPanel:setLimitVisibleRange(false)
         gameMapPanel:setZoom(11)
         gameMapPanel:setVisibleDimension({
-            width = 15,
+            width = MAP_VISIBLE_WIDTH,
             height = 11
         })
     elseif mode == 1 then
@@ -1812,7 +1814,7 @@ function setupViewMode(mode)
         gameMapPanel:setLimitVisibleRange(true)
         gameMapPanel:setZoom(11)
         gameMapPanel:setVisibleDimension({
-            width = 15,
+            width = MAP_VISIBLE_WIDTH,
             height = 11
         })
     elseif mode == 2 then
@@ -1820,7 +1822,7 @@ function setupViewMode(mode)
         gameMapPanel:setLimitVisibleRange(limit)
         gameMapPanel:setZoom(11)
         gameMapPanel:setVisibleDimension({
-            width = 15,
+            width = MAP_VISIBLE_WIDTH,
             height = 11
         })
         gameMapPanel:fill('parent')

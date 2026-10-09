@@ -4,7 +4,7 @@ function UIGameMap.create()
     local gameMap = UIGameMap.internalCreate()
     gameMap:setKeepAspectRatio(true)
     gameMap:setVisibleDimension({
-        width = 15,
+        width = 21, -- matches MAP_VISIBLE_WIDTH in gameinterface.lua
         height = 11
     })
     gameMap:setDrawLights(true)
