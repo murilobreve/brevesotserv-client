@@ -168,7 +168,7 @@ WIKI_PAGES.huntboard = {
               { '10x ou mais', 'x2,5', '2,5%', '0,75%', '0,38%', '0,05%' },
           } },
         { 'h', 'Loot' },
-        { 'p', 'O loot segue a mesma conta: loot = 1 + (rate de XP - 1) / 3. Um monstro a 10x dá 4x de loot e a 4x dá 2x. Nenhum monstro fica abaixo de 1x, e quase metade deles fica em 1x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
+        { 'p', 'O loot segue a mesma conta: loot = 1 + (rate de XP - 1) / 3. Um monstro a 10x dá 4x de loot e a 4x dá 2x. Nenhum monstro fica abaixo de 1x: um terço fica em 1x, outro terço perto de 2x, e o resto vai ficando mais raro até 10x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
         { 'p', 'O Hunt Board (no painel Mythicum, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
         { 'links', { 'tiers', 'experience' } },
     },
