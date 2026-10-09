@@ -77,7 +77,8 @@ def mount_frames(mount):
         for y in range(2):
             for d in DIRS:
                 frames.append(layers[d][y])
-    assert len(frames) == FRAMES_PER_MOUNT
+    if len(frames) != FRAMES_PER_MOUNT:
+        raise ValueError(f'{len(frames)} frames, expected {FRAMES_PER_MOUNT}')
     return frames
 
 
@@ -198,20 +199,24 @@ os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
     if f.startswith('sprites-'):
         os.remove(os.path.join(CLIENT_DIR, f))
-for name, cip, first, last in sheets + small_sheets:
-    open(os.path.join(CLIENT_DIR, name), 'wb').write(cip)
-open(os.path.join(CLIENT_DIR, dat_name), 'wb').write(custom.SerializeToString())
-json.dump([{'type': 'appearances', 'file': dat_name}] + [
-    {'type': 'sprite', 'file': name, 'spritetype': 3, 'firstspriteid': first, 'lastspriteid': last, 'area': 64}
-    for name, cip, first, last in sheets
-] + [
-    {'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first, 'lastspriteid': last, 'area': 32}
-    for name, cip, first, last in small_sheets
-], open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w'), indent=2)
+for name, cip, _first, _last in sheets + small_sheets:
+    with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
+        f.write(cip)
+with open(os.path.join(CLIENT_DIR, dat_name), 'wb') as f:
+    f.write(custom.SerializeToString())
+with open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w') as f:
+    json.dump([{'type': 'appearances', 'file': dat_name}] + [
+        {'type': 'sprite', 'file': name, 'spritetype': 3, 'firstspriteid': first, 'lastspriteid': last, 'area': 64}
+        for name, cip, first, last in sheets
+    ] + [
+        {'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first, 'lastspriteid': last, 'area': 32}
+        for name, cip, first, last in small_sheets
+    ], f, indent=2)
 
 # server: register the looktypes (replace older copies of them)
 srv = A.Appearances()
-srv.ParseFromString(open(SERVER_DAT, 'rb').read())
+with open(SERVER_DAT, 'rb') as f:
+    srv.ParseFromString(f.read())
 ids = {m['id'] for m in MOUNTS}
 keep = [x for x in srv.outfit if x.id not in ids]
 del srv.outfit[:]
@@ -222,5 +227,6 @@ keep = [x for x in srv.object if x.id not in ids]
 del srv.object[:]
 srv.object.extend(keep)
 srv.object.extend(objects)
-open(SERVER_DAT, 'wb').write(srv.SerializeToString())
+with open(SERVER_DAT, 'wb') as f:
+    f.write(srv.SerializeToString())
 print('ok', len(outfits), 'mounts,', len(objects), 'items,', len(frames) + len(small), 'sprites,', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets + small_sheets))
