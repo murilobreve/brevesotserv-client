@@ -743,6 +743,8 @@ locale = {
     ["Search an item by name"] = "Buscar item pelo nome",
     ["Pick the bag for each kind of loot.\n\nOn the right, tick Take on what the auto loot should pick up."] = "Escolha a bolsa de cada tipo de loot.\n\nNa direita, marque Pegar no que o auto loot deve pegar.",
     ["Manage Containers"] = "Auto Loot",
+    ["Loot corpse"] = "Pegar loot do corpo",
+    ["Use main container as fallback"] = "Usar a backpack principal se faltar bag",
   }
 }
 

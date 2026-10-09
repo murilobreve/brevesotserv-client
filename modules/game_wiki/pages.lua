@@ -75,6 +75,7 @@ WIKI_GROUPS = {
     { title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { title = 'Itens raros', pages = { 'items', 'grades', 'pools' } },
     { title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
+    { title = 'Loot', pages = { 'autoloot' } },
     { title = 'Teleports', pages = { 'tp' } },
 }
 
@@ -406,6 +407,44 @@ WIKI_PAGES.experience = {
         { 'p', '700 x 1,9 x 2 x 1,1 x 2 = 5.852, e depois a stamina e a rate do servidor.' },
         { 'p', 'Monstros invocados por outros monstros não recebem a rate do Hunt Board.' },
         { 'links', { 'huntboard', 'stacking' } },
+    },
+}
+
+-- ---------------------------------------------------------------- auto loot
+
+WIKI_PAGES.autoloot = {
+    menu = 'Auto Loot',
+    title = 'Auto Loot',
+    blocks = {
+        { 'lead', 'O auto loot está ligado para todo mundo. Quando um monstro morre, o servidor pega o loot e coloca na sua bag sozinho, sem você clicar no corpo.' },
+        { 'h', 'Quando o loot vai direto para a bag' },
+        { 'p', 'Tudo isto precisa valer ao mesmo tempo:' },
+        { 'table', widths = { 230, 290 }, head = { 'Regra', 'Se não valer' },
+          rows = {
+              { 'Você deu mais dano no monstro', 'Só quem deu mais dano recebe o auto loot. Se um summon seu deu a maior parte do dano, ninguém recebe' },
+              { 'Dá para andar até o corpo', 'Corpo atrás de parede, num buraco ou em outro andar fica inteiro no chão' },
+              { 'O item está com Pegar marcado', 'O item fica no corpo' },
+              { 'Você aguenta o peso', 'O item fica no corpo, com o aviso de que está pesado demais' },
+              { 'A bag de destino tem espaço', 'O item fica no corpo, com o aviso de que a bag está cheia' },
+              { 'Não é um boss de reward chest', 'O loot do boss vai para o reward chest, como sempre' },
+          } },
+        { 'p', 'Os itens raros que caem dentro da caixa de raridade saem da caixa e vão para a bag como qualquer outro item.' },
+        { 'h', 'Para qual bag vai' },
+        { 'table', widths = { 40, 480 }, head = { '', 'O servidor tenta nesta ordem' },
+          rows = {
+              { '1', 'A loot pouch, se você tiver uma' },
+              { '2', 'A bag que você escolheu para a categoria do item na janela Auto Loot (armas, poções, ouro...). Uma categoria com bag própria ganha da loot pouch' },
+              { '3', 'A bag padrão (Unassigned Loot)' },
+              { '4', 'A backpack principal, se "Usar a backpack principal se faltar bag" estiver marcado' },
+          } },
+        { 'p', 'Se nenhuma dessas existir, o item fica no corpo. Bags e backpacks que caem no loot não entram na loot pouch: vão para a bag da categoria ou para a backpack principal. Itens da Store vão para a Store Inbox.' },
+        { 'h', 'Quando precisa clicar no corpo' },
+        { 'p', 'Clique com o botão direito no corpo e escolha "Pegar loot do corpo". O servidor anda até o corpo e pega de novo tudo que está com Pegar marcado. Use depois de liberar espaço ou peso, ou quando o corpo estava longe ou atrás de alguma coisa.' },
+        { 'p', '"Pegar loot do corpo" segue a mesma lista, então um item desmarcado continua no corpo. Para levar um item desmarcado, escolha "Abrir" e arraste o item para a sua bag.' },
+        { 'h', 'Escolher o que pegar' },
+        { 'p', 'Abra o painel Mythicum e clique em Auto Loot. Com a busca vazia aparecem os seus drops recentes, cada um com a caixa Pegar. Para um item que ainda não caiu, digite o nome na busca.' },
+        { 'p', 'Pegar marcado: o auto loot leva o item. Desmarcado: o item fica no corpo. A lista vale para o personagem e fica salva entre logins.' },
+        { 'p', 'Do lado esquerdo da janela você escolhe a bag de cada categoria. Desmarque "Usar a backpack principal se faltar bag" se não quiser loot caindo solto na backpack principal.' },
     },
 }
 
