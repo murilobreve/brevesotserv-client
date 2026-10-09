@@ -34,6 +34,15 @@ local callbacks = {}
 local states = {}
 local toggles = {}
 
+-- the title line's two buttons: collapsed hides the rows (vertical),
+-- compact shows them as a grid of icons without names (horizontal)
+local collapsed = false
+local compact = false
+
+local ROW_HEIGHT, ROW_SPACING = 20, 2
+local CELL, CELL_SPACING = 22, 2
+local HEADER = 4 + 14 + 4 -- header margin, header, list margin
+
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
         if feature.id == id then
@@ -53,7 +62,16 @@ local function refreshBadge(id)
     end
     local badge = button.badge
     local state = states[id]
+    local feature = featureOf(id)
+    button:setTooltip(tr(feature.label) .. ((compact and state) and (' (' .. state.text .. ')') or ''))
+    -- no room for the badge next to an icon: the state colours the icon's frame
+    button:setBorderWidth((compact and state) and 1 or 0)
     if state then
+        button:setBorderColor(state.color)
+    end
+    if state and compact then
+        badge:hide()
+    elseif state then
         badge:setText(state.text)
         badge:setColor(state.color)
         badge:setBackgroundColor('#00000080')
@@ -82,13 +100,81 @@ local function resize()
     for _ in pairs(buttons) do
         rows = rows + 1
     end
-    local height = rows > 0 and (10 + rows * 20 + (rows - 1) * 2) or 0
+    local height = 0
+    if rows > 0 and collapsed then
+        height = HEADER
+    elseif rows > 0 and compact then
+        local width = panel.list:getWidth()
+        local columns = math.max(1, math.floor((width + CELL_SPACING) / (CELL + CELL_SPACING)))
+        if width <= 0 then
+            columns = 7
+        end
+        local lines = math.ceil(rows / columns)
+        height = HEADER + lines * CELL + (lines - 1) * CELL_SPACING + 4
+    elseif rows > 0 then
+        height = HEADER + rows * ROW_HEIGHT + (rows - 1) * ROW_SPACING + 4
+    end
     panel.panelHeight = height
     panel:setHeight(height)
     panel:setVisible(rows > 0)
     if modules.game_mainpanel and modules.game_mainpanel.reloadMainPanelSizes then
         modules.game_mainpanel.reloadMainPanelSizes()
     end
+end
+
+local function styleButton(id)
+    local button = buttons[id]
+    local feature = featureOf(id)
+    if not button or not feature then
+        return
+    end
+    button:setText(compact and '' or tr(feature.label))
+    button:setSize({ width = compact and CELL or button:getWidth(), height = compact and CELL or ROW_HEIGHT })
+    button.icon:setMarginLeft(compact and 3 or 5)
+    refreshBadge(id)
+end
+
+-- lays the rows out for the current collapsed / compact state
+local function applyLayout()
+    if not panel then
+        return
+    end
+    local list = panel.list
+    if compact then
+        local layout = UIGridLayout.create(list)
+        layout:setCellSize({ width = CELL, height = CELL })
+        layout:setCellSpacing(CELL_SPACING)
+        layout:setFlow(true)
+        list:setLayout(layout)
+    else
+        local layout = UIVerticalLayout.create(list)
+        layout:setSpacing(ROW_SPACING)
+        list:setLayout(layout)
+    end
+    for id in pairs(buttons) do
+        styleButton(id)
+    end
+    list:setVisible(not collapsed)
+
+    local header = panel.header
+    header.collapseButton:setOn(collapsed)
+    header.collapseButton:setTooltip(collapsed and tr('Show') or tr('Hide'))
+    header.compactButton:setTooltip(compact and tr('Show the names') or tr('Only the icons'))
+    -- with the rows hidden there is nothing to switch between names and icons
+    header.compactButton:setVisible(not collapsed)
+    resize()
+end
+
+function toggleCollapsed()
+    collapsed = not collapsed
+    g_settings.set('breves_panel_collapsed', collapsed)
+    applyLayout()
+end
+
+function toggleCompact()
+    compact = not compact
+    g_settings.set('breves_panel_compact', compact)
+    applyLayout()
 end
 
 local function placeInRightPanel()
@@ -148,9 +234,8 @@ function addFeature(id, callback)
             end
         end
     end
-    button:setTooltip(tr(feature.label))
     sortRows()
-    refreshBadge(id)
+    styleButton(id)
     resize()
     return button
 end
@@ -215,6 +300,15 @@ function init()
     panel = g_ui.createWidget('BrevesPanel')
     panel:setId('brevespanel')
     panel:hide()
+    collapsed = g_settings.getBoolean('breves_panel_collapsed')
+    compact = g_settings.getBoolean('breves_panel_compact')
+    -- the icon grid's line count follows the panel's width
+    panel.list.onGeometryChange = function(widget, oldRect, newRect)
+        if compact and oldRect.width ~= newRect.width then
+            resize()
+        end
+    end
+    applyLayout()
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     if g_game.isOnline() then
         onGameStart()

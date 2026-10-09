@@ -745,6 +745,10 @@ locale = {
     ["Manage Containers"] = "Auto Loot",
     ["Loot corpse"] = "Pegar loot do corpo",
     ["Use main container as fallback"] = "Usar a backpack principal se faltar bag",
+    ["Show"] = "Mostrar",
+    ["Hide"] = "Esconder",
+    ["Show the names"] = "Mostrar os nomes",
+    ["Only the icons"] = "Só os ícones",
   }
 }
 

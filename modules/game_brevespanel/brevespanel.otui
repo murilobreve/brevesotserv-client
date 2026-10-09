@@ -41,15 +41,74 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #dfdfdf
 
+// the small buttons on the panel's title line, drawn like a mini window's
+BrevesPanelButton < UIButton
+  size: 12 12
+  image-size: 14 14
+  image-source: /images/ui/miniwindow_buttons
+
 BrevesPanel < PhantomMiniWindow
   id: brevespanel
   height: 120
   &panelHeight: 120
 
   UIWidget
+    id: header
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin: 4 8 0 8
+    height: 14
+    phantom: true
+
+    Label
+      id: title
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      text-auto-resize: true
+      font: verdana-11px-rounded
+      color: #a6a6a6
+      text: Mythicum
+      phantom: true
+
+    // vertical: hide or show the rows
+    BrevesPanelButton
+      id: collapseButton
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      image-clip: 0 0 14 14
+      @onClick: modules.game_brevespanel.toggleCollapsed()
+      $hover:
+        image-clip: 0 14 14 14
+      $pressed:
+        image-clip: 0 28 14 14
+      $on:
+        image-clip: 14 0 14 14
+      $on hover:
+        image-clip: 14 14 14 14
+      $on pressed:
+        image-clip: 14 28 14 14
+
+    // horizontal: names or only the icons
+    BrevesPanelButton
+      id: compactButton
+      anchors.right: collapseButton.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-right: 2
+      image-clip: 112 0 14 14
+      @onClick: modules.game_brevespanel.toggleCompact()
+      $hover:
+        image-clip: 112 14 14 14
+      $pressed:
+        image-clip: 112 28 14 14
+
+  UIWidget
     id: list
-    anchors.fill: parent
-    margin: 6 8 4 8
+    anchors.top: header.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin: 4 8 4 8
     phantom: true
     layout:
       type: verticalBox
