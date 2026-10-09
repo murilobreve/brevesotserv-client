@@ -213,3 +213,42 @@ BrevesNewsWindow < MainWindow
     size: 60 22
     !text: tr('Close')
     @onClick: modules.game_brevespanel.hideNews()
+
+// a small notice over the top right corner of the game screen; it never takes
+// the focus, so walking and hotkeys keep working
+BrevesNotice < UIWidget
+  width: 240
+  height: 66
+  background-color: #1c1c1ce6
+  border-width: 1
+  border-color: #8a6a2a
+  padding: 6
+
+  Label
+    id: text
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #e8e8e8
+    phantom: true
+
+  Button
+    id: openButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: 86
+    height: 18
+    focusable: false
+
+  Button
+    id: closeButton
+    !text: tr('Later')
+    anchors.right: openButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    width: 56
+    height: 18
+    focusable: false

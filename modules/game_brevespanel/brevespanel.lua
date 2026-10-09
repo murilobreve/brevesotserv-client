@@ -315,6 +315,54 @@ function setFeatureToggle(id, callback)
     refreshBadge(id)
 end
 
+-- ---------------------------------------------------------------- notices
+
+local notice, noticeEvent
+local NOTICE_SECONDS = 20
+
+function hideNotice()
+    if noticeEvent then
+        removeEvent(noticeEvent)
+        noticeEvent = nil
+    end
+    if notice then
+        notice:destroy()
+        notice = nil
+    end
+end
+
+-- a small notice in the corner of the game screen with a button that opens
+-- the feature `id` (onOpen replaces the row's own action); it closes by
+-- itself and never takes the focus from the game
+function notify(id, text, buttonText, onOpen)
+    local root = modules.game_interface and modules.game_interface.getRootPanel()
+    if not root or not g_game.isOnline() then
+        return
+    end
+    hideNotice()
+    notice = g_ui.createWidget('BrevesNotice', root)
+    notice:addAnchor(AnchorTop, 'gameMapPanel', AnchorTop)
+    notice:addAnchor(AnchorRight, 'gameMapPanel', AnchorRight)
+    notice:setMarginTop(8)
+    notice:setMarginRight(8)
+    notice.text:setText(text)
+    notice:setHeight(math.max(66, notice.text:getHeight() + 12 + 24))
+    notice.openButton:setText(buttonText or tr('Open'))
+    notice.openButton.onClick = function()
+        hideNotice()
+        if onOpen then
+            onOpen()
+        else
+            open(id)
+        end
+    end
+    notice.closeButton.onClick = hideNotice
+    noticeEvent = scheduleEvent(function()
+        noticeEvent = nil
+        hideNotice()
+    end, NOTICE_SECONDS * 1000)
+end
+
 -- ---------------------------------------------------------------- news window
 
 function hideNews()
@@ -356,6 +404,7 @@ end
 
 local function onGameEnd()
     hideNews()
+    hideNotice()
 end
 
 function init()
@@ -388,6 +437,7 @@ end
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     hideNews()
+    hideNotice()
     if panel then
         panel:destroy()
         panel = nil

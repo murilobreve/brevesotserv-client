@@ -160,11 +160,31 @@ local function fillTotals(totals, items)
     end
 end
 
+function showXpBadge(xp)
+    if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
+        -- the row sits under the Rarity title: a short name leaves room for the badge
+        modules.game_brevespanel.setFeatureLabel('bonus', tr('Bonuses'), '#dfdfdf')
+        modules.game_brevespanel.setFeatureState('bonus', tr('%d XP', xp), '#e0c060')
+    end
+end
+
 local function onOpcode(protocol, opcode, data)
+    -- the balance, after every change: shown on the Rarity Bonuses row; past
+    -- a multiple of 50 a notice offers the window without opening it
+    if type(data) == 'table' and data.action == 'xp' then
+        showXpBadge(tonumber(data.xp) or 0)
+        if data.ready and not (window and window:isVisible()) and modules.game_brevespanel then
+            modules.game_brevespanel.notify('bonus',
+                tr('You have %d Rarity XP! Use it to reroll the bonuses of your rarity items.', tonumber(data.xp) or 0),
+                tr('Open'))
+        end
+        return
+    end
     if type(data) ~= 'table' or data.action ~= 'bonuses' or not window then
         return
     end
     rarityXp = tonumber(data.rarityXp) or 0
+    showXpBadge(rarityXp)
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
     window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade or level cost more.'))
     -- automatic refreshes (equipment changed) carry no message: keep the

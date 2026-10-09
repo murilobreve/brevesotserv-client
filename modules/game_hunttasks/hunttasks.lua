@@ -573,6 +573,19 @@ function handlers.progress(data)
     end
 end
 
+-- the balance passed a multiple of 50: offer the shop without opening it
+function handlers.pointsReady(data)
+    if window and window:isVisible() or not modules.game_brevespanel then
+        return
+    end
+    modules.game_brevespanel.notify('tasks',
+        tr('Você tem %d Hunt Points! Gaste na loja das tasks.', tonumber(data.points) or 0),
+        tr('Abrir loja'), function()
+            currentTab = 'shop'
+            toggle()
+        end)
+end
+
 function handlers.message(data)
     showMessage(data.text, data.ok)
 end
