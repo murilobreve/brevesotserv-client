@@ -4,9 +4,12 @@ function UIGameMap.create()
     local gameMap = UIGameMap.internalCreate()
     gameMap:setKeepAspectRatio(true)
     gameMap:setVisibleDimension({
-        width = 21, -- matches MAP_VISIBLE_WIDTH in gameinterface.lua
-        height = 11
+        width = 23, -- matches MAP_VISIBLE_WIDTH / HEIGHT in gameinterface.lua
+        height = 13
     })
+    -- the zoom is the visible height: the engine's default (11 rows) would
+    -- shrink the view back to 19 x 11 on the next resize
+    gameMap:setZoom(13)
     gameMap:setDrawLights(true)
     return gameMap
 end

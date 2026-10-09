@@ -336,7 +336,7 @@ Window
       anchors.verticalCenter: parent.verticalCenter
       text-auto-resize: true
       color: #C0C0C0
-      !text: tr('Take what Gersao pays')
+      !text: tr('Take if Gersao pays >=')
       !tooltip: tr('Every item Gersao buys for this price or more is looted. Coins and rarity items are always looted. A Take box you change by hand wins over the price.')
       @onCheckChange: QuickLoot.setPriceRule(self:isChecked())
 
@@ -345,18 +345,10 @@ Window
       anchors.left: enabled.right
       anchors.verticalCenter: parent.verticalCenter
       margin-left: 6
-      size: 64 20
+      size: 70 20
       max-length: 9
       @onTextChange: QuickLoot.setPriceMin(self:getText())
 
-    Label
-      id: gold
-      anchors.left: min.right
-      anchors.verticalCenter: parent.verticalCenter
-      margin-left: 5
-      text-auto-resize: true
-      color: #C0C0C0
-      !text: tr('or more')
 
   Label
     id: pickTitle

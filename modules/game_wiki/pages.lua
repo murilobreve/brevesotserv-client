@@ -445,7 +445,7 @@ WIKI_PAGES.autoloot = {
         { 'p', 'Abra o painel Mythicum e clique em Auto Loot. Com a busca vazia aparecem os seus drops recentes, cada um com a caixa Pegar. Para um item que ainda não caiu, digite o nome na busca.' },
         { 'p', 'Pegar marcado: o auto loot leva o item. Desmarcado: o item fica no corpo. A lista vale para o personagem e fica salva entre logins.' },
         { 'h', 'Pegar pelo preço do Gersao' },
-        { 'p', 'Marque "Pegar o que o Gersao paga" e digite um valor: o auto loot pega todo item que o Gersao compra por esse valor ou mais, e deixa o resto no corpo. Cada item da lista mostra quanto o Gersao paga.' },
+        { 'p', 'Marque "Pegar se o Gersao paga >=" e digite um valor: o auto loot pega todo item que o Gersao compra por esse valor ou mais, e deixa o resto no corpo. Cada item da lista mostra quanto o Gersao paga.' },
         { 'p', 'Moedas e itens raros (de Communis a Mythicus) são sempre pegos, mesmo abaixo do valor. Uma caixa Pegar que você muda na mão vale mais que o preço: dá para levar um item barato ou deixar um caro. Com a regra ligada, as listas Skipped e Accepted ficam paradas, e o botão de limpar apaga só essas exceções.' },
         { 'p', 'Do lado esquerdo da janela você escolhe a bag de cada categoria. Desmarque "Usar a backpack principal se faltar bag" se não quiser loot caindo solto na backpack principal.' },
     },

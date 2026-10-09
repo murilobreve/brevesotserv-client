@@ -25,8 +25,9 @@ bottomSplitter = nil
 lastManualWalk = 0
 limitedZoom = false
 currentViewMode = 0
--- tiles shown across: 2 x the viewport in data/setup.otml - 1 (8 -> 15, 11 -> 21)
-MAP_VISIBLE_WIDTH = 21
+-- tiles shown: 2 x the viewport in data/setup.otml - 1 (12 7 -> 23 x 13)
+MAP_VISIBLE_WIDTH = 23
+MAP_VISIBLE_HEIGHT = 13
 leftIncreaseSidePanels = nil
 leftDecreaseSidePanels = nil
 rightIncreaseSidePanels = nil
@@ -303,7 +304,7 @@ function show()
             gameMapPanel:setMaxZoomOut(513)
             gameMapPanel:setLimitVisibleRange(false)
         else
-            gameMapPanel:setMaxZoomOut(11)
+            gameMapPanel:setMaxZoomOut(MAP_VISIBLE_HEIGHT)
             gameMapPanel:setLimitVisibleRange(true)
         end
     end)
@@ -463,11 +464,11 @@ function updateStretchShrink()
     if modules.client_options.getOption('dontStretchShrink') and not alternativeView then
         gameMapPanel:setVisibleDimension({
             width = MAP_VISIBLE_WIDTH,
-            height = 11
+            height = MAP_VISIBLE_HEIGHT
         })
 
-        -- Set gameMapPanel size to height = 11 * 32 + 2
-        bottomSplitter:setMarginBottom(bottomSplitter:getMarginBottom() + (gameMapPanel:getHeight() - 32 * 11) - 10)
+        -- Set gameMapPanel size to height = MAP_VISIBLE_HEIGHT * 32 + 2
+        bottomSplitter:setMarginBottom(bottomSplitter:getMarginBottom() + (gameMapPanel:getHeight() - 32 * MAP_VISIBLE_HEIGHT) - 10)
     end
     -- Update action bar layout when window geometry changes
     if modules.game_actionbar and modules.game_actionbar.updateVisibleWidgetsExternal then
@@ -1804,26 +1805,26 @@ function setupViewMode(mode)
     if mode == 0 then
         gameMapPanel:setKeepAspectRatio(true)
         gameMapPanel:setLimitVisibleRange(false)
-        gameMapPanel:setZoom(11)
+        gameMapPanel:setZoom(MAP_VISIBLE_HEIGHT)
         gameMapPanel:setVisibleDimension({
             width = MAP_VISIBLE_WIDTH,
-            height = 11
+            height = MAP_VISIBLE_HEIGHT
         })
     elseif mode == 1 then
         gameMapPanel:setKeepAspectRatio(false)
         gameMapPanel:setLimitVisibleRange(true)
-        gameMapPanel:setZoom(11)
+        gameMapPanel:setZoom(MAP_VISIBLE_HEIGHT)
         gameMapPanel:setVisibleDimension({
             width = MAP_VISIBLE_WIDTH,
-            height = 11
+            height = MAP_VISIBLE_HEIGHT
         })
     elseif mode == 2 then
         local limit = limitedZoom and not g_game.isGM()
         gameMapPanel:setLimitVisibleRange(limit)
-        gameMapPanel:setZoom(11)
+        gameMapPanel:setZoom(MAP_VISIBLE_HEIGHT)
         gameMapPanel:setVisibleDimension({
             width = MAP_VISIBLE_WIDTH,
-            height = 11
+            height = MAP_VISIBLE_HEIGHT
         })
         gameMapPanel:fill('parent')
         gameRootPanel:fill('parent')
