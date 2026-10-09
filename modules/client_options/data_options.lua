@@ -570,6 +570,16 @@ return {
             modules.game_cooldown.setSpellGroupCooldownsVisible(value)
         end
     },
+    -- zooms the map until it fills the width (mode 1): no grey bars, a bit
+    -- less of the map on top and bottom
+    fillMapWidth                      = {
+        value = false,
+        action = function(value, options, controller, panels, extraWidgets)
+            if g_game.isOnline() and modules.game_interface.currentViewMode ~= 2 then
+                modules.game_interface.setupViewMode(value and 1 or 0)
+            end
+        end
+    },
     dontStretchShrink                 = {
         value = false,
         action = function(value, options, controller, panels, extraWidgets)

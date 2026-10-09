@@ -109,5 +109,17 @@ UIWidget
     height: 22
   
     OptionCheckBox
+      id: fillMapWidth
+      !text: tr('Fill the window width with the map (zoom)')
+      !tooltip: tr('No grey bars on the sides: the map zooms in until it fills the width and shows a little less on top and bottom. Ctrl+. switches too.')
+
+  SmallReversedQtPanel
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: prev.bottom
+    margin-top: 7
+    height: 22
+
+    OptionCheckBox
       id: dontStretchShrink
       !text: 'Don\'t stretch/shrink Game Window'

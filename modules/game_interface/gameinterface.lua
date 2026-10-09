@@ -292,6 +292,8 @@ function show()
     if g_platform.isMobile() or g_gameConfig.isExtendedViewUI() then
         setupViewMode(1)
         setupViewMode(2)
+    elseif modules.client_options.getOption('fillMapWidth') then
+        setupViewMode(1)
     end
 
     addEvent(function()
@@ -1764,6 +1766,10 @@ end
 
 function nextViewMode()
     setupViewMode((currentViewMode + 1) % 3)
+    -- Ctrl+. between the normal and the zoomed view is remembered like the option
+    if currentViewMode ~= 2 then
+        modules.client_options.setOption('fillMapWidth', currentViewMode == 1)
+    end
 end
 
 function setupViewMode(mode)
