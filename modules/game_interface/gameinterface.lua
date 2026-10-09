@@ -331,7 +331,9 @@ end
 
 function save()
     local settings = {}
-    settings.splitterMarginBottom = bottomSplitter:getMarginBottom()
+    -- with the chat off the console is shrunk: keep its full height
+    local expanded = modules.game_console and modules.game_console.getExpandedSplitterMargin and modules.game_console.getExpandedSplitterMargin()
+    settings.splitterMarginBottom = expanded or bottomSplitter:getMarginBottom()
     g_settings.setNode('game_interface', settings)
 end
 

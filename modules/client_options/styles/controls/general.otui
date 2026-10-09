@@ -105,6 +105,18 @@ UIWidget
       margin-top: 7
       height: 22
 
+      OptionCheckBoxMarked
+        id: hideChatWhenOff
+        !text: tr('Shrink the chat when it is off')
+        !tooltip: tr('With the chat off (walking with WASD), only the chat tabs stay and the map gets the space.')
+
+    SmallReversedQtPanel
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: prev.bottom
+      margin-top: 7
+      height: 22
+
       OptionCheckBox
         id: moveStack
         !text: tr('Move stacks directly')

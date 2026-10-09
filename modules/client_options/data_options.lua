@@ -153,6 +153,14 @@ return {
         end
     },
     returnDisablesChat                = false,
+    hideChatWhenOff                   = {
+        value = true,
+        action = function(value, options, controller, panels, extraWidgets)
+            if modules.game_console and modules.game_console.applyChatSize then
+                modules.game_console.applyChatSize()
+            end
+        end
+    },
     smartWalk                         = false,
     autoChaseOverride                 = true,
     talkOnRightClick                  = false,

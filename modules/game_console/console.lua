@@ -426,6 +426,7 @@ function switchChat(enabled)
         consoleToggleChat:setTooltip(tr('Enable chat mode'))
         Keybind.setChatMode(CHAT_MODE.OFF)
     end
+    applyChatSize()
 end
 
 function switchChatOnCall()
@@ -466,6 +467,37 @@ end
 
 function isChatEnabled()
     return consoleTextEdit:isVisible()
+end
+
+-- With the chat off (WASD) the console shrinks to its tab bar and the Chat On
+-- button, and the map gets the rest of the height back. expandedSplitterMargin
+-- is the bottom splitter's place before it shrank, restored when the chat
+-- comes back (and saved instead of the shrunk one).
+local COLLAPSED_CONSOLE_HEIGHT = 46
+local expandedSplitterMargin = nil
+
+function getExpandedSplitterMargin()
+    return expandedSplitterMargin
+end
+
+function applyChatSize()
+    local splitter = modules.game_interface and modules.game_interface.getBottomSplitter()
+    if not splitter or not consolePanel or not consoleTextEdit then
+        return
+    end
+    local hide = g_game.isOnline() and not isChatEnabled()
+        and modules.client_options.getOption('hideChatWhenOff')
+        and modules.game_interface.currentViewMode ~= 2
+    if hide and not expandedSplitterMargin then
+        local extra = consolePanel:getHeight() - COLLAPSED_CONSOLE_HEIGHT
+        if extra > 0 then
+            expandedSplitterMargin = splitter:getMarginBottom()
+            splitter:setMarginBottom(expandedSplitterMargin - extra)
+        end
+    elseif not hide and expandedSplitterMargin then
+        splitter:setMarginBottom(expandedSplitterMargin)
+        expandedSplitterMargin = nil
+    end
 end
 
 function consoleController:onTerminate()
@@ -2373,6 +2405,14 @@ function consoleController:onGameStart()
 end
 
 function consoleController:onGameEnd()
+    -- back to the full height before the interface saves the splitter
+    if expandedSplitterMargin then
+        local splitter = modules.game_interface.getBottomSplitter()
+        if splitter then
+            splitter:setMarginBottom(expandedSplitterMargin)
+        end
+        expandedSplitterMargin = nil
+    end
     clear()
     self:closeWindowExiva()
 end
