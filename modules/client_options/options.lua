@@ -164,6 +164,15 @@ local function setupComboBox()
         setOption('floorViewMode', comboBox:getCurrentOption().data)
     end
 
+    local screenMessagesCombobox = panels.interface:recursiveGetChildById('screenMessagesPosition')
+    for _, v in ipairs({ { 'Center', 'center' }, { 'Top', 'top' }, { 'Top left', 'topleft' },
+        { 'Top right', 'topright' }, { 'Bottom left', 'bottomleft' }, { 'Bottom right', 'bottomright' } }) do
+        screenMessagesCombobox:addOption(tr(v[1]), v[2])
+    end
+    screenMessagesCombobox.onOptionChange = function(comboBox, option)
+        setOption('screenMessagesPosition', comboBox:getCurrentOption().data)
+    end
+
     for k, v in pairs({ { 'None', 'none' }, { 'Frames', 'frames' }, { 'Corners', 'corners' } }) do
         framesRarityCombobox:addOption(v[1], v[2])
     end

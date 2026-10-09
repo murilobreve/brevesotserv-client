@@ -30,8 +30,8 @@ MessageSettings = {
     centerHKGreen = {
         color = TextColors.green,
         consoleTab = 'Server Log',
-        screenTarget = 'highCenterLabel',
-        consoleOption = 'showHotkeyMessagesInConsole'
+        screenTarget = 'hotkeyCenterLabel',
+        consoleOption = 'showInfoMessagesInConsole'
     },
     centerWhite = {
         color = TextColors.white,
@@ -189,7 +189,7 @@ MessageTypes = {
     [MessageModes.BeyondLast] = MessageSettings.centerWhite,
     [MessageModes.Report] = MessageSettings.centerWhite,
     [MessageModes.GameHighlight] = MessageSettings.centerRed,
-    [MessageModes.HotkeyUse] = MessageSettings.centerGreen,
+    [MessageModes.HotkeyUse] = MessageSettings.centerHKGreen,
     [MessageModes.Attention] = MessageSettings.bottomWhite,
     [MessageModes.BoostedCreature] = MessageSettings.centerWhite,
     [MessageModes.OfflineTrainning] = MessageSettings.centerWhite,
@@ -208,6 +208,72 @@ function init()
 
     connect(g_game, 'onGameEnd', clearMessages)
     messagesPanel = g_ui.loadUI('textmessage', modules.game_interface.getRootPanel())
+    local position = modules.client_options and modules.client_options.getOption and
+        modules.client_options.getOption('screenMessagesPosition')
+    applyPosition(position or 'center')
+end
+
+-- Where the center messages (look, loot, warnings, events) show on the game
+-- screen: 'center' (default), 'top', 'topleft', 'topright', 'bottomleft' or
+-- 'bottomright'. Chosen in Options > Interface.
+local MESSAGE_MARGIN = 10
+
+function applyPosition(position)
+    if not messagesPanel then
+        return
+    end
+    local panel = messagesPanel:getChildById('centerTextMessagePanel')
+    local private = messagesPanel:getChildById('privateLabel')
+    if not panel or not private then
+        return
+    end
+    panel:breakAnchors()
+    panel:setMarginTop(0)
+    panel:setMarginBottom(0)
+    panel:setMarginLeft(0)
+    panel:setMarginRight(0)
+    local vertical = position:find('bottom') and 'bottom' or (position:find('top') and 'top' or nil)
+    local horizontal = position:find('left') and 'left' or (position:find('right') and 'right' or nil)
+    if not vertical and not horizontal then
+        panel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+        panel:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+    else
+        if vertical == 'bottom' then
+            -- above the status line at the bottom of the screen
+            panel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
+            panel:setMarginBottom(MESSAGE_MARGIN + 30)
+        else
+            panel:addAnchor(AnchorTop, 'parent', AnchorTop)
+            panel:setMarginTop(MESSAGE_MARGIN)
+        end
+        if horizontal == 'left' then
+            panel:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+            panel:setMarginLeft(MESSAGE_MARGIN)
+        elseif horizontal == 'right' then
+            panel:addAnchor(AnchorRight, 'parent', AnchorRight)
+            panel:setMarginRight(MESSAGE_MARGIN)
+        else
+            panel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+        end
+    end
+    local align = horizontal == 'left' and AlignLeft or (horizontal == 'right' and AlignRight or AlignCenter)
+    for _, label in ipairs(panel:getChildren()) do
+        label:setTextAlign(align)
+    end
+    -- private messages keep the space above the screen center unless the
+    -- center messages moved up there
+    private:breakAnchors()
+    private:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+    if vertical == 'top' and not horizontal then
+        private:addAnchor(AnchorTop, 'centerTextMessagePanel', AnchorBottom)
+        private:addAnchor(AnchorBottom, 'parent', AnchorVerticalCenter)
+    elseif not vertical and not horizontal then
+        private:addAnchor(AnchorTop, 'parent', AnchorTop)
+        private:addAnchor(AnchorBottom, 'centerTextMessagePanel', AnchorTop)
+    else
+        private:addAnchor(AnchorTop, 'parent', AnchorTop)
+        private:addAnchor(AnchorBottom, 'parent', AnchorVerticalCenter)
+    end
 end
 
 function terminate()

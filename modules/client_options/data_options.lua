@@ -673,6 +673,18 @@ return {
         end
     },
     showExpiryOnUnusedItems           = true,
+    screenMessagesPosition            = {
+        value = 'center',
+        action = function(value, options, controller, panels, extraWidgets)
+            local combobox = panels.interface:recursiveGetChildById('screenMessagesPosition')
+            if combobox then
+                combobox:setCurrentOptionByData(value, true)
+            end
+            if modules.game_textmessage and modules.game_textmessage.applyPosition then
+                modules.game_textmessage.applyPosition(value)
+            end
+        end
+    },
     framesRarity                      = {
         value = 'frames',
         event = nil,

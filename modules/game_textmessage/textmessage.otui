@@ -25,6 +25,19 @@ Panel
     TextMessageLabel
       id: lowCenterLabel
 
+  // spell and hotkey messages stay in the middle wherever the others go
+  Panel
+    id: fixedCenterPanel
+    layout:
+      type: verticalBox
+      fit-children: true
+    width: 303
+    anchors.centerIn: parent
+    margin-top: 60
+
+    TextMessageLabel
+      id: hotkeyCenterLabel
+
   TextMessageLabel
     id: privateLabel
     anchors.top: parent.top
