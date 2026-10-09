@@ -1,0 +1,62 @@
+ScreenMessagesWindow < MainWindow
+  !text: tr('Screen Messages')
+  size: 300 190
+  @onEscape: modules.game_textmessage.hidePositionWindow()
+
+  Label
+    id: help
+    !text: tr('Where the look, loot and warning messages show. Hotkey messages stay in the middle.')
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+
+  Label
+    id: horizontalLabel
+    !text: tr('Left / right')
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    margin-top: 10
+
+  HorizontalScrollBar
+    id: horizontal
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    minimum: 0
+    maximum: 100
+    step: 5
+
+  Label
+    id: verticalLabel
+    !text: tr('Top / bottom')
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    margin-top: 10
+
+  HorizontalScrollBar
+    id: vertical
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    minimum: 0
+    maximum: 100
+    step: 5
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 64
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+
+  Button
+    id: centerButton
+    !text: tr('Middle')
+    width: 64
+    anchors.right: prev.left
+    anchors.bottom: parent.bottom
+    margin-right: 6

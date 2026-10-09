@@ -207,18 +207,32 @@ function init()
     end
 
     connect(g_game, 'onGameEnd', clearMessages)
+    g_ui.importStyle('positionwindow')
     messagesPanel = g_ui.loadUI('textmessage', modules.game_interface.getRootPanel())
-    local position = modules.client_options and modules.client_options.getOption and
-        modules.client_options.getOption('screenMessagesPosition')
-    applyPosition(position or 'center')
+    messagesPanel.onGeometryChange = function()
+        applyPosition()
+    end
+    applyPosition()
+    connect(g_game, { onGameStart = addPanelRow })
+    if g_game.isOnline() then
+        addPanelRow()
+    end
 end
 
--- Where the center messages (look, loot, warnings, events) show on the game
--- screen: 'center' (default), 'top', 'topleft', 'topright', 'bottomleft' or
--- 'bottomright'. Chosen in Options > Interface.
-local MESSAGE_MARGIN = 10
+-- Where the look, loot, warning and event messages show on the game screen:
+-- two sliders (0-100) in the "Screen Messages" window of the Mythicum panel.
+-- 50/50 is the middle of the screen. Hotkey use messages stay in the middle.
+local POSITION_X, POSITION_Y = 'screen_messages_x', 'screen_messages_y'
+local PANEL_HEIGHT = 60 -- three message lines
+local positionWindow, panelRow
 
-function applyPosition(position)
+local function savedPosition()
+    local x = g_settings.getNumber(POSITION_X, 50)
+    local y = g_settings.getNumber(POSITION_Y, 50)
+    return math.max(0, math.min(100, x)), math.max(0, math.min(100, y))
+end
+
+function applyPosition()
     if not messagesPanel then
         return
     end
@@ -227,52 +241,94 @@ function applyPosition(position)
     if not panel or not private then
         return
     end
+    local x, y = savedPosition()
+    local width, height = messagesPanel:getWidth(), messagesPanel:getHeight()
     panel:breakAnchors()
-    panel:setMarginTop(0)
-    panel:setMarginBottom(0)
-    panel:setMarginLeft(0)
-    panel:setMarginRight(0)
-    local vertical = position:find('bottom') and 'bottom' or (position:find('top') and 'top' or nil)
-    local horizontal = position:find('left') and 'left' or (position:find('right') and 'right' or nil)
-    if not vertical and not horizontal then
-        panel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
-        panel:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
-    else
-        if vertical == 'bottom' then
-            -- above the status line at the bottom of the screen
-            panel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
-            panel:setMarginBottom(MESSAGE_MARGIN + 30)
-        else
-            panel:addAnchor(AnchorTop, 'parent', AnchorTop)
-            panel:setMarginTop(MESSAGE_MARGIN)
-        end
-        if horizontal == 'left' then
-            panel:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-            panel:setMarginLeft(MESSAGE_MARGIN)
-        elseif horizontal == 'right' then
-            panel:addAnchor(AnchorRight, 'parent', AnchorRight)
-            panel:setMarginRight(MESSAGE_MARGIN)
-        else
-            panel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
-        end
-    end
-    local align = horizontal == 'left' and AlignLeft or (horizontal == 'right' and AlignRight or AlignCenter)
+    panel:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    panel:addAnchor(AnchorTop, 'parent', AnchorTop)
+    panel:setMarginLeft(math.floor(math.max(0, width - panel:getWidth()) * x / 100))
+    panel:setMarginTop(math.floor(math.max(0, height - PANEL_HEIGHT) * y / 100))
+    local align = x < 34 and AlignLeft or (x > 66 and AlignRight or AlignCenter)
     for _, label in ipairs(panel:getChildren()) do
         label:setTextAlign(align)
     end
-    -- private messages keep the space above the screen center unless the
-    -- center messages moved up there
+    -- private messages use the top half, or the bottom half when the other
+    -- messages sit in the top middle
     private:breakAnchors()
     private:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
-    if vertical == 'top' and not horizontal then
-        private:addAnchor(AnchorTop, 'centerTextMessagePanel', AnchorBottom)
-        private:addAnchor(AnchorBottom, 'parent', AnchorVerticalCenter)
-    elseif not vertical and not horizontal then
-        private:addAnchor(AnchorTop, 'parent', AnchorTop)
-        private:addAnchor(AnchorBottom, 'centerTextMessagePanel', AnchorTop)
+    if y < 45 and x >= 25 and x <= 75 then
+        private:addAnchor(AnchorTop, 'parent', AnchorVerticalCenter)
+        private:addAnchor(AnchorBottom, 'parent', AnchorBottom)
     else
         private:addAnchor(AnchorTop, 'parent', AnchorTop)
         private:addAnchor(AnchorBottom, 'parent', AnchorVerticalCenter)
+    end
+end
+
+local function showSample()
+    local label = messagesPanel and messagesPanel:recursiveGetChildById('highCenterLabel')
+    if not label then
+        return
+    end
+    label:setText(tr('Messages show here.'))
+    label:setColor(TextColors.green)
+    label:setVisible(true)
+    removeEvent(label.hideEvent)
+    label.hideEvent = scheduleEvent(function()
+        label:setVisible(false)
+    end, 3000)
+end
+
+local function setPosition(x, y)
+    g_settings.set(POSITION_X, x)
+    g_settings.set(POSITION_Y, y)
+    applyPosition()
+    showSample()
+end
+
+function hidePositionWindow()
+    if positionWindow then
+        positionWindow:destroy()
+        positionWindow = nil
+    end
+    if panelRow then
+        panelRow:setOn(false)
+    end
+end
+
+function togglePositionWindow()
+    if positionWindow then
+        hidePositionWindow()
+        return
+    end
+    positionWindow = g_ui.createWidget('ScreenMessagesWindow', rootWidget)
+    local x, y = savedPosition()
+    local horizontal, vertical = positionWindow:getChildById('horizontal'), positionWindow:getChildById('vertical')
+    horizontal:setValue(x)
+    vertical:setValue(y)
+    horizontal.onValueChange = function(widget, value)
+        setPosition(value, vertical:getValue())
+    end
+    vertical.onValueChange = function(widget, value)
+        setPosition(horizontal:getValue(), value)
+    end
+    positionWindow:getChildById('centerButton').onClick = function()
+        horizontal:setValue(50)
+        vertical:setValue(50)
+    end
+    positionWindow:getChildById('closeButton').onClick = hidePositionWindow
+    positionWindow.onEscape = hidePositionWindow
+    positionWindow:raise()
+    positionWindow:focus()
+    if panelRow then
+        panelRow:setOn(true)
+    end
+    showSample()
+end
+
+function addPanelRow()
+    if not panelRow and modules.game_brevespanel then
+        panelRow = modules.game_brevespanel.addFeature('messages', togglePositionWindow)
     end
 end
 
@@ -282,6 +338,12 @@ function terminate()
     end
 
     disconnect(g_game, 'onGameEnd', clearMessages)
+    disconnect(g_game, { onGameStart = addPanelRow })
+    hidePositionWindow()
+    if panelRow then
+        panelRow:destroy()
+        panelRow = nil
+    end
     clearMessages()
     messagesPanel:destroy()
     messagesPanel = nil

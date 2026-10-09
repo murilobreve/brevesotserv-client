@@ -14,6 +14,8 @@ local FEATURES = {
       news = "A daily task and the Hunter's Trail, with 70 steps. The points buy items in the task shop, such as the Bag of Mythical." },
     { id = 'rates', label = 'Hunt Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
+    { id = 'messages', label = 'Screen Messages', icon = 'messages',
+      news = 'Move the look, loot and warning messages anywhere on the game screen with two sliders.' },
     { id = 'board', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythicum Coins.' },
     { id = 'rarity', label = 'Rarity Market', icon = 'rarity',
