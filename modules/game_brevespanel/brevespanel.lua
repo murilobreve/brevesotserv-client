@@ -35,6 +35,7 @@ local buttons = {}
 local callbacks = {}
 local states = {}
 local toggles = {}
+local labels = {} -- per-row text that replaces the feature name
 
 -- the title line's two buttons: collapsed hides the rows (vertical),
 -- compact shows them as a grid of icons without names (horizontal)
@@ -65,7 +66,7 @@ local function refreshBadge(id)
     local badge = button.badge
     local state = states[id]
     local feature = featureOf(id)
-    button:setTooltip(tr(feature.label) .. ((compact and state) and (' (' .. state.text .. ')') or ''))
+    button:setTooltip((labels[id] and (tr(feature.label) .. ': ' .. labels[id]) or tr(feature.label)) .. ((compact and state) and (' (' .. state.text .. ')') or ''))
     -- no room for the badge next to an icon: the state colours the icon's frame
     button:setBorderWidth((compact and state) and 1 or 0)
     if state then
@@ -130,7 +131,7 @@ local function styleButton(id)
     if not button or not feature then
         return
     end
-    button:setText(compact and '' or tr(feature.label))
+    button:setText(compact and '' or (labels[id] or tr(feature.label)))
     button:setSize({ width = compact and CELL or button:getWidth(), height = compact and CELL or ROW_HEIGHT })
     button.icon:setMarginLeft(compact and 3 or 5)
     refreshBadge(id)
@@ -246,6 +247,17 @@ end
 function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
     refreshBadge(id)
+end
+
+-- replaces the name shown on a row (nil puts the feature name back), e.g.
+-- the Hunt Tasks row shows the current monster and kills
+function setFeatureLabel(id, text, color)
+    labels[id] = text
+    local button = buttons[id]
+    if button then
+        button:setColor(text and color or '#dfdfdf')
+        styleButton(id)
+    end
 end
 
 -- makes the state badge of a row a switch: a click runs `callback`

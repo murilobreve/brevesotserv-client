@@ -506,6 +506,39 @@ local function startTick()
     tickEvent = scheduleEvent(tick, 10)
 end
 
+-- ---------------------------------------------------------------- panel badge
+
+-- the monster and the kills left show on the Hunt Tasks row of the Mythicum
+-- panel (like the Heal Bot's ON): the daily task while it runs, otherwise the
+-- current Hunter's Trail step
+local function shortName(name)
+    name = tostring(name or '?')
+    return #name > 16 and (name:sub(1, 15) .. '.') or name
+end
+
+local function updateBadge()
+    local panel = modules.game_brevespanel
+    if not panel or not panel.setFeatureLabel then
+        return
+    end
+    if not state then
+        panel.setFeatureLabel('tasks', nil)
+        return
+    end
+    local daily = state.daily
+    if daily and daily.monster and not daily.done and (daily.need or 0) > 0 then
+        panel.setFeatureLabel('tasks', string.format('%s %d/%d', shortName(daily.monster), daily.kills or 0, daily.need), '#e0c060')
+        return
+    end
+    local trail = state.trail
+    local step = trail and not trail.finished and trail.steps and trail.steps[trail.index]
+    if step then
+        panel.setFeatureLabel('tasks', string.format('%s %d/%d', shortName(step.name), trail.kills or 0, step.need or 0), '#7fb2ff')
+    else
+        panel.setFeatureLabel('tasks', nil)
+    end
+end
+
 -- ---------------------------------------------------------------- server messages
 
 local handlers = {}
@@ -514,6 +547,7 @@ function handlers.state(data)
     timeOffset = (data.now or os.time()) - os.time()
     state = data
     render()
+    updateBadge()
 end
 
 function handlers.progress(data)
@@ -528,6 +562,10 @@ function handlers.progress(data)
         state.trail.index = data.trail.index or state.trail.index
         state.trail.kills = data.trail.kills or state.trail.kills
     end
+    if data.daily and state.daily and (data.daily.kills or 0) >= (data.daily.need or 0) then
+        state.daily.done = true
+    end
+    updateBadge()
     if window and window:isVisible() then
         renderDaily()
         renderTrailCard()
@@ -610,6 +648,12 @@ local function onGameStart()
     if not toolbarButton and modules.game_brevespanel then
         toolbarButton = modules.game_brevespanel.addFeature('tasks', toggle)
     end
+    -- ask for the tasks once, quietly, so the panel row can show them
+    scheduleEvent(function()
+        if g_game.isOnline() and not state then
+            send({ action = 'open' })
+        end
+    end, 3000)
     if not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntTasksButton', tr('Tasks do Caçador (task diária, trilha e loja)'),
             '/game_hunttasks/images/button', toggle, false, 22)
@@ -619,6 +663,7 @@ end
 local function onGameEnd()
     hide()
     state = nil
+    updateBadge()
     trailBuilt = false
     if window then
         window.trailPanel.list:destroyChildren()
