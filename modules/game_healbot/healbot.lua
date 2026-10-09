@@ -79,8 +79,7 @@ local function defaults(player)
         cures = false,
         antiIdle = false,
     }
-    -- the bot starts on with the best heal and potions; turning it off is
-    -- remembered per character
+    -- the bot starts on with the best heal and potions
     config.running = true
     return config
 end
@@ -158,6 +157,8 @@ local function load()
     if type(saved) ~= 'table' then
         return
     end
+    -- every login starts with the bot on; turning it off lasts the session
+    saved.running = nil
     local version = tonumber(saved.version)
     if version == CONFIG_VERSION then
         merge(cfg, saved)

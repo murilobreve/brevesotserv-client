@@ -1,12 +1,22 @@
 ScreenMessagesWindow < MainWindow
-  !text: tr('Screen Messages')
-  size: 300 190
+  !text: tr('Interface')
+  size: 300 212
   @onEscape: modules.game_textmessage.hidePositionWindow()
+
+  Label
+    id: section
+    !text: tr('Screen Messages')
+    anchors.top: parent.top
+    anchors.left: parent.left
+    font: verdana-11px-rounded
+    color: #ffd27a
+    text-auto-resize: true
 
   Label
     id: help
     !text: tr('Where the look, loot and warning messages show. Hotkey messages stay in the middle.')
-    anchors.top: parent.top
+    anchors.top: prev.bottom
+    margin-top: 4
     anchors.left: parent.left
     anchors.right: parent.right
     text-wrap: true

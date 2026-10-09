@@ -41,6 +41,14 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #dfdfdf
 
+// the title of a group of rows (Hunting, Rarity, Tools)
+BrevesGroupLabel < Label
+  height: 14
+  font: verdana-11px-rounded
+  color: #8f8f8f
+  text-offset: 2 0
+  phantom: true
+
 // the small buttons on the panel's title line, drawn like a mini window's
 BrevesPanelButton < UIButton
   size: 12 12

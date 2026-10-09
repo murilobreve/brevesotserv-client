@@ -10,24 +10,31 @@ local NEWS_VERSION = 5
 
 -- rows are shown in this order, whatever order the modules load in
 local FEATURES = {
-    { id = 'tasks', label = 'Hunt Tasks', icon = 'tasks',
+    { id = 'tasks', group = 'hunt', label = 'Hunt Tasks', icon = 'tasks',
       news = "A daily task and the Hunter's Trail, with 70 steps. The points buy items in the task shop, such as the Bag of Mythical." },
-    { id = 'messages', label = 'Screen Messages', icon = 'messages',
-      news = 'Move the look, loot and warning messages anywhere on the game screen with two sliders.' },
-    { id = 'rates', label = 'Hunt Rates', icon = 'rates',
+    { id = 'rates', group = 'hunt', label = 'Hunt Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
-    { id = 'board', label = 'Leaderboard', icon = 'board',
+    { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythicum Coins.' },
-    { id = 'rarity', label = 'Rarity Market', icon = 'rarity',
-      news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
-    { id = 'bonus', label = 'Rarity Bonuses', icon = 'bonus',
-      news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
-    { id = 'loot', label = 'Auto Loot', icon = 'loot',
+    { id = 'loot', group = 'hunt', label = 'Auto Loot', icon = 'loot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
-    { id = 'healbot', label = 'Heal Bot', icon = 'healbot',
+    { id = 'rarity', group = 'rarity', label = 'Rarity Market', icon = 'rarity',
+      news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
+    { id = 'bonus', group = 'rarity', label = 'Rarity Bonuses', icon = 'bonus',
+      news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
+    { id = 'healbot', group = 'tools', label = 'Heal Bot', icon = 'healbot',
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
-    { id = 'wiki', label = 'Wiki', icon = 'wiki',
+    { id = 'messages', group = 'tools', label = 'Interface', icon = 'messages',
+      news = 'Interface settings, such as where the look, loot and warning messages show on the game screen.' },
+    { id = 'wiki', group = 'tools', label = 'Wiki', icon = 'wiki',
       news = 'Rare monsters, rarity items and every bonus explained, with the real numbers from the server.' },
+}
+
+-- the rows are grouped under these titles (hidden in the icon grid)
+local GROUPS = {
+    { id = 'hunt', label = 'Hunting' },
+    { id = 'rarity', label = 'Rarity' },
+    { id = 'tools', label = 'Tools' },
 }
 
 local panel, newsWindow
@@ -36,6 +43,7 @@ local callbacks = {}
 local states = {}
 local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
+local groupLabels = {} -- group id -> title widget
 
 -- the title line's two buttons: collapsed hides the rows (vertical),
 -- compact shows them as a grid of icons without names (horizontal)
@@ -45,6 +53,7 @@ local compact = false
 local ROW_HEIGHT, ROW_SPACING = 20, 2
 local CELL, CELL_SPACING = 22, 2
 local HEADER = 4 + 14 + 4 -- header margin, header, list margin
+local GROUP_HEIGHT = 14
 
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
@@ -52,6 +61,44 @@ local function featureOf(id)
             return feature, index
         end
     end
+end
+
+-- order of a widget in the list: a group title just before its first row
+local function sortKey(widget)
+    local feature, index = featureOf(widget:getId())
+    if feature then
+        return index
+    end
+    local groupId = widget:getId():match('^group_(.+)$')
+    for i, f in ipairs(FEATURES) do
+        if f.group == groupId then
+            return i - 0.5
+        end
+    end
+    return 0
+end
+
+-- a title shows when its group has at least one row and the names are shown
+local function updateGroups()
+    local count = 0
+    for _, group in ipairs(GROUPS) do
+        local label = groupLabels[group.id]
+        local used = false
+        for id in pairs(buttons) do
+            if featureOf(id).group == group.id then
+                used = true
+                break
+            end
+        end
+        local visible = used and not compact
+        if label then
+            label:setVisible(visible)
+        end
+        if visible then
+            count = count + 1
+        end
+    end
+    return count
 end
 
 local function iconPath(feature)
@@ -103,6 +150,7 @@ local function resize()
     for _ in pairs(buttons) do
         rows = rows + 1
     end
+    local groups = updateGroups()
     local height = 0
     if rows > 0 and collapsed then
         height = HEADER
@@ -115,7 +163,8 @@ local function resize()
         local lines = math.ceil(rows / columns)
         height = HEADER + lines * CELL + (lines - 1) * CELL_SPACING + 4
     elseif rows > 0 then
-        height = HEADER + rows * ROW_HEIGHT + (rows - 1) * ROW_SPACING + 4
+        local lines = rows + groups
+        height = HEADER + rows * ROW_HEIGHT + groups * GROUP_HEIGHT + (lines - 1) * ROW_SPACING + 4
     end
     panel.panelHeight = height
     panel:setHeight(height)
@@ -201,7 +250,7 @@ end
 local function sortRows()
     local children = panel.list:getChildren()
     table.sort(children, function(a, b)
-        return select(2, featureOf(a:getId())) < select(2, featureOf(b:getId()))
+        return sortKey(a) < sortKey(b)
     end)
     panel.list:reorderChildren(children)
 end
@@ -314,6 +363,13 @@ function init()
     panel = g_ui.createWidget('BrevesPanel')
     panel:setId('brevespanel')
     panel:hide()
+    for _, group in ipairs(GROUPS) do
+        local label = g_ui.createWidget('BrevesGroupLabel', panel.list)
+        label:setId('group_' .. group.id)
+        label:setText(tr(group.label))
+        label:hide()
+        groupLabels[group.id] = label
+    end
     collapsed = g_settings.getBoolean('breves_panel_collapsed')
     compact = g_settings.getBoolean('breves_panel_compact')
     -- the icon grid's line count follows the panel's width
@@ -338,4 +394,5 @@ function terminate()
     end
     buttons = {}
     callbacks = {}
+    groupLabels = {}
 end
