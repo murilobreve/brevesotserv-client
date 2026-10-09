@@ -146,7 +146,8 @@ function onTradeTypeChange(radioTabs, selected, deselected)
 
     local currentTradeType = getCurrentTradeType()
     buyWithBackpack:setVisible(currentTradeType == BUY)
-    ignoreCapacity:setVisible(currentTradeType == BUY)
+    ignoreCapacity:setChecked(false)
+    ignoreCapacity:setVisible(false)
     ignoreEquipped:setVisible(currentTradeType == SELL)
     showAllItems:setVisible(currentTradeType == SELL)
     sellAllButton:setVisible(currentTradeType == SELL)
@@ -223,7 +224,7 @@ end
 function setShowYourCapacity(state)
     capacityDesc:setVisible(state)
     capacityLabel:setVisible(state)
-    ignoreCapacity:setVisible(state)
+    ignoreCapacity:setVisible(false)
 end
 
 function clearSelectedItem()

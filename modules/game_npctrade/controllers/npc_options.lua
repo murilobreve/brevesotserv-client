@@ -12,9 +12,8 @@ function controllerNpcTrader:onOptionsClick()
     end)
     menu:addSeparator()
     if self.tradeMode == controllerNpcTrader.BUY then
-        menu:addCheckBox("Ignore Capacity", self.ignoreCapacity, function(widget, checked)
-            self:toggleIgnoreCapacity()
-        end)
+        -- no "Ignore Capacity": the server never sells more than the player carries
+        self.ignoreCapacity = false
         if self.currencyId == controllerNpcTrader.DEFAULT_CURRENCY_ID then
             menu:addCheckBox("Buy with Backpack", self.buyWithBackpack, function(widget, checked)
                 self:toggleBuyWithBackpack()
