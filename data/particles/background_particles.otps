@@ -7,7 +7,7 @@ Particle
   velocity: 150
   min-velocity-angle: 30
   max-velocity-angle: 55
-  colors: #ffffff00 #e8e8e8 #05050500
+  colors: #ffffff00 #d9ceff #05050500
   colors-stops: 0 0.80 1
   size: 20 20
   texture: /particles/particle2
