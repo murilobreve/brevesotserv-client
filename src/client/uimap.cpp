@@ -326,6 +326,15 @@ void UIMap::updateVisibleDimension()
     if (dimensionWidth % 2 == 0)
         dimensionWidth += 1;
 
+    // A window wider than the map the server sends would show a column of
+    // tiles that never arrive at the edge. Keep the width inside it (one tile
+    // of margin for the walk animation) unless the view is zoomed out past
+    // the known map anyway.
+    const auto& range = g_map.getAwareRange();
+    const int maxWidth = range.left * 2 - 1;
+    if (dimensionHeight <= range.top * 2 + 1 && dimensionWidth > maxWidth)
+        dimensionWidth = maxWidth;
+
     m_mapView->setVisibleDimension(Size(dimensionWidth, dimensionHeight));
 
     if (m_keepAspectRatio)

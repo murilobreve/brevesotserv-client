@@ -25,7 +25,8 @@ bottomSplitter = nil
 lastManualWalk = 0
 limitedZoom = false
 currentViewMode = 0
--- tiles shown: 2 x the viewport in data/setup.otml - 1 (12 7 -> 23 x 13)
+-- tiles shown in the normal view. data/setup.otml has viewport 14 7 so that
+-- the view that fills a wide window (up to 27 x 13) has every tile it shows
 MAP_VISIBLE_WIDTH = 23
 MAP_VISIBLE_HEIGHT = 13
 leftIncreaseSidePanels = nil
