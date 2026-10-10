@@ -144,7 +144,7 @@ local function onUpdateNeeded(protocol, signature)
     end
 end
 
--- the Baiak Mythicum login card has fixed labels (the login server takes an
+-- the Mythos login card has fixed labels (the login server takes an
 -- account name or an email on every client version)
 local function updateLabelText()
 end
@@ -624,7 +624,7 @@ function EnterGame.toggleStayLoggedBox(clientVersion, init)
         return
     end
 
-    -- the option stays hidden on the Baiak Mythicum card, so the size never changes
+    -- the option stays hidden on the Mythos card, so the size never changes
     enterGame:getChildById('stayLoggedBox'):setOn(enabled)
     enterGame.stayLoggedBoxEnabled = enabled
 end

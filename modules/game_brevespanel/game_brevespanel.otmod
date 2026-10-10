@@ -1,7 +1,7 @@
 Module
   name: game_brevespanel
-  description: Baiak Mythicum panel - one labelled button per server feature, NEW badges and the news window
-  author: Baiak Mythicum
+  description: Mythos panel - one labelled button per server feature, NEW badges and the news window
+  author: Mythos
   sandboxed: true
   scripts: [ brevespanel ]
   @onLoad: init()

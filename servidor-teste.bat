@@ -1,5 +1,5 @@
 @echo off
-rem Baiak Mythicum - roda na VPS o servidor da branch de teste, ou volta ao main.
+rem Mythos - roda na VPS o servidor da branch de teste, ou volta ao main.
 rem Entra por SSH, troca a pasta /opt/brevesot de branch e reinicia o servidor.
 rem   servidor-teste.bat         liga a branch de teste
 rem   servidor-teste.bat main    volta para o main (o servidor normal)

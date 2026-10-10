@@ -76,7 +76,7 @@ BrevesPanel < PhantomMiniWindow
       text-auto-resize: true
       font: verdana-11px-rounded
       color: #a6a6a6
-      text: Mythicum
+      text: Mythos
       phantom: true
 
     // vertical: hide or show the rows
@@ -166,7 +166,7 @@ BrevesNewsRow < UIWidget
 
 BrevesNewsWindow < MainWindow
   id: brevesNewsWindow
-  !text: tr('New on Baiak Mythicum')
+  !text: tr('New on Mythos')
   size: 470 440
   @onEscape: modules.game_brevespanel.hideNews()
 

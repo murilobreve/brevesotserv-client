@@ -220,7 +220,7 @@ function init()
 end
 
 -- Where the look, loot, warning and event messages show on the game screen:
--- two sliders (0-100) in the "Screen Messages" window of the Mythicum panel.
+-- two sliders (0-100) in the "Screen Messages" window of the Mythos panel.
 -- 50/50 is the middle of the screen. Hotkey use messages stay in the middle.
 local POSITION_X, POSITION_Y = 'screen_messages_x', 'screen_messages_y'
 local PANEL_HEIGHT = 60 -- three message lines

@@ -563,7 +563,7 @@ function onPinCharacter(widget, isChecked)
 end
 
 function onPremiumButtonClick(widget)
-    -- its own key: getCoinsUrl is the Mythicum Coins page, not a premium page
+    -- its own key: getCoinsUrl is the Mythos Coins page, not a premium page
     if Services and Services.premiumUrl and Services.premiumUrl ~= '' then
         g_platform.openUrl(Services.premiumUrl)
         return

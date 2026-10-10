@@ -421,7 +421,7 @@ function onParseStoreGetCoin(coins, transferableCoins)
         return
     end
 
-    local coinTooltip = "Mythicum Coins: " .. comma_value(transferableCoins)
+    local coinTooltip = "Mythos Coins: " .. comma_value(transferableCoins)
 
     marketWindow.contentPanel.coinPanel.gold:setText(comma_value(transferableCoins))
     marketWindow.contentPanel.coinPanel.gold:setTooltip(coinTooltip)

@@ -1,7 +1,7 @@
 Module
   name: game_wiki
-  description: Mythicum Wiki - monster tiers, item rarities and how the bonuses work
-  author: Baiak Mythicum
+  description: Mythos Wiki - monster tiers, item rarities and how the bonuses work
+  author: Mythos
   sandboxed: true
   scripts: [ teleports, pages, wiki ]
   @onLoad: init()

@@ -1,7 +1,7 @@
 @echo off
-rem Baiak Mythicum - versao DirectX (teste). Sincroniza com a branch de teste,
+rem Mythos - versao DirectX (teste). Sincroniza com a branch de teste,
 rem compila o client desenhando com Direct3D 11 (via ANGLE) e empacota em
-rem dist\Baiak Mythicum DirectX\, sem mexer no client normal.
+rem dist\Mythos DirectX\, sem mexer no client normal.
 rem Pode abrir com dois cliques ou de qualquer cmd: o ambiente do Visual
 rem Studio e carregado aqui mesmo.
 rem   compilar-cliente-directx.bat         sincroniza, compila e empacota
@@ -67,11 +67,11 @@ cmake --build --preset windows-release-directx
 if errorlevel 1 goto :falhou
 
 echo == empacotando
-powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cliente.ps1" -Exe "%PASTA%\build\windows-release-directx\bin\otclient.exe" -Nome "Baiak Mythicum DirectX" -ZipNome "BaiakMythicum-DirectX.zip"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cliente.ps1" -Exe "%PASTA%\build\windows-release-directx\bin\otclient.exe" -Nome "Mythos DirectX" -ZipNome "Mythos-DirectX.zip"
 if errorlevel 1 goto :falhou
 
 echo.
-echo Pronto. O client DirectX esta em dist\Baiak Mythicum DirectX\
+echo Pronto. O client DirectX esta em dist\Mythos DirectX\
 echo Para voltar ao client normal, rode o compilar-cliente.bat (ele volta para o main).
 pause
 exit /b 0

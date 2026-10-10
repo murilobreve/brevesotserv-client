@@ -8,7 +8,7 @@ local messageBox = nil
 
 local oldProtocol = false
 local a0xF2 = true
--- Baiak Mythicum has one currency (Mythicum Coins): the server keeps every coin in
+-- Mythos has one currency (Mythos Coins): the server keeps every coin in
 -- the transferable balance, so the store shows and spends a single number
 local brevesCoins = 0
 
@@ -240,7 +240,7 @@ local STORE_ICON_TAGS = {
     ["{capacityicon}"]            = {clip = "156 0 13 13", text = ""},
     ["{use}"]                     = {clip = "169 0 13 13", text = "can be used"},
     ["{useicon}"]                 = {clip = "169 0 13 13", text = ""},
-    ["{transferableprice}"]       = {clip = "182 0 13 13", text = "can be purchased with Mythicum Coins"},
+    ["{transferableprice}"]       = {clip = "182 0 13 13", text = "can be purchased with Mythos Coins"},
     ["{transferablepriceicon}"]   = {clip = "182 0 13 13", text = ""},
     ["{star}"]                    = {localImg = "/game_store/images/icon-star-gold", text = ""},
 }
@@ -320,7 +320,7 @@ local function formatNumberWithCommas(value)
 end
 
 -- returns normal, transferable like before; with one currency everything is
--- "transferable", so both kinds of offer check the same Mythicum Coins balance
+-- "transferable", so both kinds of offer check the same Mythos Coins balance
 local function getCoinsBalance()
     return 0, brevesCoins
 end
@@ -328,7 +328,7 @@ end
 local function setBrevesCoins(amount)
     brevesCoins = math.max(0, tonumber(amount) or 0)
     if controllerShop.ui then
-        controllerShop.ui.lblCoins.lblTibiaCoins:setText(formatNumberWithCommas(brevesCoins) .. " Mythicum Coins")
+        controllerShop.ui.lblCoins.lblTibiaCoins:setText(formatNumberWithCommas(brevesCoins) .. " Mythos Coins")
     end
 end
 
@@ -1137,7 +1137,7 @@ function chooseOffert(self, focusedChild)
                 destroyWindow(acceptWindow)
             end
 
-            local coinType = "Mythicum Coins"
+            local coinType = "Mythos Coins"
             local confirmationMessage = string.format(
                 'Do you want to buy the product "%s" for %d %s?', 
                 product.name, 

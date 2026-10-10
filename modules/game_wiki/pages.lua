@@ -1,4 +1,4 @@
--- Mythicum Wiki content. The numbers come from the server's rarity config
+-- Mythos Wiki content. The numbers come from the server's rarity config
 -- (data-otservbr-global/scripts/rarity/00_config.lua) and the engine's forge
 -- stack formulas; keep them in sync when that file is rebalanced.
 --
@@ -173,7 +173,7 @@ WIKI_PAGES.huntboard = {
         { 'p', 'O loot segue a mesma conta: loot = 1 + (rate de XP - 1) / 3. Um monstro a 10x dá 4x de loot e a 4x dá 2x. Nenhum monstro fica abaixo de 1x: um terço fica em 1x, outro terço perto de 2x, e o resto vai ficando mais raro até 10x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
         { 'h', 'Força' },
         { 'p', 'Acima de 1x o monstro também fica mais forte: vida x (1 + (rate - 1) x 0,35) e dano x (1 + (rate - 1) x 0,15). A 4x ele tem 2,05 vezes a vida e bate 1,45 vez mais forte; a 10x, 4,15 vezes a vida e 2,35 vezes o dano. É vida de verdade: o seu dano entra inteiro.' },
-        { 'p', 'O Hunt Board (no painel Mythicum, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
+        { 'p', 'O Hunt Board (no painel Mythos, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
         { 'links', { 'tiers', 'experience' } },
     },
 }
@@ -446,7 +446,7 @@ WIKI_PAGES.autoloot = {
         { 'p', 'Clique com o botão direito no corpo e escolha "Pegar loot do corpo". O servidor anda até o corpo e pega de novo tudo que está com Pegar marcado. Use depois de liberar espaço ou peso, ou quando o corpo estava longe ou atrás de alguma coisa.' },
         { 'p', '"Pegar loot do corpo" segue a mesma lista, então um item desmarcado continua no corpo. Para levar um item desmarcado, escolha "Abrir" e arraste o item para a sua bag.' },
         { 'h', 'Escolher o que pegar' },
-        { 'p', 'Abra o painel Mythicum e clique em Auto Loot. Com a busca vazia aparecem os seus drops recentes, cada um com a caixa Pegar. Para um item que ainda não caiu, digite o nome na busca.' },
+        { 'p', 'Abra o painel Mythos e clique em Auto Loot. Com a busca vazia aparecem os seus drops recentes, cada um com a caixa Pegar. Para um item que ainda não caiu, digite o nome na busca.' },
         { 'p', 'Pegar marcado: o auto loot leva o item. Desmarcado: o item fica no corpo. A lista vale para o personagem e fica salva entre logins.' },
         { 'h', 'Pegar pelo preço do Gersao' },
         { 'p', 'Marque "Pegar se o Gersao paga >=" e digite um valor: o auto loot pega todo item que o Gersao compra por esse valor ou mais, e deixa o resto no corpo. Cada item da lista mostra quanto o Gersao paga.' },

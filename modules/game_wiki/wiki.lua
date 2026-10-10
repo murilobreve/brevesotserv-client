@@ -1,4 +1,4 @@
--- Mythicum Wiki: what the rarity system does, inside the client. The text and
+-- Mythos Wiki: what the rarity system does, inside the client. The text and
 -- numbers live in pages.lua; this file only builds the window from them.
 
 local window
@@ -370,7 +370,7 @@ local function onGameStart()
         wikiButton = modules.game_brevespanel.addFeature('wiki', toggle)
     end
     if not wikiButton and modules.game_mainpanel then
-        wikiButton = modules.game_mainpanel.addToggleButton('wikiButton', tr('Mythicum Wiki'),
+        wikiButton = modules.game_mainpanel.addToggleButton('wikiButton', tr('Mythos Wiki'),
             '/game_wiki/images/button', toggle, false, 30)
     end
 end

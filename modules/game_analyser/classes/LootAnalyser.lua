@@ -373,7 +373,7 @@ function LootAnalyser:addLootedItems(item, name)
 		price = 100
 	elseif itemId == 3043 then  -- Crystal coin (worth 10,000 gold)
 		price = 10000
-	elseif itemId == 60000 then  -- Ruby coin (Baiak Mythicum, worth 1,000,000 gold)
+	elseif itemId == 60000 then  -- Ruby coin (Mythos, worth 1,000,000 gold)
 		price = 1000000
 	else
 		-- For non-coin items, use the same exact logic as Cyclopedia.Items.updateResultGoldValue

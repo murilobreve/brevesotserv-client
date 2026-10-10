@@ -1,7 +1,7 @@
 Module
   name: game_healbot
   description: Heal bot - healing spells, potions, friend heal and support spells
-  author: Baiak Mythicum
+  author: Mythos
   website: http://25.18.172.192
   sandboxed: true
   scripts: [ data, engine, healbot ]

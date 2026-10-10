@@ -1,4 +1,4 @@
-// Building blocks for the Baiak Mythicum windows (heal bot, hunt board, hunt
+// Building blocks for the Mythos windows (heal bot, hunt board, hunt
 // tasks, rarity market). They copy what the client's own Tibia windows do:
 // Highscores (framed filter panel, black-bordered table, zebra rows),
 // Options (grey category buttons in cipsoftFont) and Prey (dark value boxes).

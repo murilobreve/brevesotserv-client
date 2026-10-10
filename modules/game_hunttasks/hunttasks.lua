@@ -257,7 +257,7 @@ local function renderStreak()
     panel.help:setText(tr(
         'Task diária: um monstro do seu level por dia. Se ele estiver com XP x2.0 ou mais no Hunt Board, os pontos dobram.\n' ..
         'Trilha do Caçador: %d monstros em ordem, do mais fraco ao mais forte. A cada %d etapas tem um bônus.\n' ..
-        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Rarity XP, Mythicum Coins, Loot Pouch e montarias na aba Loja.',
+        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Rarity XP, Mythos Coins, Loot Pouch e montarias na aba Loja.',
         #(state.trail.steps or {}), state.trail.milestoneEvery or 5))
 end
 
@@ -332,7 +332,7 @@ local OFFER_INFO = {
     ascensao = { name = 'Pergaminho de Ascensão', lines = { 'Use em um item com raridade: ele sobe um grau e ganha um bônus novo.', 'Os bônus que o item já tem ficam iguais.' } },
     mitica = { name = 'Bag of Mythical', lines = { 'Abre um item aleatório que já vem Mythicus, o grau mais alto.' } },
     desire = { name = 'Bag You Desire', lines = { 'Abre um item da Soul War: arma, armadura, calça, bota ou o Soulbastion.' } },
-    coins = { name = '25 Mythicum Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
+    coins = { name = '25 Mythos Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
     pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
     rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os bônus dos itens raros que você usa, na janela Rarity Bonuses.', 'Reroll: um valor novo para um bônus. Trocar: outro bônus aleatório.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
     montaria = { name = 'Montaria', lines = { 'Qualquer montaria que você ainda não tem.', 'Escolha na lista acima; a montaria já sai liberada.' } },
@@ -508,7 +508,7 @@ end
 
 -- ---------------------------------------------------------------- panel badge
 
--- the monster and the kills left show on the Hunt Tasks row of the Mythicum
+-- the monster and the kills left show on the Hunt Tasks row of the Mythos
 -- panel (like the Heal Bot's ON): the daily task while it runs, otherwise the
 -- current Hunter's Trail step
 local function shortName(name)

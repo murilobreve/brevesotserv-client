@@ -1,5 +1,5 @@
 @echo off
-rem Baiak Mythicum - atualiza o servidor na VPS a partir deste PC.
+rem Mythos - atualiza o servidor na VPS a partir deste PC.
 rem Entra por SSH, baixa do GitHub (main) os scripts, o site e o binario ja
 rem compilado, e reinicia o servidor. Dois cliques e pronto.
 rem   atualizar-servidor.bat           atualiza (o normal)

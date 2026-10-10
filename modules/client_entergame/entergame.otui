@@ -1,4 +1,4 @@
-// Baiak Mythicum login card (black, white logo, gold accents): brand + features on the left, sign-in form on the
+// Mythos login card (black, white logo, gold accents): brand + features on the left, sign-in form on the
 // right. Every id the entergame.lua logic looks up is still a direct child of
 // the window; the server/version fields stay hidden (single server client).
 
@@ -161,7 +161,7 @@ EnterGameWindow
       anchors.top: prev.bottom
       margin-top: 8
       @onSetup: |
-        self.title:setText(tr('Mythicum Coins'))
+        self.title:setText(tr('Mythos Coins'))
         self.desc:setText(tr('Leaderboard prizes, 1 per hour online'))
 
     BrevesFeature
