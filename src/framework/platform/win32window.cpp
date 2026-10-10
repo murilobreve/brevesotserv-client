@@ -1077,6 +1077,19 @@ void WIN32Window::setVerticalSync(bool enable)
 void WIN32Window::setIcon(const std::string& file)
 {
     g_mainDispatcher.addEvent([&, file] {
+        // the exe's own icon has a hand-drawn image for every size; scaling the
+        // 256 px png down to the 16 px title bar icon turns it into a smudge
+        const HINSTANCE module = GetModuleHandle(nullptr);
+        const auto smallIcon = static_cast<HICON>(LoadImageW(module, L"IDI_ICON1", IMAGE_ICON,
+            GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
+        const auto bigIcon = static_cast<HICON>(LoadImageW(module, L"IDI_ICON1", IMAGE_ICON,
+            GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR));
+        if (smallIcon && bigIcon) {
+            SendMessage(m_window, WM_SETICON, ICON_SMALL, (LPARAM)smallIcon);
+            SendMessage(m_window, WM_SETICON, ICON_BIG, (LPARAM)bigIcon);
+            return;
+        }
+
         const auto& image = Image::load(file);
 
         if (!image) {
