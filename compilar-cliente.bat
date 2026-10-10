@@ -5,7 +5,17 @@ rem Studio e carregado aqui mesmo.
 rem   compilar-cliente.bat         sincroniza, compila e empacota
 rem   compilar-cliente.bat limpo   apaga a configuracao do CMake antes
 setlocal
-cd /d "%~dp0"
+
+rem roda uma copia de si mesmo a partir da pasta temporaria: assim o git
+rem pode substituir este .bat no pull sem quebrar o cmd
+if /i not "%~1"=="--rodando" (
+    copy /y "%~f0" "%TEMP%\mythos-compilar.bat" >nul
+    call "%TEMP%\mythos-compilar.bat" --rodando "%~dp0." %1
+    exit /b
+)
+cd /d "%~2"
+set "OPCAO=%~3"
+set "PASTA=%CD%"
 
 if not defined VCPKG_ROOT set "VCPKG_ROOT=C:\vcpkg"
 
@@ -38,7 +48,7 @@ echo == carregando o ambiente do Visual Studio
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 goto :falhou
 
-if /i "%~1"=="limpo" (
+if /i "%OPCAO%"=="limpo" (
     echo == apagando a configuracao antiga
     if exist "build\windows-release\CMakeCache.txt" del "build\windows-release\CMakeCache.txt"
 )
@@ -52,7 +62,7 @@ cmake --build --preset windows-release
 if errorlevel 1 goto :falhou
 
 echo == empacotando
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\empacotar-cliente.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cliente.ps1"
 if errorlevel 1 goto :falhou
 
 echo.
