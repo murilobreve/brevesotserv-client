@@ -98,7 +98,23 @@ try {
 
     $enviar = @(@{ Arquivo = $setup; Nome = "$saida.exe" })
     $zipLocal = Join-Path $Dist ((Split-Path -Leaf $Pasta).Replace(' ', '-') + ".zip")
-    if (Test-Path $zipLocal) { $enviar += @{ Arquivo = $zipLocal; Nome = $zipNome } }
+    if (Test-Path $zipLocal) {
+        # o zip e montado antes da publicacao: poe nele o versao.json que a
+        # publicacao gravou na pasta, senao o client do zip se acha velho
+        if (Test-Path $infoPath) {
+            Add-Type -AssemblyName System.IO.Compression
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $nomeNoZip = (Split-Path -Leaf $Pasta) + "/versao.json"
+            $zip = [System.IO.Compression.ZipFile]::Open($zipLocal, [System.IO.Compression.ZipArchiveMode]::Update)
+            try {
+                foreach ($velho in @($zip.Entries | Where-Object { $_.FullName -eq $nomeNoZip })) { $velho.Delete() }
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $infoPath, $nomeNoZip) | Out-Null
+            } finally {
+                $zip.Dispose()
+            }
+        }
+        $enviar += @{ Arquivo = $zipLocal; Nome = $zipNome }
+    }
 
     foreach ($item in $enviar) {
         foreach ($velho in @($release.assets | Where-Object { $_.name -eq $item.Nome })) {

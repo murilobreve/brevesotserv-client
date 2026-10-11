@@ -82,6 +82,13 @@ echo == publicando a atualizacao
 powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\publicar-atualizacao.ps1" -Canal directx -Pasta "%PASTA%\dist\Mythos DirectX"
 if errorlevel 1 goto :falhou
 echo == montando o instalador
+rem o antivirus as vezes tira o script da pasta: volta com o do git
+if not exist "%PASTA%\tools\montar-instalador.ps1" git checkout -- tools/montar-instalador.ps1 >nul 2>&1
+if not exist "%PASTA%\tools\montar-instalador.ps1" (
+    echo O tools\montar-instalador.ps1 sumiu da pasta ^(antivirus?^). A atualizacao ja foi publicada;
+    echo veja a quarentena do antivirus e depois rode o montar-instalador.bat.
+    goto :naoPublicar
+)
 powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\montar-instalador.ps1" -Canal directx -Pasta "%PASTA%\dist\Mythos DirectX"
 if errorlevel 1 goto :falhou
 :naoPublicar
