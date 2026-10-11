@@ -195,6 +195,7 @@ WIKI_PAGES.items = {
               { 'Recompensa de quest', '30%' },
           } },
         { 'p', 'O bônus Rarity Find dos anéis e amuletos multiplica essa chance. Monstros raros sempre pagam: se nenhum equipamento cair no corpo, um equipamento da lista de loot do próprio monstro é escolhido.' },
+        { 'p', 'Qual equipamento vira raro é sorteado entre todos os da lista de loot do monstro, não só entre os que caíram, e os itens que caem muito não dominam o sorteio. Um raro de Dragon é steel shield 14% das vezes (seriam 37% pela chance de drop) e dragon shield 6% (seria 0,6%). Itens muito raros da lista (abaixo de 0,3% de chance) ficam de fora desse sorteio, mas se um deles cair ele pode virar raro.' },
         { 'h', 'Como o item é sorteado' },
         { 'p', 'Primeiro sai o grau. O grau decide quantos bônus o item tem e em que parte da faixa de cada bônus o valor cai. Depois saem os bônus, sempre do tipo do item: espada rola bônus de corpo a corpo, wand rola magia, bota rola velocidade.' },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Origem', 'Communis', 'Rarus', 'Praeclarus', 'Legendarius', 'Mythicus' },
