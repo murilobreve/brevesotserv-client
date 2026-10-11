@@ -199,6 +199,9 @@ WIKI_PAGES.items = {
         { 'p', 'Qual equipamento vira raro é sorteado entre todos os da lista de loot do monstro, não só entre os que caíram, e os itens que caem muito não dominam o sorteio. Um raro de Dragon é steel shield 14% das vezes (seriam 37% pela chance de drop) e dragon shield 6% (seria 0,6%). Itens muito raros da lista (abaixo de 0,3% de chance) ficam de fora desse sorteio, mas se um deles cair ele pode virar raro.' },
         { 'h', 'Como o item é sorteado' },
         { 'p', 'Primeiro sai o grau. O grau decide quantos bônus o item tem e em que parte da faixa de cada bônus o valor cai. Depois saem os bônus, sempre do tipo do item: espada rola bônus de corpo a corpo, wand rola magia, bota rola velocidade.' },
+        { 'h', 'Cada item tem o seu jeito' },
+        { 'p', 'Os bônus de um item dependem uns dos outros. O item sorteia uma força só, dentro da faixa do grau, e essa força é dividida entre os bônus ao acaso. Um bônus que leva uma parte grande deixa menos para os outros: uma espada com Attack muito alto costuma ter os outros bônus mais baixos, e outra espada do mesmo grau pode ter tudo equilibrado. Em média, cada grau continua com a mesma força.' },
+        { 'p', 'Nenhum bônus passa do teto da faixa do grau, então só um Mythicus chega no máximo de um bônus. E nenhum fica abaixo da metade do começo da faixa (num Mythicus, nunca abaixo de 15% da faixa do bônus). Refazer um bônus na janela Rarity Bonuses continua sorteando só aquele bônus.' },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Origem', 'Communis', 'Rarus', 'Praeclarus', 'Legendarius', 'Mythicus' },
           rows = {
               gradeRow('Monstro comum', '#c8c8c8', { 81, 17.5, 1.2, 0.25, 0.05 }),
@@ -257,8 +260,8 @@ WIKI_PAGES.pools = {
         }),
         { 'h', 'Escudos' },
         poolTable({
-            { 'Defense', '1 a 10', '' }, { 'Resistência', '1% a 20%', 'um elemento' }, { 'Last Stand', '1% a 25%', '' },
-            { 'Healing', '1% a 20%', '' }, { 'Max Health', '1% a 10%', '' },
+            { 'Defense', '1 a 10', '' }, { 'Resistência', '1% a 20%', 'um elemento' }, { 'Healing', '1% a 20%', '' },
+            { 'Max Health', '1% a 10%', '' }, { 'Reflect', '1% a 8%', '' },
         }),
         { 'h', 'Spellbooks' },
         poolTable({
@@ -269,9 +272,8 @@ WIKI_PAGES.pools = {
         { 'h', 'Capacetes, armaduras e calças' },
         poolTable({
             { 'Armor', '1 a 8', '' }, { 'Resistência', '1% a 20%', 'pode vir duas' }, { 'Healing', '1% a 20%', '' },
-            { 'Last Stand', '1% a 25%', '' }, { 'Skill da vocação', '1% a 10%', 'ML, melee, distance ou fist' },
-            { 'Dodge', '1% a 4%', '' }, { 'Reflect', '1% a 8%', '' }, { 'Emergency Heal', '5% a 20%', '' },
-            { 'Cooldown Chance', '2% a 12%', '' },
+            { 'Skill da vocação', '1% a 10%', 'ML, melee, distance ou fist' },
+            { 'Dodge', '1% a 4%', '' }, { 'Reflect', '1% a 8%', '' }, { 'Cooldown Chance', '2% a 12%', '' },
         }),
         { 'h', 'Botas' },
         poolTable({
@@ -332,10 +334,8 @@ WIKI_PAGES.affixes = {
             { 'Resistência', 'Menos dano de fire, earth, energy, ice, holy ou death.', '40%' },
             { 'Physical Resist', 'Menos dano físico. A mais forte e a mais rara.', '20%' },
             { 'Healing', 'Magias, runas e poções curam mais. Leech não conta.', '40%' },
-            { 'Last Stand', 'Menos dano recebido enquanto você está com 25% de vida ou menos. Um LAST STAND! vermelho, como o DODGE!, aparece quando ele age.', '40%' },
             { 'Dodge', 'Chance de desviar de um golpe.', '12%' },
             { 'Reflect', 'Devolve parte do dano físico que um monstro causa em você.', '20%' },
-            { 'Emergency Heal', 'Ao cair para 25% de vida ou menos, cura essa parte da vida máxima de uma vez. Uma vez por minuto.', '25%' },
             { 'Speed', 'Velocidade a mais.', '40' },
         }),
         { 'h', 'Anéis e amuletos' },
