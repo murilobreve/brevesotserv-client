@@ -258,12 +258,15 @@ local roulette
 local spin -- { result, rows, current, count, assumed, bump, finished, waiting, onDone, pending, event }
 local CARD_WIDTH = 176 -- fits "+30% Exevo Gran Mas Flam"
 local CARD_GAP = 4
--- The strips spin one at a time. Each result is the 16th card, reached on a
--- cubic curve, so the last two or three cards crawl under the marker for a
--- couple of seconds: time to read them and cheer.
-local WIN_INDEX = 16
-local CARDS_AFTER = 6 -- cards past the winner, so the strip never runs dry
-local SPIN_TIME = 4600 -- ms per strip
+-- The strips spin one at a time, calmly: each one speeds up gently, never
+-- passes more than about 4 cards a second, and slows down over the last
+-- cards so they crawl under the marker. The result is the 9th card.
+local WIN_INDEX = 9
+local CARDS_AFTER = 5 -- cards past the winner, so the strip never runs dry
+local SPIN_TIME = 5200 -- ms per strip
+local SPEED_UP = 0.18 -- share of the spin spent speeding up
+local FADE = 0.4 -- how much a strip dims at full speed: less to chase
+local WAITING_OPACITY = 0.18 -- strips waiting their turn: barely there
 local PAUSE = 800 -- ms between one strip stopping and the next starting
 local BUMP_TIME = 700 -- ms the bonuses take to grow at an empty slot
 local ACTIVE_COLOR = '#e0c060' -- the strip spinning now
@@ -316,9 +319,21 @@ local function setAgainButton()
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
 end
 
-local function easeOut(p)
-    -- fast start, long slow end (a CS case wheel)
-    return 1 - (1 - p) ^ 3
+-- Where a strip is (0 to 1) and how fast it goes (1 = average speed) at
+-- time p of its spin: speed rises in a straight line for SPEED_UP of the
+-- time, then falls away as (1 - t)^2, a long slow end.
+local CURVE_AREA = SPEED_UP / 2 + (1 - SPEED_UP) / 3
+local function spinCurve(p)
+    if p <= 0 then
+        return 0, 0
+    elseif p >= 1 then
+        return 1, 0
+    elseif p < SPEED_UP then
+        return (p * p / (2 * SPEED_UP)) / CURVE_AREA, (p / SPEED_UP) / CURVE_AREA
+    end
+    local rest = (1 - p) / (1 - SPEED_UP)
+    local position = SPEED_UP / 2 + (1 - SPEED_UP) / 3 * (1 - rest ^ 3)
+    return position / CURVE_AREA, rest * rest / CURVE_AREA
 end
 
 local function paintCard(card, text, color, empty)
@@ -480,6 +495,7 @@ local function stopRow(row)
     end
     row.stopped = true
     row.strip:setMarginLeft(-row.target)
+    row.strip:setOpacity(1)
     row.widget:setBorderWidth(1)
     if row.entry then
         lightRow(row)
@@ -507,13 +523,18 @@ local function animate()
     if row and now >= row.startsAt then
         if not row.active then
             row.active = true
+            row.strip:setOpacity(1)
             row.widget:setBorderWidth(2)
             row.widget:setBorderColor(ACTIVE_COLOR)
             roulette.status:setText(tr('Bonus %d of %d', spin.current, #spin.rows))
             roulette.status:setColor(ACTIVE_COLOR)
         end
         local p = math.min(1, (now - row.startsAt) / SPIN_TIME)
-        row.strip:setMarginLeft(-math.floor(row.target * easeOut(p)))
+        local position, speed = spinCurve(p)
+        row.strip:setMarginLeft(-math.floor(row.target * position))
+        -- dimmer while it runs fast, full contrast as it slows to a stop
+        local peak = 1 / CURVE_AREA
+        row.strip:setOpacity(1 - FADE * math.max(0, math.min(1, (speed - 0.6) / (peak - 0.6))))
         if p >= 1 then
             stopRow(row)
             spin.current = spin.current + 1
@@ -541,6 +562,7 @@ local function skipSpin()
     for _, row in ipairs(spin.rows) do
         row.stopped = true
         row.strip:setMarginLeft(-row.target)
+        row.strip:setOpacity(1)
         row.widget:setBorderWidth(1)
         paintWinner(row, spin.count)
         lightRow(row)
@@ -592,6 +614,8 @@ local function startStrips(result)
             assumed = assumed - 1
         end
         strip:setWidth(cards * (CARD_WIDTH + CARD_GAP))
+        -- waiting: so the eye stays on the strip that spins
+        strip:setOpacity(WAITING_OPACITY)
         -- stop with the winner under the marker, a little off-centre like a
         -- real wheel
         local winnerCentre = (WIN_INDEX - 1) * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2
