@@ -705,6 +705,16 @@ function onParseStoreCreateProducts(storeProducts)
             end
         else
             local firstChild = listProduct:getFirstChild()
+            -- openCategory(name, offer): select the first offer whose name has it
+            if pendingOffer then
+                for _, child in ipairs(listProduct:getChildren()) do
+                    if child.product and child.product.name and child.product.name:find(pendingOffer, 1, true) then
+                        firstChild = child
+                        break
+                    end
+                end
+                pendingOffer = nil
+            end
             if firstChild and firstChild:isEnabled() then
                 listProduct:focusChild(firstChild)
                 listProduct:ensureChildVisible(firstChild)
@@ -744,6 +754,17 @@ function onParseStoreCreateHome(offer)
     bannersHome = table.copy(offer.banners)
     showPanel("HomePanel")
     fixServerNoSend0xF2()
+    if pendingCategory then
+        -- the server ignores a store request that comes right after another
+        -- one (UI exhaustion): give the Home request a moment first
+        local name = pendingCategory
+        controllerShop:scheduleEvent(function()
+            if pendingCategory == name then
+                pendingCategory = nil
+                clickCategory(name)
+            end
+        end, 1200, 'openCategoryAfterHome')
+    end
 end
 
 function onParseStoreGetHistory(currentPage, pageCount, historyData)
@@ -921,6 +942,9 @@ function onParseStoreGetCategories(buttons)
             controllerShop.ui.openedCategory = firstCategory
             firstCategory.Button:onClick()
         end
+        -- openCategory() asked for a category before the list arrived: it is
+        -- clicked once the Home page that just got requested is shown
+        -- (onParseStoreCreateHome), or else Home would cover it
 
 end
 
@@ -971,6 +995,44 @@ function show()
 end
 
 
+
+-- Opens the Store on a category (other modules: the Rarity Bonuses window
+-- opens it on "Rarity" to buy Rarity XP). The category list arrives after
+-- the store opens the first time, so the click waits for it.
+pendingCategory = nil
+pendingOffer = nil
+
+function clickCategory(name)
+    local widget = controllerShop.ui and controllerShop.ui.listCategory:getChildById(name)
+    if widget and widget.Button then
+        widget.Button:onClick()
+        return true
+    end
+    return false
+end
+
+function openCategory(name, offer)
+    if not controllerShop.ui then
+        return
+    end
+    pendingOffer = offer
+    if controllerShop.ui:isVisible() then
+        controllerShop.ui:raise()
+        controllerShop.ui:focus()
+        clickCategory(name)
+        return
+    end
+    -- opening sends the store's own requests (categories, Home): the click
+    -- waits for the Home page (onParseStoreCreateHome) or, at worst, a while
+    pendingCategory = name
+    show()
+    controllerShop:scheduleEvent(function()
+        if pendingCategory == name then
+            pendingCategory = nil
+            clickCategory(name)
+        end
+    end, 3000, 'openCategoryFallback')
+end
 
 function getUI()
     return controllerShop.ui

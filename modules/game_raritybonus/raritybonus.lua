@@ -113,6 +113,9 @@ local function fillItems(items)
         row.rerollItemButton:setText(tr('Reroll %s', formatCost(cost)))
         row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
         row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost)
+        if cost > 0 and rarityXp < cost then
+            row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
+        end
         row.rerollItemButton.onClick = function()
             local lines = {}
             for _, bonus in ipairs(entry.bonuses or {}) do
@@ -474,6 +477,15 @@ rouletteTakes = function(data)
         return true
     end
     return false
+end
+
+-- the Store on its Rarity category, where Rarity XP is sold
+function buyRarityXp()
+    if modules.game_store and modules.game_store.openCategory then
+        modules.game_store.openCategory('Rarity', 'Rarity XP')
+    elseif modules.game_store and modules.game_store.toggle then
+        modules.game_store.toggle()
+    end
 end
 
 function spinAgain()

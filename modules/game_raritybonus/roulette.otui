@@ -96,6 +96,16 @@ MainWindow
     color: #ffd84a
 
   Button
+    id: buyXpButton
+    anchors.left: xp.right
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-left: 8
+    size: 110 22
+    !text: tr('Buy Rarity XP')
+    !tooltip: tr('Opens the Store on the Rarity category, where Rarity XP is sold.')
+    @onClick: modules.game_raritybonus.buyRarityXp()
+
+  Button
     id: againButton
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom

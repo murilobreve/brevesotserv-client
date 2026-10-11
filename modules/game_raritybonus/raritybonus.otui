@@ -148,10 +148,21 @@ MainWindow
     text-auto-resize: true
     color: #ffd84a
 
+  // shortcut to the Store's Rarity category (Rarity XP packs)
+  Button
+    id: buyXpButton
+    anchors.verticalCenter: xpLabel.verticalCenter
+    anchors.left: xpLabel.right
+    margin-left: 10
+    size: 130 20
+    !text: tr('Buy Rarity XP')
+    !tooltip: tr('Opens the Store on the Rarity category, where Rarity XP is sold.')
+    @onClick: modules.game_raritybonus.buyRarityXp()
+
   Label
     id: status
     anchors.top: parent.top
-    anchors.left: xpLabel.right
+    anchors.left: buyXpButton.right
     anchors.right: parent.right
     margin-left: 16
     height: 18

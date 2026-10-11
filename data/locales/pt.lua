@@ -824,6 +824,9 @@ locale = {
     ["Spinning..."] = "Girando...",
     ["Skip"] = "Pular",
     ["%s  up to %d bonuses  -%d Rarity XP"] = "%s   até %d bônus   -%d Rarity XP",
+    ["Buy Rarity XP"] = "Comprar Rarity XP",
+    ["Opens the Store on the Rarity category, where Rarity XP is sold."] = "Abre a Store na categoria Rarity, onde se compra Rarity XP.",
+    ["You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters."] = "Você precisa de %d Rarity XP e tem %d. Compre mais na Store (Rarity) ou mate monstros Pale, Ashen, Obsidian e Lord of Death.",
   }
 }
 
