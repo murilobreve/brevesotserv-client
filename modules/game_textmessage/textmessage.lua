@@ -396,6 +396,9 @@ function displayMessage(mode, text)
             local lootTabName = tr(msgtype.consoleTab)
             local targetTab = modules.game_console.getTab(lootTabName) and lootTabName or tr("Server Log")
             modules.game_console.addText(lootColoredText, msgtype, targetTab)
+        elseif hasColorMarks(text) then
+            -- "{+17 Attack, #ff9a1f}": a rarity bonus near its top (Look)
+            modules.game_console.addText(text, coloredCopy(msgtype), tr(msgtype.consoleTab))
         else
             modules.game_console.addText(text, msgtype, tr(msgtype.consoleTab))
         end
@@ -408,6 +411,9 @@ function displayMessage(mode, text)
         elseif msgtype == MessageSettings.loot or msgtype == MessageSettings.valuableLoot then
             local coloredText = ItemsDatabase.setColorLootMessage(text)
             label:setColoredText(coloredText)
+        elseif hasColorMarks(text) then
+            label:setColor(msgtype.color)
+            label:setColoredText(text)
         else
             label:setText(text)
             label:setColor(msgtype.color)
@@ -419,6 +425,26 @@ function displayMessage(mode, text)
             label:setVisible(false)
         end, calculateVisibleTime(text))
     end
+end
+
+-- text with "{words, #rrggbb}" parts (the server colours rarity bonuses so)
+function hasColorMarks(text)
+    return type(text) == 'string' and text:find('{[^{}]-, #%x%x%x%x%x%x}') ~= nil
+end
+
+-- the message settings with the console told to read the colour marks
+local coloredCopies = {}
+function coloredCopy(msgtype)
+    local copy = coloredCopies[msgtype]
+    if not copy then
+        copy = {}
+        for key, value in pairs(msgtype) do
+            copy[key] = value
+        end
+        copy.colored = true
+        coloredCopies[msgtype] = copy
+    end
+    return copy
 end
 
 function displayPrivateMessage(text)

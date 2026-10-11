@@ -187,9 +187,14 @@ local function showDetails(kind, entry)
     content.stats:setText(table.concat(stats, '   '))
 
     content.lines:destroyChildren()
-    for _, line in ipairs(entry.lines or {}) do
+    for index, line in ipairs(entry.lines or {}) do
         local label = g_ui.createWidget('AffixLine', content.lines)
         label:setText(line)
+        -- a bonus near its top in the roulette's colour (from the server)
+        local color = entry.lineColors and entry.lineColors[index]
+        if color and color ~= '' then
+            label:setColor(color)
+        end
     end
     if #(entry.lines or {}) == 0 then
         local label = g_ui.createWidget('AffixLine', content.lines)

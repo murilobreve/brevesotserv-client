@@ -108,6 +108,10 @@ local function fillItems(items)
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
             line.text:setText(bonusText(bonus))
+            -- near its top: the roulette's colour (from the server)
+            if bonus.color and bonus.color ~= '' then
+                line.text:setColor(bonus.color)
+            end
         end
         local cost = entry.rerollCost or 0
         row.rerollItemButton:setText(tr('Reroll %s', formatCost(cost)))
