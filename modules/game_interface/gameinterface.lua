@@ -29,6 +29,11 @@ currentViewMode = 0
 -- the view that fills a wide window (up to 27 x 13) has every tile it shows
 MAP_VISIBLE_WIDTH = 23
 MAP_VISIBLE_HEIGHT = 13
+-- "Map zoom" in Options > Graphics: the classic Tibia view or the wider one
+MAP_ZOOMS = {
+    original = { width = 15, height = 11 },
+    wide = { width = 23, height = 13 },
+}
 leftIncreaseSidePanels = nil
 leftDecreaseSidePanels = nil
 rightIncreaseSidePanels = nil
@@ -292,6 +297,7 @@ function show()
         mobileConfig.mobileHeightShortcuts = modules.game_shortcuts.getPanel():getHeight()
     end
 
+    setMapZoom(modules.client_options.getOption('mapZoom'))
     setupViewMode(0)
     if g_platform.isMobile() or g_gameConfig.isExtendedViewUI() then
         setupViewMode(1)
@@ -1773,6 +1779,23 @@ function nextViewMode()
     -- Ctrl+. between the normal and the zoomed view is remembered like the option
     if currentViewMode ~= 2 then
         modules.client_options.setOption('fillMapWidth', currentViewMode == 1)
+    end
+end
+
+function setMapZoom(value)
+    local zoom = MAP_ZOOMS[value] or MAP_ZOOMS.wide
+    MAP_VISIBLE_WIDTH = zoom.width
+    MAP_VISIBLE_HEIGHT = zoom.height
+    if not gameMapPanel then
+        return
+    end
+    gameMapPanel:setZoom(MAP_VISIBLE_HEIGHT)
+    gameMapPanel:setVisibleDimension({
+        width = MAP_VISIBLE_WIDTH,
+        height = MAP_VISIBLE_HEIGHT
+    })
+    if limitedZoom and not g_game.isGM() then
+        gameMapPanel:setMaxZoomOut(MAP_VISIBLE_HEIGHT)
     end
 end
 

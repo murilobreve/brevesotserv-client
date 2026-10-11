@@ -17,6 +17,23 @@ UIWidget
     anchors.left: prev.right
     mouse-scroll: false
 
+  Label
+    id: mapZoomLabel
+    !text: tr('Map zoom:')
+    anchors.left: parent.left
+    anchors.top: prev.bottom
+    margin-left: 18
+    margin-top: 9
+    color: #c0c0c0ff
+
+  QtComboBox
+    id: mapZoom
+    width: 200
+    margin-left: 10
+    anchors.verticalCenter: prev.verticalCenter
+    anchors.left: prev.right
+    mouse-scroll: false
+
   SmallReversedQtPanel
     anchors.left: parent.left
     anchors.right: parent.right

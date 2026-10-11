@@ -147,6 +147,13 @@ local function setupComboBox()
         -- classicControl and smartLeftClick, and their UI visibility
     end
 
+    local mapZoomCombobox = panels.graphicsPanel:recursiveGetChildById('mapZoom')
+    mapZoomCombobox:addOption(tr('Original (15 x 11 tiles)'), 'original')
+    mapZoomCombobox:addOption(tr('Zoomed out (23 x 13 tiles)'), 'wide')
+    mapZoomCombobox.onOptionChange = function(comboBox, option)
+        setOption('mapZoom', comboBox:getCurrentOption().data)
+    end
+
     for k, t in pairs({ 'None', 'Antialiasing', 'Smooth Retro' }) do
         antialiasingModeCombobox:addOption(t, k - 1)
     end

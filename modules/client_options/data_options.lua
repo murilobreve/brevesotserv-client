@@ -437,6 +437,15 @@ return {
             g_app.setDrawEffectOnTop(value)
         end
     },
+    mapZoom                           = {
+        value = 'wide',
+        action = function(value, options, controller, panels, extraWidgets)
+            panels.graphicsPanel:recursiveGetChildById('mapZoom'):setCurrentOptionByData(value, true)
+            if modules.game_interface and modules.game_interface.setMapZoom then
+                modules.game_interface.setMapZoom(value)
+            end
+        end
+    },
     floorViewMode                     = {
         value = 1,
         action = function(value, options, controller, panels, extraWidgets)
