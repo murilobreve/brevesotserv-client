@@ -784,12 +784,12 @@ local function showPreyConfirmationWindow(title, description, confirmAction)
 
     confirmWindow = displayGeneralBox(tr(title), description, {
         {
-            text = tr('No'),
-            callback = closeWindow
-        },
-        {
             text = tr('Yes'),
             callback = confirm
+        },
+        {
+            text = tr('No'),
+            callback = closeWindow
         },
     }, confirm, closeWindow)
 
@@ -1627,12 +1627,12 @@ local function handleToggleOptions(checkbox, slot, currentOption, checked)
 
         confirmWindow = displayGeneralBox(tr('Confirmation of Using Prey Wildcards'), description, {
             {
-                text = tr('No'),
-                callback = cancel
-            },
-            {
                 text = tr('Yes'),
                 callback = confirm
+            },
+            {
+                text = tr('No'),
+                callback = cancel
             },
         }, confirm, cancel)
 

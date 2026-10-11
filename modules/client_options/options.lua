@@ -535,8 +535,8 @@ function confirmResetSettings()
     resetSettingsWindow = displayGeneralBox(tr('Reset Settings'),
         tr('All client options will be restored to their defaults and the client will restart.\nDo you want to continue?'),
         {
-            { text = tr('No'), callback = close },
             { text = tr('Yes'), callback = reset },
+            { text = tr('No'), callback = close },
             anchor = AnchorHorizontalCenter
         }, reset, close)
 end

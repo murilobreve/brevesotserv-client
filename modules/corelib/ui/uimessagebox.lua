@@ -46,10 +46,12 @@ function UIMessageBox.display(title, message, buttons, onEnterCallback, onEscape
     messageBox.holder = messageBox:getChildById('holder')
 
     currentSizes.height = currentSizes.height + 22
-    for i = 1, #buttons do
+    -- the buttons line up from the right edge: the last one is created first,
+    -- so the first one (Yes, Ok, Sell...) ends up on the left
+    for i = #buttons, 1, -1 do
         local button = messageBox:addButton(buttons[i].text, buttons[i].callback)
         button:addAnchor(AnchorTop, 'parent', AnchorTop)
-        if i == 1 then
+        if i == #buttons then
             button:addAnchor(AnchorRight, 'parent', AnchorRight)
             currentSizes.height = currentSizes.height + button:getHeight() + 22
         else
@@ -197,18 +199,20 @@ function UIMessageBox.displaySHOP(title, message, description, buttons, onEnterC
     messageBox.holder = messageBox:getChildById('holder')
 
     currentSizes.height = currentSizes.height + 22
-    for i = 1, #buttons do
+    -- as in display: the first button (Buy, in blue) on the left
+    for i = #buttons, 1, -1 do
         local button = messageBox:addButton(buttons[i].text, buttons[i].callback)
         button:addAnchor(AnchorTop, 'parent', AnchorTop)
-        if i == 1 then
+        if i == #buttons then
             button:addAnchor(AnchorRight, 'parent', AnchorRight)
             currentSizes.height = currentSizes.height + button:getHeight() + 22
-            button:setImageSource('/images/options/blue_large')
-            button:setImageClip("0 0 108 20")
         else
             button:addAnchor(AnchorRight, 'prev', AnchorLeft)
-
             button:setMarginRight(10)
+        end
+        if i == 1 then
+            button:setImageSource('/images/options/blue_large')
+            button:setImageClip("0 0 108 20")
         end
     end
 
