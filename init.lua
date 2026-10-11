@@ -9,7 +9,7 @@
 -- =====================================================================
 local SERVER_NAME     = "Mythos"   -- nome exibido na janela e no client
 local CLIENT_VERSION  = 1525             -- versao do client (15.25)
-local SERVER_IP       = "82.38.28.137"   -- IP ou dominio do site/login
+local SERVER_IP       = "mythosot.com.br"   -- IP ou dominio do site/login
 local SERVER_PORT     = 80               -- porta HTTP do login.php
 local SITE_URL        = ""               -- vazio = http://<ip>
 local SERVER_SCHEME   = "http"           -- "https" quando o ip do servidor.ini comeca com https://
