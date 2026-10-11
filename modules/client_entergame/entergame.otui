@@ -143,7 +143,7 @@ EnterGameWindow
     BrevesFeature
       id: featRarity
       anchors.top: logo.bottom
-      margin-top: 24
+      margin-top: 16
       @onSetup: |
         self.title:setText(tr('Rarity drops'))
         self.desc:setText(tr('Five grades, up to Mythicus'))
@@ -151,7 +151,7 @@ EnterGameWindow
     BrevesFeature
       id: featHunt
       anchors.top: prev.bottom
-      margin-top: 8
+      margin-top: 4
       @onSetup: |
         self.title:setText(tr('Hunt Board'))
         self.desc:setText(tr('Rates up to x10, new roll every 2h'))
@@ -159,7 +159,7 @@ EnterGameWindow
     BrevesFeature
       id: featCoins
       anchors.top: prev.bottom
-      margin-top: 8
+      margin-top: 4
       @onSetup: |
         self.title:setText(tr('Mythos Coins'))
         self.desc:setText(tr('Leaderboard prizes, 1 per hour online'))
@@ -167,10 +167,45 @@ EnterGameWindow
     BrevesFeature
       id: featMarket
       anchors.top: prev.bottom
-      margin-top: 8
+      margin-top: 4
       @onSetup: |
         self.title:setText(tr('Rarity Market'))
         self.desc:setText(tr('Trade rare gear with other players'))
+
+    // client version and update state, filled by client_updater
+    Panel
+      id: updateStatus
+      height: 16
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      visible: false
+
+      UIWidget
+        id: updateDot
+        size: 8 8
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 2
+        background-color: #6b6b6b
+        phantom: true
+
+      Label
+        id: updateText
+        font: verdana-11px-antialised
+        color: #a6a6a6
+        text-auto-resize: true
+        anchors.left: updateDot.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 10
+        phantom: true
+
+      BrevesLink
+        id: updateAction
+        anchors.left: updateText.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 8
+        visible: false
 
   UIWidget
     id: brandSeparator
