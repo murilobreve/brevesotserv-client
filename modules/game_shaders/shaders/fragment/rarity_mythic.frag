@@ -4,8 +4,8 @@
 // No hue rotation.
 // No rainbow colors.
 // Original item remains recognizable.
-// Permanent white / silver theme.
-// Animated white crystalline shine.
+// Permanent white / silver theme, 40% whiter than the first version.
+// Animated white crystalline shine, a fast glint and twinkling sparkles.
 
 uniform float u_Time;
 uniform sampler2D u_Tex0;
@@ -76,6 +76,22 @@ void main()
 
 
     // --------------------------------------------------
+    // 40% whiter
+    // --------------------------------------------------
+
+    // The whole item moves 40% of the way to diamond white; the darkest
+    // pixels (outlines) keep most of their value so the shape still reads.
+    float whiter =
+        0.40 * smoothstep(0.04, 0.22, lum);
+
+    result = mix(
+        result,
+        diamondWhite,
+        whiter
+    );
+
+
+    // --------------------------------------------------
     // Moving diamond shine
     // --------------------------------------------------
 
@@ -88,13 +104,13 @@ void main()
             u_Time * 2.3
         );
 
-    // Narrow bright band.
+    // Bright band (wider than before: more shine).
     float sheen =
-        smoothstep(0.72, 0.98, wave);
+        smoothstep(0.60, 0.97, wave);
 
     // Don't strongly affect completely black pixels.
     sheen *=
-        smoothstep(0.12, 0.65, lum);
+        smoothstep(0.08, 0.55, lum);
 
     vec3 pureWhite = vec3(
         1.0,
@@ -135,7 +151,53 @@ void main()
     result = mix(
         result,
         pearl,
-        pearlSheen * 0.18
+        pearlSheen * 0.30
+    );
+
+
+    // --------------------------------------------------
+    // Fast glint
+    // --------------------------------------------------
+
+    // A thin, quick flash that crosses the item every few seconds.
+    float glintWave =
+        sin(
+            gl_FragCoord.x * 0.090 +
+            gl_FragCoord.y * 0.090 -
+            u_Time * 4.2
+        );
+
+    float glint =
+        smoothstep(0.985, 1.0, glintWave) *
+        smoothstep(0.10, 0.50, lum);
+
+    result = mix(
+        result,
+        pureWhite,
+        glint * 0.85
+    );
+
+
+    // --------------------------------------------------
+    // Twinkling sparkles
+    // --------------------------------------------------
+
+    // A few 2x2 pixel spots light up and fade, each at its own pace.
+    vec2 cell =
+        floor(gl_FragCoord.xy / 2.0);
+
+    float seed =
+        fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+
+    float twinkle =
+        step(0.965, seed) *
+        pow(max(0.0, sin(u_Time * 3.1 + seed * 60.0)), 6.0) *
+        smoothstep(0.10, 0.45, lum);
+
+    result = mix(
+        result,
+        pureWhite,
+        twinkle
     );
 
 
@@ -148,7 +210,7 @@ void main()
         0.5 * sin(u_Time * 1.2);
 
     result +=
-        vec3(0.025) *
+        vec3(0.06) *
         pulse *
         whiteMask;
 
