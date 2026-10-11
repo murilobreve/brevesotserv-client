@@ -10,9 +10,9 @@
 local SERVER_NAME     = "Mythos"   -- nome exibido na janela e no client
 local CLIENT_VERSION  = 1525             -- versao do client (15.25)
 local SERVER_IP       = "mythosot.com.br"   -- IP ou dominio do site/login
-local SERVER_PORT     = 80               -- porta HTTP do login.php
-local SITE_URL        = ""               -- vazio = http://<ip>
-local SERVER_SCHEME   = "http"           -- "https" quando o ip do servidor.ini comeca com https://
+local SERVER_PORT     = 443              -- porta do login.php (443 = https)
+local SITE_URL        = ""               -- vazio = https://<ip> (ou http://)
+local SERVER_SCHEME   = "https"          -- "http" quando o ip do servidor.ini comeca com http:// ou sem prefixo
 local PORT_FROM_INI   = false
 
 local function readServerIni()
@@ -45,6 +45,10 @@ readServerIni()
 -- try TLS on the HTTP port and every login would fail
 if SERVER_SCHEME == 'https' and (not PORT_FROM_INI or SERVER_PORT == 80) then
     SERVER_PORT = 443
+end
+-- and an "ip" line without https:// goes back to plain HTTP on port 80
+if SERVER_SCHEME == 'http' and not PORT_FROM_INI then
+    SERVER_PORT = 80
 end
 if SITE_URL == '' then
     SITE_URL = SERVER_SCHEME .. '://' .. SERVER_IP
