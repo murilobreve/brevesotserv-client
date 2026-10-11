@@ -167,6 +167,9 @@ function showXpBadge(xp)
     end
 end
 
+local applyBonuses
+local rouletteTakes
+
 local function onOpcode(protocol, opcode, data)
     -- the balance, after every change: shown on the Rarity Bonuses row; past
     -- a multiple of 50 a notice offers the window without opening it
@@ -182,6 +185,15 @@ local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' or data.action ~= 'bonuses' or not window then
         return
     end
+    -- a reroll plays the roulette first; the list below only shows the new
+    -- bonuses once the reels stop
+    if rouletteTakes(data) then
+        return
+    end
+    applyBonuses(data)
+end
+
+applyBonuses = function(data)
     rarityXp = tonumber(data.rarityXp) or 0
     showXpBadge(rarityXp)
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
@@ -222,6 +234,273 @@ local function onOpcode(protocol, opcode, data)
             featureButton:setOn(true)
         end
     end
+end
+
+
+-- ---------------------------------------------------------------------------
+-- reroll roulette: a slot machine with one reel per bonus the grade allows.
+-- The server rolls at once and sends the result; the reels spin through the
+-- item's possible bonuses, slow down and stop one by one on it. Reels the
+-- item didn't get stop on a dash (the number of bonuses is rolled too).
+-- ---------------------------------------------------------------------------
+
+local roulette
+local spin -- { result, reels, stops, startedAt, finished, waiting, onDone, pending }
+local SPIN_TICK = 45
+
+local QUALITY_COLORS = {
+    { 0.9, '#ff9a1f' }, -- near the top
+    { 0.7, '#c060ff' },
+    { 0.45, '#3d9bff' },
+    { 0.2, '#3ddc2e' },
+    { 0, '#b8b8b8' },
+}
+
+local function qualityColor(quality, perfect)
+    if perfect then
+        return '#ffe24a'
+    end
+    for _, entry in ipairs(QUALITY_COLORS) do
+        if (quality or 0) >= entry[1] then
+            return entry[2]
+        end
+    end
+    return '#b8b8b8'
+end
+
+local function randomLine(pool)
+    if not pool or #pool == 0 then
+        return '???'
+    end
+    local entry = pool[math.random(#pool)]
+    local min, max = tonumber(entry.min) or 1, tonumber(entry.max) or 1
+    return string.format('+%d%s %s', math.random(min, math.max(min, max)), entry.unit or '', entry.label or '')
+end
+
+local function rouletteVisible()
+    return roulette and roulette:isVisible()
+end
+
+local function setAgainButton()
+    if not spin or not spin.result then
+        return
+    end
+    local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
+    roulette.againButton:setText(tr('Spin again (%d)', cost))
+    roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost)
+    -- the balance only once the reels stop: it is updated with the result
+    roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
+end
+
+local function finishSpin()
+    if not spin or spin.finished then
+        return
+    end
+    spin.finished = true
+    local result = spin.result or {}
+    local rolled = result.rolled or {}
+    local best = 0
+    for _, entry in ipairs(rolled) do
+        best = math.max(best, entry.perfect and 2 or (entry.quality or 0))
+    end
+    local summary
+    if result.perfect then
+        summary = tr('PERFECT ROLL!')
+    elseif best >= 0.9 then
+        summary = tr('Jackpot! A bonus near the top.')
+    elseif best >= 0.7 then
+        summary = tr('Great roll!')
+    elseif #rolled == 1 then
+        summary = tr('Just one bonus, all the power in it.')
+    else
+        summary = tr('%d bonuses.', #rolled)
+    end
+    roulette.status:setText(summary)
+    roulette.status:setColor(result.perfect and '#ffe24a' or qualityColor(best))
+    roulette.closeButton:setText(tr('Close'))
+    if spin.onDone then
+        local done = spin.onDone
+        spin.onDone = nil
+        done()
+    end
+    if spin.pending then
+        local pending = spin.pending
+        spin.pending = nil
+        applyBonuses(pending)
+    end
+    setAgainButton()
+end
+
+local function stopReel(index)
+    local reel = spin.reels[index]
+    if not reel or reel.stopped then
+        return
+    end
+    reel.stopped = true
+    local entry = (spin.result.rolled or {})[index]
+    if entry then
+        local color = qualityColor(entry.quality, entry.perfect)
+        reel.widget.text:setText(entry.perfect and (entry.text .. '  ' .. tr('PERFECT')) or entry.text)
+        reel.widget.text:setColor(color)
+        reel.widget:setBorderColor(color)
+        -- a short flash in the bonus's colour
+        reel.widget:setBackgroundColor(color .. '66')
+        scheduleEvent(function()
+            if reel.widget and not reel.widget:isDestroyed() then
+                reel.widget:setBackgroundColor('#0b0b0bee')
+            end
+        end, 160)
+    else
+        reel.widget.text:setText('-')
+        reel.widget.text:setColor('#4a4a4a')
+        reel.widget:setBorderColor('#2a2a2a')
+    end
+    for _, other in ipairs(spin.reels) do
+        if not other.stopped then
+            return
+        end
+    end
+    finishSpin()
+end
+
+local function tickReel(index, token)
+    if not spin or spin.token ~= token or not rouletteVisible() then
+        return
+    end
+    local reel = spin.reels[index]
+    if not reel or reel.stopped then
+        return
+    end
+    local now = g_clock.millis()
+    local delay = SPIN_TICK
+    if spin.stops then
+        local stopAt = spin.stops[index]
+        if now >= stopAt then
+            stopReel(index)
+            return
+        end
+        -- slows down towards its stop
+        local progress = math.max(0, math.min(1, (now - spin.resultAt) / (stopAt - spin.resultAt)))
+        delay = SPIN_TICK + math.floor(260 * progress * progress * progress)
+    end
+    reel.widget.text:setText(randomLine(spin.pool))
+    reel.widget.text:setColor(index % 2 == 0 and '#cfcfcf' or '#9f9f9f')
+    scheduleEvent(function() tickReel(index, token) end, delay)
+end
+
+-- starts the reels; they spin until a result arrives (setSpinResult)
+local function startSpin(pool, reelCount)
+    spin = spin or {}
+    spin.token = (spin.token or 0) + 1
+    spin.pool = pool or spin.pool or {}
+    spin.stops = nil
+    spin.finished = false
+    spin.reels = {}
+    roulette.reels:destroyChildren()
+    for i = 1, math.max(1, reelCount or 1) do
+        local widget = g_ui.createWidget('RouletteReel', roulette.reels)
+        spin.reels[i] = { widget = widget }
+    end
+    roulette.reels:setHeight(#spin.reels * 40)
+    roulette.status:setText(tr('Spinning...'))
+    roulette.status:setColor('#e0c060')
+    roulette.closeButton:setText(tr('Skip'))
+    roulette.againButton:setEnabled(false)
+    local token = spin.token
+    for i = 1, #spin.reels do
+        scheduleEvent(function() tickReel(i, token) end, (i - 1) * 60)
+    end
+end
+
+local function setSpinResult(result, onDone)
+    spin.result = result
+    spin.onDone = onDone
+    spin.waiting = false
+    spin.resultAt = g_clock.millis()
+    spin.stops = {}
+    for i = 1, #spin.reels do
+        spin.stops[i] = spin.resultAt + 1300 + (i - 1) * 520
+    end
+end
+
+local function showRoulette(result, onDone)
+    if not roulette then
+        roulette = g_ui.displayUI('roulette')
+    end
+    local grade = GRADES[result.rarity] or GRADES.uncommon
+    roulette.frame:setImageClip(string.format('%d 0 %d %d', grade.frame * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE))
+    local item = Item.create(result.itemId or 0, 1)
+    if result.shader and result.shader ~= '' then
+        item:setShader(result.shader)
+    end
+    roulette.frame.item:setItem(item)
+    roulette.name:setText(titleCase(result.name or ''))
+    roulette.name:setColor(grade.color)
+    roulette.subtitle:setText(tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0))
+    roulette:show()
+    roulette:raise()
+    roulette:focus()
+    if not (spin and spin.waiting and not spin.finished) then
+        startSpin(result.pool, result.maxBonuses)
+    end
+    spin.pool = result.pool or spin.pool
+    setSpinResult(result, onDone)
+    setAgainButton()
+end
+
+-- an answer from the server while the roulette is open
+rouletteTakes = function(data)
+    local result = data.result
+    if type(result) == 'table' and result.code == 'rerolled' then
+        showRoulette(result, function() applyBonuses(data) end)
+        return true
+    end
+    if spin and rouletteVisible() and spin.waiting then
+        -- "spin again" failed (not enough XP, item taken off): stop on the
+        -- old result and say why
+        spin.waiting = false
+        for i = 1, #spin.reels do
+            stopReel(i)
+        end
+        applyBonuses(data)
+        roulette.status:setText(window.status:getText())
+        roulette.status:setColor('#ff6464')
+        setAgainButton()
+        return true
+    end
+    if spin and rouletteVisible() and not spin.finished then
+        -- an automatic refresh while the reels spin: keep it for the end
+        spin.pending = data
+        return true
+    end
+    return false
+end
+
+function spinAgain()
+    if not spin or not spin.result or not spin.finished then
+        return
+    end
+    local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
+    if rarityXp < cost then
+        return
+    end
+    startSpin(spin.result.pool, spin.result.maxBonuses)
+    spin.waiting = true
+    send({ action = 'rerollItem', slot = spin.result.slot })
+end
+
+function closeRoulette()
+    if not roulette then
+        return
+    end
+    if spin and not spin.finished and spin.stops then
+        -- skip: every reel stops on the result at once
+        for i = 1, #spin.reels do
+            stopReel(i)
+        end
+        return
+    end
+    roulette:hide()
 end
 
 function request()
@@ -273,6 +552,10 @@ end
 
 local function onGameEnd()
     hide()
+    if roulette then
+        roulette:hide()
+    end
+    spin = nil
 end
 
 function init()
@@ -302,4 +585,9 @@ function terminate()
         window:destroy()
         window = nil
     end
+    if roulette then
+        roulette:destroy()
+        roulette = nil
+    end
+    spin = nil
 end

@@ -813,6 +813,17 @@ locale = {
     ["Perfect roll!"] = "Rolagem perfeita!",
     ["You need %d Rarity XP and have %d. Kill Pale, Ashen, Obsidian and Lord of Death monsters to earn more."] = "Você precisa de %d Rarity XP e tem %d. Mate monstros Pale, Ashen, Obsidian e Lord of Death para ganhar mais.",
     ["That item is no longer equipped."] = "Esse item não está mais equipado.",
+    ["Bonus roulette"] = "Roleta de bônus",
+    ["Spin again (%d)"] = "Girar de novo (%d)",
+    ["PERFECT ROLL!"] = "ROLAGEM PERFEITA!",
+    ["Jackpot! A bonus near the top."] = "Jackpot! Um bônus quase no máximo.",
+    ["Great roll!"] = "Ótima rolagem!",
+    ["Just one bonus, all the power in it."] = "Um bônus só, com toda a força nele.",
+    ["%d bonuses."] = "%d bônus.",
+    ["PERFECT"] = "PERFEITO",
+    ["Spinning..."] = "Girando...",
+    ["Skip"] = "Pular",
+    ["%s  up to %d bonuses  -%d Rarity XP"] = "%s   até %d bônus   -%d Rarity XP",
   }
 }
 

@@ -1,0 +1,111 @@
+RouletteFrame < UIWidget
+  size: 44 44
+  image-source: /game_raritymarket/images/frames
+  image-clip: 0 0 34 34
+  phantom: true
+
+  UIItem
+    id: item
+    size: 32 32
+    anchors.centerIn: parent
+    virtual: true
+    phantom: true
+
+// one reel of the slot machine: a dark window with a thin brass edge
+RouletteReel < UIWidget
+  height: 34
+  background-color: #0b0b0bee
+  border-width: 1
+  border-color: #6b5a33
+  phantom: true
+
+  Label
+    id: text
+    anchors.fill: parent
+    text-align: center
+    font: Verdana Bold-13px
+    color: #9a9a9a
+    phantom: true
+
+MainWindow
+  id: rarityRouletteWindow
+  !text: tr('Bonus roulette')
+  size: 470 420
+  @onEscape: modules.game_raritybonus.closeRoulette()
+
+  RouletteFrame
+    id: frame
+    anchors.top: parent.top
+    anchors.left: parent.left
+
+  Label
+    id: name
+    anchors.top: frame.top
+    anchors.left: frame.right
+    anchors.right: parent.right
+    margin-left: 10
+    margin-top: 6
+    height: 16
+    font: Verdana Bold-13px
+
+  Label
+    id: subtitle
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    margin-top: 3
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9a9a9a
+
+  Panel
+    id: reels
+    anchors.top: frame.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 12
+    height: 210
+    layout:
+      type: verticalBox
+      spacing: 6
+
+  Label
+    id: status
+    anchors.top: reels.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 34
+    text-align: center
+    text-wrap: true
+    font: Verdana Bold-11px
+    color: #e0c060
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Label
+    id: xp
+    anchors.left: parent.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    text-auto-resize: true
+    color: #ffd84a
+
+  Button
+    id: againButton
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    size: 150 22
+    @onClick: modules.game_raritybonus.spinAgain()
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 70 22
+    @onClick: modules.game_raritybonus.closeRoulette()
