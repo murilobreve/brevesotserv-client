@@ -256,20 +256,20 @@ end
 
 local roulette
 local spin -- { result, rows, current, count, assumed, bump, finished, waiting, onDone, pending, event }
-local CARD_WIDTH = 176 -- fits "+30% Exevo Gran Mas Flam"
-local CARD_GAP = 4
--- The strips spin one at a time, calmly: each one speeds up gently, never
--- passes more than about 4 cards a second, and slows down over the last
--- cards so they crawl under the marker. The result is the 9th card.
-local WIN_INDEX = 9
-local CARDS_AFTER = 5 -- cards past the winner, so the strip never runs dry
-local SPIN_TIME = 5200 -- ms per strip
+-- One reel, like a slot machine: the bonuses roll from the bottom to the
+-- top, each one centred and on its own line, so it can be read as it goes
+-- by. The slots roll one at a time; the result lands on the middle line and
+-- goes to the list below the reel.
+local LINE = 34 -- height of a reel line
+local WIN_INDEX = 12 -- the result is the 12th line: 10 lines go by
+local LINES_AFTER = 2 -- lines under the result, so the reel never runs dry
+local SPIN_TIME = 4600 -- ms per slot
 local SPEED_UP = 0.18 -- share of the spin spent speeding up
-local FADE = 0.4 -- how much a strip dims at full speed: less to chase
-local WAITING_OPACITY = 0.18 -- strips waiting their turn: barely there
-local PAUSE = 800 -- ms between one strip stopping and the next starting
+local PAUSE = 900 -- ms between one slot stopping and the next starting
 local BUMP_TIME = 700 -- ms the bonuses take to grow at an empty slot
-local ACTIVE_COLOR = '#e0c060' -- the strip spinning now
+local FADE = 0.3 -- how much the reel dims at full speed
+local ACTIVE_COLOR = '#e0c060' -- the slot rolling now
+local REEL_TOP = 2 -- the strip's margin when its first line is at the top
 
 local QUALITY_COLORS = {
     { 0.9, '#ff9a1f' }, -- near the top
@@ -291,9 +291,9 @@ local function qualityColor(quality, perfect)
     return '#b8b8b8'
 end
 
--- a card the item could have rolled: mostly low and middle values, now and
+-- a bonus the item could have rolled: mostly low and middle values, now and
 -- then one near the top, like the odds really are
-local function randomCard(pool)
+local function randomLine(pool)
     if not pool or #pool == 0 then
         return '???', '#b8b8b8'
     end
@@ -315,13 +315,13 @@ local function setAgainButton()
     local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
     roulette.againButton:setText(tr('Spin again (%d)', cost))
     roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost)
-    -- the balance only once the strips stop: it is updated with the result
+    -- the balance only once the reel stops: it is updated with the result
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
 end
 
--- Where a strip is (0 to 1) and how fast it goes (1 = average speed) at
--- time p of its spin: speed rises in a straight line for SPEED_UP of the
--- time, then falls away as (1 - t)^2, a long slow end.
+-- Where the reel is (0 to 1) and how fast it goes (1 = average speed) at
+-- time p of a spin: speed rises in a straight line for SPEED_UP of the time,
+-- then falls away as (1 - t)^2, a long slow end.
 local CURVE_AREA = SPEED_UP / 2 + (1 - SPEED_UP) / 3
 local function spinCurve(p)
     if p <= 0 then
@@ -334,12 +334,6 @@ local function spinCurve(p)
     local rest = (1 - p) / (1 - SPEED_UP)
     local position = SPEED_UP / 2 + (1 - SPEED_UP) / 3 * (1 - rest ^ 3)
     return position / CURVE_AREA, rest * rest / CURVE_AREA
-end
-
-local function paintCard(card, text, color, empty)
-    card.text:setText(text)
-    card.text:setColor(empty and '#5a5a5a' or color)
-    card:setBorderColor(empty and '#2a2a2a' or color .. '99')
 end
 
 local function finishSpin()
@@ -406,47 +400,37 @@ local function bonusText(entry, value, final)
     return text
 end
 
--- a strip's winning card as its bonus looks with `assumed` bonuses
-local function paintWinner(row, assumed)
+-- text and colour of a slot's bonus with `assumed` bonuses; nil text for an
+-- empty slot. Also remembers the value shown.
+local function slotLook(row, assumed)
     local entry = row.entry
     if not entry then
-        paintCard(row.winner, tr('no bonus'), nil, true)
-        return
+        return nil
     end
     local step, final = stepFor(entry, assumed)
     if not step then
         -- a server without steps: the final value straight away
-        local text = entry.perfect and (entry.text .. '  ' .. tr('PERFECT')) or entry.text
-        paintCard(row.winner, text, qualityColor(entry.quality, entry.perfect))
         row.shown = nil
-        return
+        local text = entry.perfect and (entry.text .. '  ' .. tr('PERFECT')) or entry.text
+        return text, qualityColor(entry.quality, entry.perfect)
     end
-    paintCard(row.winner, bonusText(entry, step.value, final), qualityColor(step.quality, final and entry.perfect))
     row.shown = step.value
+    return bonusText(entry, step.value, final), qualityColor(step.quality, final and entry.perfect)
 end
 
--- the winning card lights up in its colour
-local function lightRow(row)
-    local card = row.winner
-    if not row.entry then
-        row.widget:setBorderColor('#2a2a2a')
-        return
-    end
-    local step, final = stepFor(row.entry, spin.assumed)
-    local color
-    if step then
-        color = qualityColor(step.quality, final and row.entry.perfect)
-    else
-        color = qualityColor(row.entry.quality, row.entry.perfect)
-    end
-    card:setBackgroundColor(color .. '55')
-    card:setBorderColor(color)
-    scheduleEvent(function()
-        if card and not card:isDestroyed() then
-            card:setBackgroundColor(color .. '22')
-        end
-    end, 220)
-    row.widget:setBorderColor(color)
+local function paintLine(line, text, color)
+    line.text:setText(text or tr('no bonus'))
+    line.text:setColor(text and color or '#5a5a5a')
+end
+
+-- a slot's line in the list under the reel
+local function paintResult(row, text, color)
+    local widget = row.result
+    widget:setOpacity(1)
+    widget.text:setText(text or tr('no bonus'))
+    widget.text:setColor(text and color or '#5a5a5a')
+    widget:setBorderColor(text and color or '#2a2a2a')
+    widget:setBackgroundColor(text and (color .. '22') or '#0b0b0bee')
 end
 
 -- an empty slot: one bonus fewer, so the bonuses already out grow to their
@@ -475,10 +459,9 @@ local function growRevealed()
             if target then
                 local value = math.floor(old + (target.value - old) * p + 0.5)
                 local done = p >= 1
-                paintCard(row.winner, bonusText(row.entry, value, final and done), qualityColor(target.quality, final and done and row.entry.perfect))
+                paintResult(row, bonusText(row.entry, value, final and done), qualityColor(target.quality, final and done and row.entry.perfect))
                 if done then
                     row.shown = target.value
-                    lightRow(row)
                 end
             end
         end
@@ -489,19 +472,44 @@ local function growRevealed()
     tick()
 end
 
+-- fills the reel for a slot: random bonuses, the result on line WIN_INDEX
+local function loadReel(row)
+    local strip = roulette.reel.strip
+    strip:destroyChildren()
+    local total = #spin.rows
+    for i = 1, WIN_INDEX + LINES_AFTER do
+        local line = g_ui.createWidget('RouletteLine', strip)
+        if i == WIN_INDEX then
+            row.line = line
+            paintLine(line, slotLook(row, spin.assumed))
+        elseif total > 1 and math.random() < 0.1 then
+            -- empty lines: the number of bonuses is rolled too
+            paintLine(line, nil)
+        else
+            paintLine(line, randomLine(spin.result.pool))
+        end
+    end
+    strip:setHeight((WIN_INDEX + LINES_AFTER) * LINE)
+    strip:setMarginTop(REEL_TOP)
+    strip:setOpacity(1)
+end
+
 local function stopRow(row)
     if row.stopped then
         return
     end
     row.stopped = true
-    row.strip:setMarginLeft(-row.target)
-    row.strip:setOpacity(1)
-    row.widget:setBorderWidth(1)
-    if row.entry then
-        lightRow(row)
+    roulette.reel.strip:setMarginTop(REEL_TOP - (WIN_INDEX - 2) * LINE)
+    roulette.reel.strip:setOpacity(1)
+    row.result:setBorderWidth(1)
+    local text, color = slotLook(row, spin.assumed)
+    paintResult(row, text, color)
+    if row.line and not row.line:isDestroyed() then
+        row.line:setBackgroundColor(text and (color .. '44') or '#00000000')
+    end
+    if text then
         return
     end
-    row.widget:setBorderColor('#2a2a2a')
     local before = false
     for _, other in ipairs(spin.rows) do
         if other.stopped and other.entry then
@@ -513,7 +521,7 @@ local function stopRow(row)
     roulette.status:setColor('#ffb84a')
 end
 
--- one strip at a time: the current one spins, the next waits its turn
+-- one slot at a time: its reel rolls, the next waits its turn
 local function animate()
     if not spin or spin.finished or not rouletteVisible() then
         return
@@ -523,18 +531,24 @@ local function animate()
     if row and now >= row.startsAt then
         if not row.active then
             row.active = true
-            row.strip:setOpacity(1)
-            row.widget:setBorderWidth(2)
-            row.widget:setBorderColor(ACTIVE_COLOR)
+            if spin.current > 1 then
+                loadReel(row)
+            end
+            row.result:setOpacity(1)
+            row.result:setBorderWidth(2)
+            row.result:setBorderColor(ACTIVE_COLOR)
+            row.result.text:setText('...')
+            row.result.text:setColor(ACTIVE_COLOR)
             roulette.status:setText(tr('Bonus %d of %d', spin.current, #spin.rows))
             roulette.status:setColor(ACTIVE_COLOR)
         end
         local p = math.min(1, (now - row.startsAt) / SPIN_TIME)
         local position, speed = spinCurve(p)
-        row.strip:setMarginLeft(-math.floor(row.target * position))
+        local strip = roulette.reel.strip
+        strip:setMarginTop(REEL_TOP - math.floor((WIN_INDEX - 2) * LINE * position))
         -- dimmer while it runs fast, full contrast as it slows to a stop
         local peak = 1 / CURVE_AREA
-        row.strip:setOpacity(1 - FADE * math.max(0, math.min(1, (speed - 0.6) / (peak - 0.6))))
+        strip:setOpacity(1 - FADE * math.max(0, math.min(1, (speed - 0.6) / (peak - 0.6))))
         if p >= 1 then
             stopRow(row)
             spin.current = spin.current + 1
@@ -555,24 +569,26 @@ local function animate()
     end
 end
 
--- skip: every strip jumps to its result, at the real values
+-- skip: every slot shows its result, at the real values
 local function skipSpin()
     spin.bump = nil
     spin.assumed = spin.count
-    for _, row in ipairs(spin.rows) do
+    for i, row in ipairs(spin.rows) do
         row.stopped = true
-        row.strip:setMarginLeft(-row.target)
-        row.strip:setOpacity(1)
-        row.widget:setBorderWidth(1)
-        paintWinner(row, spin.count)
-        lightRow(row)
+        row.result:setBorderWidth(1)
+        paintResult(row, slotLook(row, spin.count))
+        if i == spin.current and row.line and not row.line:isDestroyed() then
+            roulette.reel.strip:setMarginTop(REEL_TOP - (WIN_INDEX - 2) * LINE)
+            roulette.reel.strip:setOpacity(1)
+            paintLine(row.line, slotLook(row, spin.count))
+        end
     end
     finishSpin()
 end
 
--- builds one strip per bonus slot and starts the first
+-- one line per bonus slot under the reel, and the first slot's reel
 local function startStrips(result)
-    roulette.reels:destroyChildren()
+    roulette.results:destroyChildren()
     spin.rows = {}
     local rolled = result.rolled or {}
     local total = math.max(1, result.maxBonuses or 0, #rolled)
@@ -588,44 +604,18 @@ local function startStrips(result)
         local j = math.random(i)
         slots[i], slots[j] = slots[j], slots[i]
     end
-    local viewport = roulette.reels:getWidth()
-    local cards = WIN_INDEX + CARDS_AFTER
-    -- the bonuses the item may still have when each strip stops
-    local assumed = total
     for i = 1, total do
-        local widget = g_ui.createWidget('RouletteRow', roulette.reels)
-        local strip = widget.strip
-        local row = { widget = widget, strip = strip, entry = slots[i] or nil }
-        for c = 1, cards do
-            local card = g_ui.createWidget('RouletteCard', strip)
-            card:setWidth(CARD_WIDTH)
-            if c == WIN_INDEX then
-                row.winner = card
-                paintWinner(row, assumed)
-            elseif total > 1 and math.random() < 0.08 then
-                -- empty cards: the number of bonuses is rolled too
-                paintCard(card, tr('no bonus'), nil, true)
-            else
-                local text, color = randomCard(result.pool)
-                paintCard(card, text, color)
-            end
-        end
-        if not row.entry then
-            assumed = assumed - 1
-        end
-        strip:setWidth(cards * (CARD_WIDTH + CARD_GAP))
-        -- waiting: so the eye stays on the strip that spins
-        strip:setOpacity(WAITING_OPACITY)
-        -- stop with the winner under the marker, a little off-centre like a
-        -- real wheel
-        local winnerCentre = (WIN_INDEX - 1) * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2
-        local jitter = math.random(-math.floor(CARD_WIDTH * 0.35), math.floor(CARD_WIDTH * 0.35))
-        row.target = math.floor(winnerCentre - viewport / 2 + jitter)
-        spin.rows[i] = row
+        local widget = g_ui.createWidget('RouletteResult', roulette.results)
+        widget.slot:setText(tr('Bonus %d', i))
+        widget.text:setText('?')
+        -- waiting: so the eye stays on the reel
+        widget:setOpacity(0.35)
+        spin.rows[i] = { result = widget, entry = slots[i] or nil }
     end
-    roulette.reels:setHeight(#spin.rows * 42)
+    roulette.results:setHeight(total * 29)
     spin.current = 1
-    spin.rows[1].startsAt = g_clock.millis()
+    loadReel(spin.rows[1])
+    spin.rows[1].startsAt = g_clock.millis() + 300
     spin.finished = false
     roulette.status:setText(tr('Spinning...'))
     roulette.status:setColor('#e0c060')

@@ -11,47 +11,52 @@ RouletteFrame < UIWidget
     virtual: true
     phantom: true
 
-// one strip of the roulette: a window onto a long row of cards
-RouletteRow < UIWidget
-  height: 36
-  background-color: #0b0b0bee
-  border-width: 1
-  border-color: #6b5a33
-  clipping: true
-  phantom: true
-
-  UIWidget
-    id: strip
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    anchors.left: parent.left
-    margin-top: 2
-    margin-bottom: 2
-    phantom: true
-    layout:
-      type: horizontalBox
-      spacing: 4
-
-// a bonus card on a strip
-RouletteCard < UIWidget
-  height: 32
-  background-color: #161616
-  border-width: 1
-  border-color: #333333
+// a line of the reel: one bonus the slot could land on
+RouletteLine < UIWidget
+  height: 34
   phantom: true
 
   Label
     id: text
     anchors.fill: parent
     text-align: center
-    font: Verdana Bold-11px
+    font: Verdana Bold-13px
     color: #9a9a9a
+    phantom: true
+
+// a slot's result under the reel
+RouletteResult < UIWidget
+  height: 26
+  background-color: #0b0b0bee
+  border-width: 1
+  border-color: #3a3a3a
+  phantom: true
+
+  Label
+    id: slot
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    width: 70
+    font: verdana-11px-monochrome
+    color: #8a8a8a
+    phantom: true
+
+  Label
+    id: text
+    anchors.left: slot.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 78
+    text-align: center
+    font: Verdana Bold-11px
+    color: #5a5a5a
     phantom: true
 
 MainWindow
   id: rarityRouletteWindow
   !text: tr('Rarity Roulette')
-  size: 600 430
+  size: 600 480
   @onEscape: modules.game_raritybonus.closeRoulette()
 
   RouletteFrame
@@ -79,32 +84,76 @@ MainWindow
     font: verdana-11px-monochrome
     color: #9a9a9a
 
-  Panel
-    id: reels
+  // the reel: three lines, the slot's result stops on the middle one
+  UIWidget
+    id: reel
     anchors.top: frame.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 12
+    size: 400 106
+    background-color: #0b0b0bee
+    border-width: 1
+    border-color: #6b5a33
+    clipping: true
+
+    UIWidget
+      id: strip
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      phantom: true
+      layout:
+        type: verticalBox
+
+  // the lines above and below the middle one, shaded
+  UIWidget
+    id: shadeTop
+    anchors.top: reel.top
+    anchors.left: reel.left
+    anchors.right: reel.right
+    margin: 1
+    height: 35
+    background-color: #000000a0
+    phantom: true
+
+  UIWidget
+    id: shadeBottom
+    anchors.bottom: reel.bottom
+    anchors.left: reel.left
+    anchors.right: reel.right
+    margin: 1
+    height: 35
+    background-color: #000000a0
+    phantom: true
+
+  // the gold frame of the middle line
+  UIWidget
+    id: reelFocus
+    anchors.verticalCenter: reel.verticalCenter
+    anchors.left: reel.left
+    anchors.right: reel.right
+    margin-left: -6
+    margin-right: -6
+    height: 36
+    border-width: 2
+    border-color: #ffd84a
+    phantom: true
+
+  Panel
+    id: results
+    anchors.top: reel.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 12
-    height: 210
+    margin-top: 14
+    height: 145
     layout:
       type: verticalBox
-      spacing: 6
-
-  // the gold line the cards stop under
-  UIWidget
-    id: marker
-    anchors.top: reels.top
-    anchors.bottom: reels.bottom
-    anchors.horizontalCenter: reels.horizontalCenter
-    margin-top: -4
-    margin-bottom: -4
-    width: 2
-    background-color: #ffd84a
-    phantom: true
+      spacing: 3
 
   Label
     id: status
-    anchors.top: reels.bottom
+    anchors.top: results.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 8
