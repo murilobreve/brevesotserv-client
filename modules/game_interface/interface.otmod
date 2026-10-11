@@ -54,6 +54,7 @@ Module
     - game_brevespanel
     - game_raritymarket
     - game_raritybonus
+    - game_raresell
     - game_wiki
     - game_huntboard
     - game_healbot

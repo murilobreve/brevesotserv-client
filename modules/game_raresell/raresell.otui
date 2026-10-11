@@ -1,0 +1,181 @@
+RareSellFrame < UIWidget
+  size: 36 36
+  image-source: /game_raritymarket/images/frames
+  image-clip: 0 0 34 34
+  phantom: true
+
+  UIItem
+    id: item
+    size: 32 32
+    anchors.centerIn: parent
+    virtual: true
+    phantom: true
+
+// one rarity item: tick box, frame, name, grade and Gersao's price
+RareSellRow < BrevesRow
+  height: 42
+  focusable: false
+  padding: 3
+
+  CheckBox
+    id: pick
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    width: 16
+
+  RareSellFrame
+    id: frame
+    anchors.left: pick.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+  Label
+    id: price
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    width: 90
+    text-align: right
+    color: #e0c060
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: frame.top
+    anchors.left: frame.right
+    anchors.right: price.left
+    margin-left: 8
+    margin-top: 3
+    height: 14
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: price.left
+    margin-top: 2
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9a9a9a
+    phantom: true
+
+RareSellRowEven < RareSellRow
+  background-color: #ffffff12
+
+// quick selection by grade
+RareSellGradeButton < Button
+  height: 20
+  font: verdana-11px-monochrome
+
+MainWindow
+  id: rareSellWindow
+  !text: tr('Sell rarity items to Gersao')
+  size: 600 520
+  @onEscape: modules.game_raresell.hide()
+
+  BrevesNote
+    id: intro
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    !text: tr('Gersao pays the same as for a common item of the same kind. Tick the ones to sell; the gold goes to your bank. Equipped items are not listed.')
+
+  Label
+    id: selectLabel
+    anchors.top: intro.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    height: 20
+    text-auto-resize: true
+    !text: tr('Select:')
+
+  Panel
+    id: gradeButtons
+    anchors.top: selectLabel.top
+    anchors.left: selectLabel.right
+    anchors.right: parent.right
+    margin-left: 6
+    height: 20
+    layout:
+      type: horizontalBox
+      spacing: 3
+
+  BrevesSection
+    id: itemsSection
+    anchors.top: selectLabel.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: status.top
+    margin-top: 6
+    margin-bottom: 6
+    !text: tr('Rarity items in your bags')
+
+    BrevesList
+      id: itemsList
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: itemsScroll.left
+      anchors.bottom: parent.bottom
+      vertical-scrollbar: itemsScroll
+
+    VerticalScrollBar
+      id: itemsScroll
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      step: 42
+      pixel-scroll: true
+
+    BrevesNote
+      id: itemsEmpty
+      anchors.top: itemsList.top
+      anchors.left: itemsList.left
+      anchors.right: itemsList.right
+      margin: 10
+      text-align: center
+      !text: tr('No rarity item in your bags that Gersao buys. Equipped items are not listed: put them in your backpack first.')
+      visible: false
+
+  Label
+    id: status
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: bottomSep.top
+    margin-bottom: 6
+    height: 28
+    text-wrap: true
+    color: #7fd35a
+
+  HorizontalSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  Label
+    id: total
+    anchors.left: parent.left
+    anchors.right: sellButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 8
+    color: #e0c060
+
+  Button
+    id: sellButton
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    size: 110 22
+    !text: tr('Sell selected')
+    @onClick: modules.game_raresell.sellSelected()
+
+  Button
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 60 22
+    !text: tr('Close')
+    @onClick: modules.game_raresell.hide()

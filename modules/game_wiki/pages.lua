@@ -362,6 +362,10 @@ WIKI_PAGES.affixes = {
           } },
         { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Um Mythicus de level 400 custa 1600 no Melhorar, 534 no Reroll e 934 no Trocar.' },
         { 'p', 'A Store também vende Rarity XP na categoria Rarity: 500 por 250 coins, 1500 por 700 e 5000 por 2200.' },
+        { 'h', 'Vender itens raros' },
+        { 'p', 'Nenhum NPC compra item raro na janela de troca, nem no vender tudo, então um raro nunca é vendido sem querer. Para vender, fale hi e depois raros (ou rare) ao Gersao, no templo de Ventera.' },
+        { 'p', 'Abre uma janela com os itens raros das suas mochilas que o Gersao compra, com os bônus de cada um e o preço, que é o mesmo de um item comum do mesmo tipo. Marque um por um ou use os botões de grau (por exemplo, Communis marca todos os Communis), confira o total e clique em Vender marcados. O ouro vai para o banco.' },
+        { 'p', 'Itens equipados não aparecem: tire o item do corpo antes. Se no meio da venda tiver um Legendarius, um Mythicus ou um item com rolagem perfeita, a confirmação avisa.' },
         { 'links', { 'stacking', 'pools' } },
     },
 }

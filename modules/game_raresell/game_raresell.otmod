@@ -1,0 +1,9 @@
+Module
+  name: game_raresell
+  description: Rare Sell - choose the rarity items to sell to Gersao
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ raresell ]
+  @onLoad: init()
+  @onUnload: terminate()
