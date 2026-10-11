@@ -781,6 +781,11 @@ locale = {
     ["Hide"] = "Esconder",
     ["Show the names"] = "Mostrar os nomes",
     ["Only the icons"] = "Só os ícones",
+    ["Account name or password is not correct."] = "Conta ou senha incorreta.",
+    ["Email or password is not correct."] = "E-mail ou senha incorreta.",
+    ["Failed to connect to login server."] = "Não foi possível conectar ao servidor de login.",
+    ["Connecting"] = "Conectando",
+    ["Your character list is being loaded. Please wait."] = "Carregando a lista de personagens. Aguarde.",
   }
 }
 

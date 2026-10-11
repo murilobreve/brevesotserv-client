@@ -50,7 +50,8 @@ local function onError(protocol, message, errorCode)
         EnterGame.clearAccountFields()
     end
 
-    local errorBox = displayErrorBox(tr('Login Error'), message)
+    -- login.php answers in English: the known messages are in the locale files
+    local errorBox = displayErrorBox(tr('Login Error'), tr(message))
     connect(errorBox, {
         onOk = EnterGame.show
     })

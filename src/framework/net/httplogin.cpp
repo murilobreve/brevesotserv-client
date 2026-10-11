@@ -228,10 +228,14 @@ std::string LoginHttp::getSession() { return this->session; }
 void LoginHttp::httpLogin(const std::string& host, const std::string& path,
                           uint16_t port, const std::string& email,
                           const std::string& password, int request_id, bool httpLogin, const std::string& token) {
+    // Lua drops its reference as soon as httpLogin() returns ("local http =
+    // LoginHttp.create()"); the tasks below hold one so the garbage collector
+    // cannot free this object while the request is still running
+    const auto self = static_self_cast<LoginHttp>();
 #ifndef __EMSCRIPTEN__
     this->errorMessage.clear();
     g_asyncDispatcher->detach_task(
-        [this, host, path, port, email, password, token, request_id, httpLogin] {
+        [this, self, host, path, port, email, password, token, request_id, httpLogin] {
         if (cancelled.load()) return;
         // no plain HTTP retry when HTTPS fails: it would send the password
         // unencrypted to a server that was set up for HTTPS
@@ -240,7 +244,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
             : this->loginHttpsJson(host, path, port, email, password, token);
 
         if (result && result.status == Success && parseJsonResponse(result.body)) {
-            g_dispatcher.addEvent([this, request_id] {
+            g_dispatcher.addEvent([this, self, request_id] {
                 if (cancelled.load()) return;
                 g_lua.callGlobalField("EnterGame", "loginSuccess", request_id,
                 this->getSession(), this->getWorldList(),
@@ -285,7 +289,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
                 }
             }
 
-            g_dispatcher.addEvent([this, request_id, status, msg] {
+            g_dispatcher.addEvent([this, self, request_id, status, msg] {
                 if (cancelled.load()) return;
                 g_lua.callGlobalField("EnterGame", "loginFailed", request_id, msg,
                 status);
@@ -295,7 +299,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
 #else
     this->errorMessage.clear();
     g_asyncDispatcher->detach_task(
-        [this, host, path, port, email, password, token, request_id, httpLogin] {
+        [this, self, host, path, port, email, password, token, request_id, httpLogin] {
         if (cancelled.load()) return;
         const auto doRequest = [&](bool useHttp) -> LoginHttp::HttpResponse {
             emscripten_fetch_attr_t attr;
@@ -346,7 +350,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
             result.status = -1;
         }
         if (result && result.status == Success) {
-            g_dispatcher.addEvent([this, request_id] {
+            g_dispatcher.addEvent([this, self, request_id] {
                 if (cancelled.load()) return;
                 g_lua.callGlobalField("EnterGame", "loginSuccess", request_id,
                 this->getSession(), this->getWorldList(),
@@ -358,7 +362,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
             status = result ? result.status : -1;
             msg = this->errorMessage.length() == 0 ? "Unknown error" : this->errorMessage;
 
-            g_dispatcher.addEvent([this, request_id, status, msg] {
+            g_dispatcher.addEvent([this, self, request_id, status, msg] {
                 if (cancelled.load()) return;
                 g_lua.callGlobalField("EnterGame", "loginFailed", request_id, msg,
                 status);
