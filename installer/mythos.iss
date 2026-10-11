@@ -43,7 +43,10 @@ AppPublisherURL=https://mythosot.com.br
 AppSupportURL=https://mythosot.com.br
 DefaultDirName={localappdata}\Programs\{#Pasta}
 DisableProgramGroupPage=yes
-DisableDirPage=auto
+; sempre a pasta do usuario: em "Arquivos de Programas" o client nao consegue
+; gravar as atualizacoes (e o Windows nega criar a pasta sem administrador)
+DisableDirPage=yes
+UsePreviousAppDir=no
 PrivilegesRequired=lowest
 OutputDir=..\dist
 OutputBaseFilename={#Saida}
