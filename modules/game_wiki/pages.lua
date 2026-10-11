@@ -390,6 +390,7 @@ WIKI_PAGES.affixes = {
         { 'h', 'Rarity XP: refazer o item' },
         { 'p', 'Matar um monstro Pale, Ashen, Obsidian ou Lord of Death dá Rarity XP para quem tem o loot: a experiência do monstro dividida por 100, vezes 1 (Pale), 2 (Ashen), 4 (Obsidian) ou 10 (Lord of Death). Um Pale Dragon dá 7, um Obsidian Dragon dá 28.' },
         { 'p', 'Na janela Rarity Bonuses, cada item raro que você está usando tem o botão Refazer. Ele sorteia o item inteiro de novo, no mesmo grau: quantos bônus, quais bônus e os valores. O item, o grau e o nome de quem achou continuam. Os bônus antigos são perdidos e os novos podem sair melhores ou piores; não tem volta.' },
+        { 'p', 'A roleta gira um espaço de bônus de cada vez. Um bônus aparece com o valor que teria se todos os espaços seguintes também tivessem bônus; cada espaço que cai em sem bônus deixa os bônus de cima mais fortes, até o valor real do item.' },
         { 'table', widths = { 160, 120 }, head = { 'Grau do item', 'Refazer' },
           rows = {
               { 'Communis', '20' }, { 'Rarus', '50' }, { 'Praeclarus', '125' },
