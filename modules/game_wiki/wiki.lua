@@ -236,7 +236,11 @@ function builders.grades(parent)
         end
         row.name:setText(grade.name)
         row.name:setColor(grade.color)
-        row.bonuses:setText(grade.bonuses == 1 and T('1 bônus') or T('%d bônus', grade.bonuses))
+        if grade.minBonuses and grade.minBonuses < grade.bonuses then
+            row.bonuses:setText(T('%d a %d bônus', grade.minBonuses, grade.bonuses))
+        else
+            row.bonuses:setText(grade.bonuses == 1 and T('1 bônus') or T('%d bônus', grade.bonuses))
+        end
         row.band:setText(grade.band)
         local from, to = grade.band:match('(%d+)%% a (%d+)%%')
         from, to = tonumber(from) or 0, tonumber(to) or 100

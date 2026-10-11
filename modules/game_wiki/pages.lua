@@ -13,10 +13,10 @@
 
 WIKI_GRADES = {
     { key = 'uncommon', name = 'Communis', color = '#3ddc2e', frame = 1, item = 3264, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%' },
-    { key = 'rare', name = 'Rarus', color = '#3d9bff', frame = 2, item = 3369, shader = 'Rarity - Rare', bonuses = 2, band = '10% a 50%' },
-    { key = 'epic', name = 'Praeclarus', color = '#b45cff', frame = 3, item = 3079, shader = 'Rarity - Epic', bonuses = 3, band = '15% a 70%' },
-    { key = 'legendary', name = 'Legendarius', color = '#ff9a1f', frame = 4, item = 3409, shader = 'Rarity - Legendary', bonuses = 4, band = '20% a 85%' },
-    { key = 'mythic', name = 'Mythicus', color = '#66f0ff', frame = 5, item = 3366, shader = 'Rarity - Mythic', bonuses = 5, band = '30% a 100%' },
+    { key = 'rare', name = 'Rarus', color = '#3d9bff', frame = 2, item = 3369, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%' },
+    { key = 'epic', name = 'Praeclarus', color = '#b45cff', frame = 3, item = 3079, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%' },
+    { key = 'legendary', name = 'Legendarius', color = '#ff9a1f', frame = 4, item = 3409, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 2, band = '20% a 85%' },
+    { key = 'mythic', name = 'Mythicus', color = '#66f0ff', frame = 5, item = 3366, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 2, band = '30% a 100%' },
 }
 
 -- stack: forge stack the tier gives the monster. The engine turns it into
@@ -201,7 +201,25 @@ WIKI_PAGES.items = {
         { 'p', 'Primeiro sai o grau. O grau decide quantos bônus o item tem e em que parte da faixa de cada bônus o valor cai. Depois saem os bônus, sempre do tipo do item: espada rola bônus de corpo a corpo, wand rola magia, bota rola velocidade.' },
         { 'h', 'Cada item tem o seu jeito' },
         { 'p', 'Os bônus de um item dependem uns dos outros. O item sorteia uma força só, dentro da faixa do grau, e essa força é dividida entre os bônus ao acaso. Um bônus que leva uma parte grande deixa menos para os outros: uma espada com Attack muito alto costuma ter os outros bônus mais baixos, e outra espada do mesmo grau pode ter tudo equilibrado. Em média, cada grau continua com a mesma força.' },
-        { 'p', 'Nenhum bônus passa do teto da faixa do grau, então só um Mythicus chega no máximo de um bônus. E nenhum fica abaixo da metade do começo da faixa (num Mythicus, nunca abaixo de 15% da faixa do bônus). Refazer um bônus na janela Rarity Bonuses continua sorteando só aquele bônus.' },
+        { 'h', 'Menos bônus, bônus mais fortes' },
+        { 'p', 'O número de bônus também é sorteado. Um Mythicus pode ter de 2 a 5, e a força do grau é a mesma: com menos bônus, cada um recebe mais. Num Mythicus de 2 bônus, cada bônus fica em média com 86% da faixa; num de 5, com 44%.' },
+        { 'p', 'Por isso um item com menos bônus pode passar do máximo da tabela de cada tipo de item, até 1,5 vez a faixa. Attack, que vai de 1 a 20, chega a:' },
+        { 'table', widths = { 120, 110, 110, 110, 110 }, head = { 'Grau', 'Todos os bônus', '1 a menos', '2 a menos', '3 a menos' },
+          rows = {
+              { { 'Rarus', '#3d9bff' }, '11 (2 bônus)', '15 (1 bônus)', '', '' },
+              { { 'Praeclarus', '#b45cff' }, '14 (3 bônus)', '21 (2 bônus)', '21 (1 bônus)', '' },
+              { { 'Legendarius', '#ff9a1f' }, '17 (4 bônus)', '23 (3 bônus)', '25 (2 bônus)', '' },
+              { { 'Mythicus', '#66f0ff' }, '20 (5 bônus)', '25 (4 bônus)', '30 (3 bônus)', '30 (2 bônus)' },
+          } },
+        { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Quantos bônus', '1', '2', '3', '4', '5' },
+          rows = {
+              { { 'Communis', '#3ddc2e' }, '100%', '', '', '', '' },
+              { { 'Rarus', '#3d9bff' }, '30%', '70%', '', '', '' },
+              { { 'Praeclarus', '#b45cff' }, '15%', '35%', '50%', '', '' },
+              { { 'Legendarius', '#ff9a1f' }, '', '20%', '35%', '45%', '' },
+              { { 'Mythicus', '#66f0ff' }, '', '15%', '25%', '30%', '30%' },
+          } },
+        { 'p', 'Nenhum grau passa do teto que só o grau acima alcança, e nenhum bônus fica abaixo da metade do começo da faixa do grau (num Mythicus, nunca abaixo de 15% da faixa do bônus). Refazer um bônus na janela Rarity Bonuses sorteia ele do jeito que um bônus de um item com essa quantidade de bônus sai.' },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Origem', 'Communis', 'Rarus', 'Praeclarus', 'Legendarius', 'Mythicus' },
           rows = {
               gradeRow('Monstro comum', '#c8c8c8', { 81, 17.5, 1.2, 0.25, 0.05 }),
