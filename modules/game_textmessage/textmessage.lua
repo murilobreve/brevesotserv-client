@@ -318,6 +318,7 @@ function togglePositionWindow()
     end
     local zoom = positionWindow:getChildById('mapZoom')
     zoom:addOption(tr('Original (15 x 11 tiles)'), 'original')
+    zoom:addOption(tr('Medium (19 x 11 tiles)'), 'medium')
     zoom:addOption(tr('Zoomed out (23 x 13 tiles)'), 'wide')
     zoom:setCurrentOptionByData(modules.client_options.getOption('mapZoom') or 'wide', true)
     zoom.onOptionChange = function(widget, text, data)

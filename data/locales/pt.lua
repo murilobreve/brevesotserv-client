@@ -788,6 +788,7 @@ locale = {
     ["Map zoom:"] = "Zoom do mapa:",
     ["Map zoom"] = "Zoom do mapa",
     ["Original (15 x 11 tiles)"] = "Original (15 x 11 quadrados)",
+    ["Medium (19 x 11 tiles)"] = "Médio (19 x 11 quadrados)",
     ["Zoomed out (23 x 13 tiles)"] = "Afastado (23 x 13 quadrados)",
     ["Your character list is being loaded. Please wait."] = "Carregando a lista de personagens. Aguarde.",
   }

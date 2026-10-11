@@ -32,6 +32,7 @@ MAP_VISIBLE_HEIGHT = 13
 -- "Map zoom" in Options > Graphics: the classic Tibia view or the wider one
 MAP_ZOOMS = {
     original = { width = 15, height = 11 },
+    medium = { width = 19, height = 11 },
     wide = { width = 23, height = 13 },
 }
 leftIncreaseSidePanels = nil

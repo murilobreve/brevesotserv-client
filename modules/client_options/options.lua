@@ -149,6 +149,7 @@ local function setupComboBox()
 
     local mapZoomCombobox = panels.graphicsPanel:recursiveGetChildById('mapZoom')
     mapZoomCombobox:addOption(tr('Original (15 x 11 tiles)'), 'original')
+    mapZoomCombobox:addOption(tr('Medium (19 x 11 tiles)'), 'medium')
     mapZoomCombobox:addOption(tr('Zoomed out (23 x 13 tiles)'), 'wide')
     mapZoomCombobox.onOptionChange = function(comboBox, option)
         setOption('mapZoom', comboBox:getCurrentOption().data)
