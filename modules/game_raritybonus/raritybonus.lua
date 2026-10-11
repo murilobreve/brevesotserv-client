@@ -256,12 +256,18 @@ end
 
 local roulette
 local spin -- { result, rows, startedAt, finished, waiting, onDone, pending, event }
-local CARD_WIDTH = 132
+local CARD_WIDTH = 176 -- fits "+30% Exevo Gran Mas Flam"
 local CARD_GAP = 4
-local STRIP_CARDS = 46
-local WIN_INDEX = 40 -- the result is the 40th card: the strip runs a long way
-local FIRST_STOP = 3200 -- ms
-local NEXT_STOP = 950 -- ms between strips
+-- The first strip's result is its 16th card, each later strip runs 5 cards
+-- more, so every strip moves at about the same pace. A short run on a cubic
+-- curve leaves the last two or three cards crawling under the marker for a
+-- couple of seconds: time to read them and cheer.
+local WIN_INDEX = 16
+local WIN_INDEX_STEP = 5
+local CARDS_AFTER = 6 -- cards past the winner, so the strip never runs dry
+local FIRST_STOP = 4200 -- ms
+local NEXT_STOP = 1500 -- ms between strips, one stops at a time
+local ACTIVE_COLOR = '#e0c060' -- the strip about to stop
 
 local QUALITY_COLORS = {
     { 0.9, '#ff9a1f' }, -- near the top
@@ -313,7 +319,7 @@ end
 
 local function easeOut(p)
     -- fast start, long slow end (a CS case wheel)
-    return 1 - (1 - p) ^ 4
+    return 1 - (1 - p) ^ 3
 end
 
 local function paintCard(card, text, color, empty)
@@ -372,6 +378,7 @@ local function stopRow(row)
     end
     row.stopped = true
     row.strip:setMarginLeft(-row.target)
+    row.widget:setBorderWidth(1)
     local card = row.winner
     if row.entry then
         local color = qualityColor(row.entry.quality, row.entry.perfect)
@@ -401,6 +408,12 @@ local function animate()
             if p >= 1 then
                 stopRow(row)
             else
+                -- the next strip to stop gets a gold frame: watch this one
+                if not running and not row.active then
+                    row.active = true
+                    row.widget:setBorderWidth(2)
+                    row.widget:setBorderColor(ACTIVE_COLOR)
+                end
                 running = true
             end
         end
@@ -423,10 +436,12 @@ local function startStrips(result)
         local widget = g_ui.createWidget('RouletteRow', roulette.reels)
         local strip = widget.strip
         local row = { widget = widget, strip = strip, entry = rolled[i] }
-        for c = 1, STRIP_CARDS do
+        local winIndex = WIN_INDEX + (i - 1) * WIN_INDEX_STEP
+        local cards = winIndex + CARDS_AFTER
+        for c = 1, cards do
             local card = g_ui.createWidget('RouletteCard', strip)
             card:setWidth(CARD_WIDTH)
-            if c == WIN_INDEX then
+            if c == winIndex then
                 row.winner = card
                 if row.entry then
                     local text = row.entry.perfect and (row.entry.text .. '  ' .. tr('PERFECT')) or row.entry.text
@@ -442,10 +457,10 @@ local function startStrips(result)
                 paintCard(card, text, color)
             end
         end
-        strip:setWidth(STRIP_CARDS * (CARD_WIDTH + CARD_GAP))
+        strip:setWidth(cards * (CARD_WIDTH + CARD_GAP))
         -- stop with the winner under the marker, a little off-centre like a
         -- real wheel
-        local winnerCentre = (WIN_INDEX - 1) * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2
+        local winnerCentre = (winIndex - 1) * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2
         local jitter = math.random(-math.floor(CARD_WIDTH * 0.35), math.floor(CARD_WIDTH * 0.35))
         row.target = math.floor(winnerCentre - viewport / 2 + jitter)
         row.duration = FIRST_STOP + (i - 1) * NEXT_STOP

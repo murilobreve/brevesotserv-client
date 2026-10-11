@@ -262,12 +262,14 @@ WIKI_PAGES.pools = {
             { 'Crit Chance', '1% a 10%', '' }, { 'Crit Damage', '1% a 25%', '' },
             { 'Life Leech', '1% a 12%', '' }, { 'Finisher', '1% a 25%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Cleave', '3% a 15%', 'duas mãos: 5% a 25%' },
+            { 'Spell Damage', '2% a 12%', '' }, { 'Bônus de magia', '5% a 25%', 'até dois; knight (fist: monk)' },
         }),
         { 'h', 'Arcos e armas de distância' },
         poolTable({
             { 'Attack', '1 a 20', '' }, { 'Distance', '1% a 10%', '' }, { 'Hit Chance', '1% a 15%', '' },
             { 'Crit Chance', '1% a 10%', '' }, { 'Crit Damage', '1% a 25%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Perfect Shot', '5 a 40', 'a 3, 4 ou 5 sqm' },
+            { 'Spell Damage', '2% a 12%', '' }, { 'Bônus de magia', '5% a 25%', 'até dois; paladin' },
         }),
         { 'h', 'Wands e rods' },
         poolTable({
@@ -275,6 +277,7 @@ WIKI_PAGES.pools = {
             { 'Crit Damage', '5% a 40%', '' }, { 'Wand Damage', '10% a 100%', '' }, { 'Max Mana', '2% a 15%', '' },
             { 'Cooldown', '2% a 14%', '' }, { 'Attack Speed', '3% a 25%', '' },
             { 'Pierce', '5% a 30%', 'elemento da própria arma' }, { 'Ally Heal', '5% a 30%', 'só rods de druid' },
+            { 'Spell Damage', '2% a 12%', '' }, { 'Bônus de magia', '5% a 25%', 'até dois; wand: sorcerer, rod: druid' },
         }),
         { 'h', 'Escudos' },
         poolTable({
@@ -285,7 +288,8 @@ WIKI_PAGES.pools = {
         poolTable({
             { 'Magic Level', '1% a 10%', '' }, { 'Max Mana', '2% a 15%', '' }, { 'Defense', '1 a 10', '' },
             { 'Resistência', '1% a 20%', '' }, { 'Ally Heal', '5% a 30%', '' }, { 'Cooldown', '2% a 14%', '' },
-            { 'Pierce', '5% a 30%', 'elemento sorteado' },
+            { 'Pierce', '5% a 30%', 'elemento sorteado' }, { 'Spell Damage', '2% a 12%', '' },
+            { 'Bônus de magia', '5% a 25%', 'um; da vocação do livro' },
         }),
         { 'h', 'Capacetes, armaduras e calças' },
         poolTable({
@@ -343,7 +347,19 @@ WIKI_PAGES.affixes = {
             { 'Max Mana', 'Mana máxima a mais.', '25%' },
             { 'Cooldown', 'Cooldowns das magias mais curtos. Vem de wands, rods, spellbooks, capacetes, armaduras e calças.', '20%' },
             { 'Ally Heal', 'Cura a mais em outro jogador (exura sio, mass healing). Não vale em você.', '40%' },
+            { 'Spell Damage', 'Dano a mais em todas as magias de ataque (as faladas, não runas). Vem das armas e dos spellbooks.', '25%' },
+            { 'Bônus de magia', 'Dano a mais em uma magia, ou cura a mais se for magia de cura. Soma com Spell Damage.', '40%' },
         }),
+        { 'h', 'Bônus de magia por vocação' },
+        { 'p', 'Cada arma só rola magias da vocação que usa ela. No item aparece com as palavras da magia, por exemplo +18% Exori Gran. Espadas, machados e clavas rolam magias de knight, armas de punho de monk, arcos e bestas de paladin, wands de sorcerer, rods de druid, e spellbooks da vocação do livro.' },
+        { 'table', widths = { 80, 430 }, head = { 'Vocação', 'Magias' },
+          rows = {
+              { 'Knight', 'exori, exori gran, exori min, exori mas, exori hur, exori ico, exori gran ico, exura gran ico (cura)' },
+              { 'Paladin', 'exevo mas san, exori san, exori con, exori gran con, exura gran san (cura), exura san (cura)' },
+              { 'Sorcerer', 'exevo gran mas flam, exevo gran mas vis, exori max flam, exori max vis, exori gran flam, exori gran vis, exevo vis hur, exevo gran flam hur' },
+              { 'Druid', 'exevo gran mas tera, exevo gran mas frigo, exori max tera, exori max frigo, exevo gran frigo hur, exura gran mas res (cura), exura vita (cura), exura sio (cura)' },
+              { 'Monk', 'exori gran mas pug, exori mas pug, exori gran pug, exori gran nia, exori mas nia, exori pug, exura gran tio (cura), exura mas nia (cura)' },
+          } },
         { 'h', 'Defesa' },
         affixTable({
             { 'Armor, Defense', 'Armor ou defesa a mais no item.', '' },
