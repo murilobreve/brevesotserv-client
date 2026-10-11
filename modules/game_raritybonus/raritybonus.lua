@@ -108,35 +108,21 @@ local function fillItems(items)
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
             line.text:setText(bonusText(bonus))
-            line.rerollButton:setText(formatCost(entry.rerollCost))
-            line.rerollButton:setTooltip(tr('Reroll: roll a new value for %s (%d Rarity XP).', bonus.label, entry.rerollCost or 0))
-            line.rerollButton:setEnabled(rarityXp >= (entry.rerollCost or 0))
-            line.rerollButton.onClick = function()
-                send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'value' })
-            end
-            if bonus.min and bonus.max then
-                line.range:setText(string.format('%s-%s', number(bonus.min), number(bonus.max)))
-                line.range:setTooltip(tr('A reroll gives %s to %s%s on this item. The perfect roll is %s%s.', number(bonus.min), number(bonus.max), bonus.unit or '', number(bonus.perfect or bonus.max), bonus.unit or ''))
-            end
-            local canImprove = bonus.max and (bonus.value or 0) < bonus.max
-            line.improveButton:setText(formatCost(entry.improveCost))
-            line.improveButton:setTooltip(canImprove
-                and tr('Improve: a new value for %s that is always higher than the current one (%d Rarity XP).', bonus.label, entry.improveCost or 0)
-                or tr('%s is already at the top of its range.', bonus.label))
-            line.improveButton:setEnabled(canImprove and rarityXp >= (entry.improveCost or 0) and (entry.improveCost or 0) > 0)
-            line.improveButton.onClick = function()
-                send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'improve' })
-            end
-            line.changeButton:setText(formatCost(entry.changeCost))
-            line.changeButton:setTooltip(tr('Change: swap %s for another random bonus (%d Rarity XP).', bonus.label, entry.changeCost or 0))
-            line.changeButton:setEnabled(rarityXp >= (entry.changeCost or 0))
-            line.changeButton.onClick = function()
-                confirm(tr('Change bonus'), tr('Swap %s for another random bonus of this item for %d Rarity XP? The current one is lost.', bonusText(bonus), entry.changeCost or 0), function()
-                    send({ action = 'reroll', slot = entry.slotId, key = bonus.key, mode = 'change' })
-                end)
-            end
         end
-        local linesHeight = count * 20
+        local cost = entry.rerollCost or 0
+        row.rerollItemButton:setText(tr('Reroll %s', formatCost(cost)))
+        row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
+        row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost)
+        row.rerollItemButton.onClick = function()
+            local lines = {}
+            for _, bonus in ipairs(entry.bonuses or {}) do
+                table.insert(lines, bonusText(bonus))
+            end
+            confirm(tr('Reroll item'), tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n')), function()
+                send({ action = 'rerollItem', slot = entry.slotId })
+            end)
+        end
+        local linesHeight = count * 18
         row.bonuses:setHeight(linesHeight)
         row:setHeight(math.max(42, 3 + 15 + 16 + 3 + linesHeight + 6))
     end
@@ -188,7 +174,7 @@ local function onOpcode(protocol, opcode, data)
         showXpBadge(tonumber(data.xp) or 0)
         if data.ready and not (window and window:isVisible()) and modules.game_brevespanel then
             modules.game_brevespanel.notify('bonus',
-                tr('You have %d Rarity XP! Use it to reroll the bonuses of your rarity items.', tonumber(data.xp) or 0),
+                tr('You have %d Rarity XP! Use it to reroll your rarity items.', tonumber(data.xp) or 0),
                 tr('Open'))
         end
         return
@@ -199,11 +185,25 @@ local function onOpcode(protocol, opcode, data)
     rarityXp = tonumber(data.rarityXp) or 0
     showXpBadge(rarityXp)
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
-    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the bonuses of the items you wear; items of a higher grade or level cost more.'))
+    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the items you wear; items of a higher grade or level cost more.'))
     -- automatic refreshes (equipment changed) carry no message: keep the
     -- answer to the last reroll on screen
-    if data.message then
-        window.status:setText(data.message)
+    local message = data.message
+    local result = data.result
+    if type(result) == 'table' then
+        if result.code == 'rerolled' then
+            message = tr('%s rerolled: %s. (-%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), tonumber(result.cost) or 0)
+            if result.perfect then
+                message = message .. ' ' .. tr('Perfect roll!')
+            end
+        elseif result.code == 'xp' then
+            message = tr('You need %d Rarity XP and have %d. Kill Pale, Ashen, Obsidian and Lord of Death monsters to earn more.', tonumber(result.cost) or 0, tonumber(result.balance) or 0)
+        elseif result.code == 'gone' then
+            message = tr('That item is no longer equipped.')
+        end
+    end
+    if message then
+        window.status:setText(message)
         window.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
     end
     fillItems(data.items or {})
