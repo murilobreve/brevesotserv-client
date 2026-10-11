@@ -354,8 +354,8 @@ WIKI_PAGES.affixes = {
         { 'p', 'Cada arma só rola magias da vocação que usa ela. No item aparece com as palavras da magia, por exemplo +18% Exori Gran. Espadas, machados e clavas rolam magias de knight, armas de punho de monk, arcos e bestas de paladin, wands de sorcerer, rods de druid, e spellbooks da vocação do livro.' },
         { 'table', widths = { 80, 430 }, head = { 'Vocação', 'Magias' },
           rows = {
-              { 'Knight', 'exori, exori gran, exori ico, exori gran ico, exura gran ico (cura)' },
-              { 'Paladin', 'exevo mas san, exori gran con, exura gran san (cura), exura san (cura)' },
+              { 'Knight', 'exori, exori gran, exori ico, exori gran ico' },
+              { 'Paladin', 'exevo mas san, exori gran con' },
               { 'Sorcerer', 'exevo gran mas flam, exevo gran mas vis, exevo vis hur, exevo gran flam hur' },
               { 'Druid', 'exevo gran mas tera, exevo gran mas frigo, exevo gran frigo hur, exura sio (cura)' },
               { 'Monk', 'exori gran mas pug, exori mas pug, exori gran pug, exori gran nia, exori mas nia, exori pug, exura gran tio (cura), exura mas nia (cura)' },
