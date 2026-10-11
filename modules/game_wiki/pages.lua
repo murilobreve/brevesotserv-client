@@ -266,7 +266,7 @@ WIKI_PAGES.pools = {
         { 'h', 'Arcos e armas de distância' },
         poolTable({
             { 'Attack', '1 a 20', '' }, { 'Distance', '1% a 10%', '' }, { 'Hit Chance', '1% a 15%', '' },
-            { 'Crit Chance', '1% a 10%', '' }, { 'Crit Damage', '1% a 25%', '' }, { 'Range', '+1', '' },
+            { 'Crit Chance', '1% a 10%', '' }, { 'Crit Damage', '1% a 25%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Perfect Shot', '5 a 40', 'a 3, 4 ou 5 sqm' },
         }),
         { 'h', 'Wands e rods' },
@@ -326,7 +326,6 @@ WIKI_PAGES.affixes = {
             { 'Melee', 'Sword, axe e club ao mesmo tempo.', '20%' },
             { 'Distance', 'Porcentagem a mais em distance.', '20%' },
             { 'Hit Chance', 'Chance de acerto a mais na arma de distância.', '' },
-            { 'Range', 'Um sqm a mais de alcance.', '' },
             { 'Crit Chance', 'Chance de golpe crítico.', '25%' },
             { 'Crit Damage', 'Dano a mais no golpe crítico.', '50%' },
             { 'Life Leech', 'Parte do dano volta como vida.', '25%' },
