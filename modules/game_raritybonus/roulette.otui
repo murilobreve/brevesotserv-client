@@ -11,26 +11,47 @@ RouletteFrame < UIWidget
     virtual: true
     phantom: true
 
-// one reel of the slot machine: a dark window with a thin brass edge
-RouletteReel < UIWidget
-  height: 34
+// one strip of the roulette: a window onto a long row of cards
+RouletteRow < UIWidget
+  height: 36
   background-color: #0b0b0bee
   border-width: 1
   border-color: #6b5a33
+  clipping: true
+  phantom: true
+
+  UIWidget
+    id: strip
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    margin-top: 2
+    margin-bottom: 2
+    phantom: true
+    layout:
+      type: horizontalBox
+      spacing: 4
+
+// a bonus card on a strip
+RouletteCard < UIWidget
+  height: 32
+  background-color: #161616
+  border-width: 1
+  border-color: #333333
   phantom: true
 
   Label
     id: text
     anchors.fill: parent
     text-align: center
-    font: Verdana Bold-13px
+    font: Verdana Bold-11px
     color: #9a9a9a
     phantom: true
 
 MainWindow
   id: rarityRouletteWindow
-  !text: tr('Bonus roulette')
-  size: 470 420
+  !text: tr('Rarity Roulette')
+  size: 600 430
   @onEscape: modules.game_raritybonus.closeRoulette()
 
   RouletteFrame
@@ -68,6 +89,18 @@ MainWindow
     layout:
       type: verticalBox
       spacing: 6
+
+  // the gold line the cards stop under
+  UIWidget
+    id: marker
+    anchors.top: reels.top
+    anchors.bottom: reels.bottom
+    anchors.horizontalCenter: reels.horizontalCenter
+    margin-top: -4
+    margin-bottom: -4
+    width: 2
+    background-color: #ffd84a
+    phantom: true
 
   Label
     id: status

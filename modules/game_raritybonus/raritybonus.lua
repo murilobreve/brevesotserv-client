@@ -245,15 +245,23 @@ end
 
 
 -- ---------------------------------------------------------------------------
--- reroll roulette: a slot machine with one reel per bonus the grade allows.
--- The server rolls at once and sends the result; the reels spin through the
--- item's possible bonuses, slow down and stop one by one on it. Reels the
--- item didn't get stop on a dash (the number of bonuses is rolled too).
+-- Rarity Roulette, opened like a CS case: one strip per bonus the grade
+-- allows. Each strip is a long row of cards (bonuses this item could roll,
+-- painted in their quality colour, so the player sees what was possible)
+-- that races under a gold marker, slows down and stops on the server's
+-- result. Strips stop one by one, each a bit later. Strips the item didn't
+-- get stop on an empty card (the number of bonuses is rolled too).
+-- The server rolls at once; this is only the show.
 -- ---------------------------------------------------------------------------
 
 local roulette
-local spin -- { result, reels, stops, startedAt, finished, waiting, onDone, pending }
-local SPIN_TICK = 45
+local spin -- { result, rows, startedAt, finished, waiting, onDone, pending, event }
+local CARD_WIDTH = 132
+local CARD_GAP = 4
+local STRIP_CARDS = 46
+local WIN_INDEX = 40 -- the result is the 40th card: the strip runs a long way
+local FIRST_STOP = 3200 -- ms
+local NEXT_STOP = 950 -- ms between strips
 
 local QUALITY_COLORS = {
     { 0.9, '#ff9a1f' }, -- near the top
@@ -275,13 +283,17 @@ local function qualityColor(quality, perfect)
     return '#b8b8b8'
 end
 
-local function randomLine(pool)
+-- a card the item could have rolled: mostly low and middle values, now and
+-- then one near the top, like the odds really are
+local function randomCard(pool)
     if not pool or #pool == 0 then
-        return '???'
+        return '???', '#b8b8b8'
     end
     local entry = pool[math.random(#pool)]
     local min, max = tonumber(entry.min) or 1, tonumber(entry.max) or 1
-    return string.format('+%d%s %s', math.random(min, math.max(min, max)), entry.unit or '', entry.label or '')
+    local quality = math.random() ^ 1.7
+    local value = min + math.floor(quality * math.max(0, max - min) + 0.5)
+    return string.format('+%d%s %s', value, entry.unit or '', entry.label or ''), qualityColor(quality)
 end
 
 local function rouletteVisible()
@@ -295,8 +307,19 @@ local function setAgainButton()
     local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
     roulette.againButton:setText(tr('Spin again (%d)', cost))
     roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost)
-    -- the balance only once the reels stop: it is updated with the result
+    -- the balance only once the strips stop: it is updated with the result
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
+end
+
+local function easeOut(p)
+    -- fast start, long slow end (a CS case wheel)
+    return 1 - (1 - p) ^ 4
+end
+
+local function paintCard(card, text, color, empty)
+    card.text:setText(text)
+    card.text:setColor(empty and '#5a5a5a' or color)
+    card:setBorderColor(empty and '#2a2a2a' or color .. '99')
 end
 
 local function finishSpin()
@@ -304,6 +327,10 @@ local function finishSpin()
         return
     end
     spin.finished = true
+    if spin.event then
+        removeEvent(spin.event)
+        spin.event = nil
+    end
     local result = spin.result or {}
     local rolled = result.rolled or {}
     local best = 0
@@ -338,96 +365,103 @@ local function finishSpin()
     setAgainButton()
 end
 
-local function stopReel(index)
-    local reel = spin.reels[index]
-    if not reel or reel.stopped then
+-- the winning card lights up when its strip stops
+local function stopRow(row)
+    if row.stopped then
         return
     end
-    reel.stopped = true
-    local entry = (spin.result.rolled or {})[index]
-    if entry then
-        local color = qualityColor(entry.quality, entry.perfect)
-        reel.widget.text:setText(entry.perfect and (entry.text .. '  ' .. tr('PERFECT')) or entry.text)
-        reel.widget.text:setColor(color)
-        reel.widget:setBorderColor(color)
-        -- a short flash in the bonus's colour
-        reel.widget:setBackgroundColor(color .. '66')
+    row.stopped = true
+    row.strip:setMarginLeft(-row.target)
+    local card = row.winner
+    if row.entry then
+        local color = qualityColor(row.entry.quality, row.entry.perfect)
+        card:setBackgroundColor(color .. '55')
+        card:setBorderColor(color)
         scheduleEvent(function()
-            if reel.widget and not reel.widget:isDestroyed() then
-                reel.widget:setBackgroundColor('#0b0b0bee')
+            if card and not card:isDestroyed() then
+                card:setBackgroundColor(color .. '22')
             end
-        end, 160)
+        end, 220)
+        row.widget:setBorderColor(color)
     else
-        reel.widget.text:setText('-')
-        reel.widget.text:setColor('#4a4a4a')
-        reel.widget:setBorderColor('#2a2a2a')
+        row.widget:setBorderColor('#2a2a2a')
     end
-    for _, other in ipairs(spin.reels) do
-        if not other.stopped then
-            return
-        end
-    end
-    finishSpin()
 end
 
-local function tickReel(index, token)
-    if not spin or spin.token ~= token or not rouletteVisible() then
-        return
-    end
-    local reel = spin.reels[index]
-    if not reel or reel.stopped then
+local function animate()
+    if not spin or spin.finished or not rouletteVisible() then
         return
     end
     local now = g_clock.millis()
-    local delay = SPIN_TICK
-    if spin.stops then
-        local stopAt = spin.stops[index]
-        if now >= stopAt then
-            stopReel(index)
-            return
+    local running = false
+    for _, row in ipairs(spin.rows) do
+        if not row.stopped then
+            local p = math.min(1, (now - spin.startedAt) / row.duration)
+            row.strip:setMarginLeft(-math.floor(row.target * easeOut(p)))
+            if p >= 1 then
+                stopRow(row)
+            else
+                running = true
+            end
         end
-        -- slows down towards its stop
-        local progress = math.max(0, math.min(1, (now - spin.resultAt) / (stopAt - spin.resultAt)))
-        delay = SPIN_TICK + math.floor(260 * progress * progress * progress)
     end
-    reel.widget.text:setText(randomLine(spin.pool))
-    reel.widget.text:setColor(index % 2 == 0 and '#cfcfcf' or '#9f9f9f')
-    scheduleEvent(function() tickReel(index, token) end, delay)
+    if running then
+        spin.event = scheduleEvent(animate, 16)
+    else
+        spin.event = nil
+        finishSpin()
+    end
 end
 
--- starts the reels; they spin until a result arrives (setSpinResult)
-local function startSpin(pool, reelCount)
-    spin = spin or {}
-    spin.token = (spin.token or 0) + 1
-    spin.pool = pool or spin.pool or {}
-    spin.stops = nil
-    spin.finished = false
-    spin.reels = {}
+-- builds one strip per bonus slot and starts them
+local function startStrips(result)
     roulette.reels:destroyChildren()
-    for i = 1, math.max(1, reelCount or 1) do
-        local widget = g_ui.createWidget('RouletteReel', roulette.reels)
-        spin.reels[i] = { widget = widget }
+    spin.rows = {}
+    local rolled = result.rolled or {}
+    local viewport = roulette.reels:getWidth()
+    for i = 1, math.max(1, result.maxBonuses or #rolled) do
+        local widget = g_ui.createWidget('RouletteRow', roulette.reels)
+        local strip = widget.strip
+        local row = { widget = widget, strip = strip, entry = rolled[i] }
+        for c = 1, STRIP_CARDS do
+            local card = g_ui.createWidget('RouletteCard', strip)
+            card:setWidth(CARD_WIDTH)
+            if c == WIN_INDEX then
+                row.winner = card
+                if row.entry then
+                    local text = row.entry.perfect and (row.entry.text .. '  ' .. tr('PERFECT')) or row.entry.text
+                    paintCard(card, text, qualityColor(row.entry.quality, row.entry.perfect))
+                else
+                    paintCard(card, tr('no bonus'), nil, true)
+                end
+            elseif (result.maxBonuses or 1) > 1 and math.random() < 0.08 then
+                -- empty cards: the number of bonuses is rolled too
+                paintCard(card, tr('no bonus'), nil, true)
+            else
+                local text, color = randomCard(result.pool)
+                paintCard(card, text, color)
+            end
+        end
+        strip:setWidth(STRIP_CARDS * (CARD_WIDTH + CARD_GAP))
+        -- stop with the winner under the marker, a little off-centre like a
+        -- real wheel
+        local winnerCentre = (WIN_INDEX - 1) * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2
+        local jitter = math.random(-math.floor(CARD_WIDTH * 0.35), math.floor(CARD_WIDTH * 0.35))
+        row.target = math.floor(winnerCentre - viewport / 2 + jitter)
+        row.duration = FIRST_STOP + (i - 1) * NEXT_STOP
+        spin.rows[i] = row
     end
-    roulette.reels:setHeight(#spin.reels * 40)
+    roulette.reels:setHeight(#spin.rows * 42)
+    spin.startedAt = g_clock.millis()
+    spin.finished = false
     roulette.status:setText(tr('Spinning...'))
     roulette.status:setColor('#e0c060')
     roulette.closeButton:setText(tr('Skip'))
-    roulette.againButton:setEnabled(false)
-    local token = spin.token
-    for i = 1, #spin.reels do
-        scheduleEvent(function() tickReel(i, token) end, (i - 1) * 60)
+    setAgainButton()
+    if spin.event then
+        removeEvent(spin.event)
     end
-end
-
-local function setSpinResult(result, onDone)
-    spin.result = result
-    spin.onDone = onDone
-    spin.waiting = false
-    spin.resultAt = g_clock.millis()
-    spin.stops = {}
-    for i = 1, #spin.reels do
-        spin.stops[i] = spin.resultAt + 1300 + (i - 1) * 520
-    end
+    spin.event = scheduleEvent(animate, 16)
 end
 
 local function showRoulette(result, onDone)
@@ -447,12 +481,16 @@ local function showRoulette(result, onDone)
     roulette:show()
     roulette:raise()
     roulette:focus()
-    if not (spin and spin.waiting and not spin.finished) then
-        startSpin(result.pool, result.maxBonuses)
-    end
-    spin.pool = result.pool or spin.pool
-    setSpinResult(result, onDone)
-    setAgainButton()
+    spin = spin or {}
+    spin.result = result
+    spin.onDone = onDone
+    spin.waiting = false
+    -- the strips are measured against the window: lay it out first
+    addEvent(function()
+        if spin and spin.result == result then
+            startStrips(result)
+        end
+    end)
 end
 
 -- an answer from the server while the roulette is open
@@ -463,20 +501,18 @@ rouletteTakes = function(data)
         return true
     end
     if spin and rouletteVisible() and spin.waiting then
-        -- "spin again" failed (not enough XP, item taken off): stop on the
-        -- old result and say why
+        -- "spin again" failed (not enough XP, item taken off): say why
         spin.waiting = false
-        for i = 1, #spin.reels do
-            stopReel(i)
-        end
+        spin.finished = true
         applyBonuses(data)
         roulette.status:setText(window.status:getText())
         roulette.status:setColor('#ff6464')
+        roulette.closeButton:setText(tr('Close'))
         setAgainButton()
         return true
     end
     if spin and rouletteVisible() and not spin.finished then
-        -- an automatic refresh while the reels spin: keep it for the end
+        -- an automatic refresh while the strips run: keep it for the end
         spin.pending = data
         return true
     end
@@ -500,8 +536,10 @@ function spinAgain()
     if rarityXp < cost then
         return
     end
-    startSpin(spin.result.pool, spin.result.maxBonuses)
     spin.waiting = true
+    roulette.status:setText(tr('Spinning...'))
+    roulette.status:setColor('#e0c060')
+    roulette.againButton:setEnabled(false)
     send({ action = 'rerollItem', slot = spin.result.slot })
 end
 
@@ -509,11 +547,12 @@ function closeRoulette()
     if not roulette then
         return
     end
-    if spin and not spin.finished and spin.stops then
-        -- skip: every reel stops on the result at once
-        for i = 1, #spin.reels do
-            stopReel(i)
+    if spin and not spin.finished and spin.rows then
+        -- skip: every strip jumps to its result
+        for _, row in ipairs(spin.rows) do
+            stopRow(row)
         end
+        finishSpin()
         return
     end
     roulette:hide()
