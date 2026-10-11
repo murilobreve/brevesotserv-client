@@ -292,10 +292,11 @@ WIKI_PAGES.pools = {
             { 'Armor', '1 a 8', '' }, { 'Resistência', '1% a 20%', 'pode vir duas' }, { 'Healing', '1% a 20%', '' },
             { 'Skill da vocação', '1% a 10%', 'ML, melee, distance ou fist' },
             { 'Dodge', '1% a 4%', '' }, { 'Reflect', '1% a 8%', '' }, { 'Cooldown', '2% a 14%', '' },
+            { 'Speed', '1 a 40', 'só calças' },
         }),
         { 'h', 'Botas' },
         poolTable({
-            { 'Armor', '1 a 4', '' }, { 'Speed', '2 a 20', '' }, { 'Resistência', '1% a 20%', '' },
+            { 'Armor', '1 a 4', '' }, { 'Speed', '1 a 40', '' }, { 'Resistência', '1% a 20%', '' },
             { 'Healing', '1% a 20%', '' }, { 'Max Health', '1% a 10%', '' }, { 'Dodge', '1% a 4%', '' },
         }),
         { 'h', 'Anéis e amuletos' },
@@ -353,7 +354,7 @@ WIKI_PAGES.affixes = {
             { 'Healing', 'Magias, runas e poções curam mais. Leech não conta.', '40%' },
             { 'Dodge', 'Chance de desviar de um golpe.', '12%' },
             { 'Reflect', 'Devolve parte do dano físico que um monstro causa em você.', '20%' },
-            { 'Speed', 'Velocidade a mais.', '40' },
+            { 'Speed', 'Velocidade a mais. Vem de botas e calças.', '80' },
         }),
         { 'h', 'Anéis e amuletos' },
         affixTable({
