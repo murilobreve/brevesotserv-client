@@ -22,6 +22,9 @@ if not defined VCPKG_ROOT set "VCPKG_ROOT=C:\vcpkg"
 echo == sincronizando com o main do GitHub
 git fetch origin main
 if errorlevel 1 goto :falhou
+rem uma copia deste .bat baixada por cima da do git (mandada pelo chat, por
+rem exemplo) travaria a troca de branch: volta para a do git, que e a mesma
+git checkout -- compilar-cliente.bat compilar-cliente-directx.bat >nul 2>&1
 git checkout main
 if errorlevel 1 goto :falhou
 git pull --ff-only origin main

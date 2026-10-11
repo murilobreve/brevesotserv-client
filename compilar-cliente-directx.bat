@@ -27,6 +27,9 @@ if errorlevel 1 goto :falhou
 rem uma copia solta deste .bat (baixada a parte) travaria a troca de branch
 git ls-files --error-unmatch compilar-cliente-directx.bat >nul 2>&1
 if errorlevel 1 if exist compilar-cliente-directx.bat del compilar-cliente-directx.bat
+rem uma copia deste .bat baixada por cima da do git (mandada pelo chat, por
+rem exemplo) travaria a troca de branch: volta para a do git, que e a mesma
+git checkout -- compilar-cliente.bat compilar-cliente-directx.bat >nul 2>&1
 git checkout claude/funny-maxwell-kpy7sn
 if errorlevel 1 goto :falhou
 git pull --ff-only origin claude/funny-maxwell-kpy7sn
