@@ -57,6 +57,14 @@ if ($repoVazio) {
     if ($LASTEXITCODE -ne 0) { Falhou "nao consegui atualizar $Repo (git pull)" }
 }
 
+# os arquivos vao byte a byte: sem isto o git do Windows (core.autocrlf)
+# troca CRLF por LF e o SHA-256 do arquivo no GitHub deixa de bater
+git -C $Repo config core.autocrlf false
+$atributos = Join-Path $Repo ".gitattributes"
+if (-not (Test-Path $atributos) -or ([System.IO.File]::ReadAllText($atributos) -notmatch '(?m)^\* -text')) {
+    [System.IO.File]::WriteAllText($atributos, "* -text`n", $semBom)
+}
+
 $pastaCanal = Join-Path $Repo $Canal
 $pastaObjetos = Join-Path $Repo "objects"
 New-Item -ItemType Directory -Force -Path $pastaCanal, $pastaObjetos | Out-Null
@@ -94,6 +102,9 @@ Get-ChildItem -Path $Pasta -Recurse -Force -File | ForEach-Object {
     if (-not (Test-Path $objeto)) {
         Copy-Item -LiteralPath $_.FullName -Destination $objeto
         $script:tamanhoNovo += $_.Length
+    } elseif ((Get-FileHash -Path $objeto -Algorithm SHA256).Hash.ToLower() -ne $sha) {
+        # um objeto alterado no caminho (quebra de linha trocada): volta o original
+        Copy-Item -LiteralPath $_.FullName -Destination $objeto -Force
     }
 }
 
@@ -129,6 +140,15 @@ if (Test-Path $zip) {
 }
 
 if (-not $mudou) {
+    git -C $Repo add -A
+    git -C $Repo add --renormalize . 2>$null
+    git -C $Repo diff --cached --quiet
+    if ($LASTEXITCODE -ne 0 -and -not $SemEnviar) {
+        Info "corrigindo arquivos ja publicados no GitHub"
+        git -C $Repo commit -q -m "$Canal versao ${versao}: arquivos byte a byte"
+        git -C $Repo push -q -u origin main
+        if ($LASTEXITCODE -ne 0) { Falhou "git push falhou" }
+    }
     Write-Host ""
     Write-Host "Nada mudou desde a versao ${versao}: nao ha o que publicar." -ForegroundColor Yellow
     exit 0
@@ -148,6 +168,7 @@ Info ("versao {0} -> {1}, {2} arquivos, {3} MB novos" -f $versaoAntiga, $versao,
 
 # ---------------------------------------------------------------- envio
 git -C $Repo add -A
+git -C $Repo add --renormalize . 2>$null
 git -C $Repo commit -q -m "$Canal versao $versao"
 if ($LASTEXITCODE -ne 0) { Falhou "git commit falhou em $Repo" }
 if ($SemEnviar) {
