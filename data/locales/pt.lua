@@ -786,6 +786,7 @@ locale = {
     ["Failed to connect to login server."] = "Não foi possível conectar ao servidor de login.",
     ["Connecting"] = "Conectando",
     ["Map zoom:"] = "Zoom do mapa:",
+    ["Map zoom"] = "Zoom do mapa",
     ["Original (15 x 11 tiles)"] = "Original (15 x 11 quadrados)",
     ["Zoomed out (23 x 13 tiles)"] = "Afastado (23 x 13 quadrados)",
     ["Your character list is being loaded. Please wait."] = "Carregando a lista de personagens. Aguarde.",

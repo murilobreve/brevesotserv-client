@@ -1,6 +1,6 @@
 ScreenMessagesWindow < MainWindow
   !text: tr('Interface')
-  size: 300 212
+  size: 300 268
   @onEscape: modules.game_textmessage.hidePositionWindow()
 
   Label
@@ -55,6 +55,25 @@ ScreenMessagesWindow < MainWindow
     minimum: 0
     maximum: 100
     step: 5
+
+  // the same setting as Options > Graphics > Map zoom
+  Label
+    id: zoomSection
+    !text: tr('Map zoom')
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    margin-top: 14
+    font: verdana-11px-rounded
+    color: #ffd27a
+    text-auto-resize: true
+
+  ComboBox
+    id: mapZoom
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+    mouse-scroll: false
 
   Button
     id: closeButton

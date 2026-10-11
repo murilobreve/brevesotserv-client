@@ -316,6 +316,13 @@ function togglePositionWindow()
         horizontal:setValue(50)
         vertical:setValue(50)
     end
+    local zoom = positionWindow:getChildById('mapZoom')
+    zoom:addOption(tr('Original (15 x 11 tiles)'), 'original')
+    zoom:addOption(tr('Zoomed out (23 x 13 tiles)'), 'wide')
+    zoom:setCurrentOptionByData(modules.client_options.getOption('mapZoom') or 'wide', true)
+    zoom.onOptionChange = function(widget, text, data)
+        modules.client_options.setOption('mapZoom', data)
+    end
     positionWindow:getChildById('closeButton').onClick = hidePositionWindow
     positionWindow.onEscape = hidePositionWindow
     positionWindow:raise()
