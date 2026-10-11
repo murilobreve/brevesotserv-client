@@ -91,6 +91,8 @@ public:
     std::string fileSha256InWorkDir(const std::string& path);
     bool writeDownloadedFile(const std::string& path, std::string destinationPath, bool decompressLzma);
     bool writeDownloadedFileToWorkDir(const std::string& path, std::string destinationPath, bool decompressLzma);
+    bool installDownloadedFileInWorkDir(const std::string& path, std::string destinationPath);
+    int cleanupOldFilesInWorkDir();
     bool extractDownloadedArchive(const std::string& path, std::string destinationPath, const std::string& entryPrefix, bool stripPrefix);
     bool extractDownloadedArchiveToWorkDir(const std::string& path, std::string destinationPath, const std::string& entryPrefix, bool stripPrefix);
     bool extractDownloadedZip(const std::string& path, std::string destinationPath, const std::string& entryPrefix, bool stripPrefix);

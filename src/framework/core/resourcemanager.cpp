@@ -35,6 +35,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #endif
 
 #include <lzma.h>
@@ -954,6 +955,103 @@ bool ResourceManager::writeDownloadedFileToWorkDir(const std::string& path, std:
     setWriteDir(oldWriteDir);
     addSearchPath(getWorkDir(), true);
     return ok;
+}
+
+// Mythos updater: puts a downloaded file in the client folder even when the
+// file there is in use (the running .exe, a loaded .dll). Windows lets a file
+// in use be renamed, so the old one moves aside to "<name>.old" and the new
+// one takes its name; cleanupOldFilesInWorkDir() deletes the leftovers on the
+// next start. The new file is written next to the target first, so a failed
+// write never leaves a half file in place.
+bool ResourceManager::installDownloadedFileInWorkDir(const std::string& path, std::string destinationPath)
+{
+    const auto downloadedFile = getDownloadedFile(path);
+    if (!downloadedFile) {
+        g_logger.error("Cannot find downloaded file '{}'", path);
+        return false;
+    }
+
+    const auto relativePath = safeRelativePath(std::move(destinationPath));
+    if (relativePath.empty()) {
+        g_logger.error("Refusing to install '{}' outside the client folder", path);
+        return false;
+    }
+
+    std::error_code ec;
+    const auto target = std::filesystem::path(getWorkDir()) / relativePath;
+    std::filesystem::create_directories(target.parent_path(), ec);
+
+    auto partial = target;
+    partial += ".part";
+    {
+        std::ofstream out(partial, std::ios::binary | std::ios::trunc);
+        out.write(downloadedFile->response.data(), static_cast<std::streamsize>(downloadedFile->response.size()));
+        if (!out.good()) {
+            g_logger.error("Cannot write '{}'", partial.string());
+            std::filesystem::remove(partial, ec);
+            return false;
+        }
+    }
+
+    std::filesystem::path aside;
+    if (std::filesystem::exists(target, ec)) {
+        // keep what the old file allowed (the executable bit on Linux/macOS)
+        std::filesystem::permissions(partial, std::filesystem::status(target, ec).permissions(), ec);
+        aside = target;
+        aside += ".old";
+        std::filesystem::remove(aside, ec);
+        if (std::filesystem::exists(aside, ec)) {
+            aside = target;
+            aside += ".old" + std::to_string(time(nullptr));
+        }
+        std::filesystem::rename(target, aside, ec);
+        if (ec) {
+            g_logger.error("Cannot move '{}' aside: {}", target.string(), ec.message());
+            std::filesystem::remove(partial, ec);
+            return false;
+        }
+    }
+
+    std::filesystem::rename(partial, target, ec);
+    if (ec) {
+        g_logger.error("Cannot put '{}' in place: {}", target.string(), ec.message());
+        if (!aside.empty())
+            std::filesystem::rename(aside, target, ec);
+        return false;
+    }
+
+    // drop the old copy now; one still in use (the running .exe) stays
+    // until cleanupOldFilesInWorkDir() on the next start
+    if (!aside.empty())
+        std::filesystem::remove(aside, ec);
+    return true;
+}
+
+int ResourceManager::cleanupOldFilesInWorkDir()
+{
+    int removed = 0;
+    std::error_code ec;
+    const std::filesystem::path root(getWorkDir());
+    for (auto it = std::filesystem::recursive_directory_iterator(root, std::filesystem::directory_options::skip_permission_denied, ec);
+         !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
+        const auto& entry = *it;
+        const auto name = entry.path().filename().string();
+        if (entry.is_directory(ec)) {
+            // the game assets are hundreds of files the updater never touches
+            if (name == "things" || name == "sounds" || name == ".git")
+                it.disable_recursion_pending();
+            continue;
+        }
+        const auto oldPos = name.rfind(".old");
+        const bool isOld = oldPos != std::string::npos && name.find_first_not_of("0123456789", oldPos + 4) == std::string::npos;
+        const bool isPart = name.size() > 5 && name.ends_with(".part");
+        if (!isOld && !isPart)
+            continue;
+        std::error_code removeEc;
+        if (std::filesystem::remove(entry.path(), removeEc))
+            ++removed;
+    }
+    return removed;
 }
 
 bool ResourceManager::extractDownloadedArchive(const std::string& path, std::string destinationPath, const std::string& entryPrefix, const bool stripPrefix)

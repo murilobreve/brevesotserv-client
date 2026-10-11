@@ -66,6 +66,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cli
 if errorlevel 1 goto :falhou
 
 echo.
+rem S publica: os jogadores recebem a versao nova ao abrir o client, e o
+rem instalador do site e trocado. N so deixa o client pronto em dist\ para testar.
+choice /c SN /m "Publicar esta versao para os jogadores"
+if errorlevel 2 goto :naoPublicar
+echo == publicando a atualizacao
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\publicar-atualizacao.ps1" -Canal opengl
+if errorlevel 1 goto :falhou
+echo == montando o instalador
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\montar-instalador.ps1" -Canal opengl
+if errorlevel 1 goto :falhou
+:naoPublicar
+
+echo.
 echo Pronto. O client esta em dist\Mythos\ e o zip em dist\Mythos.zip
 pause
 exit /b 0

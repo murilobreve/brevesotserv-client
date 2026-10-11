@@ -1,0 +1,10 @@
+Module
+  name: client_updater
+  description: Downloads the files of a new Mythos client version
+  author: Mythos
+  website: https://mythosot.com.br
+  autoload: true
+  autoload-priority: 1000
+  scripts: [ client_updater ]
+  @onLoad: Updater.init()
+  @onUnload: Updater.terminate()
