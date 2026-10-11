@@ -89,9 +89,13 @@ public:
     void setMaxZoomIn(int maxZoomIn) { m_maxZoomIn = static_cast<uint16_t>(maxZoomIn); }
     void setMaxZoomOut(int maxZoomOut) { m_maxZoomOut = static_cast<uint16_t>(maxZoomOut); }
     void setLimitVisibleRange(bool limitVisibleRange) { m_limitVisibleRange = limitVisibleRange; updateVisibleDimension(); }
+    // the map fills the widget: the chosen dimension always fits, the rest of
+    // the widget shows more tiles (up to the aware range) instead of cutting
+    void setFillView(bool enable);
 
     bool isKeepAspectRatioEnabled() { return m_keepAspectRatio; }
     bool isLimitVisibleRangeEnabled() { return m_limitVisibleRange; }
+    bool isFillViewEnabled() { return m_fillView; }
 
     int getMaxZoomIn() { return m_maxZoomIn; }
     int getMaxZoomOut() { return m_maxZoomOut; }
@@ -111,6 +115,7 @@ protected:
 private:
     void updateVisibleDimension();
     void updateMapSize();
+    void updateFillView(const Rect& area);
     void resetCursorToDefault();
 
     MapViewPtr m_mapView;
@@ -121,6 +126,7 @@ private:
 
     bool m_keepAspectRatio;
     bool m_limitVisibleRange;
+    bool m_fillView{ false };
 
     uint16_t m_maxZoomIn;
     uint16_t m_maxZoomOut;

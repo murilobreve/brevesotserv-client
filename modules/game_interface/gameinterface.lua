@@ -392,16 +392,16 @@ function tryExit()
             'If you shut down the program, your character might stay in the game.\nClick on \'Logout\' to ensure that you character leaves the game properly.\nClick on \'Exit\' if you want to exit the program without logging out your character.'),
         {
             {
-                text = tr('Cancel'),
-                callback = cancelFunc
+                text = tr('Force Exit'),
+                callback = exitFunc
             },
             {
                 text = tr('Logout'),
                 callback = logoutFunc
             },
             {
-                text = tr('Force Exit'),
-                callback = exitFunc
+                text = tr('Cancel'),
+                callback = cancelFunc
             },
             anchor = AnchorHorizontalCenter
         }, logoutFunc, cancelFunc)
@@ -454,12 +454,12 @@ function tryLogout(prompt)
     if prompt then
         logoutWindow = displayGeneralBox(tr('Logout'), tr(msg), {
             {
-                text = tr('No'),
-                callback = noCallback
-            },
-            {
                 text = tr('Yes'),
                 callback = yesCallback
+            },
+            {
+                text = tr('No'),
+                callback = noCallback
             },
             anchor = AnchorHorizontalCenter
         }, yesCallback, noCallback)
@@ -1825,6 +1825,12 @@ function setupViewMode(mode)
         gameRightExtraPanel:setMarginTop(0)
         gameLeftExtraPanel:setMarginTop(0)
         gameBottomPanel:setImageColor('white')
+    end
+
+    -- fill: the chosen map zoom always fits and the rest of the panel shows
+    -- more tiles (a shorter or narrower window never zooms the view in)
+    if gameMapPanel.setFillView then
+        gameMapPanel:setFillView(mode == 1)
     end
 
     if mode == 0 then

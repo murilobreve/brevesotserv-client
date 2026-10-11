@@ -234,8 +234,16 @@ void UIMap::setVisibleDimension(const Size& visibleDimension)
     m_mapView->setVisibleDimension(visibleDimension);
     m_aspectRatio = visibleDimension.ratio();
 
-    if (m_keepAspectRatio)
+    if (m_keepAspectRatio || m_fillView)
         updateMapSize();
+}
+
+void UIMap::setFillView(const bool enable)
+{
+    if (m_fillView == enable)
+        return;
+    m_fillView = enable;
+    updateVisibleDimension();
 }
 
 void UIMap::setKeepAspectRatio(const bool enable)
@@ -314,6 +322,11 @@ bool UIMap::onMouseWheel(const Point& mousePos, Fw::MouseWheelDirection directio
 
 void UIMap::updateVisibleDimension()
 {
+    if (m_fillView) {
+        updateMapSize();
+        return;
+    }
+
     int dimensionHeight = m_zoom;
 
     float ratio = m_aspectRatio;
@@ -344,6 +357,11 @@ void UIMap::updateVisibleDimension()
 void UIMap::updateMapSize()
 {
     const auto& clippingRect = getPaddingRect();
+    if (m_fillView) {
+        updateFillView(clippingRect.expanded(-1));
+        return;
+    }
+
     Size mapSize;
     if (m_keepAspectRatio) {
         const auto& mapRect = clippingRect.expanded(-1);
@@ -363,3 +381,46 @@ void UIMap::updateMapSize()
 }
 
 /* vim: set ts=4 sw=4 et: */
+
+// Fill view: the tile size is the largest that still shows the whole chosen
+// dimension (m_zoom rows, m_zoom * m_aspectRatio columns). The space left on
+// the other axis shows more tiles, rounded up and centred, so the edges cut
+// part of a tile instead of leaving a bar. Past the aware range there are no
+// tiles to show: that axis keeps a bar, so a short or narrow window never
+// zooms the view in.
+void UIMap::updateFillView(const Rect& area)
+{
+    const auto odd = [](int n) { return n % 2 == 0 ? n + 1 : n; };
+    const int baseHeight = odd(std::max<int>(m_zoom, 3));
+    const int baseWidth = odd(std::max<int>(static_cast<int>(std::lround(m_zoom * m_aspectRatio)), 3));
+
+    if (area.width() <= 0 || area.height() <= 0) {
+        m_mapRect.resize(1, 1);
+        m_mapRect.moveCenter(area.center());
+        m_mapviewRect = Rect(m_mapRect.topLeft() * g_window.getDisplayDensity(), m_mapRect.size() * g_window.getDisplayDensity());
+        m_mapView->setVisibleDimension(Size(baseWidth, baseHeight));
+        return;
+    }
+
+    const float tile = std::min(area.width() / static_cast<float>(baseWidth), area.height() / static_cast<float>(baseHeight));
+
+    const auto& range = g_map.getAwareRange();
+    const auto fit = [&](const int pixels, const int base, const int limit) {
+        int tiles = odd(static_cast<int>(std::ceil(pixels / tile - 0.01f)));
+        tiles = std::max(tiles, base);
+        // zoomed out past the known map: no limit (as updateVisibleDimension)
+        if (base <= limit)
+            tiles = std::min(tiles, limit);
+        return tiles;
+    };
+    const int width = fit(area.width(), baseWidth, range.left * 2 - 1);
+    const int height = fit(area.height(), baseHeight, range.top * 2 - 1);
+
+    const Size mapSize(std::min<int>(area.width(), static_cast<int>(std::lround(width * tile))),
+                       std::min<int>(area.height(), static_cast<int>(std::lround(height * tile))));
+    m_mapRect.resize(mapSize);
+    m_mapRect.moveCenter(area.center());
+    m_mapviewRect = Rect(m_mapRect.topLeft() * g_window.getDisplayDensity(), m_mapRect.size() * g_window.getDisplayDensity());
+
+    m_mapView->setVisibleDimension(Size(width, height));
+}
