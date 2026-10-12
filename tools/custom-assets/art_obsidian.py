@@ -1,5 +1,6 @@
 """Draws the obsidian temple floors into art/obsidian_*/.
 
+  (now from import_obsidian_sheets.py instead)
   obsidian_floor/  16 tiles (4x4 pattern): four polished 64x64 slabs, each
                    made of 2x2 tiles, with violet veins and a glassy sheen
   obsidian_inlay/  1 tile: a darker slab with a thin violet inlay and gem
@@ -182,7 +183,7 @@ def rune():
 
 
 if __name__ == '__main__':
-    floor()
-    inlay()
+    # the hall floor and the inlaid floor now come from the hand-made sheets
+    # (import_obsidian_sheets.py); floor() and inlay() stay for reference
     rune()
     print('ok')

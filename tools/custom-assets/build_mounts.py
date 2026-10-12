@@ -61,7 +61,7 @@ COINS = [
 # the white temple marble's (id 409): walkable at speed 100, fills the tile.
 GROUNDS = [
     {'id': 60001, 'name': 'obsidian floor', 'folder': 'obsidian_floor', 'pattern': (4, 4), 'phases': 1},
-    {'id': 60002, 'name': 'inlaid obsidian floor', 'folder': 'obsidian_inlay', 'pattern': (1, 1), 'phases': 1},
+    {'id': 60002, 'name': 'inlaid obsidian floor', 'folder': 'obsidian_inlay', 'pattern': (4, 2), 'phases': 1},
     # the arrival point of the temple: a soft violet light like the old flame slab
     {'id': 60003, 'name': 'obsidian rune', 'folder': 'obsidian_rune', 'pattern': (1, 1), 'phases': 4, 'duration': 450,
      'light': (3, 125)},
