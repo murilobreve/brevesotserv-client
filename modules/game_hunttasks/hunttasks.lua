@@ -152,7 +152,7 @@ local function renderDaily()
     card.bar:setVisible(true)
 
     if daily.done then
-        setBar(card.bar, daily.need, daily.need, '#c9a227')
+        setBar(card.bar, daily.need, daily.need, '#e2a443')
         card.bar.value:setText(tr('Completa!'))
         card.reward:setText(tr('Você já completou a task de hoje.'))
         card.extra:setText('')
@@ -201,7 +201,7 @@ local function renderTrailCard()
         card.info:setText(tr('Você venceu os %d monstros da trilha.', #steps))
         card.badge:setText('')
         card.bar:setVisible(true)
-        setBar(card.bar, #steps, #steps, '#c9a227')
+        setBar(card.bar, #steps, #steps, '#e2a443')
         card.reward:setText(tr('Respeito, caçador.'))
         card.extra:setText('')
     else
@@ -212,7 +212,7 @@ local function renderTrailCard()
         card.name:setText(step.name or '?')
         card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
-        setBar(card.bar, trail.kills, step.need, '#3d7fd6')
+        setBar(card.bar, trail.kills, step.need, '#8c7bd9')
         local points = step.points or 0
         if step.milestone then
             card.badge:setText(tr('Etapa de marco: +%d pontos de bônus!', trail.milestonePoints or 0))
@@ -249,7 +249,7 @@ local function renderStreak()
         dot:setText(string.format('+%d', (day - 1) * bonus))
         dot:setTooltip(tr('Dia %d seguido: +%d pontos', day, (day - 1) * bonus))
         if day <= streak then
-            dot:setBackgroundColor('#c9a22790')
+            dot:setBackgroundColor('#e2a44390')
             dot:setBorderColor('#ffe066')
             dot:setColor('#ffffff')
         end
@@ -296,12 +296,12 @@ local function renderTrailList()
                 row.status:setText(tr('Em andamento: %d / %d', trail.kills or 0, steps[i].need))
                 row.status:setColor('#ffe066')
                 row.name:setColor('#ffe066')
-                row:setBackgroundColor('#c9a22730')
+                row:setBackgroundColor('#e2a44330')
             else
                 row.status:setText(tr('Bloqueada'))
                 row.status:setColor('#8a8a8a')
                 row.name:setColor('#c8c8c8')
-                row:setBackgroundColor(i % 2 == 0 and '#ffffff12' or '#00000012')
+                row:setBackgroundColor(i % 2 == 0 and '#ffffff07' or '#00000000')
             end
         end
     end

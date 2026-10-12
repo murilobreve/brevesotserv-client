@@ -1,4 +1,4 @@
-ScreenMessagesWindow < MainWindow
+ScreenMessagesWindow < MythosWindow
   !text: tr('Interface')
   size: 300 268
   @onEscape: modules.game_textmessage.hidePositionWindow()
@@ -9,7 +9,7 @@ ScreenMessagesWindow < MainWindow
     anchors.top: parent.top
     anchors.left: parent.left
     font: verdana-11px-rounded
-    color: #ffd27a
+    color: #f3dcae
     text-auto-resize: true
 
   Label
@@ -29,7 +29,7 @@ ScreenMessagesWindow < MainWindow
     anchors.left: parent.left
     margin-top: 10
 
-  HorizontalScrollBar
+  MythosHSlider
     id: horizontal
     anchors.top: prev.bottom
     anchors.left: parent.left
@@ -46,7 +46,7 @@ ScreenMessagesWindow < MainWindow
     anchors.left: parent.left
     margin-top: 10
 
-  HorizontalScrollBar
+  MythosHSlider
     id: vertical
     anchors.top: prev.bottom
     anchors.left: parent.left
@@ -64,10 +64,10 @@ ScreenMessagesWindow < MainWindow
     anchors.left: parent.left
     margin-top: 14
     font: verdana-11px-rounded
-    color: #ffd27a
+    color: #f3dcae
     text-auto-resize: true
 
-  ComboBox
+  MythosComboBox
     id: mapZoom
     anchors.top: prev.bottom
     anchors.left: parent.left
@@ -75,14 +75,14 @@ ScreenMessagesWindow < MainWindow
     margin-top: 6
     mouse-scroll: false
 
-  Button
+  MythosButton
     id: closeButton
     !text: tr('Close')
     width: 64
     anchors.right: parent.right
     anchors.bottom: parent.bottom
 
-  Button
+  MythosButton
     id: centerButton
     !text: tr('Middle')
     width: 64

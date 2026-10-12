@@ -574,6 +574,11 @@ function EnterGame.show()
         return
     end
 
+    -- the updater window owns the screen while a new version downloads
+    if Updater and Updater.isUpdating and Updater.isUpdating() then
+        return
+    end
+
     enterGame:show()
     enterGame:raise()
     enterGame:focus()

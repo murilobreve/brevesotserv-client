@@ -37,7 +37,7 @@ RareSellRow < BrevesRow
     margin-right: 6
     width: 90
     text-align: right
-    color: #e0c060
+    color: #e2a443
     phantom: true
 
   Label
@@ -58,18 +58,18 @@ RareSellRow < BrevesRow
     margin-top: 2
     height: 14
     font: verdana-11px-monochrome
-    color: #9a9a9a
+    color: #a39db2
     phantom: true
 
 RareSellRowEven < RareSellRow
-  background-color: #ffffff12
+  background-color: #ffffff07
 
 // quick selection by grade
-RareSellGradeButton < Button
+RareSellGradeButton < MythosButton
   height: 20
   font: verdana-11px-monochrome
 
-MainWindow
+MythosWindow
   id: rareSellWindow
   !text: tr('Sell rarity items to Gersao')
   size: 600 520
@@ -80,7 +80,7 @@ MainWindow
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
-    !text: tr('Gersao pays the same as for a common item of the same kind. Tick the ones to sell; the gold goes to your bank. Equipped items are not listed.')
+    !text: tr('Gersao pays the common price plus 300 gold, times the grade (Communis x1 up to Mythicus x5). Tick the ones to sell; the gold goes to your bank. Equipped items are not listed.')
 
   Label
     id: selectLabel
@@ -120,7 +120,7 @@ MainWindow
       anchors.bottom: parent.bottom
       vertical-scrollbar: itemsScroll
 
-    VerticalScrollBar
+    MythosScrollBar
       id: itemsScroll
       anchors.top: parent.top
       anchors.bottom: parent.bottom
@@ -148,7 +148,7 @@ MainWindow
     text-wrap: true
     color: #7fd35a
 
-  HorizontalSeparator
+  MythosSeparator
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
@@ -161,18 +161,18 @@ MainWindow
     anchors.right: sellButton.left
     anchors.verticalCenter: closeButton.verticalCenter
     margin-right: 8
-    color: #e0c060
+    color: #e2a443
 
-  Button
+  MythosPrimaryButton
     id: sellButton
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom
     margin-right: 6
-    size: 110 22
+    size: 126 22
     !text: tr('Sell selected')
     @onClick: modules.game_raresell.sellSelected()
 
-  Button
+  MythosButton
     id: closeButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom

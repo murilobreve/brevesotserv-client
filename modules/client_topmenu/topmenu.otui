@@ -62,14 +62,16 @@ TopMenuPanel
     size: 100 32
 
     Panel
+      id: topLeftOnlinePlayersIcon
       image-source: /images/icons/icon_players
       anchors.verticalCenter: parent.verticalCenter
       anchors.left: parent.left
       size: 11 14
+      visible: false
 
+    // empty until the site answers with the count
     Label
       id: topLeftOnlinePlayersLabel
-      !text: '- ' .. tr('players online')
       anchors.left: prev.right
       margin-left: 5
       anchors.verticalCenter: prev.verticalCenter

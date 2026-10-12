@@ -90,18 +90,35 @@ local function serverNow()
     return os.time() + timeOffset
 end
 
--- tenths -> colour
-local function multColor(tenths)
-    if tenths < 10 then
-        return '#e0564a'
-    elseif tenths < 15 then
-        return '#c8c8c8'
-    elseif tenths < 30 then
-        return '#7fd35a'
-    elseif tenths < 60 then
-        return '#3d9bff'
+local RATE_COLORS = {
+    { 1, 235, 235, 235 },
+    { 3, 255, 236, 96 },
+    { 6, 255, 158, 40 },
+    { 10, 255, 52, 52 },
+}
+local RATE_ALERT = 8 -- from here the label also gets a "!"
+
+local function rateColor(rate)
+    if rate <= RATE_COLORS[1][1] then
+        local c = RATE_COLORS[1]
+        return string.format('#%02x%02x%02x', c[2], c[3], c[4])
     end
-    return '#ffb020'
+    for i = 2, #RATE_COLORS do
+        local lo, hi = RATE_COLORS[i - 1], RATE_COLORS[i]
+        if rate <= hi[1] or i == #RATE_COLORS then
+            local t = math.min(1, (rate - lo[1]) / (hi[1] - lo[1]))
+            local function mix(k)
+                return math.floor(lo[k] + (hi[k] - lo[k]) * t + 0.5)
+            end
+            return string.format('#%02x%02x%02x', mix(2), mix(3), mix(4))
+        end
+    end
+end
+
+-- tenths -> colour: the same scale as the rate label over the monsters,
+-- so a hot hunt reads the same here and in the map
+local function multColor(tenths)
+    return rateColor(tenths / 10)
 end
 
 -- loot follows the XP rate (0.8x to 4x), so its colours step sooner
@@ -492,31 +509,6 @@ end
 local rateByName = {}
 
 -- the label's colour by rate: light grey at 1x, yellow, orange, red at 10x
-local RATE_COLORS = {
-    { 1, 235, 235, 235 },
-    { 3, 255, 236, 96 },
-    { 6, 255, 158, 40 },
-    { 10, 255, 52, 52 },
-}
-local RATE_ALERT = 8 -- from here the label also gets a "!"
-
-local function rateColor(rate)
-    if rate <= RATE_COLORS[1][1] then
-        local c = RATE_COLORS[1]
-        return string.format('#%02x%02x%02x', c[2], c[3], c[4])
-    end
-    for i = 2, #RATE_COLORS do
-        local lo, hi = RATE_COLORS[i - 1], RATE_COLORS[i]
-        if rate <= hi[1] or i == #RATE_COLORS then
-            local t = math.min(1, (rate - lo[1]) / (hi[1] - lo[1]))
-            local function mix(k)
-                return math.floor(lo[k] + (hi[k] - lo[k]) * t + 0.5)
-            end
-            return string.format('#%02x%02x%02x', mix(2), mix(3), mix(4))
-        end
-    end
-end
-
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return

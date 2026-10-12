@@ -51,7 +51,8 @@ local PINNED_CHARACTERS_SETTING = 'characterlist-pinned-characters'
     true  -> panel is displayed
     false -> panel is hidden
 ]]
-local SHOW_PREMIUM_WIDGETS = true
+-- Mythos runs with free premium for everyone: no premium sales pitch
+local SHOW_PREMIUM_WIDGETS = false
 
 -- autoReconnect Button
 local autoReconnectButton
@@ -733,9 +734,11 @@ function CharacterList.create(characters, account, otui)
     end
 
     if account.subStatus == SubscriptionStatus.Free then
-        accountStatusLabel:setText(('%s%s'):format(tr('Free Account'), status))
+        -- the server gives premium to every account (freePremium), the
+        -- login answer just does not say so
+        accountStatusLabel:setText(('%s%s'):format(tr('Gratis Premium Account'), status))
         if accountStatusIcon then
-            accountStatusIcon:setImageSource('/images/game/entergame/nopremium')
+            accountStatusIcon:setImageSource('/images/game/entergame/premium')
         end
     elseif account.subStatus == SubscriptionStatus.Premium then
         if account.premDays == 0 or account.premDays == 65535 then
@@ -762,10 +765,7 @@ function CharacterList.create(characters, account, otui)
         local autoReconnect = not g_settings.getBoolean('autoReconnect', false)
         autoReconnectButton:setOn(autoReconnect)
         g_settings.set('autoReconnect', autoReconnect)
-        local statusText = autoReconnect and 'Auto reconnect: On' or 'Auto reconnect: off'
-        if not shouldShowAppearance() then
-            statusText = autoReconnect and 'Auto reconnect:\n On' or 'Auto reconnect:\n off'
-        end
+        local statusText = autoReconnect and tr('Auto reconnect: On') or tr('Auto reconnect: Off')
 
         autoReconnectButton:setText(statusText)
     end
@@ -778,8 +778,8 @@ function CharacterList.rebuildCharactersList()
 
     local showAppearance = shouldShowAppearance()
     local showOutfits = showAppearance and getShowOutfits()
-    local oddRowColor = showAppearance and '#484848' or '#565656'
-    local evenRowColor = showAppearance and '#414141' or '#4f4f4f'
+    local oddRowColor = '#00000000'
+    local evenRowColor = '#ffffff07'
     local focused = characterList:getFocusedChild()
     local focusName = focused and focused.characterName or g_settings.get('last-used-character')
     local focusWorld = focused and focused.worldName or g_settings.get('last-used-world')
@@ -890,12 +890,7 @@ function CharacterList.show()
 
     local autoReconnect = g_settings.getBoolean('autoReconnect', false)
     autoReconnectButton:setOn(autoReconnect)
-    local reconnectStatus = autoReconnect and 'On' or 'Off'
-    if not shouldShowAppearance() then
-        autoReconnectButton:setText('Auto reconnect:\n ' .. reconnectStatus)
-    else
-        autoReconnectButton:setText('Auto reconnect: ' .. reconnectStatus)
-    end
+    autoReconnectButton:setText(autoReconnect and tr('Auto reconnect: On') or tr('Auto reconnect: Off'))
 end
 
 function CharacterList.hide(showLogin)

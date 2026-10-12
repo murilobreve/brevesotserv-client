@@ -67,7 +67,7 @@ BrevesLink < UIButton
 
 BrevesLabel < Label
   font: verdana-11px-antialised
-  color: #a6a6a6
+  color: #a39db2
 
 BrevesFeature < Panel
   height: 38
@@ -94,7 +94,7 @@ BrevesFeature < Panel
   Label
     id: desc
     font: verdana-11px-antialised
-    color: #a6a6a6
+    color: #a39db2
     anchors.left: title.left
     anchors.right: parent.right
     anchors.top: title.bottom
@@ -102,10 +102,10 @@ BrevesFeature < Panel
     text-auto-resize: true
 
 EnterGameWindow < UIWindow
-  size: 660 312
+  size: 660 324
   anchors.centerIn: parent
   image-source: /images/brevesui/panel
-  image-border: 12
+  image-border: 9
   color: #00000000
   padding: 0
 
@@ -145,6 +145,7 @@ EnterGameWindow
       anchors.top: logo.bottom
       margin-top: 16
       @onSetup: |
+        self.bullet:setImageSource('/images/mythos/gem_pearl')
         self.title:setText(tr('Rarity drops'))
         self.desc:setText(tr('Five grades, up to Mythicus'))
 
@@ -153,6 +154,7 @@ EnterGameWindow
       anchors.top: prev.bottom
       margin-top: 4
       @onSetup: |
+        self.bullet:setImageSource('/images/mythos/gem_sapphire')
         self.title:setText(tr('Hunt Board'))
         self.desc:setText(tr('Rates up to x10, new roll every 2h'))
 
@@ -161,6 +163,7 @@ EnterGameWindow
       anchors.top: prev.bottom
       margin-top: 4
       @onSetup: |
+        self.bullet:setImageSource('/images/mythos/gem_gold')
         self.title:setText(tr('Mythos Coins'))
         self.desc:setText(tr('Leaderboard prizes, 1 per hour online'))
 
@@ -169,6 +172,7 @@ EnterGameWindow
       anchors.top: prev.bottom
       margin-top: 4
       @onSetup: |
+        self.bullet:setImageSource('/images/mythos/gem_amethyst')
         self.title:setText(tr('Rarity Market'))
         self.desc:setText(tr('Trade rare gear with other players'))
 
@@ -210,7 +214,7 @@ EnterGameWindow
   UIWidget
     id: brandSeparator
     width: 1
-    background-color: #2a2a2a
+    image-source: /images/brevesui/separator_v
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.left: brandPanel.right
@@ -222,8 +226,9 @@ EnterGameWindow
   Label
     id: formTitle
     !text: tr('Welcome back')
-    font: Verdana Bold-13px
-    color: #ffffff
+    ttf-font: cinzel-bold
+    ttf-font-size: 18
+    color: #ece8f6
     text-auto-resize: true
     anchors.top: parent.top
     anchors.left: brandSeparator.right

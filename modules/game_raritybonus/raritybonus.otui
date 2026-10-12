@@ -48,7 +48,7 @@ BonusItemRow < BrevesRow
     margin-top: 2
     height: 14
     font: verdana-11px-monochrome
-    color: #9a9a9a
+    color: #a39db2
     phantom: true
 
   Panel
@@ -62,25 +62,15 @@ BonusItemRow < BrevesRow
       spacing: 2
 
 // reroll / change button: Store look, an icon and the price
-BonusActionButton < UIButton
+BonusActionButton < MythosButton
   size: 66 18
-  font: verdana-11px-antialised
-  color: #dfdfdf
-  image-source: /game_store/images/button
-  image-color: #dfdfdf
-  image-clip: 0 0 22 23
-  image-border: 3
   icon-align: left
   icon-offset: 4 0
   text-offset: 8 0
-  $hover !disabled:
-    image-clip: 0 23 22 23
   $pressed:
-    image-clip: 0 46 22 23
     text-offset: 9 1
   $disabled:
-    color: #dfdfdf66
-    opacity: 0.6
+    opacity: 0.7
 
 // one bonus of an item
 BonusLine < Panel
@@ -95,7 +85,7 @@ BonusLine < Panel
     color: #7fd35a
 
 BonusItemRowEven < BonusItemRow
-  background-color: #ffffff12
+  background-color: #ffffff07
 
 // one bonus: its total (and cap) on the right, the items it comes from below
 BonusTotalRow < BrevesRow
@@ -108,7 +98,7 @@ BonusTotalRow < BrevesRow
     anchors.left: parent.left
     anchors.right: total.left
     height: 14
-    color: #dfdfdf
+    color: #e4e0ec
     phantom: true
 
   Label
@@ -128,13 +118,13 @@ BonusTotalRow < BrevesRow
     anchors.right: parent.right
     margin-top: 2
     font: verdana-11px-monochrome
-    color: #9a9a9a
+    color: #a39db2
     phantom: true
 
 BonusTotalRowEven < BonusTotalRow
-  background-color: #ffffff12
+  background-color: #ffffff07
 
-MainWindow
+MythosWindow
   id: rarityBonusWindow
   !text: tr('Rarity Bonuses')
   size: 900 560
@@ -146,10 +136,10 @@ MainWindow
     anchors.left: parent.left
     height: 18
     text-auto-resize: true
-    color: #ffd84a
+    color: #e2a443
 
   // shortcut to the Store's Rarity category (Rarity XP packs)
-  Button
+  MythosButton
     id: buyXpButton
     anchors.verticalCenter: xpLabel.verticalCenter
     anchors.left: xpLabel.right
@@ -161,12 +151,14 @@ MainWindow
 
   Label
     id: status
-    anchors.top: parent.top
+    anchors.verticalCenter: buyXpButton.verticalCenter
     anchors.left: buyXpButton.right
     anchors.right: parent.right
     margin-left: 16
-    height: 18
+    height: 26
     text-align: right
+    text-wrap: true
+    font: verdana-11px-antialised
     color: #7fd35a
 
   BrevesSection
@@ -187,7 +179,7 @@ MainWindow
       anchors.bottom: parent.bottom
       vertical-scrollbar: itemsScroll
 
-    VerticalScrollBar
+    MythosScrollBar
       id: itemsScroll
       anchors.top: parent.top
       anchors.bottom: parent.bottom
@@ -223,7 +215,7 @@ MainWindow
       anchors.bottom: parent.bottom
       vertical-scrollbar: totalsScroll
 
-    VerticalScrollBar
+    MythosScrollBar
       id: totalsScroll
       anchors.top: parent.top
       anchors.bottom: parent.bottom
@@ -231,7 +223,7 @@ MainWindow
       step: 30
       pixel-scroll: true
 
-  HorizontalSeparator
+  MythosSeparator
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
@@ -245,7 +237,7 @@ MainWindow
     anchors.bottom: parent.bottom
     margin-right: 10
 
-  Button
+  MythosButton
     id: refreshButton
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom
@@ -254,7 +246,7 @@ MainWindow
     !text: tr('Refresh')
     @onClick: modules.game_raritybonus.request()
 
-  Button
+  MythosButton
     id: closeButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom

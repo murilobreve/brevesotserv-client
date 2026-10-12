@@ -1,3 +1,9 @@
+// thin column rule between the table columns
+CharColumnLine < UIWidget
+  width: 1
+  background-color: #322d3e
+  phantom: true
+
 CharacterWidget < UIWidget
   height: 14
   background-color: alpha
@@ -10,9 +16,9 @@ CharacterWidget < UIWidget
       end
       if self.rowColor then
         if focused then
-          self:setBackgroundColor("#696767")
+          self:setBackgroundColor("#8c7bd933")
           self:setBorderWidth(1)
-          self:setBorderColor("#696767")
+          self:setBorderColor("#8c7bd9")
         else
           self:setBackgroundColor(self.rowColor)
           self:setBorderWidth(0)
@@ -46,7 +52,7 @@ CharacterWidget < UIWidget
 
   Label
     id: name
-    color: #bbbbbb
+    color: #c9c3d6
     anchors.top: parent.top
     anchors.left: parent.left
     font: verdana-11px-monochrome
@@ -124,7 +130,7 @@ CharacterWidget < UIWidget
 
   Label
     id: level
-    color: #bbbbbb
+    color: #c9c3d6
     anchors.top: parent.top
     anchors.left: parent.left
     margin-left: 350
@@ -142,7 +148,7 @@ CharacterWidget < UIWidget
 
   Label
     id: vocation
-    color: #bbbbbb
+    color: #c9c3d6
     anchors.top: parent.top
     anchors.left: parent.left
     margin-left: 410
@@ -160,7 +166,7 @@ CharacterWidget < UIWidget
 
   Label
     id: worldName
-    color: #bbbbbb
+    color: #c9c3d6
     anchors.top: parent.top
     font: verdana-11px-monochrome
     text-auto-resize: true
@@ -182,7 +188,7 @@ CharacterWidget < UIWidget
     $on:
       color: #ffffff
 
-MainWindow
+MythosWindow
   id: charactersWindow
   !text: tr('Character List')
   visible: false
@@ -195,7 +201,6 @@ MainWindow
       if g_game.getFeature(GameEnterGameShowAppearance) then
         self:setSize({width = 745, height = 430})
         self:setText(tr('Select Character'))
-        self:setColor("#c0c0c0")
       else
         self:setSize({width = 350, height = 400})
         self:setText(tr('Character List'))
@@ -206,15 +211,9 @@ MainWindow
 
   TextList
     id: characters
-    background-color: #404040
-    border-width-top: 1
-    border-color-top: black
-    border-width-left: 1
-    border-color-left: black
-    border-width-bottom: 1
-    border-color-bottom: #747474
-    border-width-right: 1
-    border-color-right: #747474
+    background-color: #0f0e13
+    border-width: 1
+    border-color: #322d3e
     padding: 1 1 1 1
     anchors.top: parent.top
     anchors.left: parent.left
@@ -227,10 +226,10 @@ MainWindow
     auto-focus: first
     @onSetup: |
       if g_game.getFeature(GameEnterGameShowAppearance) then
-        self:setBackgroundColor("#404040")
+        self:setBackgroundColor("#0f0e13")
         self:setPaddingTop(20)
       else
-        self:setBackgroundColor("#565656")
+        self:setBackgroundColor("#0f0e13")
       end
 
   UIWidget
@@ -240,11 +239,8 @@ MainWindow
     anchors.top: characters.top
     height: 19
     border-width: 1
-    border-color-top: #1B1B1A
-    border-color-left: #1B1B1A
-    border-color-right: #6b6b6b
-    border-color-bottom: #6b6b6b
-    background-color: #363636
+    border-color: #322d3e
+    background-color: #1d1a25
     @onSetup: |
       if not(g_game.getFeature(GameEnterGameShowAppearance)) then
         self:hide()
@@ -258,15 +254,17 @@ MainWindow
       margin-top: 2
       !text: tr('Character')
       text-offset: -30 0
-      font: verdana-11px-monochrome
-      color: #c0c0c0
+      font: verdana-11px-antialised
+      color: #8d869c
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 242 5
       @onClick: onSortButtonClick(self, 1)
+      $hover:
+        color: #e4e0ec
       $pressed:
-        color: #9d9d9d
+        color: #ece8f6
         image-clip: 0 4 7 4
       $checked:
         image-clip: 0 4 7 4
@@ -284,15 +282,17 @@ MainWindow
       margin-top: 2
       !text: tr('Status')
       text-offset: -20 0
-      font: verdana-11px-monochrome
-      color: #c0c0c0
+      font: verdana-11px-antialised
+      color: #8d869c
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 92 5
       @onClick: onSortButtonClick(self, 2)
+      $hover:
+        color: #e4e0ec
       $pressed:
-        color: #9d9d9d
+        color: #ece8f6
         image-clip: 0 4 7 4
       $checked:
         image-clip: 0 4 7 4
@@ -310,15 +310,17 @@ MainWindow
       margin-top: 2
       !text: tr('Level')
       text-offset: -8 0
-      font: verdana-11px-monochrome
-      color: #c0c0c0
+      font: verdana-11px-antialised
+      color: #8d869c
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 52 5
       @onClick: onSortButtonClick(self, 3)
+      $hover:
+        color: #e4e0ec
       $pressed:
-        color: #9d9d9d
+        color: #ece8f6
         image-clip: 0 4 7 4
       $checked:
         image-clip: 0 4 7 4
@@ -336,15 +338,17 @@ MainWindow
       margin-top: 2
       !text: tr('Vocation')
       text-offset: -10 0
-      font: verdana-11px-monochrome
-      color: #c0c0c0
+      font: verdana-11px-antialised
+      color: #8d869c
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 82 5
       @onClick: onSortButtonClick(self, 4)
+      $hover:
+        color: #e4e0ec
       $pressed:
-        color: #9d9d9d
+        color: #ece8f6
         image-clip: 0 4 7 4
       $checked:
         image-clip: 0 4 7 4
@@ -362,15 +366,17 @@ MainWindow
       margin-top: 2
       !text: tr('World')
       text-offset: -85 0
-      font: verdana-11px-monochrome
-      color: #c0c0c0
+      font: verdana-11px-antialised
+      color: #8d869c
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 212 5
       @onClick: onSortButtonClick(self, 5)
+      $hover:
+        color: #e4e0ec
       $pressed:
-        color: #9d9d9d
+        color: #ece8f6
         image-clip: 0 4 7 4
       $checked:
         image-clip: 0 4 7 4
@@ -379,7 +385,7 @@ MainWindow
       $on:
         image-source: /images/game/entergame/sort-button
 
-  VerticalScrollBar
+  MythosScrollBar
     id: characterListScrollBar
     anchors.top: parent.top
     anchors.bottom: accountStatusCaption.top
@@ -388,7 +394,7 @@ MainWindow
     step: 14
     pixels-scroll: true
 
-  VerticalSeparator
+  CharColumnLine
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: prev.bottom
@@ -398,7 +404,7 @@ MainWindow
         self:hide()
       end
 
-  VerticalSeparator
+  CharColumnLine
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: prev.bottom
@@ -408,7 +414,7 @@ MainWindow
         self:hide()
       end
 
-  VerticalSeparator
+  CharColumnLine
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: prev.bottom
@@ -418,7 +424,7 @@ MainWindow
         self:hide()
       end
 
-  VerticalSeparator
+  CharColumnLine
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: prev.bottom
@@ -473,7 +479,7 @@ MainWindow
     $on:
       color: #FF0000
 
-  Button
+  MythosButton
     id: premiumButton
     !text: tr('Get Premium')
     anchors.right: parent.right
@@ -488,12 +494,12 @@ MainWindow
       end
 
 
-  HorizontalSeparator
+  MythosSeparator
     id: separator
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: premiumBenefitsPanel.top
-    height: 2
+    height: 1
     @onSetup: |
       if g_game.getFeature(GameEnterGameShowAppearance) then
         self:setMarginBottom(6)
@@ -634,14 +640,6 @@ MainWindow
     anchors.bottom: autoReconnect.top
     margin-bottom: 6
     size: 165 22
-    border-width-top: 1
-    border-color-top: black
-    border-width-left: 1
-    border-color-left: black
-    border-width-bottom: 1
-    border-color-bottom: #747474
-    border-width-right: 1
-    border-color-right: #747474
     @onSetup: |
       if not(g_game.getFeature(GameEnterGameShowAppearance)) then
         self:setHeight(0)
@@ -659,7 +657,7 @@ MainWindow
       checked: true
       !text: tr('Show Hidden Characters')
       text-auto-resize: true
-      color: #c0c0c0
+      color: #c9c3d6
       @onCheckChange: onShowHiddenCharacters(self, self:isChecked())
 
 
@@ -669,14 +667,6 @@ MainWindow
     anchors.verticalCenter: buttonHidden.verticalCenter
     margin-left: 10
     size: 100 22
-    border-width-top: 1
-    border-color-top: black
-    border-width-left: 1
-    border-color-left: black
-    border-width-bottom: 1
-    border-color-bottom: #747474
-    border-width-right: 1
-    border-color-right: #747474
     padding: 1 1 1 1
     @onSetup: |
       if not(g_game.getFeature(GameEnterGameShowAppearance)) then
@@ -692,26 +682,26 @@ MainWindow
       margin-left: 6      
       !text: tr('Show Outfit')
       text-auto-resize: true
-      color: #c0c0c0
+      color: #c9c3d6
       @onCheckChange: onShowOutfits(self, self:isChecked())
 
-  Button
+  MythosButton
     id: autoReconnect
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     @onSetup: |
       if g_game.getFeature(GameEnterGameShowAppearance) then
-        self:setWidth(140)
+        self:setWidth(170)
       else
         self:setWidth(75)
         self:setFont('small-9px')
       end
     $!on:
-      image-color: red
+      color: #8d869c
     $on:
-      image-color: green
+      color: #7fd35a
 
-  Button
+  MythosPrimaryButton
     id: buttonOk
     !text: tr('Ok')
     width: 64
@@ -720,7 +710,7 @@ MainWindow
     margin-right: 10
     @onClick: CharacterList.doLogin()
 
-  Button
+  MythosButton
     id: buttonCancel
     !text: tr('Cancel')
     width: 64

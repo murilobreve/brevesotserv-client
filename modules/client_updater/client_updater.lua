@@ -98,8 +98,8 @@ end
 local STATUS_COLORS = {
   checking = '#6b6b6b',
   uptodate = '#5fbf6a',
-  available = '#e0b04a',
-  updating = '#8b6bff',
+  available = '#e2a443',
+  updating = '#8c7bd9',
   error = '#c0574f',
 }
 
@@ -218,8 +218,38 @@ local function setProgress(done, total, percent)
   if not box then
     return
   end
-  box.content:setText(txt('Baixando a nova versão do Mythos', 'Downloading the new Mythos version') ..
-    string.format('\n%d / %d  (%d%%)', done, total, math.floor(percent or 0)))
+  percent = math.max(0, math.min(100, percent or 0))
+  box.content:setText(txt('Baixando arquivo %d de %d (%d%%)', 'Downloading file %d of %d (%d%%)',
+    math.min(done + 1, total), total, math.floor(percent)))
+  local track = box.track
+  track.fill:setWidth(math.floor((track:getWidth() - 4) * percent / 100))
+end
+
+-- the download window: logo, versions, a progress bar and Cancel
+local function openBox(onCancel)
+  if not pcall(g_ui.importStyle, '/client_updater/client_updater') then
+    -- an old style set: fall back to the plain box
+    box = displayCancelBox(txt('Atualização', 'Update'), '')
+    box.track = { fill = { setWidth = function() end }, getWidth = function() return 0 end }
+    connect(box, { onCancel = onCancel })
+    return
+  end
+  box = g_ui.createWidget('UpdaterWindow', rootWidget)
+  box:setText(txt('Atualização', 'Update'))
+  box.versions:setText(txt('Versão %d para %d', 'Version %d to %d', localInfo.versao, remoteVersion or 0))
+  box.cancelButton:setText(txt('Cancelar', 'Cancel'))
+  box.cancelButton.onClick = function()
+    local current = box
+    box = nil
+    onCancel()
+    if current then
+      current:destroy()
+    end
+  end
+  box.onEscape = box.cancelButton.onClick
+  box:show()
+  box:raise()
+  box:focus()
 end
 
 local function install(changed, manifest)
@@ -240,7 +270,11 @@ local function install(changed, manifest)
   end
   log(string.format('updated to version %d (%d files)', manifest.versao, #changed))
   if box then
-    box.content:setText(txt('Mythos atualizado! Reiniciando...', 'Mythos updated! Restarting...'))
+    box.content:setText(txt('Mythos atualizado. Reiniciando...', 'Mythos updated. Restarting...'))
+    box.track.fill:setWidth(box.track:getWidth() - 4)
+    if box.cancelButton then
+      box.cancelButton:setEnabled(false)
+    end
   end
   scheduleEvent(function() g_app.restart() end, 1200)
 end
@@ -329,13 +363,12 @@ local function startUpdate(manifest)
   if eg then
     eg.hide()
   end
-  box = displayCancelBox(txt('Atualização', 'Update'), '')
-  setProgress(0, #changed, 0)
-  connect(box, { onCancel = function()
+  openBox(function()
     generation = generation + 1
     box = nil
     giveUp()
-  end })
+  end)
+  setProgress(0, #changed, 0)
   downloadAll(changed, manifest, myGeneration)
 end
 
@@ -377,6 +410,10 @@ function Updater.check(autoInstall)
 end
 
 -- "Update now" on the login screen
+function Updater.isUpdating()
+  return status == 'updating'
+end
+
 function Updater.update()
   if g_game.isOnline() then
     return

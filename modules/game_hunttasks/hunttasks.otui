@@ -1,13 +1,13 @@
 TaskTab < BrevesTab
-  size: 130 20
+  size: 130 24
   anchors.top: parent.top
 
 // progress bar: dark track, coloured fill, text on top
 TaskBar < UIWidget
   height: 18
-  background-color: #00000080
+  background-color: #0f0e13
   border-width: 1
-  border-color: #000000
+  border-color: #322d3e
   phantom: true
 
   UIWidget
@@ -41,7 +41,7 @@ TaskCard < BrevesSection
     height: 14
     text-align: center
     font: verdana-11px-monochrome
-    color: #dfdfdf
+    color: #e4e0ec
 
   BrevesCell
     id: portrait
@@ -77,7 +77,7 @@ TaskCard < BrevesSection
     height: 28
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #9a9a9a
+    color: #a39db2
 
   Label
     id: badge
@@ -103,7 +103,7 @@ TaskCard < BrevesSection
     margin-top: 8
     height: 48
     text-wrap: true
-    color: #bfbfbf
+    color: #c9c3d6
 
   Label
     id: extra
@@ -114,15 +114,15 @@ TaskCard < BrevesSection
     height: 30
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #8a8a8a
+    color: #8d869c
 
-  Button
+  MythosPrimaryButton
     id: action
     anchors.bottom: parent.bottom
     anchors.left: parent.left
     size: 150 24
 
-  Button
+  MythosButton
     id: action2
     anchors.bottom: parent.bottom
     anchors.right: parent.right
@@ -139,7 +139,7 @@ TrailRow < BrevesRow
     anchors.verticalCenter: parent.verticalCenter
     width: 34
     text-align: center
-    color: #8a8a8a
+    color: #8d869c
     phantom: true
 
   UICreature
@@ -157,7 +157,7 @@ TrailRow < BrevesRow
     margin-right: 6
     width: 200
     text-align: right
-    color: #7a7a7a
+    color: #8d869c
     phantom: true
 
   Label
@@ -168,7 +168,7 @@ TrailRow < BrevesRow
     margin-top: 4
     margin-left: 8
     height: 14
-    color: #e8e8e8
+    color: #e9e6f0
     phantom: true
 
   Label
@@ -179,7 +179,7 @@ TrailRow < BrevesRow
     margin-top: 3
     height: 14
     font: verdana-11px-monochrome
-    color: #7a7a7a
+    color: #8d869c
     phantom: true
 
 // task shop, drawn like the Store: offer rows on the left, the chosen
@@ -233,7 +233,7 @@ ShopPrice < ShopPanelDark
   text-align: center
   text-offset: -6 0
   font: verdana-11px-antialised
-  color: #dfdfdf
+  color: #e4e0ec
   icon: /game_brevespanel/images/tasks
   icon-align: right
   icon-offset: -4 0
@@ -260,7 +260,7 @@ ShopOffer < ShopPanelLight
     margin: 10 8 0 8
     text-align: center
     font: verdana-11px-antialised
-    color: #dfdfdf
+    color: #e4e0ec
     phantom: true
 
   Label
@@ -270,7 +270,7 @@ ShopOffer < ShopPanelLight
     margin-left: 12
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #dfdfdf
+    color: #e4e0ec
     phantom: true
 
   ShopPrice
@@ -281,14 +281,14 @@ ShopOffer < ShopPanelLight
 
 ShopDescLine < Label
   font: verdana-11px-antialised
-  color: #dfdfdf
+  color: #e4e0ec
   text-wrap: true
   text-auto-resize: true
 
 TaskList < BrevesList
   focusable: false
 
-MainWindow
+MythosWindow
   id: huntTasksWindow
   size: 760 560
   @onEscape: modules.game_hunttasks.hide()
@@ -318,9 +318,9 @@ MainWindow
     anchors.right: parent.right
     anchors.verticalCenter: tasksTab.verticalCenter
     text-auto-resize: true
-    color: #dfdfdf
+    color: #e4e0ec
 
-  HorizontalSeparator
+  MythosSeparator
     id: topSep
     anchors.top: tasksTab.bottom
     anchors.left: parent.left
@@ -356,7 +356,7 @@ MainWindow
       margin-top: 10
       text-auto-resize: true
       font: verdana-11px-monochrome
-      color: #bfbfbf
+      color: #c9c3d6
 
     Panel
       id: streakDots
@@ -378,7 +378,7 @@ MainWindow
       margin-top: 8
       text-wrap: true
       font: verdana-11px-monochrome
-      color: #909090
+      color: #8d869c
 
   // ---------------------------------------------------------------- trail
   Panel
@@ -394,7 +394,7 @@ MainWindow
       height: 30
       text-wrap: true
       font: verdana-11px-monochrome
-      color: #bfbfbf
+      color: #c9c3d6
 
     TaskList
       id: list
@@ -405,7 +405,7 @@ MainWindow
       margin-top: 4
       vertical-scrollbar: scroll
 
-    VerticalScrollBar
+    MythosScrollBar
       id: scroll
       anchors.top: summary.bottom
       anchors.bottom: parent.bottom
@@ -427,7 +427,7 @@ MainWindow
       anchors.right: parent.right
       height: 18
       font: verdana-11px-antialised
-      color: #ffe9a0
+      color: #f3dcae
 
     ShopPanelDark
       id: listBox
@@ -450,7 +450,7 @@ MainWindow
           type: verticalBox
           spacing: 3
 
-      VerticalScrollBar
+      MythosScrollBar
         id: shopScroll
         anchors.top: parent.top
         anchors.bottom: parent.bottom
@@ -483,7 +483,7 @@ MainWindow
         font: verdana-11px-antialised
         color: #ffffff
 
-      Button
+      MythosPrimaryButton
         id: buy
         anchors.top: name.bottom
         anchors.horizontalCenter: name.horizontalCenter
@@ -498,7 +498,7 @@ MainWindow
         margin-top: 6
         width: 120
 
-      ComboBox
+      MythosComboBox
         id: options
         anchors.top: price.bottom
         anchors.left: image.right
@@ -529,7 +529,7 @@ MainWindow
     height: 16
     text-align: center
 
-  HorizontalSeparator
+  MythosSeparator
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
@@ -542,9 +542,9 @@ MainWindow
     anchors.right: closeButton.left
     anchors.verticalCenter: closeButton.verticalCenter
     font: verdana-11px-monochrome
-    color: #909090
+    color: #8d869c
 
-  Button
+  MythosButton
     id: closeButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom
@@ -556,6 +556,6 @@ StreakDot < UIWidget
   size: 44 22
   text-align: center
   border-width: 1
-  border-color: #000000
+  border-color: #322d3e
   background-color: #00000060
-  color: #6a6a6a
+  color: #6d6779

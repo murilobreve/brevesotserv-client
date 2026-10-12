@@ -1,0 +1,61 @@
+// the window shown while a new client version downloads
+UpdaterWindow < MythosWindow
+  size: 380 196
+  draggable: false
+  &static: true
+
+  UIWidget
+    id: logo
+    size: 271 64
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: -6
+    image-source: /images/brevesui/logo
+    phantom: true
+
+  Label
+    id: versions
+    anchors.top: logo.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    text-align: center
+    font: verdana-11px-antialised
+    color: #a39db2
+
+  UIWidget
+    id: track
+    anchors.top: versions.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 12
+    height: 10
+    image-source: /images/mythos/input
+    image-border: 3
+    phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin: 2
+      width: 0
+      background-color: #8c7bd9
+      phantom: true
+
+  Label
+    id: content
+    anchors.top: track.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    text-align: center
+    font: verdana-11px-antialised
+    color: #e4e0ec
+
+  MythosButton
+    id: cancelButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 80 22

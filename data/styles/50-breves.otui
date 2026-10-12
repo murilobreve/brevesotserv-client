@@ -1,76 +1,339 @@
-// Building blocks for the Mythos windows (heal bot, hunt board, hunt
-// tasks, rarity market). They copy what the client's own Tibia windows do:
-// Highscores (framed filter panel, black-bordered table, zebra rows),
-// Options (grey category buttons in cipsoftFont) and Prey (dark value boxes).
+// Mythos window kit. Colours from the login screen: obsidian body, the violet
+// of the halo above the logo for focus and selection, pearl for titles and
+// the main button. Window titles use Cinzel, the lettering of the logo.
+// Images are drawn by tools/mythos_ui_assets.py into /images/mythos.
 
-// framed sub panel with its title in the top strip, like "Highscores Filter"
-BrevesSection < Panel
-  image-source: /images/ui/window_new
-  image-border: 4
-  image-border-top: 17
-  padding: 22 6 6 6
-  text-align: top
-  text-offset: 0 3
-  color: #bfbfbf
-  font: verdana-11px-monochrome
+MythosWindow < MainWindow
+  image-source: /images/mythos/window
+  image-border: 6
+  image-border-top: 30
+  padding-top: 40
+  padding-left: 16
+  padding-right: 16
+  padding-bottom: 14
+  color: #ece8f6
+  text-offset: 0 7
+  ttf-font: cinzel-bold
+  ttf-font-size: 15
 
-// tab or category button, like the Options categories
-BrevesTab < UIButton
-  size: 118 20
-  image-source: /images/ui/button-grey-up
-  image-border: 5
-  font: cipsoftFont
-  color: #dfdfdf
+MythosButton < UIButton
+  font: verdana-11px-antialised
+  color: #ddd8e8
+  size: 86 22
   text-offset: 0 1
-  $hover !checked:
-    color: #ffffff
-  $pressed:
-    image-source: /images/ui/button-grey-down
-  $checked:
-    image-source: /images/ui/button-grey-down
-    color: #ffffff
-    text-offset: 1 2
+  image-source: /images/mythos/button
+  image-border: 4
+  change-cursor-image: true
+  cursor: pointer
 
-// table body: black border over the window texture, rows stack inside
+  $hover !disabled:
+    image-source: /images/mythos/button_hover
+    color: #ffffff
+
+  $pressed:
+    image-source: /images/mythos/button_pressed
+    text-offset: 0 2
+
+  $on:
+    image-source: /images/mythos/button_pressed
+    color: #ffffff
+
+  $checked:
+    image-source: /images/mythos/button_pressed
+    color: #ffffff
+
+  $disabled:
+    image-source: /images/mythos/button_disabled
+    color: #6d6779
+    change-cursor-image: false
+
+// the one action a window is about: pearl, like the PLAY button on the login
+MythosPrimaryButton < MythosButton
+  font: Verdana Bold-11px
+  color: #16131c
+  image-source: /images/mythos/button_pearl
+
+  $hover !disabled:
+    image-source: /images/mythos/button_pearl_hover
+    color: #000000
+
+  $pressed:
+    image-source: /images/mythos/button_pearl_pressed
+
+  $disabled:
+    image-source: /images/mythos/button_pearl_disabled
+    color: #7d778a
+
+MythosTab < UIButton
+  size: 118 24
+  font: verdana-11px-antialised
+  color: #9a93aa
+  text-offset: 0 -1
+  image-source: /images/mythos/tab
+  image-border: 2
+  image-border-bottom: 2
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover !checked:
+    image-source: /images/mythos/tab_hover
+    color: #e0dbea
+
+  $checked:
+    image-source: /images/mythos/tab_on
+    font: Verdana Bold-11px
+    color: #f3f0fa
+
+MythosTextEdit < UITextEdit
+  font: verdana-11px-antialised
+  color: #e6e2ee
+  height: 22
+  text-offset: 0 1
+  padding: 4 6 3 6
+  image-source: /images/mythos/input
+  image-border: 3
+  selection-color: #16131c
+  selection-background-color: #c9bff0
+  placeholder-color: #6d6779
+  cursor: text
+
+  $focus:
+    image-source: /images/mythos/input_focus
+
+  $disabled:
+    color: #6d6779
+
+MythosComboBoxPopupMenuButton < UIButton
+  height: 20
+  font: verdana-11px-antialised
+  text-align: left
+  text-offset: 6 0
+  color: #c9c3d6
+  background-color: alpha
+
+  $hover !disabled:
+    color: #ffffff
+    background-color: #8c7bd940
+
+  $disabled:
+    color: #6d6779
+
+MythosComboBoxPopupMenuSeparator < UIWidget
+  image-source: /images/ui/menubox
+  image-border-left: 1
+  image-border-right: 1
+  image-clip: 0 0 32 2
+  height: 2
+  phantom: true
+  margin-top: 2
+  margin-bottom: 2
+
+MythosComboBoxPopupMenu < UIPopupMenu
+  image-source: /images/mythos/popup
+  image-border: 2
+  padding: 2
+
+MythosComboBoxPopupScrollMenuButton < MythosComboBoxPopupMenuButton
+
+MythosComboBoxPopupScrollMenu < UIPopupScrollMenu
+  image-source: /images/mythos/popup
+  image-border: 2
+  padding: 2
+
+MythosComboBox < UIComboBox
+  font: verdana-11px-antialised
+  color: #ddd8e8
+  size: 120 20
+  text-align: center
+  text-offset: -9 0
+  image-source: /images/mythos/combobox
+  image-border: 3
+  image-border-right: 20
+  image-clip: 0 0 91 20
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover !disabled:
+    image-clip: 0 20 91 20
+    color: #ffffff
+
+  $on:
+    image-clip: 0 40 91 20
+
+  $disabled:
+    color: #6d6779
+
+MythosScrollBarSlider < UIButton
+  id: sliderButton
+  anchors.centerIn: parent
+  size: 8 20
+  image-source: /images/mythos/scroll_thumb
+  image-border: 4
+  margin-left: 1
+  margin-right: 1
+
+  $hover:
+    image-source: /images/mythos/scroll_thumb_hover
+
+  $pressed:
+    image-source: /images/mythos/scroll_thumb_hover
+
+  $disabled:
+    opacity: 0
+
+MythosScrollBar < UIScrollBar
+  orientation: vertical
+  width: 10
+  height: 39
+  image-source: /images/mythos/scroll_track
+  image-border: 2
+  pixels-scroll: true
+
+  UIButton
+    id: decrementButton
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 10 10
+    image-source: /images/mythos/scroll_arrows
+    image-clip: 0 0 10 10
+    $hover:
+      image-clip: 10 0 10 10
+    $pressed:
+      image-clip: 10 0 10 10
+
+  UIButton
+    id: incrementButton
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    size: 10 10
+    image-source: /images/mythos/scroll_arrows
+    image-clip: 0 10 10 10
+    $hover:
+      image-clip: 10 10 10 10
+    $pressed:
+      image-clip: 10 10 10 10
+
+  MythosScrollBarSlider
+
+MythosHSliderThumb < UIButton
+  id: sliderButton
+  anchors.centerIn: parent
+  size: 20 8
+  image-source: /images/mythos/scroll_thumb_h
+  image-border: 4
+
+  $hover:
+    image-source: /images/mythos/scroll_thumb_h_hover
+
+  $pressed:
+    image-source: /images/mythos/scroll_thumb_h_hover
+
+  $disabled:
+    opacity: 0
+
+MythosHSlider < UIScrollBar
+  orientation: horizontal
+  size: 78 10
+  image-source: /images/mythos/scroll_track_h
+  image-border: 2
+  pixels-scroll: true
+  parent-scroll: true
+
+  UIButton
+    id: decrementButton
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.left: parent.left
+    size: 10 10
+    image-source: /images/mythos/scroll_arrows_h
+    image-clip: 0 0 10 10
+    $hover:
+      image-clip: 10 0 10 10
+    $pressed:
+      image-clip: 10 0 10 10
+
+  UIButton
+    id: incrementButton
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.right: parent.right
+    size: 10 10
+    image-source: /images/mythos/scroll_arrows_h
+    image-clip: 0 10 10 10
+    $hover:
+      image-clip: 10 10 10 10
+    $pressed:
+      image-clip: 10 10 10 10
+
+  MythosHSliderThumb
+
+MythosSeparator < UIWidget
+  height: 1
+  background-color: #322d3e
+  phantom: true
+
+// the corner toast and other small floating boxes
+MythosBox < UIWidget
+  image-source: /images/mythos/notice
+  image-border: 4
+
+// framed sub panel with its title in the top strip
+BrevesSection < Panel
+  image-source: /images/mythos/section
+  image-border: 4
+  image-border-top: 21
+  padding: 26 8 8 8
+  text-align: top
+  text-offset: 0 4
+  color: #ddd7ea
+  font: Verdana Bold-11px
+
+// the same panel without the title strip
+BrevesPanelBox < Panel
+  image-source: /images/mythos/panel
+  image-border: 4
+  padding: 8
+
+// tab or category button
+BrevesTab < MythosTab
+
+// table body: a dark well, rows stack inside
 BrevesList < UIScrollArea
-  border-width: 1
-  border-color: #000000
-  background-color: #00000026
-  padding: 1
+  image-source: /images/mythos/well
+  image-border: 3
+  padding: 2
   layout:
     type: verticalBox
 
 // column header strip on top of a BrevesList
 BrevesHeader < UIWidget
   height: 20
-  image-source: /images/ui/button
-  image-clip: 0 0 22 23
-  image-border: 3
+  background-color: #1d1a25
+  border-width: 1
+  border-color: #322d3e
   font: verdana-11px-antialised
-  color: #dfdfdf88
+  color: #8d869c
   text-align: left
-  text-offset: 6 0
+  text-offset: 7 0
 
-// zebra rows: odd rows keep the texture, even rows get the light tint
+// rows: odd rows stay clear, even rows get a faint light, the chosen row
+// takes the halo violet
 BrevesRow < UIWidget
   focusable: true
-  background-color: #00000012
+  background-color: #00000000
   $hover !focus:
-    background-color: #ffffff1a
+    background-color: #ffffff0e
   $focus:
-    background-color: #ffffff30
+    background-color: #8c7bd930
 
 BrevesRowEven < BrevesRow
-  background-color: #ffffff12
+  background-color: #ffffff07
 
 // dark box with a value and an icon, like the gold box in Prey
 BrevesValueBox < UIWidget
   height: 20
-  background-color: #00000066
-  border-width: 1
-  border-color: #000000
+  image-source: /images/mythos/input
+  image-border: 3
   font: verdana-11px-antialised
-  color: #dfdfdf
+  color: #e6e2ee
   text-align: right
   text-offset: -20 0
 
@@ -82,18 +345,18 @@ BrevesValueBox < UIWidget
     margin-right: 4
     phantom: true
 
-// cell for a creature or item, like the Prey creature grid
+// cell for a creature or item
 BrevesCell < UIWidget
-  background-color: #00000040
+  background-color: #0f0e13
   border-width: 1
-  border-color: #000000
+  border-color: #322d3e
 
 BrevesNote < Label
-  font: verdana-11px-monochrome
-  color: #909090
+  font: verdana-11px-antialised
+  color: #8d869c
   text-wrap: true
   text-auto-resize: true
 
 BrevesLabel < Label
-  font: verdana-11px-monochrome
-  color: #bfbfbf
+  font: verdana-11px-antialised
+  color: #c9c3d6

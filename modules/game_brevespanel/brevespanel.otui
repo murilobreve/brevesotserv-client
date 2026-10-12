@@ -1,19 +1,22 @@
 // one row per server feature, under the store and control buttons
 BrevesFeatureButton < UIButton
   height: 20
-  image-source: /images/ui/button-grey-up
-  image-border: 5
+  image-source: /images/mythos/button
+  image-border: 4
   font: verdana-11px-rounded
-  color: #dfdfdf
+  color: #e4e0ec
   text-align: left
   text-offset: 25 0
+  change-cursor-image: true
+  cursor: pointer
   $hover !on:
+    image-source: /images/mythos/button_hover
     color: #ffffff
   $pressed:
-    image-source: /images/ui/button-grey-down
+    image-source: /images/mythos/button_pressed
   $on:
-    image-source: /images/ui/button-grey-down
-    color: #ffd27a
+    image-source: /images/mythos/button_pressed
+    color: #f3dcae
     text-offset: 26 1
 
   UIWidget
@@ -35,17 +38,17 @@ BrevesFeatureButton < UIButton
     text-align: center
     padding: 1 5 0 5
     font: verdana-9px-bold
-    border-color: #6e6e6e
+    border-color: #3a3446
     phantom: true
     visible: false
     $hover:
-      border-color: #dfdfdf
+      border-color: #e4e0ec
 
 // the title of a group of rows (Hunting, Rarity, Tools)
 BrevesGroupLabel < Label
   height: 14
   font: verdana-11px-rounded
-  color: #8f8f8f
+  color: #8d869c
   text-offset: 2 0
   phantom: true
 
@@ -59,6 +62,8 @@ BrevesPanel < PhantomMiniWindow
   id: brevespanel
   height: 120
   &panelHeight: 120
+  image-source: /images/mythos/panel
+  image-border: 4
 
   UIWidget
     id: header
@@ -74,8 +79,9 @@ BrevesPanel < PhantomMiniWindow
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text-auto-resize: true
-      font: verdana-11px-rounded
-      color: #a6a6a6
+      color: #ece8f6
+      ttf-font: cinzel-bold
+      ttf-font-size: 13
       text: Mythos
       phantom: true
 
@@ -142,7 +148,7 @@ BrevesNewsRow < UIWidget
     margin-left: 10
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #ffd27a
+    color: #f3dcae
 
   Label
     id: text
@@ -154,9 +160,9 @@ BrevesNewsRow < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #bfbfbf
+    color: #c9c3d6
 
-  Button
+  MythosButton
     id: open
     anchors.right: parent.right
     anchors.top: parent.top
@@ -164,7 +170,7 @@ BrevesNewsRow < UIWidget
     size: 60 22
     !text: tr('Open')
 
-BrevesNewsWindow < MainWindow
+BrevesNewsWindow < MythosWindow
   id: brevesNewsWindow
   !text: tr('New on Mythos')
   size: 470 440
@@ -178,10 +184,10 @@ BrevesNewsWindow < MainWindow
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #dfdfdf
+    color: #e4e0ec
     !text: tr('The server has new systems. They are all in the right panel, under the Store button.')
 
-  HorizontalSeparator
+  MythosSeparator
     id: topSep
     anchors.top: intro.bottom
     anchors.left: parent.left
@@ -199,14 +205,14 @@ BrevesNewsWindow < MainWindow
       type: verticalBox
       spacing: 4
 
-  HorizontalSeparator
+  MythosSeparator
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: closeButton.top
     margin-bottom: 8
 
-  Button
+  MythosButton
     id: closeButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom
@@ -216,13 +222,10 @@ BrevesNewsWindow < MainWindow
 
 // a small notice over the top right corner of the game screen; it never takes
 // the focus, so walking and hotkeys keep working
-BrevesNotice < UIWidget
-  width: 240
-  height: 66
-  background-color: #1c1c1ce6
-  border-width: 1
-  border-color: #8a6a2a
-  padding: 6
+BrevesNotice < MythosBox
+  width: 250
+  height: 72
+  padding: 10 8 8 10
 
   Label
     id: text
@@ -232,23 +235,23 @@ BrevesNotice < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e8e8e8
+    color: #e9e6f0
     phantom: true
 
-  Button
+  MythosPrimaryButton
     id: openButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     width: 86
-    height: 18
+    height: 20
     focusable: false
 
-  Button
+  MythosButton
     id: closeButton
     !text: tr('Later')
     anchors.right: openButton.left
     anchors.bottom: parent.bottom
     margin-right: 6
-    width: 56
-    height: 18
+    width: 60
+    height: 20
     focusable: false

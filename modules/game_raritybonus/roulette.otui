@@ -21,15 +21,15 @@ RouletteLine < UIWidget
     anchors.fill: parent
     text-align: center
     font: Verdana Bold-13px
-    color: #9a9a9a
+    color: #a39db2
     phantom: true
 
 // a slot's result under the reel
 RouletteResult < UIWidget
   height: 26
-  background-color: #0b0b0bee
+  background-color: #0f0e13f0
   border-width: 1
-  border-color: #3a3a3a
+  border-color: #3a3446
   phantom: true
 
   Label
@@ -39,7 +39,7 @@ RouletteResult < UIWidget
     margin-left: 8
     width: 70
     font: verdana-11px-monochrome
-    color: #8a8a8a
+    color: #8d869c
     phantom: true
 
   Label
@@ -50,10 +50,10 @@ RouletteResult < UIWidget
     margin-right: 78
     text-align: center
     font: Verdana Bold-11px
-    color: #5a5a5a
+    color: #5d5869
     phantom: true
 
-MainWindow
+MythosWindow
   id: rarityRouletteWindow
   !text: tr('Rarity Roulette')
   size: 600 480
@@ -82,7 +82,7 @@ MainWindow
     margin-top: 3
     height: 14
     font: verdana-11px-monochrome
-    color: #9a9a9a
+    color: #a39db2
 
   // the reel: three lines, the slot's result stops on the middle one
   UIWidget
@@ -91,9 +91,9 @@ MainWindow
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 12
     size: 400 106
-    background-color: #0b0b0bee
+    background-color: #0f0e13f0
     border-width: 1
-    border-color: #6b5a33
+    border-color: #4a4358
     clipping: true
 
     UIWidget
@@ -137,7 +137,7 @@ MainWindow
     margin-right: -6
     height: 36
     border-width: 2
-    border-color: #ffd84a
+    border-color: #e2a443
     phantom: true
 
   Panel
@@ -161,9 +161,9 @@ MainWindow
     text-align: center
     text-wrap: true
     font: Verdana Bold-11px
-    color: #e0c060
+    color: #e2a443
 
-  HorizontalSeparator
+  MythosSeparator
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
@@ -175,19 +175,19 @@ MainWindow
     anchors.left: parent.left
     anchors.verticalCenter: closeButton.verticalCenter
     text-auto-resize: true
-    color: #ffd84a
+    color: #e2a443
 
-  Button
+  MythosButton
     id: buyXpButton
     anchors.left: xp.right
     anchors.verticalCenter: closeButton.verticalCenter
     margin-left: 8
-    size: 110 22
+    size: 130 22
     !text: tr('Buy Rarity XP')
     !tooltip: tr('Opens the Store on the Rarity category, where Rarity XP is sold.')
     @onClick: modules.game_raritybonus.buyRarityXp()
 
-  Button
+  MythosPrimaryButton
     id: againButton
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom
@@ -195,7 +195,7 @@ MainWindow
     size: 150 22
     @onClick: modules.game_raritybonus.spinAgain()
 
-  Button
+  MythosButton
     id: closeButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom

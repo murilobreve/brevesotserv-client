@@ -349,6 +349,10 @@ end
 
 function setPlayersOnline(value)
     topLeftOnlinePlayersLabel:setText(value .. " " .. tr('players online'))
+    local icon = topLeftOnlinePlayersLabel:getParent():getChildById('topLeftOnlinePlayersIcon')
+    if icon then
+        icon:setVisible(true)
+    end
 end
 function setDiscordStreams(value)
     topLeftDiscordStreamersLabel:setText(value)

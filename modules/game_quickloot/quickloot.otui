@@ -13,11 +13,11 @@ RemoveBagButton < UIWidget
   $pressed:
     image-clip: 0 20 20 20
 QuicLootIgnoreItem < UIWidget
-  background-color: #484848
+  background-color: #ffffff07
   Label
     id: label
     !text: tr('bag')
-    color: #C0C0C0
+    color: #c9c3d6
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     text-auto-resize: true
@@ -37,7 +37,7 @@ QuicLootIgnoreItem < UIWidget
     $pressed:
       opacity: 0.5
 QuickLootPickRow < UIWidget
-  background-color: #484848
+  background-color: #ffffff07
   Item
     id: item
     anchors.verticalCenter: parent.verticalCenter
@@ -54,7 +54,7 @@ QuickLootPickRow < UIWidget
     margin-right: 14
   Label
     id: label
-    color: #C0C0C0
+    color: #c9c3d6
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: item.right
     anchors.right: take.left
@@ -64,12 +64,12 @@ QuickLootPickRow < UIWidget
     text-auto-resize: true
 
 QuicklootBagLabel < UIWidget
-  background-color: #484848
+  background-color: #ffffff07
 
   Label
     id: label
     !text: tr('Unassigned Loot')
-    color: #C0C0C0
+    color: #c9c3d6
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     text-auto-resize: true
@@ -135,17 +135,15 @@ QuicklootBagLabel < UIWidget
     @onClick: modules.game_quickloot.QuickLoot.openContainer(self)
     $pressed:
       opacity: 0.5
-Window
+MythosWindow
   id: main
   !text: tr('Manage Containers')
-  color: #C0C0C0
-  size: 700 425
-  anchors.centerIn: parent
+  size: 700 432
   @onEscape: modules.game_quickloot.QuickLoot.toggle()
-  SmallReversedQtPanel
+  BrevesPanelBox
     id: fallbackPanel
-    size: 255 20
-    image-border: 15
+    size: 255 22
+    padding: 0
     anchors.top: parent.top
     anchors.left: parent.left
     
@@ -161,7 +159,7 @@ Window
   Label
 
     !text: tr('Loot')
-    color: #C0C0C0
+    color: #c9c3d6
     anchors.top: fallbackPanel.bottom
     anchors.left: parent.left
     margin-left: 85
@@ -169,7 +167,7 @@ Window
   Label
 
     !text: tr('Obtain')
-    color: #C0C0C0
+    color: #c9c3d6
     margin-right: 15
     anchors.top: fallbackPanel.bottom
     anchors.right: fallbackPanel.right
@@ -177,8 +175,8 @@ Window
     id: list
     focusable: false
     border-width: 1
-    border-color: #00000077
-    background-color: #ffffff11
+    border-color: #322d3e
+    background-color: #0f0e13
     anchors.top: fallbackPanel.bottom
     anchors.bottom: parent.bottom
     anchors.left: fallbackPanel.left
@@ -194,7 +192,7 @@ Window
       cell-size: 240 36
       cell-spacing: 0
       flow: true
-  VerticalScrollBar
+  MythosScrollBar
     id: scrollbar
     anchors.top: list.top
     anchors.bottom: list.bottom
@@ -204,17 +202,16 @@ Window
   Panel
     id: filters
     size: 140 115
-    image-source: /images/ui/2pixel_up_frame_borderimage
-    image-border: 5
+    image-source: /images/mythos/panel
+    image-border: 4
     anchors.top: fallbackPanel.top
     anchors.left: list.right
     margin-left: 5
     padding: 7
-    image-size: 140 111
     Label
       id: label
       !text: tr('Quick Loot Filter:')
-      color: #C0C0C0
+      color: #c9c3d6
       anchors.top: parent.top
       anchors.left: parent.left
     CheckBoxCircle
@@ -223,8 +220,8 @@ Window
       margin-top: 5
       anchors.top: label.bottom
       anchors.left: parent.left
-      text: Skipped Loot
-      color: #C0C0C0
+      !text: tr('Skipped Loot')
+      color: #c9c3d6
       width: 84
       checked: true
       @onClick: QuickLoot.filter(self, self:isChecked())
@@ -234,26 +231,24 @@ Window
       margin-top: 5
       anchors.top: skipped.bottom
       anchors.left: parent.left
-      text: Accepted Loot
-      color: #C0C0C0
+      !text: tr('Accepted Loot')
+      color: #c9c3d6
       width: 84
       @onClick: QuickLoot.filter(self, self:isChecked())
-    QtButton
+    MythosButton
       id: clear
       size: 128 20
       !text: tr('Clear Skipped Loot List')
-      color: #C0C0C0
-      font: small-9px
+      color: #c9c3d6
       anchors.top: accepted.bottom
       anchors.left: parent.left
       margin-top: 5
       @onClick: QuickLoot.clearFilterItems()
-    QtButton
+    MythosButton
       id: add
       size: 128 20
       !text: tr('Add to Skipped Loot List')
-      color: #C0C0C0
-      font: small-9px
+      color: #c9c3d6
       anchors.bottom: parent.bottom
       anchors.left: parent.left
       @onClick: QuickLoot.focusSearch()
@@ -261,12 +256,13 @@ Window
   Panel
     id: information
     size: 140 115
-    image-source: /images/ui/2pixel_up_frame_borderimage
-    image-border: 5
+    image-source: /images/mythos/panel
+    image-border: 4
     text-wrap: true
-    color: #C0C0C0
+    color: #c9c3d6
     text-align: left
-    text-offset: 5 -50
+    text-offset: 2 2
+    text-align: topLeft
     !text: tr('Pick the bag for each kind of loot.\n\nOn the right, tick Take on what the auto loot should pick up.')
     anchors.top: filters.bottom
     anchors.bottom: list.bottom
@@ -274,9 +270,11 @@ Window
     anchors.right: filters.right
     padding: 7
 
+    // every account is premium on Mythos: nothing to sell here
     Panel
       id: vipPanel
       height: 34
+      visible: false
       anchors.bottom: parent.bottom
       anchors.left: parent.left
       anchors.right: parent.right
@@ -304,7 +302,7 @@ Window
         anchors.verticalCenter: premium.verticalCenter
         anchors.left: premium.right
         margin-left: 10
-  TextEdit
+  MythosTextEdit
     id: search
     height: 22
     !placeholder: tr('Search an item by name')
@@ -335,12 +333,12 @@ Window
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text-auto-resize: true
-      color: #C0C0C0
+      color: #c9c3d6
       !text: tr('Take if Gersao pays >=')
       !tooltip: tr('Every item Gersao buys for this price or more is looted. Coins and rarity items are always looted. A Take box you change by hand wins over the price.')
       @onCheckChange: QuickLoot.setPriceRule(self:isChecked())
 
-    TextEdit
+    MythosTextEdit
       id: min
       anchors.left: enabled.right
       anchors.verticalCenter: parent.verticalCenter
@@ -352,7 +350,8 @@ Window
 
   Label
     id: pickTitle
-    color: #f0f0f0
+    color: #e4e0ec
+    text-wrap: true
     anchors.top: priceRule.bottom
     anchors.left: search.left
     anchors.right: clearSearch.right
@@ -372,28 +371,28 @@ Window
     padding-bottom: 3
     vertical-scrollbar: ignoreScrollbar
     border-width: 1
-    border-color: #00000077
-    background-color: #414141
+    border-color: #322d3e
+    background-color: #0f0e13
     layout:
       type: grid
       cell-size: 244 38
       cell-spacing: 0
       flow: true
-  VerticalScrollBar
+  MythosScrollBar
     id: ignoreScrollbar
     anchors.top: ignoreList.top
     anchors.bottom: ignoreList.bottom
     anchors.right: ignoreList.right
     step: 48
     pixels-scroll: true
-  QtButton
+  MythosButton
     size: 43 20
     !text: tr('Close')
-    color: #C0C0C0
+    color: #c9c3d6
     anchors.bottom: parent.bottom
     anchors.right: parent.right
     @onClick: QuickLoot.toggle()
-  HorizontalSeparator
+  MythosSeparator
     id: separator
     anchors.bottom: prev.top
     anchors.left: parent.left
