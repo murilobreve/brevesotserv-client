@@ -305,12 +305,90 @@ local function install(changed, manifest)
   scheduleEvent(function() g_app.restart() end, 1200)
 end
 
+-- a download that stops receiving data never ends by itself (the timeout
+-- only covers the connection), so each file has a watchdog: no progress for
+-- STALL_SECONDS and it is cancelled and tried again, up to FILE_TRIES times
+local STALL_SECONDS = 20
+local FILE_TRIES = 3
+
 local function downloadAll(changed, manifest, myGeneration)
   local base = filesBase or baseUrl()
   local total = #changed
   local index = 0
+  local nextFile
 
-  local function nextFile()
+  local function fetch(entry, attempt)
+    local operation, watchdog
+    local finished = false
+    local lastProgress = -1
+    local function stopWatchdog()
+      if watchdog then
+        removeEvent(watchdog)
+        watchdog = nil
+      end
+    end
+    local function retry(reason)
+      if finished or myGeneration ~= generation then
+        return
+      end
+      finished = true
+      stopWatchdog()
+      if attempt >= FILE_TRIES then
+        return giveUp('download failed for ' .. entry.path .. ': ' .. reason)
+      end
+      log(string.format('%s: %s, trying again (%d/%d)', entry.path, reason, attempt + 1, FILE_TRIES))
+      fetch(entry, attempt + 1)
+    end
+    local function arm()
+      stopWatchdog()
+      watchdog = scheduleEvent(function()
+        watchdog = nil
+        if operation then
+          HTTP.cancel(operation)
+        end
+        retry('no data for ' .. STALL_SECONDS .. 's')
+      end, STALL_SECONDS * 1000)
+    end
+
+    -- a fresh file name per try: a cancelled download may still write its own
+    entry.download = string.format('mythos_update_%d_%d_%d', manifest.versao, index, attempt)
+    table.insert(downloads, entry.download)
+    -- the last try goes through main/, in case the commit address misbehaves
+    local from = (attempt == FILE_TRIES) and baseUrl() or base
+    local oldTimeout = HTTP.timeout
+    HTTP.timeout = DOWNLOAD_TIMEOUT
+    arm()
+    operation = HTTP.download(from .. 'objects/' .. entry.sha256, entry.download, function(path, checksum, err)
+      if finished or myGeneration ~= generation then
+        return
+      end
+      if err then
+        return retry(tostring(err))
+      end
+      local ok, contents = pcall(g_resources.readFileContents, '/downloads/' .. entry.download)
+      if not ok or g_crypt.sha256(contents) ~= entry.sha256 then
+        return retry('wrong contents')
+      end
+      finished = true
+      stopWatchdog()
+      nextFile()
+    end, function(progress)
+      if finished or myGeneration ~= generation then
+        return
+      end
+      -- the progress event also repeats while nothing arrives: only real
+      -- progress keeps the watchdog quiet
+      progress = tonumber(progress) or 0
+      if progress > lastProgress then
+        lastProgress = progress
+        arm()
+      end
+      setProgress(index - 1, total, ((index - 1) + progress / 100) * 100 / total)
+    end)
+    HTTP.timeout = oldTimeout
+  end
+
+  nextFile = function()
     if myGeneration ~= generation then
       return
     end
@@ -319,29 +397,8 @@ local function downloadAll(changed, manifest, myGeneration)
       return install(changed, manifest)
     end
     local entry = changed[index]
-    entry.download = string.format('mythos_update_%d_%d', manifest.versao, index)
-    table.insert(downloads, entry.download)
     setProgress(index - 1, total, (index - 1) * 100 / total)
-    local oldTimeout = HTTP.timeout
-    HTTP.timeout = DOWNLOAD_TIMEOUT
-    HTTP.download(base .. 'objects/' .. entry.sha256, entry.download, function(path, checksum, err)
-      if myGeneration ~= generation then
-        return
-      end
-      if err then
-        return giveUp('download failed for ' .. entry.path .. ': ' .. tostring(err))
-      end
-      local ok, contents = pcall(g_resources.readFileContents, '/downloads/' .. entry.download)
-      if not ok or g_crypt.sha256(contents) ~= entry.sha256 then
-        return giveUp('wrong contents for ' .. entry.path)
-      end
-      nextFile()
-    end, function(progress)
-      if myGeneration == generation then
-        setProgress(index - 1, total, ((index - 1) + (progress or 0) / 100) * 100 / total)
-      end
-    end)
-    HTTP.timeout = oldTimeout
+    fetch(entry, 1)
   end
 
   nextFile()
