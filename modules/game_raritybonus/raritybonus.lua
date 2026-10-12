@@ -339,6 +339,32 @@ local function spinCurve(p)
     return position / CURVE_AREA, rest * rest / CURVE_AREA
 end
 
+-- "12%", "2.5%", "0.35%": enough digits to tell rare rolls apart
+local function formatChance(chance)
+    local percent = chance * 100
+    if percent >= 10 then
+        return string.format('%d%%', math.floor(percent + 0.5))
+    elseif percent >= 1 then
+        return string.format('%.1f%%', percent)
+    elseif percent >= 0.01 then
+        return string.format('%.2f%%', percent)
+    end
+    return '<0.01%'
+end
+
+-- once every slot stopped: each bonus's range on the item and the odds of
+-- rolling its value or better (sent by the server with the roll)
+local function showOdds()
+    for _, row in ipairs(spin.rows or {}) do
+        local entry = row.entry
+        local widget = row.result
+        if entry and entry.min and entry.max and entry.chance and widget and not widget:isDestroyed() then
+            widget.odds:setText(tr('%d to %d, %s', entry.min, entry.max, entry.perfect and tr('perfect') or tr('top %s', formatChance(entry.chance))))
+            widget.odds:setColor(qualityColor(entry.quality, entry.perfect))
+        end
+    end
+end
+
 local function finishSpin()
     if not spin or spin.finished then
         return
@@ -368,6 +394,7 @@ local function finishSpin()
     end
     roulette.status:setText(summary)
     roulette.status:setColor(result.perfect and '#ffe7a6' or qualityColor(best))
+    showOdds()
     roulette.closeButton:setText(tr('Close'))
     if spin.onDone then
         local done = spin.onDone

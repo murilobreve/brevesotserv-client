@@ -45,12 +45,24 @@ RouletteResult < UIWidget
   Label
     id: text
     anchors.left: slot.right
-    anchors.right: parent.right
+    anchors.right: odds.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 78
     text-align: center
     font: Verdana Bold-11px
     color: #655780
+    phantom: true
+
+  // after the roll: the bonus's range on the item and the odds of this
+  // value or better
+  Label
+    id: odds
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    width: 150
+    text-align: right
+    font: verdana-11px-monochrome
+    color: #9789b3
     phantom: true
 
 MythosWindow
