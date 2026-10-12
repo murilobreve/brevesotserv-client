@@ -401,7 +401,14 @@ end
 
 -- ---------------------------------------------------------------- news window
 
+-- the delayed first showing of the news window (see onGameStart)
+local newsEvent
+
 function hideNews()
+    if newsEvent then
+        removeEvent(newsEvent)
+        newsEvent = nil
+    end
     if newsWindow then
         newsWindow:destroy()
         newsWindow = nil
@@ -410,6 +417,10 @@ end
 
 function showNews()
     hideNews()
+    -- its buttons open game windows: never on the login screen
+    if not g_game.isOnline() then
+        return
+    end
     newsWindow = g_ui.createWidget('BrevesNewsWindow', rootWidget)
     for _, feature in ipairs(FEATURES) do
         local row = g_ui.createWidget('BrevesNewsRow', newsWindow.rows)
@@ -465,8 +476,12 @@ local function onGameStart()
         g_settings.set('breves_news_version', NEWS_VERSION)
         -- written now: a client that crashes never saves its settings on exit
         g_settings.save()
-        -- after the feature modules added their rows
-        scheduleEvent(showNews, 1500)
+        -- after the feature modules added their rows; kept, so a logout
+        -- before it fires cancels it (hideNews)
+        newsEvent = scheduleEvent(function()
+            newsEvent = nil
+            showNews()
+        end, 1500)
     end
 end
 

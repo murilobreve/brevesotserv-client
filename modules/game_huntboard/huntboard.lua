@@ -5,6 +5,9 @@
 
 local HUNT_OPCODE = 121
 local PAGE_SIZE = 40
+-- the server ignores a request that comes within 300 ms of the previous one
+-- (huntboard/02_events.lua), so requests leave at least this far apart
+local SEND_INTERVAL = 350
 
 local FILTERS = {
     { key = 'all', label = 'All monsters' },
@@ -48,6 +51,10 @@ local boards = {}
 local timeOffset = 0 -- server time - local time
 local online = { minutes = 0, goal = 60, amount = 1 }
 local filterEvent
+local ratesEvent
+local sendQueue = {}
+local sendEvent
+local lastSendAt = 0
 
 -- ---------------------------------------------------------------- helpers
 
@@ -136,11 +143,51 @@ local function multText(tenths)
     return string.format('x%.1f', tenths / 10)
 end
 
-local function send(data)
+local function flushSendQueue()
+    sendEvent = nil
+    local wait = lastSendAt + SEND_INTERVAL - g_clock.millis()
+    if wait > 0 then
+        sendEvent = scheduleEvent(flushSendQueue, wait)
+        return
+    end
+
+    local data = table.remove(sendQueue, 1)
+    if not data then
+        return
+    end
     local protocol = g_game.getProtocolGame()
     if protocol then
         protocol:sendExtendedJSONOpcode(HUNT_OPCODE, data)
+        lastSendAt = g_clock.millis()
     end
+    if #sendQueue > 0 then
+        sendEvent = scheduleEvent(flushSendQueue, SEND_INTERVAL)
+    end
+end
+
+local function send(data)
+    -- a newer request of the same kind replaces one still waiting, so after
+    -- Hourly, Monthly, Daily clicked quickly only Daily is sent after Hourly
+    for i, queued in ipairs(sendQueue) do
+        if queued.action == data.action then
+            table.remove(sendQueue, i)
+            break
+        end
+    end
+    table.insert(sendQueue, data)
+    if not sendEvent then
+        flushSendQueue()
+    end
+end
+
+local function clearSendQueue()
+    if sendEvent then
+        removeEvent(sendEvent)
+        sendEvent = nil
+    end
+    sendQueue = {}
+    -- the server forgets the cooldown on logout, so the next login starts fresh
+    lastSendAt = 0
 end
 
 local function outfitOf(monster)
@@ -799,7 +846,11 @@ end
 
 local function onGameStart()
     connect(Creature, { onAppear = labelCreature })
-    scheduleEvent(function()
+    if ratesEvent then
+        removeEvent(ratesEvent)
+    end
+    ratesEvent = scheduleEvent(function()
+        ratesEvent = nil
         if g_game.isOnline() then
             send({ action = 'rates' })
         end
@@ -816,6 +867,11 @@ end
 
 local function onGameEnd()
     disconnect(Creature, { onAppear = labelCreature })
+    if ratesEvent then
+        removeEvent(ratesEvent)
+        ratesEvent = nil
+    end
+    clearSendQueue()
     rateByName = {}
     hide()
     hideToast()
@@ -852,6 +908,11 @@ function terminate()
         removeEvent(filterEvent)
         filterEvent = nil
     end
+    if ratesEvent then
+        removeEvent(ratesEvent)
+        ratesEvent = nil
+    end
+    clearSendQueue()
     if toolbarButton then
         toolbarButton:destroy()
         toolbarButton = nil

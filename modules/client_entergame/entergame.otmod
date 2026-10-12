@@ -15,8 +15,8 @@ Module
     dofile 'createAccount'
     dofile 'crashreport'
     EnterGame.init()
-    CrashReport.init()
     CharacterList.init()
+    pcall(CrashReport.init)
 
   @onUnload: |
     EnterGame.terminate()

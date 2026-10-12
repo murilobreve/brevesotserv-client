@@ -155,11 +155,19 @@ namespace {
             dir.pop_back();
         if (!dir.empty())
             return dir;
-        char cwd[MAX_PATH];
-        const DWORD len = GetCurrentDirectoryA(sizeof(cwd), cwd);
-        if (len == 0 || len >= sizeof(cwd))
+        wchar_t cwd[MAX_PATH];
+        const DWORD len = GetCurrentDirectoryW(MAX_PATH, cwd);
+        if (len == 0 || len >= MAX_PATH)
             return ".";
-        return cwd;
+        return stdext::utf16_to_utf8(cwd);
+    }
+
+    // the paths here are UTF-8 (the client folder can have accents, like a
+    // Windows user named "João"): the narrow Windows calls would read them
+    // in the ANSI code page and miss the folder
+    std::filesystem::path widePath(const std::string& utf8)
+    {
+        return std::filesystem::path(stdext::utf8_to_utf16(utf8));
     }
 
     std::string windowsVersion()
@@ -215,9 +223,9 @@ namespace {
     {
         std::error_code ec;
         std::vector<std::filesystem::path> dumps;
-        for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
-            const auto name = entry.path().filename().string();
-            if (name.starts_with("crash-") && entry.path().extension() == ".dmp")
+        for (const auto& entry : std::filesystem::directory_iterator(widePath(dir), ec)) {
+            const auto name = entry.path().filename().wstring();
+            if (name.starts_with(L"crash-") && entry.path().extension() == L".dmp")
                 dumps.push_back(entry.path());
         }
         if (dumps.size() <= keep)
@@ -227,13 +235,13 @@ namespace {
             std::filesystem::remove(dumps[i], ec);
     }
 
-    void writeMiniDump(const LPEXCEPTION_POINTERS e, const std::string& fileName)
+    void writeMiniDump(const LPEXCEPTION_POINTERS e, const DWORD threadId, const std::string& fileName)
     {
-        const HANDLE file = CreateFileA(fileName.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        const HANDLE file = CreateFileW(widePath(fileName).c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (file == INVALID_HANDLE_VALUE)
             return;
         MINIDUMP_EXCEPTION_INFORMATION info;
-        info.ThreadId = GetCurrentThreadId();
+        info.ThreadId = threadId;
         info.ExceptionPointers = e;
         info.ClientPointers = FALSE;
         const auto type = static_cast<MINIDUMP_TYPE>(MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules);
@@ -242,21 +250,16 @@ namespace {
     }
 
     std::atomic_bool crashing{ false };
-}
 
-LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
+void writeReport(const LPEXCEPTION_POINTERS e, const DWORD threadId)
 {
-    // a second crash while reporting the first one: let Windows end it
-    if (crashing.exchange(true))
-        return EXCEPTION_CONTINUE_SEARCH;
-
     const std::string dir = crashDir();
     const std::string stamp = stdext::date_time_string("%Y%m%d-%H%M%S");
     const std::string dumpName = fmt::format("{}\\crash-{}.dmp", dir, stamp);
     const std::string fileName = fmt::format("{}\\crashreport.log", dir);
 
     // the dump first: it does not depend on anything the crash may have broken
-    writeMiniDump(e, dumpName);
+    writeMiniDump(e, threadId, dumpName);
 
     std::stringstream oss;
     oss << fmt::format(
@@ -303,7 +306,7 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
     oss << "  log of this session (last lines):\n" << g_logger.getRecentLog(g_logger.isFullLog() ? 300 : 60)
         << "  log file (last lines):\n" << logTail(8 * 1024) << "== end of report\n\n";
 
-    std::ofstream fout(fileName, std::ios::out | std::ios::app);
+    std::ofstream fout(widePath(fileName), std::ios::out | std::ios::app);
     if (fout.is_open()) {
         fout << oss.str();
         fout.close();
@@ -318,8 +321,41 @@ LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
         "{}\n{}",
         fileName, dumpName
     );
-    MessageBoxA(nullptr, msg.c_str(), "Application crashed", MB_OK | MB_ICONERROR);
+    MessageBoxW(nullptr, stdext::utf8_to_utf16(msg).c_str(), L"Application crashed", MB_OK | MB_ICONERROR);
+}
 
+struct ReportRequest
+{
+    LPEXCEPTION_POINTERS exception;
+    DWORD threadId;
+};
+}
+
+LONG CALLBACK ExceptionHandler(const LPEXCEPTION_POINTERS e)
+{
+    // a second crash while reporting the first one: let Windows end it
+    if (crashing.exchange(true))
+        return EXCEPTION_CONTINUE_SEARCH;
+
+    // after a stack overflow the crashed thread has a few KB of stack left,
+    // and only the main thread got a guarantee: write the report from a new
+    // thread with its own stack
+    if (e->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
+        static ReportRequest request;
+        request = { e, GetCurrentThreadId() };
+        const HANDLE helper = CreateThread(nullptr, 1024 * 1024, [](LPVOID param) -> DWORD {
+            const auto* r = static_cast<const ReportRequest*>(param);
+            writeReport(r->exception, r->threadId);
+            return 0;
+        }, &request, 0, nullptr);
+        if (helper) {
+            WaitForSingleObject(helper, INFINITE);
+            CloseHandle(helper);
+            return EXCEPTION_CONTINUE_SEARCH;
+        }
+    }
+
+    writeReport(e, GetCurrentThreadId());
     return EXCEPTION_CONTINUE_SEARCH;
 }
 

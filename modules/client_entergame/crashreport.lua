@@ -33,7 +33,13 @@ local function post(kind, text, onSent)
         return
     end
     if #text > MAX_SEND then
+        -- from the start of a line: a cut in the middle of a character is not
+        -- valid UTF-8
         text = text:sub(-MAX_SEND)
+        local newline = text:find('\n', 1, true)
+        if newline then
+            text = text:sub(newline + 1)
+        end
     end
     local payload = {
         kind = kind,
@@ -46,6 +52,13 @@ local function post(kind, text, onSent)
     HTTP.post(url, json.encode(payload), function(message, err)
         if err or type(message) ~= 'string' or not message:find('"ok"%s*:%s*true') then
             g_logger.warning('[crash report] not sent: ' .. tostring(err or message))
+            -- the site refused this report (4xx): sending it again would fail
+            -- the same way on every start and hold back the newer ones. Too
+            -- many reports today (429) is worth another try later.
+            local status = tonumber(tostring(err or ''):match('^http_status::(%d+)'))
+            if status and status >= 400 and status < 500 and status ~= 429 and onSent then
+                onSent()
+            end
             return
         end
         g_logger.info('[crash report] sent (' .. kind .. ')')
@@ -75,12 +88,13 @@ function CrashReport.send()
     -- a fatal error ("The game cannot start: ...") ends the session without a
     -- crash: its log, kept as <name>-previous.log, says why
     local previous = readFile('/' .. g_app.getCompactName() .. '-previous.log')
-    if previous and previous:find('%[critical%]') then
+    if previous and previous:find('[critical]', 1, true) then
         post('fatal', previous)
     end
 end
 
 function CrashReport.init()
-    -- after the window is up and the network stack is ready
-    scheduleEvent(CrashReport.send, 5000)
+    -- on the next frame: a crash that happens in the first seconds of every
+    -- start must still be reported (the post itself does not block)
+    addEvent(CrashReport.send)
 end

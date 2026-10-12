@@ -2907,18 +2907,6 @@ void ProtocolGame::parseTalk(const InputMessagePtr& msg)
         case Otc::MessageRVRChannel:
             msg->getU32();
             break;
-        case Otc::MessageNone:
-            // Some servers (notably scripts still using legacy/removed
-            // TALKTYPE_* constants that resolve to nil in Lua, which the
-            // server-side binding then silently coerces to talktype 0
-            // instead of erroring) send a talk packet with mode byte 0.
-            // That used to throw here, which not only dropped this one
-            // message but desynced the rest of the input buffer (the
-            // exception unwound before the trailing text was consumed),
-            // corrupting whatever packets followed. Treat it like the
-            // other no-extra-fields modes instead of crashing the
-            // connection over a single bad talktype.
-            break;
         default:
             throw Exception("ProtocolGame::parseTalk: unknown message mode {}", messageByte);
     }
@@ -3019,8 +3007,6 @@ void ProtocolGame::parseTextMessage(const InputMessagePtr& msg)
     const Otc::MessageMode mode = Proto::translateMessageModeFromServer(code);
     std::string text;
 
-    g_logger.debug("[ProtocolGame::parseTextMessage] code: {}, mode: {}", code, std::to_string(mode));
-
     switch (mode) {
         case Otc::MessageChannelManagement:
             msg->getU16(); // channelId
@@ -3094,8 +3080,9 @@ void ProtocolGame::parseTextMessage(const InputMessagePtr& msg)
     }
 
     // with the full log on, the text too: the last message before a crash
-    // tells what the player was doing
-    g_logger.debug("[ProtocolGame::parseTextMessage] text: {}", text);
+    // tells what the player was doing (one line per message: damage, heal
+    // and loot messages come several times a second)
+    g_logger.debug("[ProtocolGame::parseTextMessage] code: {}, mode: {}, text: {}", code, std::to_string(mode), text);
     g_game.processTextMessage(mode, text);
 }
 

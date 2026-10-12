@@ -1,3 +1,20 @@
+-- The row labels are bound to plain fields of the entry: a binding runs every
+-- 50 ms for every loaded row, so the strings are built here, not by the
+-- binding. Name and price never change; sideText is set by filterTradeList.
+local function newTradeEntry(ptr, name, weight, price)
+    local entry = {
+        ptr = ptr,
+        name = name,
+        weight = weight,
+        price = price,
+        count = 1
+    }
+    entry.displayName = controllerNpcTrader:displayName(entry)
+    entry.priceText = controllerNpcTrader:formatGold(price) .. ' gp'
+    entry.sideText = ''
+    return entry
+end
+
 function controllerNpcTrader:onOpenNpcTrade(items, currencyId, currencyName)
     local ui = controllerNpcTrader.ui
     if not ui or not ui:isVisible() then
@@ -31,22 +48,10 @@ function controllerNpcTrader:onOpenNpcTrade(items, currencyId, currencyName)
             local buyPrice = itemData[4]
             local sellPrice = itemData[5]
             if buyPrice > 0 then
-                table.insert(controllerNpcTrader.buyItems, {
-                    ptr = ptr,
-                    name = name,
-                    weight = weight,
-                    price = buyPrice,
-                    count = 1
-                })
+                table.insert(controllerNpcTrader.buyItems, newTradeEntry(ptr, name, weight, buyPrice))
             end
             if sellPrice > 0 then
-                table.insert(controllerNpcTrader.sellItems, {
-                    ptr = ptr,
-                    name = name,
-                    weight = weight,
-                    price = sellPrice,
-                    count = 1
-                })
+                table.insert(controllerNpcTrader.sellItems, newTradeEntry(ptr, name, weight, sellPrice))
             end
         end
     end
@@ -453,13 +458,13 @@ function controllerNpcTrader:displayName(item)
 end
 
 -- right side of a row: how many the player carries when selling, the
--- weight when buying
-function controllerNpcTrader:sideText(item)
+-- weight when buying. quantity is optional, for callers that already know it.
+function controllerNpcTrader:sideText(item, quantity)
     if not item then
         return ''
     end
     if self.tradeMode == controllerNpcTrader.SELL then
-        local quantity = self:getSellQuantity(item.ptr)
+        quantity = quantity or self:getSellQuantity(item.ptr)
         return quantity > 0 and ('you have ' .. quantity) or ''
     end
     return item.weight .. ' oz'
@@ -488,8 +493,12 @@ function controllerNpcTrader:onPlayerGoods(money, items)
         newPlayerItems[key] = (newPlayerItems[key] or 0) + count
     end
     self.playerItems = newPlayerItems
-    -- every sale sends a new goods list; a Sell All of many items sends one
-    -- per item, so rebuild the list once after they stop coming
+    self:scheduleGoodsRefresh()
+end
+
+-- every sale sends a new goods list; a Sell All of many items sends one
+-- per item, so rebuild the list once after they stop coming
+function controllerNpcTrader:scheduleGoodsRefresh()
     if self.goodsRefreshEvent then
         removeEvent(self.goodsRefreshEvent)
     end
@@ -499,6 +508,14 @@ function controllerNpcTrader:onPlayerGoods(money, items)
             self:refreshPlayerGoods()
         end
     end, 100)
+end
+
+-- Moving an item between a bag and an equipment slot sends no new goods list,
+-- but with Sell Equipped off it changes how many the Sell tab offers.
+function controllerNpcTrader:onInventoryChange()
+    if self.isTradeOpen and self.ignoreEquipped and self.tradeMode == controllerNpcTrader.SELL then
+        self:scheduleGoodsRefresh()
+    end
 end
 
 function controllerNpcTrader:refreshPlayerGoods(skipFilter)
@@ -554,11 +571,12 @@ function controllerNpcTrader:filterTradeList(searchText)
         end
     end
 
+    local quantity
     if self.tradeMode == controllerNpcTrader.SELL then
         -- big shops (Gersao buys ~1700 items): work out each quantity once,
         -- not twice per comparison of the sort
         local equippedCounts = self:getEquippedCounts()
-        local quantity = {}
+        quantity = {}
         for _, item in ipairs(filteredItems) do
             quantity[item] = self:getSellQuantity(item.ptr, equippedCounts)
         end
@@ -578,6 +596,12 @@ function controllerNpcTrader:filterTradeList(searchText)
         end)
     else
         self:sortTradeItems(filteredItems)
+    end
+
+    -- the row's side label is bound to this field; every change to what it
+    -- shows (goods, tab, Sell Equipped, equipment) comes through here
+    for _, item in ipairs(filteredItems) do
+        item.sideText = self:sideText(item, quantity and quantity[item])
     end
 
     self.currentList = filteredItems

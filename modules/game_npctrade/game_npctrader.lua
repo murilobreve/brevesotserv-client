@@ -60,6 +60,15 @@ function controllerNpcTrader:onGameStart()
             end
         end
     })
+
+    -- the legacy window connects its own inventory handler
+    if not self:isLegacyMode() then
+        self:registerEvents(LocalPlayer, {
+            onInventoryChange = function()
+                self:onInventoryChange()
+            end
+        })
+    end
 end
 
 function controllerNpcTrader:connectNpcTalkEvent()

@@ -876,6 +876,11 @@ function CharacterList.show()
     if loadBox or errorBox or not charactersWindow then
         return
     end
+    -- an autologin that answers while a new version downloads: the client
+    -- restarts when it is done and logs in again
+    if Updater and Updater.isUpdating and Updater.isUpdating() then
+        return
+    end
     charactersWindow:show()
     charactersWindow:raise()
     charactersWindow:focus()

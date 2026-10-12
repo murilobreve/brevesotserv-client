@@ -381,6 +381,12 @@ local function startCountdown()
     countdownEvent = cycleEvent(function()
         if rewardWallController.ui and rewardWallController.ui:isVisible() then
             refreshTimeLeft()
+            return
+        end
+        -- closed (or logged out): stop; the next opening starts it again
+        if countdownEvent then
+            removeEvent(countdownEvent)
+            countdownEvent = nil
         end
     end, 30000)
 end

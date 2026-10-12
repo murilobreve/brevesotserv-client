@@ -114,9 +114,8 @@ namespace
             logger->set_level(spdlog::level::trace);
             logger->flush_on(spdlog::level::warn);
             spdlog::set_default_logger(logger);
-            // a crash ends the process without a flush: at most one second of
-            // the log file is lost, so the crash report can include its tail
-            spdlog::flush_every(std::chrono::seconds(1));
+            // the periodic flush starts in setLogFile, once the file sink is in:
+            // its thread walks the sinks and must not see them change
 
             return logger;
         } catch (...) {
@@ -185,9 +184,13 @@ void Logger::log(Fw::LogLevel level, const std::string_view message)
     }
 
     std::size_t now = std::time(nullptr);
-    m_logMessages.emplace_back(level, outmsg, now);
-    if (m_logMessages.size() > MAX_LOG_HISTORY)
-        m_logMessages.pop_front();
+    {
+        // the crash handler reads this history from whichever thread crashed
+        std::lock_guard lock(m_historyMutex);
+        m_logMessages.emplace_back(level, outmsg, now);
+        if (m_logMessages.size() > MAX_LOG_HISTORY)
+            m_logMessages.pop_front();
+    }
 
     if (m_onLog) {
         // schedule log callback, because this callback can run lua code that may affect the current state
@@ -243,15 +246,23 @@ void Logger::fireOldMessages()
 
 void Logger::setFullLog(const bool enabled)
 {
+    // only which lines are logged changes: flushing every line would stall
+    // the game thread on the disk. The file is flushed every second and the
+    // crash report carries the last lines from memory, so a crash still
+    // loses nothing.
     m_fullLog = enabled;
-    if (auto& spdLogger = getSpdLogger())
-        spdLogger->flush_on(enabled ? spdlog::level::trace : spdlog::level::warn);
     if (enabled)
-        info("Full log enabled ([debug] fullLog in config.ini): every line, debug included, is written at once");
+        info("Full log enabled ([debug] fullLog in config.ini): debug lines are logged too");
 }
 
 std::string Logger::getRecentLog(const std::size_t maxLines) const
 {
+    // never wait here: the crash may have happened while the history was
+    // being changed (then this thread may even be the one holding the lock)
+    std::unique_lock lock(m_historyMutex, std::try_to_lock);
+    if (!lock.owns_lock())
+        return "(log history busy)\n";
+
     std::string out;
     const std::size_t count = m_logMessages.size();
     const std::size_t first = count > maxLines ? count - maxLines : 0;
@@ -293,7 +304,13 @@ void Logger::setLogFile(const std::string_view file)
         if (std::filesystem::exists(current, ec) && std::filesystem::file_size(current, ec) > 0) {
             auto previous = current;
             previous.replace_filename(current.stem().string() + "-previous" + current.extension().string());
-            std::filesystem::copy_file(current, previous, std::filesystem::copy_options::overwrite_existing, ec);
+            // a rename costs nothing however big the log got; a copy only
+            // when the file is in use (another copy of the game is open)
+            std::filesystem::rename(current, previous, ec);
+            if (ec) {
+                ec.clear();
+                std::filesystem::copy_file(current, previous, std::filesystem::copy_options::overwrite_existing, ec);
+            }
         }
     }
     m_logFile = std::string{ file };
@@ -313,6 +330,14 @@ void Logger::setLogFile(const std::string_view file)
             currentLogFileSink = fileSink;
             sinks.push_back(currentLogFileSink);
             spdLogger->flush();
+
+            // a crash ends the process without a flush: at most one second of
+            // the log file is lost, so the crash report can include its tail
+            static bool flushing = false;
+            if (!flushing) {
+                flushing = true;
+                spdlog::flush_every(std::chrono::seconds(1));
+            }
             return;
         } catch (const spdlog::spdlog_ex& e) {
             g_logger.error("Unable to save log to '{}' using spdlog: {}", file, e.what());

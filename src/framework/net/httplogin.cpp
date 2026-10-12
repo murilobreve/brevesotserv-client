@@ -33,6 +33,7 @@
 #include <framework/core/asyncdispatcher.h>
 #include <framework/core/eventdispatcher.h>
 #include <framework/core/logger.h>
+#include <framework/core/resourcemanager.h>
 #include <nlohmann/json.hpp>
 #include <cctype>
 #include <spdlog/spdlog.h>
@@ -67,10 +68,13 @@ namespace {
 
     bool isSensitiveRequestField(const std::string_view key)
     {
+        // the account name and e-mail too: the log goes into crash reports
         const auto lowered = toLowerCopy(key);
         return lowered.find("password") != std::string::npos
             || lowered.find("token") != std::string::npos
-            || lowered.find("session") != std::string::npos;
+            || lowered.find("session") != std::string::npos
+            || lowered.find("account") != std::string::npos
+            || lowered.find("email") != std::string::npos;
     }
 
     bool isSensitiveResponseField(const std::string_view key)
@@ -383,9 +387,15 @@ LoginHttp::HttpResponse LoginHttp::loginHttpsJson(const std::string& host,
     client.set_logger(
         [this](const auto& req, const auto& res) { LoginHttp::Logger(req, res); });
 
-    client.set_ca_cert_path("./cacert.pem");
-    client.enable_server_certificate_verification(false);
-    client.enable_server_hostname_verification(false);
+    // check that the site is really the server's: without it anyone on the
+    // same network (a public Wi-Fi) could pose as it and read the password.
+    // The CA list ships next to the client (an absolute path: the game can be
+    // started from another folder); without it, the system's list is used.
+    const auto caFile = g_resources.getWorkDir() + "cacert.pem";
+    if (g_resources.fileExistsInWorkDir("cacert.pem"))
+        client.set_ca_cert_path(caFile);
+    client.enable_server_certificate_verification(true);
+    client.enable_server_hostname_verification(true);
 
     json body = loginBody(email, password);
 

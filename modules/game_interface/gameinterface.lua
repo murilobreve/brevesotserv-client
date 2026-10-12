@@ -288,7 +288,9 @@ function show()
     gameRootPanel:focus()
     gameMapPanel:followCreature(g_game.getLocalPlayer())
 
-    updateStretchShrink()
+    -- the zoom first: "don't stretch/shrink" sizes the map for its rows
+    -- (setMapZoom calls updateStretchShrink)
+    setMapZoom(modules.client_options.getOption('mapZoom'))
     logoutButton:setTooltip(tr('Logout'))
 
     if g_platform.isMobile() then
@@ -298,7 +300,6 @@ function show()
         mobileConfig.mobileHeightShortcuts = modules.game_shortcuts.getPanel():getHeight()
     end
 
-    setMapZoom(modules.client_options.getOption('mapZoom'))
     setupViewMode(0)
     if g_platform.isMobile() or g_gameConfig.isExtendedViewUI() then
         setupViewMode(1)
@@ -1798,6 +1799,10 @@ function setMapZoom(value)
     if limitedZoom and not g_game.isGM() then
         gameMapPanel:setMaxZoomOut(MAP_VISIBLE_HEIGHT)
     end
+    -- a new row count changes the size "don't stretch/shrink" keeps
+    if g_game.isOnline() then
+        updateStretchShrink()
+    end
 end
 
 function setupViewMode(mode)
@@ -1828,9 +1833,11 @@ function setupViewMode(mode)
     end
 
     -- fill: the chosen map zoom always fits and the rest of the panel shows
-    -- more tiles (a shorter or narrower window never zooms the view in)
+    -- more tiles (a shorter or narrower window never zooms the view in).
+    -- The full-screen mode too: without it, a screen wider than the map the
+    -- server sends was cropped to its shape and lost rows at the top and bottom
     if gameMapPanel.setFillView then
-        gameMapPanel:setFillView(mode == 1)
+        gameMapPanel:setFillView(mode == 1 or mode == 2)
     end
 
     if mode == 0 then
