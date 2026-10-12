@@ -70,6 +70,32 @@ local function baseUrl()
   return base
 end
 
+-- raw.githubusercontent.com keeps main/ in its cache for 5 minutes and
+-- ignores query strings, so a client opened right after a publish saw the
+-- old version. The API says which commit main is on; the files of that
+-- exact commit are never stale. Without the API (offline, rate limit, or a
+-- test URL) it falls back to main/.
+local REF_URL = 'https://api.github.com/repos/murilobreve/mythos-client/git/ref/heads/main'
+local COMMIT_BASE = 'https://raw.githubusercontent.com/murilobreve/mythos-client/%s/'
+local filesBase -- base of the version being checked or downloaded
+
+local function resolveBase(callback)
+  local custom = os.getenv and os.getenv('MYTHOS_UPDATE_URL') or nil
+  if custom and custom ~= '' then
+    return callback(baseUrl())
+  end
+  HTTP.getJSON(REF_URL, function(ref, err)
+    local sha = not err and type(ref) == 'table' and type(ref.object) == 'table' and ref.object.sha
+    if type(sha) == 'string' and sha:match('^%x+$') and #sha >= 40 then
+      log('checking commit ' .. sha:sub(1, 7))
+      callback(string.format(COMMIT_BASE, sha))
+    else
+      log('commit unknown (' .. tostring(err) .. '), checking main')
+      callback(baseUrl())
+    end
+  end)
+end
+
 local function checkInterval()
   local env = os.getenv and tonumber(os.getenv('MYTHOS_UPDATE_INTERVAL') or '') or nil
   return math.max(5, env or DEFAULT_INTERVAL)
@@ -280,7 +306,7 @@ local function install(changed, manifest)
 end
 
 local function downloadAll(changed, manifest, myGeneration)
-  local base = baseUrl()
+  local base = filesBase or baseUrl()
   local total = #changed
   local index = 0
 
@@ -383,8 +409,11 @@ function Updater.check(autoInstall)
   if status ~= 'available' then
     setStatus('checking')
   end
-  local url = baseUrl() .. localInfo.canal .. '/manifest.json?t=' .. os.time()
   local oldTimeout = HTTP.timeout
+  HTTP.timeout = CHECK_TIMEOUT
+  resolveBase(function(base)
+  local url = base .. localInfo.canal .. '/manifest.json?t=' .. os.time()
+  local outerTimeout = HTTP.timeout
   HTTP.timeout = CHECK_TIMEOUT
   HTTP.getJSON(url, function(manifest, err)
     if err or type(manifest) ~= 'table' or type(manifest.files) ~= 'table' then
@@ -393,6 +422,7 @@ function Updater.check(autoInstall)
       return
     end
     lastManifest = manifest
+    filesBase = base
     remoteVersion = tonumber(manifest.versao) or 0
     if remoteVersion <= localInfo.versao then
       log(string.format('up to date (version %d)', localInfo.versao))
@@ -405,6 +435,8 @@ function Updater.check(autoInstall)
     log(string.format('version %d is out (running %d)', remoteVersion, localInfo.versao))
     setStatus('available')
     remindInGame()
+  end)
+  HTTP.timeout = outerTimeout
   end)
   HTTP.timeout = oldTimeout
 end
