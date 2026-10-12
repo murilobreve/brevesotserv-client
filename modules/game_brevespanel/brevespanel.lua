@@ -50,12 +50,13 @@ local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
 local groupLabels = {} -- group id -> title widget
 
--- the title line's two buttons. The first one cycles the view: every row
--- (full), only the rows with something to show such as the task kills or
--- the Rarity XP (info), or just the title line (closed). The second one
+-- The panel is a mini window: it moves between the side panels, the bottom
+-- border resizes it and the header minimizes it. Two extra header buttons:
+-- the first switches between every row (full) and only the rows with
+-- something to show such as the task kills or the Rarity XP (info). The second one
 -- shows the full view as a grid of icons without names. A click on a group
 -- title folds that group.
-local VIEWS = { 'full', 'info', 'closed' }
+local VIEWS = { 'full', 'info' }
 local view = 'full'
 local compact = false
 local folded = {} -- group id -> true
@@ -170,28 +171,14 @@ local function rowVisible(id)
     return not (feature and folded[feature.group])
 end
 
-local function availableHeight()
-    -- the main right panel (map, inventory, options, this one) hangs from
-    -- the top of the game screen; the containers take what is left below
-    local game = modules.game_interface
-    local mainRight = game and game.getMainRightPanel and game.getMainRightPanel()
-    local screen = mainRight and mainRight:getParent()
-    if not screen or panel:getParent() ~= mainRight or screen:getHeight() <= 0 then
-        return nil
-    end
-    local others = 0
-    for _, child in ipairs(mainRight:getChildren()) do
-        if child ~= panel and child:isVisible() then
-            others = others + child:getHeight()
-        end
-    end
-    return screen:getHeight() - (mainRight:getY() - screen:getY()) - others - 4
-end
-
-local function resize()
+-- fit: grow or shrink the window to its rows (after a change the player
+-- made, or rows that came or went); otherwise only the limits move, so a
+-- size the player chose by dragging the border stays
+local function resize(fit)
     if not panel then
         return
     end
+    local list = panel.contentsPanel
     local rows, shown = 0, 0
     for id, button in pairs(buttons) do
         rows = rows + 1
@@ -202,35 +189,24 @@ local function resize()
         end
     end
     local groups = updateGroups()
-    local height = 0
-    if rows > 0 and (view == 'closed' or shown + groups == 0) then
-        height = HEADER
-    elseif rows > 0 and iconGrid() then
-        local width = panel.list:getWidth()
-        local columns = math.max(1, math.floor((width + CELL_SPACING) / (CELL + CELL_SPACING)))
-        if width <= 0 then
-            columns = 7
-        end
+    local padding = list:getPaddingTop() + list:getPaddingBottom()
+    local content = padding
+    if iconGrid() then
+        local width = list:getWidth() - list:getPaddingLeft() - list:getPaddingRight()
+        local columns = width > 0 and math.max(1, math.floor((width + CELL_SPACING) / (CELL + CELL_SPACING))) or 7
         local lines = math.ceil(rows / columns)
-        height = HEADER + lines * CELL + (lines - 1) * CELL_SPACING + 4
-    elseif rows > 0 then
+        content = content + lines * CELL + math.max(0, lines - 1) * CELL_SPACING
+    else
         local lines = shown + groups
-        height = HEADER + shown * ROW_HEIGHT + groups * GROUP_HEIGHT + (lines - 1) * ROW_SPACING + 4
+        content = content + shown * ROW_HEIGHT + groups * GROUP_HEIGHT + math.max(0, lines - 1) * ROW_SPACING
     end
-    -- the side panel is as tall as the game window: when the rows do not
-    -- fit under the other panels, the list scrolls instead of being cut
-    local room = availableHeight()
-    local scroll = room ~= nil and height > room and room >= HEADER + 2 * ROW_HEIGHT and view ~= 'closed'
-    if scroll then
-        height = room
-    end
-    panel.listScroll:setVisible(scroll)
-    panel.list:setMarginRight(scroll and 16 or 8)
-    panel.panelHeight = height
-    panel:setHeight(height)
-    panel:setVisible(rows > 0)
-    if modules.game_mainpanel and modules.game_mainpanel.reloadMainPanelSizes then
-        modules.game_mainpanel.reloadMainPanelSizes()
+    content = math.max(content, ROW_HEIGHT + padding)
+    -- the mini window's content sizes leave out the header strip
+    content = content + panel.miniwindowHeader:getHeight()
+    panel:setContentMinimumHeight(math.min(content, 2 * ROW_HEIGHT + ROW_SPACING + padding + panel.miniwindowHeader:getHeight()))
+    panel:setContentMaximumHeight(content)
+    if fit and not panel:isOn() then
+        panel:setContentHeight(content)
     end
 end
 
@@ -251,7 +227,7 @@ local function applyLayout()
     if not panel then
         return
     end
-    local list = panel.list
+    local list = panel.contentsPanel
     if iconGrid() then
         local layout = UIGridLayout.create(list)
         layout:setCellSize({ width = CELL, height = CELL })
@@ -266,16 +242,12 @@ local function applyLayout()
     for id in pairs(buttons) do
         styleButton(id)
     end
-    list:setVisible(view ~= 'closed')
-
-    local header = panel.header
-    header.collapseButton:setOn(view ~= 'full')
-    local nextTip = { full = tr('Only the info'), info = tr('Hide'), closed = tr('Show everything') }
-    header.collapseButton:setTooltip(nextTip[view])
-    header.compactButton:setTooltip(compact and tr('Show the names') or tr('Only the icons'))
+    panel.collapseButton:setOn(view ~= 'full')
+    panel.collapseButton:setTooltip(view == 'full' and tr('Only the info') or tr('Show everything'))
+    panel.compactButton:setTooltip(compact and tr('Show the names') or tr('Only the icons'))
     -- names or icons only means something in the full view
-    header.compactButton:setVisible(view == 'full')
-    resize()
+    panel.compactButton:setVisible(view == 'full')
+    resize(true)
 end
 
 function toggleCollapsed()
@@ -305,30 +277,12 @@ function toggleCompact()
     applyLayout()
 end
 
-local function placeInRightPanel()
-    local mainRightPanel = modules.game_interface.getMainRightPanel()
-    if not panel or not mainRightPanel then
-        return
-    end
-    if panel:getParent() ~= mainRightPanel then
-        if panel:getParent() then
-            panel:getParent():removeChild(panel)
-        end
-        mainRightPanel:addChild(panel)
-    end
-    -- right under the store and control buttons
-    local options = mainRightPanel:getChildById('mainoptionspanel')
-    if options then
-        mainRightPanel:moveChildToIndex(panel, mainRightPanel:getChildIndex(options) + 1)
-    end
-end
-
 local function sortRows()
-    local children = panel.list:getChildren()
+    local children = panel.contentsPanel:getChildren()
     table.sort(children, function(a, b)
         return sortKey(a) < sortKey(b)
     end)
-    panel.list:reorderChildren(children)
+    panel.contentsPanel:reorderChildren(children)
 end
 
 function open(id)
@@ -347,7 +301,7 @@ function addFeature(id, callback)
     callbacks[id] = callback
     local button = buttons[id]
     if not button then
-        button = g_ui.createWidget('BrevesFeatureButton', panel.list)
+        button = g_ui.createWidget('BrevesFeatureButton', panel.contentsPanel)
         button:setId(id)
         button:setText(tr(feature.label))
         button.icon:setImageSource(iconPath(feature))
@@ -358,13 +312,13 @@ function addFeature(id, callback)
             if buttons[id] == button then
                 buttons[id] = nil
                 callbacks[id] = nil
-                resize()
+                resize(true)
             end
         end
     end
     sortRows()
     styleButton(id)
-    resize()
+    resize(true)
     return button
 end
 
@@ -373,7 +327,7 @@ function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
     refreshBadge(id)
     if view == 'info' then
-        resize()
+        resize(true)
     end
 end
 
@@ -387,7 +341,7 @@ function setFeatureLabel(id, text, color)
         styleButton(id)
     end
     if view == 'info' then
-        resize()
+        resize(true)
     end
 end
 
@@ -472,21 +426,19 @@ function showNews()
     newsWindow:focus()
 end
 
-local function onRightPanelResize(widget, oldRect, newRect)
-    if oldRect.height ~= newRect.height then
-        resize()
-    end
-end
-
 local function onGameStart()
-    placeInRightPanel()
-    local mainRight = modules.game_interface.getMainRightPanel()
-    local right = mainRight and mainRight:getParent()
-    if right then
-        disconnect(right, { onGeometryChange = onRightPanelResize })
-        connect(right, { onGeometryChange = onRightPanelResize })
+    panel:setupOnStart()
+    -- the first time, at the top of the right panel, where the old fixed
+    -- panel was; after that the mini window settings remember the place
+    if not g_settings.getBoolean('breves_panel_placed') then
+        g_settings.set('breves_panel_placed', true)
+        local right = modules.game_interface.getRightPanel()
+        if right and panel:getParent() == right then
+            right:moveChildToIndex(panel, 1)
+        end
+        panel:open(true)
     end
-    resize()
+    applyLayout()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
         -- written now: a client that crashes never saves its settings on exit
@@ -505,9 +457,31 @@ function init()
     g_ui.importStyle('brevespanel')
     panel = g_ui.createWidget('BrevesPanel')
     panel:setId('brevespanel')
-    panel:hide()
+    panel:setup()
+    -- only minimize and lock: a closed panel would have no way back
+    for _, id in ipairs({ 'closeButton', 'toggleFilterButton', 'contextMenuButton', 'newWindowButton' }) do
+        local button = panel:getChildById(id)
+        if button then
+            button:hide()
+        end
+    end
+    panel.lockButton:breakAnchors()
+    panel.lockButton:addAnchor(AnchorTop, 'parent', AnchorTop)
+    panel.lockButton:addAnchor(AnchorRight, 'minimizeButton', AnchorLeft)
+    panel.lockButton:setMarginTop(2)
+    panel.lockButton:setMarginRight(2)
+    panel.minimizeButton:breakAnchors()
+    panel.minimizeButton:addAnchor(AnchorTop, 'parent', AnchorTop)
+    panel.minimizeButton:addAnchor(AnchorRight, 'parent', AnchorRight)
+    panel.minimizeButton:setMarginTop(2)
+    panel.minimizeButton:setMarginRight(3)
+    -- Mythos colours on the Tibia frame
+    panel:setImageSource('/images/mythos/panel')
+    panel:setImageBorder(4)
+    panel.miniwindowHeader:setImageSource('')
+    panel.miniwindowHeader:setBackgroundColor('#1c1230')
     for _, group in ipairs(GROUPS) do
-        local label = g_ui.createWidget('BrevesGroupLabel', panel.list)
+        local label = g_ui.createWidget('BrevesGroupLabel', panel.contentsPanel)
         label:setId('group_' .. group.id)
         label:setText(tr(group.label))
         label:hide()
@@ -518,9 +492,8 @@ function init()
         groupLabels[group.id] = label
     end
     view = g_settings.getString('breves_panel_view')
-    if view ~= 'info' and view ~= 'closed' then
-        -- older clients saved only collapsed or not
-        view = g_settings.getBoolean('breves_panel_collapsed') and 'closed' or 'full'
+    if view ~= 'info' then
+        view = 'full'
     end
     compact = g_settings.getBoolean('breves_panel_compact')
     folded = {}
@@ -528,9 +501,9 @@ function init()
         folded[id] = true
     end
     -- the icon grid's line count follows the panel's width
-    panel.list.onGeometryChange = function(widget, oldRect, newRect)
+    panel.contentsPanel.onGeometryChange = function(widget, oldRect, newRect)
         if iconGrid() and oldRect.width ~= newRect.width then
-            resize()
+            resize(true)
         end
     end
     applyLayout()

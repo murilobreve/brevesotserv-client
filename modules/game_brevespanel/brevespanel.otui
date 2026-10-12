@@ -69,86 +69,63 @@ BrevesPanelButton < UIButton
   image-size: 14 14
   image-source: /images/ui/miniwindow_buttons
 
-BrevesPanel < PhantomMiniWindow
+// a Tibia mini window: it moves between the side panels, the bottom border
+// resizes it and the header minimizes it, like Skills or Battle
+BrevesPanel < MiniWindow
   id: brevespanel
-  height: 120
-  &panelHeight: 120
-  image-source: /images/mythos/panel
-  image-border: 4
+  height: 300
+  &save: true
 
-  UIWidget
-    id: header
-    anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.right: parent.right
-    margin: 4 8 0 8
-    height: 14
+  Label
+    id: miniwindowTitle
+    anchors.top: miniwindowHeader.top
+    anchors.left: miniwindowHeader.left
+    margin-top: 1
+    margin-left: 6
+    text-auto-resize: true
+    color: #ece8f6
+    ttf-font: cinzel-bold
+    ttf-font-size: 12
+    text: Mythos
     phantom: true
 
-    Label
-      id: title
-      anchors.left: parent.left
-      anchors.verticalCenter: parent.verticalCenter
-      text-auto-resize: true
-      color: #ece8f6
-      ttf-font: cinzel-bold
-      ttf-font-size: 13
-      text: Mythos
-      phantom: true
+  // full rows or only the rows with a value (task kills, XP, ON / OFF)
+  BrevesPanelButton
+    id: collapseButton
+    anchors.top: lockButton.top
+    anchors.right: lockButton.left
+    margin-right: 2
+    image-clip: 0 0 14 14
+    @onClick: modules.game_brevespanel.toggleCollapsed()
+    $hover:
+      image-clip: 0 14 14 14
+    $pressed:
+      image-clip: 0 28 14 14
+    $on:
+      image-clip: 14 0 14 14
+    $on hover:
+      image-clip: 14 14 14 14
+    $on pressed:
+      image-clip: 14 28 14 14
 
-    // vertical: hide or show the rows
-    BrevesPanelButton
-      id: collapseButton
-      anchors.right: parent.right
-      anchors.verticalCenter: parent.verticalCenter
-      image-clip: 0 0 14 14
-      @onClick: modules.game_brevespanel.toggleCollapsed()
-      $hover:
-        image-clip: 0 14 14 14
-      $pressed:
-        image-clip: 0 28 14 14
-      $on:
-        image-clip: 14 0 14 14
-      $on hover:
-        image-clip: 14 14 14 14
-      $on pressed:
-        image-clip: 14 28 14 14
+  // names or only the icons
+  BrevesPanelButton
+    id: compactButton
+    anchors.top: collapseButton.top
+    anchors.right: collapseButton.left
+    margin-right: 2
+    image-clip: 112 0 14 14
+    @onClick: modules.game_brevespanel.toggleCompact()
+    $hover:
+      image-clip: 112 14 14 14
+    $pressed:
+      image-clip: 112 28 14 14
 
-    // horizontal: names or only the icons
-    BrevesPanelButton
-      id: compactButton
-      anchors.right: collapseButton.left
-      anchors.verticalCenter: parent.verticalCenter
-      margin-right: 2
-      image-clip: 112 0 14 14
-      @onClick: modules.game_brevespanel.toggleCompact()
-      $hover:
-        image-clip: 112 14 14 14
-      $pressed:
-        image-clip: 112 28 14 14
-
-  // scrolls when the side panel has no room for every row
-  UIScrollArea
-    id: list
-    anchors.top: header.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    margin: 4 8 4 8
-    vertical-scrollbar: listScroll
+  MiniWindowContents
+    padding: 3 4 3 4
     layout:
       type: verticalBox
       spacing: 2
-
-  MythosScrollBar
-    id: listScroll
-    anchors.top: list.top
-    anchors.bottom: list.bottom
-    anchors.right: parent.right
-    margin-right: 3
-    step: 22
-    pixels-scroll: true
-    visible: false
 
 // ---------------------------------------------------------------- news window
 
