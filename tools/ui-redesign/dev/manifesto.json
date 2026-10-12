@@ -1,0 +1,846 @@
+{
+  "changed_count": 58,
+  "unchanged": [
+    "3-janelas-extras/frames.png"
+  ],
+  "assets": [
+    {
+      "path": "1-tema/button.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "2abf1caac25221f0e6b4df76ddac51f73dc8c51a27753dc2e8bd3850ba58f657"
+    },
+    {
+      "path": "1-tema/button_disabled.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "73507bef01011c3762e29476501ca9d06c1fd8c67c4617a6d7aa676ea1d91c8e"
+    },
+    {
+      "path": "1-tema/button_hover.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "789e68a42ffd4513b111d2638480e869af98744929b40076854d0d0509e6fdec"
+    },
+    {
+      "path": "1-tema/button_pearl.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "68fd85a1788cec65832132e63348eb3797c3f68b15d48b38c68d297cf8e500a7"
+    },
+    {
+      "path": "1-tema/button_pearl_disabled.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "31a14b5dc2e38135be928dd6432c98d600323acd5313173b4fac2e6f6ded0fa3"
+    },
+    {
+      "path": "1-tema/button_pearl_hover.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "2b817d683771717cb129ff93cf65d87c572360a82140041bb30be2333d3fb3ba"
+    },
+    {
+      "path": "1-tema/button_pearl_pressed.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "a05d1a6f5f4a80d2e382092795df98301ad00c762b6ab3ca017b89f94a12ee42"
+    },
+    {
+      "path": "1-tema/button_pressed.png",
+      "size": [
+        64,
+        22
+      ],
+      "fixed_border": 4,
+      "frame": [
+        64,
+        22
+      ],
+      "layout": "single",
+      "sha256": "8a019d1a317875d3f4ea17342f9e2241fd0762a7486cb88d71ffa559455b4aed"
+    },
+    {
+      "path": "1-tema/combobox.png",
+      "size": [
+        91,
+        60
+      ],
+      "fixed_border": {
+        "top": 3,
+        "right": 20,
+        "bottom": 3,
+        "left": 3
+      },
+      "frame": [
+        91,
+        20
+      ],
+      "layout": "vertical: normal, hover, on",
+      "sha256": "84cc0bc471375e195455ed1e87f353b17a129223cdc11850eea8cb28966b244f"
+    },
+    {
+      "path": "1-tema/fold_closed.png",
+      "size": [
+        8,
+        8
+      ],
+      "fixed_border": 0,
+      "frame": [
+        8,
+        8
+      ],
+      "layout": "single",
+      "sha256": "f05fbecddf416f4e2a3353349aa8b99cf2d22f4fe7763d0754f48566ce0c5ccf"
+    },
+    {
+      "path": "1-tema/fold_open.png",
+      "size": [
+        8,
+        8
+      ],
+      "fixed_border": 0,
+      "frame": [
+        8,
+        8
+      ],
+      "layout": "single",
+      "sha256": "46d7bdc6be0e9bc9a3adf4499d2d0d4b2fc9697279593869456d21e195c8dd23"
+    },
+    {
+      "path": "1-tema/gem_amethyst.png",
+      "size": [
+        12,
+        12
+      ],
+      "fixed_border": 0,
+      "frame": [
+        12,
+        12
+      ],
+      "layout": "single",
+      "sha256": "aa318c7dc6e12d5cab6d6187aacfb48338fa8928263c58f52811b1ea74138dae"
+    },
+    {
+      "path": "1-tema/gem_gold.png",
+      "size": [
+        12,
+        12
+      ],
+      "fixed_border": 0,
+      "frame": [
+        12,
+        12
+      ],
+      "layout": "single",
+      "sha256": "e75ecfbb3a9b97bff3d541a582df08564a19a86ace8ddef96049101ff0819a55"
+    },
+    {
+      "path": "1-tema/gem_pearl.png",
+      "size": [
+        12,
+        12
+      ],
+      "fixed_border": 0,
+      "frame": [
+        12,
+        12
+      ],
+      "layout": "single",
+      "sha256": "12e7fd3ce40e238e4ff92ce3cf8eeb19f56eaaa707d76d8481f95d6bbd008671"
+    },
+    {
+      "path": "1-tema/gem_sapphire.png",
+      "size": [
+        12,
+        12
+      ],
+      "fixed_border": 0,
+      "frame": [
+        12,
+        12
+      ],
+      "layout": "single",
+      "sha256": "3c7e1510ef7ae338a60dfa136e11d6b12b5962061a3891ddafeaa8ae8747d619"
+    },
+    {
+      "path": "1-tema/input.png",
+      "size": [
+        32,
+        22
+      ],
+      "fixed_border": 3,
+      "frame": [
+        32,
+        22
+      ],
+      "layout": "single",
+      "sha256": "f5b3c53fcb7ca6fc679100a8336dc5d847831846e61516d76f29c11de6f89a5b"
+    },
+    {
+      "path": "1-tema/input_focus.png",
+      "size": [
+        32,
+        22
+      ],
+      "fixed_border": 3,
+      "frame": [
+        32,
+        22
+      ],
+      "layout": "single",
+      "sha256": "3775f22add451cb32b1246886a40c8e5b0d58e9f9a5420746b9292c8eda1e2a3"
+    },
+    {
+      "path": "1-tema/notice.png",
+      "size": [
+        32,
+        32
+      ],
+      "fixed_border": 4,
+      "frame": [
+        32,
+        32
+      ],
+      "layout": "single",
+      "sha256": "dc7e3c55fec5f3ce3c8ac1e5bf00466ab1d66cd799565836ba59439213bd0973"
+    },
+    {
+      "path": "1-tema/panel.png",
+      "size": [
+        32,
+        32
+      ],
+      "fixed_border": 4,
+      "frame": [
+        32,
+        32
+      ],
+      "layout": "single",
+      "sha256": "c4783de660478a03859b6fa8fd171908e46591e1a5bba91b8e44084a994652f6"
+    },
+    {
+      "path": "1-tema/panel_on.png",
+      "size": [
+        32,
+        32
+      ],
+      "fixed_border": 4,
+      "frame": [
+        32,
+        32
+      ],
+      "layout": "single",
+      "sha256": "bb5872b435060d720d34482715a4e804fe8e53f1210a3e24cf90fa93ed7f1488"
+    },
+    {
+      "path": "1-tema/popup.png",
+      "size": [
+        32,
+        32
+      ],
+      "fixed_border": 2,
+      "frame": [
+        32,
+        32
+      ],
+      "layout": "single",
+      "sha256": "6dc147366e7af971b1b22ff909efc10267c3ac300e9d8b574f295ac0d171353c"
+    },
+    {
+      "path": "1-tema/scroll_arrows.png",
+      "size": [
+        20,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        10,
+        10
+      ],
+      "layout": "2x2: upper/left normal, hover; lower/right normal, hover",
+      "sha256": "73e4becb03c234bcbb1a58252b628be4a42ed1880db1c0c078489c8c62250cda"
+    },
+    {
+      "path": "1-tema/scroll_arrows_h.png",
+      "size": [
+        20,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        10,
+        10
+      ],
+      "layout": "2x2: upper/left normal, hover; lower/right normal, hover",
+      "sha256": "aead47b5000c3b03fef0c23a8da70778ea26fd3a546980ceef39a597df69351b"
+    },
+    {
+      "path": "1-tema/scroll_thumb.png",
+      "size": [
+        10,
+        24
+      ],
+      "fixed_border": 4,
+      "frame": [
+        10,
+        24
+      ],
+      "layout": "single",
+      "sha256": "41b53327243a546e7dcdc2ceaa21efe7f5477dfe36a767520d6747027d25bcd4"
+    },
+    {
+      "path": "1-tema/scroll_thumb_h.png",
+      "size": [
+        24,
+        10
+      ],
+      "fixed_border": 4,
+      "frame": [
+        24,
+        10
+      ],
+      "layout": "single",
+      "sha256": "6e048ab1605804da85f322d6c92992f23d92b768ffbf643182fc627897a87944"
+    },
+    {
+      "path": "1-tema/scroll_thumb_h_hover.png",
+      "size": [
+        24,
+        10
+      ],
+      "fixed_border": 4,
+      "frame": [
+        24,
+        10
+      ],
+      "layout": "single",
+      "sha256": "16580e0bc65879b57a8ee04342ffd7902f6f20b315de727161d66e24f20c7929"
+    },
+    {
+      "path": "1-tema/scroll_thumb_hover.png",
+      "size": [
+        10,
+        24
+      ],
+      "fixed_border": 4,
+      "frame": [
+        10,
+        24
+      ],
+      "layout": "single",
+      "sha256": "42a4f7c55595ce28f22e7d0eb9c53ca0acb223ebf8b99adfc3421c20be68544e"
+    },
+    {
+      "path": "1-tema/scroll_track.png",
+      "size": [
+        10,
+        32
+      ],
+      "fixed_border": 2,
+      "frame": [
+        10,
+        32
+      ],
+      "layout": "single",
+      "sha256": "684658b47121f8e7079869fa6be57c3e11ffb503bc2568d5f7af1c761ef68776"
+    },
+    {
+      "path": "1-tema/scroll_track_h.png",
+      "size": [
+        32,
+        10
+      ],
+      "fixed_border": 2,
+      "frame": [
+        32,
+        10
+      ],
+      "layout": "single",
+      "sha256": "fa69aed65ac24ed411b97698946db5e8a52d588599417560723cd78f89a5a803"
+    },
+    {
+      "path": "1-tema/section.png",
+      "size": [
+        64,
+        64
+      ],
+      "fixed_border": {
+        "top": 21,
+        "right": 4,
+        "bottom": 4,
+        "left": 4
+      },
+      "frame": [
+        64,
+        64
+      ],
+      "layout": "single",
+      "sha256": "13a51edd7ae3c883e74ceb0f765dea7f2f339f66c2298262206c4745f3aece6c"
+    },
+    {
+      "path": "1-tema/tab.png",
+      "size": [
+        64,
+        24
+      ],
+      "fixed_border": 2,
+      "frame": [
+        64,
+        24
+      ],
+      "layout": "single",
+      "sha256": "143da6f21453deee97e397bf64d70ff90596420554cb9ff8acfe3eed3b23afd9"
+    },
+    {
+      "path": "1-tema/tab_hover.png",
+      "size": [
+        64,
+        24
+      ],
+      "fixed_border": 2,
+      "frame": [
+        64,
+        24
+      ],
+      "layout": "single",
+      "sha256": "e252d6f98204d4fe8e78b2f4315b8a81302433895e5ed9f020d9c30fe77a153d"
+    },
+    {
+      "path": "1-tema/tab_on.png",
+      "size": [
+        64,
+        24
+      ],
+      "fixed_border": 2,
+      "frame": [
+        64,
+        24
+      ],
+      "layout": "single",
+      "sha256": "bcdd07afdfe7be4d7809baa6eea48fdb601680d4a588f4e0133823be5763482c"
+    },
+    {
+      "path": "1-tema/well.png",
+      "size": [
+        32,
+        32
+      ],
+      "fixed_border": 3,
+      "frame": [
+        32,
+        32
+      ],
+      "layout": "single",
+      "sha256": "8e15fdc5d48ea2ed85c77f6c5c79f43f6644a3ecc0717d8be1b23f397fc6cf61"
+    },
+    {
+      "path": "1-tema/window.png",
+      "size": [
+        256,
+        256
+      ],
+      "fixed_border": {
+        "top": 30,
+        "right": 6,
+        "bottom": 6,
+        "left": 6
+      },
+      "frame": [
+        256,
+        256
+      ],
+      "layout": "single",
+      "sha256": "ee40fd293de84de24858e50ce611331afd2914f0b528062ff49a760dbc3afdd0"
+    },
+    {
+      "path": "2-icones-painel/board.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "e66be68e06848e0a74c06d0076191eb172bafde5caae3d372231a503d950bea8"
+    },
+    {
+      "path": "2-icones-painel/bonus.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "e224f7cdd3cf49053d319573f9e8a4320f3885ca65a9a7a50caf1263e14c1839"
+    },
+    {
+      "path": "2-icones-painel/botao-barra-healbot.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "d0d1351dfd2947d8e84becdd2d6f47435d165b609548c2401977b9f17e7d7a2e"
+    },
+    {
+      "path": "2-icones-painel/botao-barra-huntboard.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "240afa39312b56a8ac6c6b0186f80b86ee653df75e3a3806241ddfd1aafb9d5b"
+    },
+    {
+      "path": "2-icones-painel/botao-barra-hunttasks.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "994a94d24fc4386ec4eb2a1fcef833614e68c2a9f3e8817e840fa5d6ee8b4f88"
+    },
+    {
+      "path": "2-icones-painel/botao-barra-raritymarket.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "1f9731a19b02529819f2556072981a2d35e160fbb5673339d38936dc87c313cd"
+    },
+    {
+      "path": "2-icones-painel/botao-barra-wiki.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "4cc2f233cd6c5c4fc6f6de387edbe8d22e950c1090d8f32c32b167ab1c888f28"
+    },
+    {
+      "path": "2-icones-painel/button.png",
+      "size": [
+        40,
+        20
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "horizontal: normal, on",
+      "sha256": "71a4b66d7fab5acb9e0edb071c142f76d8deb685a967324518e5e9b68ca130d1"
+    },
+    {
+      "path": "2-icones-painel/healbot.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "7204406633320407a43cc472d039c5cf94bf9990e5522e897294a5625e6e5a58"
+    },
+    {
+      "path": "2-icones-painel/loot.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "0ab6d81e94ed25ab99585f64263d7fc14f6e21dcbdf24020738562abe2f0c2e6"
+    },
+    {
+      "path": "2-icones-painel/messages.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "45e33ad014b48d56044477fc43b148569d9cab16d5daa270a221b74bdb6235b7"
+    },
+    {
+      "path": "2-icones-painel/rarity.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "ccb0f18da92287aa1a3e74038e4fe06adfb77e9a83cd2a5bf999f27aace9b736"
+    },
+    {
+      "path": "2-icones-painel/rates.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "1fcc74c7c1f84851706794714432522155a45aabd2b3fa0114f773ffcc54425b"
+    },
+    {
+      "path": "2-icones-painel/tasks.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "f634608d8e62eae7b881eeeea1beeb61291628cf8054b00078c37b2ce96add73"
+    },
+    {
+      "path": "2-icones-painel/taskshop.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "4fb05791169c28bc092b87659e1981bf4d40a6f67596c90dd56d3e9e6de2a7bc"
+    },
+    {
+      "path": "2-icones-painel/trail.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "03f4c052b91e734cfacb5a0b3a85938e5909882d7f955d6c800cc4e2adb9bf1d"
+    },
+    {
+      "path": "2-icones-painel/wiki.png",
+      "size": [
+        16,
+        16
+      ],
+      "fixed_border": 0,
+      "frame": [
+        16,
+        16
+      ],
+      "layout": "single",
+      "sha256": "b5b23fa642e850d01f8807d3ba7c525650d688162b1a06d93e71730fa87f9d7e"
+    },
+    {
+      "path": "3-janelas-extras/change.png",
+      "size": [
+        14,
+        14
+      ],
+      "fixed_border": 0,
+      "frame": [
+        14,
+        14
+      ],
+      "layout": "single",
+      "sha256": "7175284772abac74a860b4c9f9f13dec8a1e9df5484c64bece8cd91b0e6dadcb"
+    },
+    {
+      "path": "3-janelas-extras/choose.png",
+      "size": [
+        20,
+        40
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "vertical: normal, hover",
+      "sha256": "d998b135fbc77cd4e3ddadcc7cd45336277b09da5386c093f9389509051f741c"
+    },
+    {
+      "path": "3-janelas-extras/container.png",
+      "size": [
+        7,
+        9
+      ],
+      "fixed_border": 0,
+      "frame": [
+        7,
+        9
+      ],
+      "layout": "single",
+      "sha256": "c3b8248d004e987ef9c0e231d1848ce6ebacd1167f9d14796158703394053bcc"
+    },
+    {
+      "path": "3-janelas-extras/improve.png",
+      "size": [
+        14,
+        14
+      ],
+      "fixed_border": 0,
+      "frame": [
+        14,
+        14
+      ],
+      "layout": "single",
+      "sha256": "d2fa2f75a7c4de3eea7ee99a9c0863de193d05b9444f69d92cdc3cf8e6788003"
+    },
+    {
+      "path": "3-janelas-extras/remove.png",
+      "size": [
+        20,
+        40
+      ],
+      "fixed_border": 0,
+      "frame": [
+        20,
+        20
+      ],
+      "layout": "vertical: normal, hover",
+      "sha256": "0da7eb17c2823d9fa2b5cdf421f6203bc839d1bb652fb92e57ecd256f9d173f2"
+    },
+    {
+      "path": "3-janelas-extras/reroll.png",
+      "size": [
+        14,
+        14
+      ],
+      "fixed_border": 0,
+      "frame": [
+        14,
+        14
+      ],
+      "layout": "single",
+      "sha256": "fa2422fef3d65cec2449a215a75f80e758ff62e01c8c59e48a5643ecbf18c6b9"
+    }
+  ],
+  "validation": {
+    "same_names": true,
+    "same_dimensions": true,
+    "binary_alpha": true,
+    "state_silhouette_alignment": true,
+    "engine_tested": false,
+    "uniform_stretchable_centers": true,
+    "all_atlas_frame_alignment": true,
+    "otui_properties_preserved": true,
+    "rarity_frames_unchanged": true
+  }
+}

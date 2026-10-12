@@ -115,22 +115,21 @@ local function rateColor(rate)
     end
 end
 
--- tenths -> colour: the same scale as the rate label over the monsters,
--- so a hot hunt reads the same here and in the map
-local function multColor(tenths)
-    return rateColor(tenths / 10)
+-- inside this window XP is violet and loot gold, brighter the higher the
+-- rate; red stays for real danger (the heat scale above is for the map)
+local function ramp(t, from, to)
+    local function mix(k)
+        return math.floor(from[k] + (to[k] - from[k]) * t + 0.5)
+    end
+    return string.format('#%02x%02x%02x', mix(1), mix(2), mix(3))
 end
 
--- loot follows the XP rate (0.8x to 4x), so its colours step sooner
-local function lootColor(tenths)
-    if tenths < 10 then
-        return '#e0564a'
-    elseif tenths < 15 then
-        return '#c8c8c8'
-    elseif tenths < 25 then
-        return '#7fd35a'
-    end
-    return '#ffb020'
+local function xpTone(tenths)
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 90)), { 120, 108, 140 }, { 196, 170, 255 })
+end
+
+local function lootTone(tenths)
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 138, 122, 85 }, { 235, 205, 130 })
 end
 
 local function multText(tenths)
@@ -160,7 +159,7 @@ end
 local function setBar(bar, tenths, maxTenths, colorOf)
     maxTenths = math.max(maxTenths or rates.max or 100, 10)
     local inner = bar:getWidth() - 2
-    local color = (colorOf or multColor)(tenths)
+    local color = (colorOf or xpTone)(tenths)
     bar.fill:setWidth(math.max(1, math.floor(inner * math.min(tenths, maxTenths) / maxTenths)))
     bar.fill:setBackgroundColor(color .. 'b0')
     bar.mark:setMarginLeft(1 + math.floor(inner * 10 / maxTenths))
@@ -265,9 +264,9 @@ local function renderPage()
             row.info:setText(tr('Exp %s  -  HP %s  -  %d spawns', formatNumber(monster.exp), formatNumber(monster.hp), monster.spawns))
         end
         setBar(row.xpBar, monster.xp)
-        setBar(row.lootBar, monster.loot, rates.lootMax, lootColor)
+        setBar(row.lootBar, monster.loot, rates.lootMax, lootTone)
         row.perKill:setText(formatShort(monster.perKill) .. ' xp')
-        row.perKill:setColor(multColor(monster.xp))
+        row.perKill:setColor(xpTone(monster.xp))
         local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
             formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
         if monster.dmgMult > 1 then
@@ -329,9 +328,9 @@ local function renderHot()
         card.creature:setOutfit(outfitOf(monster))
         card.name:setText(monster.name)
         card.xp:setText(tr('XP %s', multText(monster.xp)))
-        card.xp:setColor(multColor(monster.xp))
+        card.xp:setColor(xpTone(monster.xp))
         card.loot:setText(tr('Loot %s', multText(monster.loot)))
-        card.loot:setColor(lootColor(monster.loot))
+        card.loot:setColor(lootTone(monster.loot))
         card.onClick = function()
             window.ratesPanel.searchEdit:setText(monster.name)
         end

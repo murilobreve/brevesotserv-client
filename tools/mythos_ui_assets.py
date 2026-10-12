@@ -388,6 +388,30 @@ def login_kit():
     im.save(os.path.join(out, 'separator_v.png'))
 
 
+def apply_redesign():
+    """The hand-drawn pieces in tools/ui-redesign replace the drawn ones of
+    the same name (theme, panel icons, bar buttons, roulette and auto loot)."""
+    src = os.path.join(ROOT, 'tools', 'ui-redesign')
+    if not os.path.isdir(src):
+        return
+    import shutil
+    bars = {'healbot': 'game_healbot', 'huntboard': 'game_huntboard', 'hunttasks': 'game_hunttasks',
+            'raritymarket': 'game_raritymarket', 'wiki': 'game_wiki'}
+    extras = {'change': 'game_raritybonus', 'improve': 'game_raritybonus', 'reroll': 'game_raritybonus',
+              'choose': 'game_quickloot', 'remove': 'game_quickloot', 'container': 'game_quickloot'}
+    for f in os.listdir(os.path.join(src, '1-tema')):
+        shutil.copy(os.path.join(src, '1-tema', f), os.path.join(OUT, f))
+    for f in os.listdir(os.path.join(src, '2-icones-painel')):
+        name = f[:-4]
+        if name.startswith('botao-barra-'):
+            dest = os.path.join(ROOT, 'modules', bars[name[12:]], 'images', 'button.png')
+        else:
+            dest = os.path.join(ROOT, 'modules', 'game_brevespanel', 'images', f)
+        shutil.copy(os.path.join(src, '2-icones-painel', f), dest)
+    for f in os.listdir(os.path.join(src, '3-janelas-extras')):
+        shutil.copy(os.path.join(src, '3-janelas-extras', f), os.path.join(ROOT, 'modules', extras[f[:-4]], 'images', f))
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     window()
@@ -405,4 +429,5 @@ if __name__ == '__main__':
     corner_notice()
     bullets()
     login_kit()
+    apply_redesign()
     print('wrote', sorted(os.listdir(OUT)))

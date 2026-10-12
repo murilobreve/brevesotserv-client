@@ -1,7 +1,8 @@
 // Mythos window kit. Colours from the login screen: obsidian body, the violet
 // of the halo above the logo for focus and selection, pearl for titles and
 // the main button. Window titles use Cinzel, the lettering of the logo.
-// Images are drawn by tools/mythos_ui_assets.py into /images/mythos.
+// Optional color update for the native-size Mythos redesign.
+// All image borders, clips, widget sizes and behavior remain unchanged.
 
 MythosWindow < MainWindow
   image-source: /images/mythos/window
@@ -11,14 +12,14 @@ MythosWindow < MainWindow
   padding-left: 16
   padding-right: 16
   padding-bottom: 14
-  color: #ece8f6
+  color: #eee6d4
   text-offset: 0 7
   ttf-font: cinzel-bold
   ttf-font-size: 15
 
 MythosButton < UIButton
   font: verdana-11px-antialised
-  color: #e0d8f0
+  color: #e7e2ef
   size: 86 22
   text-offset: 0 1
   image-source: /images/mythos/button
@@ -44,7 +45,7 @@ MythosButton < UIButton
 
   $disabled:
     image-source: /images/mythos/button_disabled
-    color: #75688f
+    color: #898293
     change-cursor-image: false
 
 // the one action a window is about: pearl, like the PLAY button on the login
@@ -67,7 +68,7 @@ MythosPrimaryButton < MythosButton
 MythosTab < UIButton
   size: 118 24
   font: verdana-11px-antialised
-  color: #9a93aa
+  color: #b4afc3
   text-offset: 0 -1
   image-source: /images/mythos/tab
   image-border: 2
@@ -93,30 +94,30 @@ MythosTextEdit < UITextEdit
   image-source: /images/mythos/input
   image-border: 3
   selection-color: #170f24
-  selection-background-color: #cdbcff
-  placeholder-color: #75688f
+  selection-background-color: #d0baff
+  placeholder-color: #898293
   cursor: text
 
   $focus:
     image-source: /images/mythos/input_focus
 
   $disabled:
-    color: #75688f
+    color: #898293
 
 MythosComboBoxPopupMenuButton < UIButton
   height: 20
   font: verdana-11px-antialised
   text-align: left
   text-offset: 6 0
-  color: #cbc0e0
+  color: #d1ccd9
   background-color: alpha
 
   $hover !disabled:
     color: #ffffff
-    background-color: #9b7bff40
+    background-color: #b296f540
 
   $disabled:
-    color: #75688f
+    color: #898293
 
 MythosComboBoxPopupMenuSeparator < UIWidget
   image-source: /images/ui/menubox
@@ -142,7 +143,7 @@ MythosComboBoxPopupScrollMenu < UIPopupScrollMenu
 
 MythosComboBox < UIComboBox
   font: verdana-11px-antialised
-  color: #e0d8f0
+  color: #e7e2ef
   size: 120 20
   text-align: center
   text-offset: -9 0
@@ -161,7 +162,7 @@ MythosComboBox < UIComboBox
     image-clip: 0 40 91 20
 
   $disabled:
-    color: #75688f
+    color: #898293
 
 MythosScrollBarSlider < UIButton
   id: sliderButton
@@ -267,7 +268,7 @@ MythosHSlider < UIScrollBar
 
 MythosSeparator < UIWidget
   height: 1
-  background-color: #3e2d5e
+  background-color: #514553
   phantom: true
 
 // the corner toast and other small floating boxes
@@ -283,7 +284,7 @@ BrevesSection < Panel
   padding: 26 8 8 8
   text-align: top
   text-offset: 0 4
-  color: #e0d6f2
+  color: #e8dfce
   font: Verdana Bold-11px
 
 // the same panel without the title strip
@@ -306,11 +307,11 @@ BrevesList < UIScrollArea
 // column header strip on top of a BrevesList
 BrevesHeader < UIWidget
   height: 20
-  background-color: #22173a
+  background-color: #24212e
   border-width: 1
-  border-color: #3e2d5e
+  border-color: #514553
   font: verdana-11px-antialised
-  color: #9789b3
+  color: #b4afc3
   text-align: left
   text-offset: 7 0
 
@@ -322,7 +323,7 @@ BrevesRow < UIWidget
   $hover !focus:
     background-color: #ffffff0e
   $focus:
-    background-color: #9b7bff30
+    background-color: #b296f530
 
 BrevesRowEven < BrevesRow
   background-color: #ffffff07
@@ -349,14 +350,14 @@ BrevesValueBox < UIWidget
 BrevesCell < UIWidget
   background-color: #0f0a19
   border-width: 1
-  border-color: #3e2d5e
+  border-color: #514553
 
 BrevesNote < Label
   font: verdana-11px-antialised
-  color: #9789b3
+  color: #b4afc3
   text-wrap: true
   text-auto-resize: true
 
 BrevesLabel < Label
   font: verdana-11px-antialised
-  color: #cbc0e0
+  color: #d1ccd9
