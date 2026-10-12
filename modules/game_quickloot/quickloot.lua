@@ -12,6 +12,9 @@ end
 -- "take everything Gersao buys for at least X gold" rule
 LOOT_PRICES_OPCODE = 124
 
+-- Auto Loot by price, on by default: items Gersao buys for at least this
+local DEFAULT_PRICE_MIN = 500
+
 quickLootController = Controller:new()
 quickLootController:setUI('quickloot')
 function quickLootController:onInit()
@@ -339,7 +342,23 @@ function QuickLoot.Define()
         local data = QuickLoot.data
         data.priceRule = data.priceRule or {}
         local rule = data.priceRule
-        rule.min = tonumber(rule.min) or 1000
+        if rule.enabled == nil then
+            -- never switched by the player (older clients saved the rule off
+            -- at 1000 without asking): the default Auto Loot, coins and every
+            -- item Gersao buys for 500 gold or more. A player who built a
+            -- list by hand keeps it.
+            local manual = false
+            for _, list in pairs(data.loots or {}) do
+                if type(list) == 'table' and #list > 0 then
+                    manual = true
+                end
+            end
+            rule.enabled = not manual
+            if rule.min == nil or tonumber(rule.min) == 1000 then
+                rule.min = DEFAULT_PRICE_MIN
+            end
+        end
+        rule.min = tonumber(rule.min) or DEFAULT_PRICE_MIN
         rule.take = rule.take or {}
         rule.skip = rule.skip or {}
         return rule

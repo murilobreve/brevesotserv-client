@@ -270,6 +270,9 @@ local BUMP_TIME = 700 -- ms the bonuses take to grow at an empty slot
 local FADE = 0.3 -- how much the reel dims at full speed
 local ACTIVE_COLOR = '#e0c060' -- the slot rolling now
 local REEL_TOP = 2 -- the strip's margin when its first line is at the top
+-- ms between reel updates: under one frame even at 165 Hz, so every frame
+-- shows a fresh position (16 ms skipped or doubled frames, a stutter)
+local FRAME_MS = 6
 
 local QUALITY_COLORS = {
     { 0.9, '#ff9a1f' }, -- near the top
@@ -559,7 +562,7 @@ local function animate()
         end
     end
     if spin.rows[spin.current] then
-        spin.event = scheduleEvent(animate, 16)
+        spin.event = scheduleEvent(animate, FRAME_MS)
     elseif row and not row.entry then
         -- the last slot was empty: let the bonuses finish growing first
         spin.event = scheduleEvent(finishSpin, BUMP_TIME + 300)
@@ -624,7 +627,7 @@ local function startStrips(result)
     if spin.event then
         removeEvent(spin.event)
     end
-    spin.event = scheduleEvent(animate, 16)
+    spin.event = scheduleEvent(animate, FRAME_MS)
 end
 
 local function showRoulette(result, onDone)
