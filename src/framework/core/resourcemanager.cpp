@@ -1027,6 +1027,32 @@ bool ResourceManager::installDownloadedFileInWorkDir(const std::string& path, st
     return true;
 }
 
+// Mythos updater: deletes a file a newer version no longer ships. A file in
+// use (Windows) is moved aside to "<name>.old" instead, and goes away with
+// cleanupOldFilesInWorkDir() on the next start. True when the file is gone.
+bool ResourceManager::removeFileInWorkDir(std::string path)
+{
+    const auto relativePath = safeRelativePath(std::move(path));
+    if (relativePath.empty())
+        return false;
+
+    std::error_code ec;
+    const auto target = std::filesystem::path(getWorkDir()) / relativePath;
+    if (!std::filesystem::is_regular_file(target, ec))
+        return true;
+    if (std::filesystem::remove(target, ec))
+        return true;
+
+    auto aside = target;
+    aside += ".old" + std::to_string(time(nullptr));
+    std::filesystem::rename(target, aside, ec);
+    if (ec) {
+        g_logger.error("Cannot remove '{}': {}", target.string(), ec.message());
+        return false;
+    }
+    return true;
+}
+
 int ResourceManager::cleanupOldFilesInWorkDir()
 {
     int removed = 0;

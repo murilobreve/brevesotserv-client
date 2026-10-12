@@ -20,12 +20,15 @@ Updater = {}
 local DEFAULT_BASE = 'https://raw.githubusercontent.com/murilobreve/mythos-client/main/'
 local LOCAL_INFO = 'versao.json'
 local CHECK_TIMEOUT = 8
+local DOWNLOAD_TIMEOUT = 20            -- seconds to connect for each file (2 by default)
 local DEFAULT_INTERVAL = 10 * 60      -- seconds between checks while open
 local REMIND_EVERY = 30 * 60          -- seconds between in-game reminders
 
 local box
 local downloads = {}
-local cancelled = false
+-- each update gets its own number: callbacks of a cancelled one see a newer
+-- number and stop, so "Update now" right after a cancel never runs two
+local generation = 0
 local localInfo
 local versionLabel
 local checkEvent
@@ -166,6 +169,32 @@ local function closeBox()
   end
 end
 
+-- a manifest path the updater may write or delete: inside the client folder
+local function validPath(path)
+  return type(path) == 'string' and path ~= '' and not path:find('\\', 1, true) and not path:find(':', 1, true)
+    and path:sub(1, 1) ~= '/' and not ('/' .. path .. '/'):find('/%.%.?/')
+end
+
+-- files an older version shipped and this one no longer does
+local function removeStale(manifest)
+  if type(manifest.removed) ~= 'table' or not g_resources.removeFileInWorkDir then
+    return
+  end
+  local removed = 0
+  for _, path in ipairs(manifest.removed) do
+    if validPath(path) and manifest.files[path] == nil and g_resources.fileExistsInWorkDir(path) then
+      if g_resources.removeFileInWorkDir(path) then
+        removed = removed + 1
+      else
+        log('could not remove ' .. path)
+      end
+    end
+  end
+  if removed > 0 then
+    log(string.format('removed %d files the new version no longer has', removed))
+  end
+end
+
 local function giveUp(message)
   closeBox()
   for _, name in ipairs(downloads) do
@@ -194,11 +223,20 @@ local function setProgress(done, total, percent)
 end
 
 local function install(changed, manifest)
+  local staleRemoved = false
   for _, entry in ipairs(changed) do
+    -- versao.json goes last, after the old files are gone
+    if entry.path == LOCAL_INFO and not staleRemoved then
+      removeStale(manifest)
+      staleRemoved = true
+    end
     if not g_resources.installDownloadedFileInWorkDir(entry.download, entry.path) then
       -- files already installed stay; the next start finishes the job
       return giveUp('could not install ' .. entry.path)
     end
+  end
+  if not staleRemoved then
+    removeStale(manifest)
   end
   log(string.format('updated to version %d (%d files)', manifest.versao, #changed))
   if box then
@@ -207,13 +245,13 @@ local function install(changed, manifest)
   scheduleEvent(function() g_app.restart() end, 1200)
 end
 
-local function downloadAll(changed, manifest)
+local function downloadAll(changed, manifest, myGeneration)
   local base = baseUrl()
   local total = #changed
   local index = 0
 
   local function nextFile()
-    if cancelled then
+    if myGeneration ~= generation then
       return
     end
     index = index + 1
@@ -224,8 +262,10 @@ local function downloadAll(changed, manifest)
     entry.download = string.format('mythos_update_%d_%d', manifest.versao, index)
     table.insert(downloads, entry.download)
     setProgress(index - 1, total, (index - 1) * 100 / total)
+    local oldTimeout = HTTP.timeout
+    HTTP.timeout = DOWNLOAD_TIMEOUT
     HTTP.download(base .. 'objects/' .. entry.sha256, entry.download, function(path, checksum, err)
-      if cancelled then
+      if myGeneration ~= generation then
         return
       end
       if err then
@@ -237,14 +277,29 @@ local function downloadAll(changed, manifest)
       end
       nextFile()
     end, function(progress)
-      setProgress(index - 1, total, ((index - 1) + (progress or 0) / 100) * 100 / total)
+      if myGeneration == generation then
+        setProgress(index - 1, total, ((index - 1) + (progress or 0) / 100) * 100 / total)
+      end
     end)
+    HTTP.timeout = oldTimeout
   end
 
   nextFile()
 end
 
 local function startUpdate(manifest)
+  -- one bad path and the whole manifest is refused, before any download
+  for path in pairs(manifest.files) do
+    if not validPath(path) then
+      log('manifest refused: bad path ' .. tostring(path))
+      setStatus('error')
+      return
+    end
+  end
+  if type(manifest.removed) == 'string' then
+    manifest.removed = { manifest.removed }
+  end
+
   local changed = {}
   for path, info in pairs(manifest.files) do
     local sha = type(info) == 'table' and info.sha256 or info
@@ -266,7 +321,8 @@ local function startUpdate(manifest)
     return
   end
 
-  cancelled = false
+  generation = generation + 1
+  local myGeneration = generation
   downloads = {}
   setStatus('updating')
   local eg = enterGame()
@@ -276,11 +332,11 @@ local function startUpdate(manifest)
   box = displayCancelBox(txt('Atualização', 'Update'), '')
   setProgress(0, #changed, 0)
   connect(box, { onCancel = function()
-    cancelled = true
+    generation = generation + 1
     box = nil
     giveUp()
   end })
-  downloadAll(changed, manifest)
+  downloadAll(changed, manifest, myGeneration)
 end
 
 -- ---------------------------------------------------------------- checks
@@ -359,7 +415,7 @@ function Updater.init()
 end
 
 function Updater.terminate()
-  cancelled = true
+  generation = generation + 1
   closeBox()
   if checkEvent then
     removeEvent(checkEvent)

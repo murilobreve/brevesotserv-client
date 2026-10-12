@@ -288,6 +288,7 @@ void Application::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_resources", "updateExecutable", &ResourceManager::updateExecutable, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "installDownloadedFileInWorkDir", &ResourceManager::installDownloadedFileInWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "cleanupOldFilesInWorkDir", &ResourceManager::cleanupOldFilesInWorkDir, &g_resources);
+    g_lua.bindSingletonFunction("g_resources", "removeFileInWorkDir", &ResourceManager::removeFileInWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "createArchive", &ResourceManager::createArchive, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "decompressArchive", &ResourceManager::decompressArchive, &g_resources);
 

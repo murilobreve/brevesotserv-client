@@ -4,7 +4,8 @@
 # Pega a pasta pronta (dist\Mythos), calcula o SHA-256 de cada arquivo e
 # manda para o repositorio publico murilobreve/mythos-client:
 #   objects\<sha256>          o conteudo de cada arquivo (so os que ainda nao estao la)
-#   <canal>\manifest.json     a lista: caminho -> sha256, e o numero da versao
+#   <canal>\manifest.json     a lista: caminho -> sha256, o numero da versao e
+#                            os arquivos que sairam (o client apaga)
 # O client, ao abrir, le o manifest.json e baixa so o que mudou. Tudo vem do
 # GitHub: a VPS nao gasta banda nenhuma.
 #
@@ -72,12 +73,14 @@ $caminhoManifest = Join-Path $pastaCanal "manifest.json"
 
 $versaoAntiga = 0
 $arquivosAntigos = @{}
+$removidosAntigos = @()
 if (Test-Path $caminhoManifest) {
     $antigo = [System.IO.File]::ReadAllText($caminhoManifest) | ConvertFrom-Json
     $versaoAntiga = [int]$antigo.versao
     foreach ($p in $antigo.files.PSObject.Properties) {
         if ($p.Name -ne "versao.json") { $arquivosAntigos[$p.Name] = $p.Value.sha256 }
     }
+    if ($antigo.removed) { $removidosAntigos = @($antigo.removed) }
 }
 
 # ---------------------------------------------------------------- arquivos
@@ -156,11 +159,21 @@ if (-not $mudou) {
 
 $lista = [ordered]@{}
 foreach ($k in ($arquivos.Keys | Sort-Object)) { $lista[$k] = $arquivos[$k] }
+
+# arquivos que uma versao antiga tinha e esta nao tem mais: o client apaga.
+# A lista acumula, para quem pula versoes; um arquivo que volta sai dela.
+$removidos = @{}
+foreach ($k in $removidosAntigos) { $removidos[$k] = $true }
+foreach ($k in $arquivosAntigos.Keys) { $removidos[$k] = $true }
+foreach ($k in $arquivos.Keys) { $removidos.Remove($k) }
+[string[]]$listaRemovidos = @($removidos.Keys | Sort-Object)
+
 $manifest = [ordered]@{
     versao = $versao
     canal = $Canal
     data = (Get-Date).ToString("yyyy-MM-dd HH:mm")
     files = $lista
+    removed = $listaRemovidos
 } | ConvertTo-Json -Depth 5
 [System.IO.File]::WriteAllText($caminhoManifest, $manifest, $semBom)
 
