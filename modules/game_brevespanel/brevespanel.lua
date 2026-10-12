@@ -42,7 +42,7 @@ local GROUPS = {
     { id = 'tools', label = 'Tools' },
 }
 
-local panel, newsWindow
+local panel, newsWindow, panelButton
 local buttons = {}
 local callbacks = {}
 local states = {}
@@ -426,7 +426,26 @@ function showNews()
     newsWindow:focus()
 end
 
+function togglePanel()
+    if not panel then
+        return
+    end
+    if panel:isVisible() then
+        panel:close()
+    else
+        panel:open()
+        if panel:isOn() then
+            panel:maximize()
+        end
+        panel:raise()
+    end
+end
+
 local function onGameStart()
+    if not panelButton and modules.game_mainpanel and modules.game_mainpanel.addSpecialToggleButton then
+        panelButton = modules.game_mainpanel.addSpecialToggleButton('mythosPanelButton', tr('Mythos panel: tasks, hunt rates, rarity, heal bot'),
+            '/game_brevespanel/images/button', togglePanel, true, 0)
+    end
     panel:setupOnStart()
     -- the first time, at the top of the right panel, where the old fixed
     -- panel was; after that the mini window settings remember the place
@@ -439,6 +458,9 @@ local function onGameStart()
         panel:open(true)
     end
     applyLayout()
+    if panelButton then
+        panelButton:setOn(panel:isVisible())
+    end
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
         -- written now: a client that crashes never saves its settings on exit
@@ -458,8 +480,8 @@ function init()
     panel = g_ui.createWidget('BrevesPanel')
     panel:setId('brevespanel')
     panel:setup()
-    -- only minimize and lock: a closed panel would have no way back
-    for _, id in ipairs({ 'closeButton', 'toggleFilterButton', 'contextMenuButton', 'newWindowButton' }) do
+    -- the gem button among the Tibia option buttons opens it again
+    for _, id in ipairs({ 'toggleFilterButton', 'contextMenuButton', 'newWindowButton' }) do
         local button = panel:getChildById(id)
         if button then
             button:hide()
@@ -470,11 +492,16 @@ function init()
     panel.lockButton:addAnchor(AnchorRight, 'minimizeButton', AnchorLeft)
     panel.lockButton:setMarginTop(2)
     panel.lockButton:setMarginRight(2)
-    panel.minimizeButton:breakAnchors()
-    panel.minimizeButton:addAnchor(AnchorTop, 'parent', AnchorTop)
-    panel.minimizeButton:addAnchor(AnchorRight, 'parent', AnchorRight)
-    panel.minimizeButton:setMarginTop(2)
-    panel.minimizeButton:setMarginRight(3)
+    panel.onOpen = function()
+        if panelButton then
+            panelButton:setOn(true)
+        end
+    end
+    panel.onClose = function()
+        if panelButton then
+            panelButton:setOn(false)
+        end
+    end
     -- Mythos colours on the Tibia frame
     panel:setImageSource('/images/mythos/panel')
     panel:setImageBorder(4)
@@ -517,6 +544,10 @@ function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     hideNews()
     hideNotice()
+    if panelButton then
+        panelButton:destroy()
+        panelButton = nil
+    end
     if panel then
         panel:destroy()
         panel = nil

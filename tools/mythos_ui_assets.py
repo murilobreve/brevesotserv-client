@@ -238,6 +238,51 @@ def fold_marks():
         save(im, name)
 
 
+def panel_button():
+    # the button that opens the Mythos panel, among the Tibia option buttons:
+    # a faceted obsidian gem on a dark violet button; second half is "on"
+    out = os.path.join(ROOT, 'modules', 'game_brevespanel', 'images', 'button.png')
+    im = img(40, 20)
+    gem = [
+        "......#......",
+        ".....#a#.....",
+        "....#aAb#....",
+        "...#aAAbb#...",
+        "..#aAAAbbb#..",
+        ".#aaAAAbbbc#.",
+        "#ddddddeeeee#",
+        ".#dddddeeee#.",
+        "..#ddddeee#..",
+        "...#dddee#...",
+        "....#dde#....",
+        ".....#e#.....",
+        "......#......",
+    ]
+    cols = {'#': (26, 12, 46), 'a': (196, 168, 255), 'A': (236, 226, 255), 'b': (150, 112, 245),
+            'c': (110, 76, 210), 'd': (112, 70, 214), 'e': (64, 34, 140)}
+    for k, (top, bottom, fill, dx) in enumerate((((120, 96, 168), (20, 12, 34), (48, 32, 78), 0),
+                                                 ((20, 12, 34), (120, 96, 168), (36, 22, 60), 1))):
+        ox = k * 20
+        rect(im, ox, 0, ox + 20, 20, fill + (255,))
+        rect(im, ox, 0, ox + 20, 1, top + (255,))
+        rect(im, ox, 0, ox + 1, 20, top + (255,))
+        rect(im, ox, 19, ox + 20, 20, bottom + (255,))
+        rect(im, ox + 19, 0, ox + 20, 20, bottom + (255,))
+        # a soft halo behind the gem
+        for y in range(2, 18):
+            for x in range(2, 18):
+                d = ((x - 9.5) ** 2 + (y - 9.5) ** 2) ** 0.5
+                if d < 8:
+                    t = (1 - d / 8) * 0.55
+                    r, g, b, a = im.getpixel((ox + x, y))
+                    im.putpixel((ox + x, y), mix((r, g, b), HALO, t) + (255,))
+        for y, row in enumerate(gem):
+            for x, c in enumerate(row):
+                if c != '.':
+                    im.putpixel((ox + 3 + x + dx, 3 + y + dx), cols[c] + (255,))
+    im.save(out)
+
+
 def corner_notice():
     # small toast in the corner of the map
     w = h = 32
@@ -311,6 +356,7 @@ if __name__ == '__main__':
     scrollbar()
     slider()
     fold_marks()
+    panel_button()
     corner_notice()
     bullets()
     login_kit()

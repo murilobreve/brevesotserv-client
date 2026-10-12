@@ -221,6 +221,7 @@ locale = {
     ["Force Exit"] = "Forçar Saida",
     ["Formula"] = "Fórmula",
     ["Free Account"] = "Conta Grátis",
+    ["Mythos panel: tasks, hunt rates, rarity, heal bot"] = "Painel Mythos: tasks, hunt rates, raridade, heal bot",
     ["Shop"] = "Loja",
     ["Roulette"] = "Roleta",
     ["Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more."] = "Os Hunt Points compram poção de XP, pergaminhos de raridade, Rarity XP, Mythos Coins, a Bag of Mythical e mais.",
