@@ -567,7 +567,12 @@ void MapView::updateLight()
 
 void MapView::onTileUpdate(const Position& pos, const ThingPtr& thing, const Otc::Operation op)
 {
-    if (thing && thing->isOpaque() && op == Otc::OPERATION_REMOVE)
+    // a tile that covered the ones below can go away by being removed or
+    // cleaned (the server resending it, or it leaving the aware range on a
+    // step): the "completely covered" cache of the tiles under it is stale
+    // then, and a tile still marked covered was left undrawn - a black
+    // square until something reset the cache
+    if (op == Otc::OPERATION_CLEAN || (thing && thing->isOpaque() && op == Otc::OPERATION_REMOVE))
         m_resetCoveredCache = true;
 
     if (op == Otc::OPERATION_CLEAN) {

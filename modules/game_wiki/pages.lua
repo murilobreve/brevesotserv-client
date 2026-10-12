@@ -175,6 +175,7 @@ WIKI_PAGES.huntboard = {
         { 'h', 'Força' },
         { 'p', 'Acima de 1x o monstro também fica mais forte: vida x (1 + (rate - 1) x 0,35) e dano x (1 + (rate - 1) x 0,15). A 4x ele tem 2,05 vezes a vida e bate 1,45 vez mais forte; a 10x, 4,15 vezes a vida e 2,35 vezes o dano. É vida de verdade: o seu dano entra inteiro.' },
         { 'p', 'O Hunt Board (no painel Mythos, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
+        { 'p', 'A rate também aparece ao lado da barra de vida de cada monstro. A cor avisa o quanto ele está forte: cinza perto de 1x, amarelo perto de 3x, laranja perto de 6x e vermelho em 10x. A partir de 8x vem com um ponto de exclamação, como 9.6x!.' },
         { 'links', { 'tiers', 'experience' } },
     },
 }

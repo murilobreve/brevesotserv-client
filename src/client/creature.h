@@ -190,6 +190,7 @@ minHeight,
     // short label drawn where the skull goes (the Hunt Board rate, "3.4x")
     void setRateText(const std::string& text);
     std::string getRateText() const { return m_rateText.getText(); }
+    void setRateColor(const Color& color) { m_rateColor = color; }
     bool canShoot(int distance);
 
     const auto& getIcons() {
@@ -305,6 +306,7 @@ private:
 
     CachedText m_name;
     CachedText m_rateText;
+    Color m_rateColor{ 235, 235, 235, 220 };
     std::string m_nameShader;
     CachedStep m_stepCache;
 

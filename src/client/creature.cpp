@@ -339,7 +339,7 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         if ((m_skull != Otc::SkullNone && m_skullTexture) || (g_game.getClientVersion() >= 1281 && m_icons && !m_icons->atlasGroups.empty()))
             x += 12;
         const auto size = m_rateText.getTextSize();
-        m_rateText.draw(Rect(x, backgroundRect.center().y - size.height() / 2, size), Color(235, 235, 235, 220));
+        m_rateText.draw(Rect(x, backgroundRect.center().y - size.height() / 2, size), m_rateColor);
     }
 
     if (m_shield != Otc::ShieldNone && m_shieldTexture && m_showShieldTexture)

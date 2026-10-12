@@ -491,12 +491,47 @@ end
 -- experience rate (tenths) of each monster, by lower-case name
 local rateByName = {}
 
+-- the label's colour by rate: light grey at 1x, yellow, orange, red at 10x
+local RATE_COLORS = {
+    { 1, 235, 235, 235 },
+    { 3, 255, 236, 96 },
+    { 6, 255, 158, 40 },
+    { 10, 255, 52, 52 },
+}
+local RATE_ALERT = 8 -- from here the label also gets a "!"
+
+local function rateColor(rate)
+    if rate <= RATE_COLORS[1][1] then
+        local c = RATE_COLORS[1]
+        return string.format('#%02x%02x%02x', c[2], c[3], c[4])
+    end
+    for i = 2, #RATE_COLORS do
+        local lo, hi = RATE_COLORS[i - 1], RATE_COLORS[i]
+        if rate <= hi[1] or i == #RATE_COLORS then
+            local t = math.min(1, (rate - lo[1]) / (hi[1] - lo[1]))
+            local function mix(k)
+                return math.floor(lo[k] + (hi[k] - lo[k]) * t + 0.5)
+            end
+            return string.format('#%02x%02x%02x', mix(2), mix(3), mix(4))
+        end
+    end
+end
+
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return
     end
     local tenths = rateByName[creature:getName():lower()]
-    creature:setRateText(tenths and string.format('%.1fx', tenths / 10) or '')
+    if not tenths then
+        creature:setRateText('')
+        return
+    end
+    local rate = tenths / 10
+    creature:setRateText(string.format(rate >= RATE_ALERT and '%.1fx!' or '%.1fx', rate))
+    -- clients from before the colours keep the plain label
+    if creature.setRateColor then
+        creature:setRateColor(rateColor(rate))
+    end
 end
 
 local function labelAll()
