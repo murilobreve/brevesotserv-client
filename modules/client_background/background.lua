@@ -27,7 +27,7 @@ function init()
     startBackgroundEffectLoop() -- start the background effect loop
 end
 
-local ARTWORK_W, ARTWORK_H = 1672, 941
+local ARTWORK_W, ARTWORK_H = 2000, 1125
 
 function fitArtwork()
     if not background then
