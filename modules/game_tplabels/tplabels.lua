@@ -1,20 +1,11 @@
 -- Teleport labels: the server sends the list of teleports with their names
 -- when the client asks for it (extended opcode 126, JSON). Each one in sight on the
--- player's floor gets a small fixed obsidian plate over its tile, coloured
--- by what it leads to, instead of floating text that blinks every few
--- seconds. The client answers "ok" so the server stops the floating text.
+-- player's floor gets its name fixed over the tile, in the same orange as
+-- the old floating text, instead of text that blinks every few seconds.
+-- The client answers "ok" so the server stops the floating text.
 
 local OPCODE = 126
 local RANGE_X, RANGE_Y = 9, 7
-
--- kind -> plate colours and gem
-local STYLES = {
-    city = { text = '#f1d399', border = '#8d7040', gem = 'gem_gold' },
-    hunt = { text = '#d9c7ff', border = '#6e58c0', gem = 'gem_amethyst' },
-    event = { text = '#ffc9d6', border = '#9a4660', gem = 'gem_ruby' },
-    service = { text = '#ece8f6', border = '#6d6480', gem = 'gem_pearl' },
-    back = { text = '#bfeccb', border = '#3f7a52', gem = 'gem_sapphire' },
-}
 
 local labels = {}   -- { pos = {x,y,z}, text, kind }
 local shown = {}    -- key -> widget
@@ -49,23 +40,17 @@ end
 
 local function makeWidget(label)
     local widget = g_ui.createWidget('TeleportLabel')
-    local style = STYLES[label.kind] or STYLES.city
     widget:setId('tplabel_' .. key(label.pos))
-    widget:setBorderColor(style.border)
-    widget:getChildById('gem'):setImageSource('/images/mythos/' .. style.gem)
-    local name = widget:getChildById('name')
-    name:setText((label.text:gsub(' ', '  '))) -- the 7px font has a very thin space
-    name:setColor(style.text)
-    -- size the plate from the measured text so it always fits: gem + text + margins
-    widget:setWidth(11 + name:getTextSize().width + 6)
+    widget:setText(label.text)
+    widget:resizeToText()
     return widget
 end
 
 local function place(widget)
-    -- centre the plate over the tile, mostly above it so the portal shows
+    -- centred over the tile, where the old floating text used to appear
     local tw = tileWidth()
     widget:setMarginLeft(math.floor((tw - widget:getWidth()) / 2))
-    widget:setMarginTop(-math.floor(widget:getHeight() * 0.7))
+    widget:setMarginTop(-math.floor(widget:getHeight() * 0.5))
 end
 
 local function alive(widget)

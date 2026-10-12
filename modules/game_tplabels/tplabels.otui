@@ -1,28 +1,7 @@
-TeleportLabel < UIWidget
-  height: 11
-  background-color: #0e0a18e6
-  border-width: 1
-  border-color: #6e58c0
+TeleportLabel < UILabel
+  font: verdana-11px-rounded
+  color: #fe6500
+  text-auto-resize: true
   phantom: true
   focusable: false
   opacity: 0
-
-  UIWidget
-    id: gem
-    size: 6 6
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 3
-    phantom: true
-
-  UILabel
-    id: name
-    font: verdana-7px-rounded
-    text-align: center
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    margin-left: 11
-    margin-right: 2
-    phantom: true
