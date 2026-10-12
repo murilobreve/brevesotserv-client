@@ -56,7 +56,8 @@ local function makeWidget(label)
     local name = widget:getChildById('name')
     name:setText(label.text)
     name:setColor(style.text)
-    widget:setWidth(18 + name:getWidth() + 7)
+    -- size the plate from the measured text so it always fits: gem + text + margins
+    widget:setWidth(18 + name:getTextSize().width + 10)
     return widget
 end
 
