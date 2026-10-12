@@ -1,34 +1,35 @@
-// Rarity item tint - Mythicus (pearl and opal)
-// Pearl: the item turns a bright pearly white while its dark lines and a
-// trace of its own colour stay, so it is still recognisable. Over it a band
-// of opal light passes, shifting through soft pastel hues, with a quick
-// glint and twinkling sparkles.
+// Rarity item tint - Mythicus (living pearl and opal)
+// The item turns a bright pearl while its dark lines and a trace of its own
+// colour stay, so it is still recognisable. Over it:
+//  - the whole surface plays like mother of pearl, its hue drifting with
+//    brightness and time
+//  - a band of light crosses it with prismatic, rainbow edges
+//  - a quick white glint every few seconds
+//  - four point stars that flare and fade
+//  - a double heartbeat of light now and then
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
-float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
-
-// "Color" blend: the gem's hue and saturation at the pixel's own brightness,
-// so the item keeps its light, shade and drawing and only takes the tone
-vec3 setLuma(vec3 c, float l)
-{
-    c += l - luma(c);
-    float L = luma(c);
-    float n = min(min(c.r, c.g), c.b);
-    float x = max(max(c.r, c.g), c.b);
-    if (n < 0.0) c = L + (c - L) * L / max(L - n, 0.0001);
-    if (x > 1.0) c = L + (c - L) * (1.0 - L) / max(x - L, 0.0001);
-    return c;
-}
-
 const vec3 PEARL = vec3(0.945, 0.937, 1.000);
 
-// soft pastel of hue h (0..1), for the opal play of colour
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+// full colour of hue h (0..1)
+vec3 hue(float h)
+{
+    return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+}
+
+// soft pastel of hue h, for the opal play of colour
 vec3 opal(float h)
 {
-    vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    return mix(vec3(1.0), k, 0.38);
+    return mix(vec3(1.0), hue(h), 0.42);
+}
+
+float rand(vec2 p)
+{
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 void main()
@@ -36,38 +37,58 @@ void main()
     vec4 col = texture2D(u_Tex0, v_TexCoord);
     vec3 c = col.rgb;
     float lum = luma(c);
+    vec2 p = gl_FragCoord.xy;
 
     // pearl body: most of the colour drains, the light parts go white
     vec3 result = mix(c, vec3(lum), 0.55);
     float bright = smoothstep(0.10, 0.80, lum);
-    result = mix(result, PEARL, bright * 0.72);
+    result = mix(result, PEARL, bright * 0.70);
     // dark lines stay dark: the item's drawing
     float dark = 1.0 - smoothstep(0.06, 0.26, lum);
     result = mix(result, c * 0.80, dark * 0.75);
 
-    // opal band, its hue drifting along the band and with time
-    float pos = gl_FragCoord.x * 0.055 + gl_FragCoord.y * 0.040;
-    float band = sin(pos - u_Time * 1.9);
-    float sheen = smoothstep(0.55, 1.0, band) * smoothstep(0.08, 0.60, lum);
-    vec3 play = opal(fract(pos * 0.07 + u_Time * 0.06));
-    result = mix(result, play, sheen * 0.55);
+    // living opal: like mother of pearl, several soft hues at once across
+    // the item (by brightness and place), slowly drifting
+    float film = fract(lum * 2.6 + (p.x - p.y) * 0.035 + u_Time * 0.05);
+    result = mix(result, result * opal(film) * 1.06, smoothstep(0.20, 0.70, lum) * 0.38);
 
-    // a second, slower pearl reflection across it
-    float band2 = sin(gl_FragCoord.x * 0.036 - gl_FragCoord.y * 0.054 - u_Time * 1.4);
-    result = mix(result, vec3(1.0), smoothstep(0.86, 1.0, band2) * smoothstep(0.25, 0.80, lum) * 0.35);
+    // prism band: white in the middle, a full rainbow spread across its
+    // edges (narrow enough that the item never turns one colour)
+    float across = (p.x * 0.80 + p.y) * 0.060 - u_Time * 2.4;
+    float wave = sin(across);
+    float core = smoothstep(0.90, 1.0, wave);
+    float edge = smoothstep(0.62, 0.90, wave) * (1.0 - core);
+    float lit = smoothstep(0.08, 0.60, lum);
+    result = mix(result, vec3(1.0), core * lit * 0.70);
+    float spectrum = fract((wave - 0.62) / 0.28 * 0.85 + (p.x - p.y) * 0.01);
+    result = mix(result, mix(vec3(1.0), hue(spectrum), 0.70), edge * lit * 0.40);
+
+    // a second, slower pearl reflection the other way
+    float wave2 = sin(p.x * 0.036 - p.y * 0.054 - u_Time * 1.3);
+    result = mix(result, vec3(1.0), smoothstep(0.86, 1.0, wave2) * smoothstep(0.25, 0.80, lum) * 0.35);
 
     // quick thin glint every few seconds
-    float glint = sin((gl_FragCoord.x + gl_FragCoord.y) * 0.090 - u_Time * 4.2);
-    result = mix(result, vec3(1.0), smoothstep(0.985, 1.0, glint) * smoothstep(0.10, 0.50, lum) * 0.85);
+    float glint = sin((p.x + p.y) * 0.090 - u_Time * 4.2);
+    result = mix(result, vec3(1.0), smoothstep(0.985, 1.0, glint) * smoothstep(0.10, 0.50, lum) * 0.90);
 
-    // twinkling sparkles, tinted by the opal
-    vec2 cell = floor(gl_FragCoord.xy / 2.0);
-    float seed = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
-    float twinkle = step(0.965, seed) * pow(max(0.0, sin(u_Time * 3.1 + seed * 60.0)), 6.0) * smoothstep(0.10, 0.45, lum);
-    result = mix(result, mix(vec3(1.0), opal(seed), 0.5), twinkle);
+    // four point stars: one may live in each 9x9 pixel cell
+    vec2 cell = floor(p / 9.0);
+    float seed = rand(cell);
+    if (seed > 0.86) {
+        vec2 centre = cell * 9.0 + 4.5 + (vec2(rand(cell + 1.7), rand(cell + 3.1)) - 0.5) * 3.0;
+        vec2 d = abs(p - centre);
+        float flare = pow(max(0.0, sin(u_Time * 2.2 + seed * 40.0)), 10.0);
+        float arms = max((1.0 - smoothstep(0.0, 4.5, d.x)) * (1.0 - smoothstep(0.4, 1.1, d.y)),
+                         (1.0 - smoothstep(0.0, 4.5, d.y)) * (1.0 - smoothstep(0.4, 1.1, d.x)));
+        float glow = 1.0 - smoothstep(0.0, 2.0, length(d));
+        float star = clamp(max(arms, glow), 0.0, 1.0) * flare * smoothstep(0.08, 0.40, lum);
+        result = mix(result, mix(vec3(1.0), opal(seed * 3.0), 0.45), star);
+    }
 
-    // gentle breathing glow
-    result += vec3(0.05) * (0.5 + 0.5 * sin(u_Time * 1.2)) * bright;
+    // heartbeat: two quick pulses of light every 3.2 seconds
+    float beat = mod(u_Time, 3.2);
+    float pulse = exp(-pow((beat - 0.25) * 9.0, 2.0)) + 0.7 * exp(-pow((beat - 0.60) * 9.0, 2.0));
+    result += vec3(0.95, 0.93, 1.0) * 0.16 * pulse * bright;
 
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }
