@@ -13,8 +13,7 @@ function init()
     clientVersionLabel = background:getChildById('clientVersionLabel')
     clientVersionLabel:hide()
 
-    -- the artwork is shown whole (scaled to fit), the blurred copy behind it
-    -- fills whatever is left when the window is not 16:9
+    -- the artwork covers the whole window (scaled to fill, centred)
     connect(background, { onGeometryChange = fitArtwork })
     fitArtwork()
 
@@ -38,7 +37,9 @@ function fitArtwork()
     if size.width <= 0 or size.height <= 0 then
         return
     end
-    local scale = math.min(size.width / ARTWORK_W, size.height / ARTWORK_H)
+    -- cover: the artwork fills the whole window, a little of its edges is cut
+    -- when the window is not 16:9 (no empty or blurred bands)
+    local scale = math.max(size.width / ARTWORK_W, size.height / ARTWORK_H)
     artwork:setSize({ width = math.floor(ARTWORK_W * scale), height = math.floor(ARTWORK_H * scale) })
 end
 
