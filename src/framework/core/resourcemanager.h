@@ -106,7 +106,7 @@ public:
     std::string createArchive(const std::unordered_map<std::string, std::string>& files);
     std::unordered_map<std::string, std::string> decompressArchive(std::string dataOrPath);
 
-    std::string getBinaryPath() { return m_binaryPath.string(); }
+    std::string getBinaryPath();
 
 protected:
     std::vector<std::string> discoverPath(const std::filesystem::path& path, bool filenameOnly, bool recursive);

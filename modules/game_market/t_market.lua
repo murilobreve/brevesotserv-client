@@ -1170,11 +1170,10 @@ function onSelectChildCategory(widget, selected, keepFilter)
     -- with no market items on this server), which made marketItems[id] nil
     -- and crashed here with "bad argument #1 to 'ipairs' (table expected,
     -- got nil)" as soon as the player touched a filter (e.g. "show locker
-    -- only").
-    local categoryItems = marketItems[selected.categoryId]
-    if not categoryItems then
-        return
-    end
+    -- only"). An empty list instead of a return: the rest still has to run
+    -- (the list and scrollbar reset, isRebuildingCategory goes back to false;
+    -- left true, every later click on a category was ignored)
+    local categoryItems = marketItems[selected.categoryId] or {}
 
     for i, itemInfo in ipairs(categoryItems) do
         if checkSortMarketOptions(itemInfo) and

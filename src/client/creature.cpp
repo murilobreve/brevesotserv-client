@@ -332,7 +332,7 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
     if (m_skull != Otc::SkullNone && m_skullTexture)
         g_drawPool.addTexturedPos(m_skullTexture, backgroundRect.x() + 15.5 + 12, backgroundRect.y() + 5);
 
-    if (!m_rateText.getText().empty()) {
+    if (m_rateText.hasText()) {
         // small and faded, just right of the health bar (after the skull and
         // the status icons when the creature has them)
         float x = backgroundRect.right() + 3;

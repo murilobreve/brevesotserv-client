@@ -77,6 +77,19 @@ local function confirm(title, message, callback)
     }, function() close(); callback() end, close)
 end
 
+-- an item's Reroll button follows the balance: off, saying why, while the
+-- Rarity XP doesn't pay for it
+local function setRerollState(row)
+    local entry = row.entry
+    local grade = GRADES[entry.rarity] or GRADES.uncommon
+    local cost = entry.rerollCost or 0
+    row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
+    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost)
+    if cost > 0 and rarityXp < cost then
+        row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
+    end
+end
+
 local function fillItems(items)
     local list = window.itemsSection.itemsList
     list:destroyChildren()
@@ -115,11 +128,8 @@ local function fillItems(items)
         end
         local cost = entry.rerollCost or 0
         row.rerollItemButton:setText(tr('Reroll %s', formatCost(cost)))
-        row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
-        row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost)
-        if cost > 0 and rarityXp < cost then
-            row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
-        end
+        row.entry = entry
+        setRerollState(row)
         row.rerollItemButton.onClick = function()
             local lines = {}
             for _, bonus in ipairs(entry.bonuses or {}) do
@@ -174,14 +184,31 @@ function showXpBadge(xp)
     end
 end
 
+-- a new balance (Store pack, tier kill) while the window is open: the label
+-- and the Reroll buttons follow it without asking the server again
+local function updateXp()
+    window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
+    for _, row in ipairs(window.itemsSection.itemsList:getChildren()) do
+        if row.entry then
+            setRerollState(row)
+        end
+    end
+end
+
 local applyBonuses
 local rouletteTakes
+local updateRouletteXp
 
 local function onOpcode(protocol, opcode, data)
     -- the balance, after every change: shown on the Rarity Bonuses row; past
     -- a multiple of 50 a notice offers the window without opening it
     if type(data) == 'table' and data.action == 'xp' then
-        showXpBadge(tonumber(data.xp) or 0)
+        rarityXp = tonumber(data.xp) or rarityXp
+        showXpBadge(rarityXp)
+        if window and window:isVisible() then
+            updateXp()
+        end
+        updateRouletteXp()
         if data.ready and not (window and window:isVisible()) and modules.game_brevespanel then
             modules.game_brevespanel.notify('bonus',
                 tr('You have %d Rarity XP! Use it to reroll your rarity items.', tonumber(data.xp) or 0),
@@ -320,6 +347,13 @@ local function setAgainButton()
     roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost)
     -- the balance only once the reel stops: it is updated with the result
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
+end
+
+-- a new balance while the roulette is open: "spin again" follows it
+updateRouletteXp = function()
+    if rouletteVisible() then
+        setAgainButton()
+    end
 end
 
 -- Where the reel is (0 to 1) and how fast it goes (1 = average speed) at
@@ -678,6 +712,8 @@ local function showRoulette(result, onDone)
     spin.result = result
     spin.onDone = onDone
     spin.waiting = false
+    -- a refresh kept from before this reroll is older than its answer
+    spin.pending = nil
     -- the strips are measured against the window: lay it out first
     addEvent(function()
         if spin and spin.result == result then
@@ -693,10 +729,12 @@ rouletteTakes = function(data)
         showRoulette(result, function() applyBonuses(data) end)
         return true
     end
-    if spin and rouletteVisible() and spin.waiting then
-        -- "spin again" failed (not enough XP, item taken off): say why
+    if spin and rouletteVisible() and spin.waiting and data.ok == false then
+        -- "spin again" failed (not enough XP, item taken off, too fast): say
+        -- why. The answer carries the whole list, newer than a kept refresh.
         spin.waiting = false
         spin.finished = true
+        spin.pending = nil
         applyBonuses(data)
         roulette.status:setText(window.status:getText())
         roulette.status:setColor('#ff6464')
@@ -704,8 +742,9 @@ rouletteTakes = function(data)
         setAgainButton()
         return true
     end
-    if spin and rouletteVisible() and not spin.finished then
-        -- an automatic refresh while the strips run: keep it for the end
+    if spin and rouletteVisible() and (not spin.finished or spin.waiting) then
+        -- an automatic refresh while the strips run or "spin again" waits for
+        -- its answer: keep it for the end
         spin.pending = data
         return true
     end
@@ -775,8 +814,13 @@ function toggle()
 end
 
 -- equipment changed while the window is open: ask again
-local function onInventoryChange()
+local function onInventoryChange(player, slot, item, oldItem)
     if not window or not window:isVisible() then
+        return
+    end
+    -- the same item with only its count changed (an arrow shot, a charge
+    -- used): its bonuses are the same, so no rebuild of the whole window
+    if item and oldItem and item:getId() == oldItem:getId() and item:getCountOrSubType() ~= oldItem:getCountOrSubType() then
         return
     end
     if refreshEvent then

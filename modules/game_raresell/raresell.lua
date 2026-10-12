@@ -25,6 +25,9 @@ local window
 local confirmBox
 local token = 0
 local rows = {}
+-- set while a button ticks many rows: the total is counted once at the end,
+-- not once per row (250 rows made that 250 times 250)
+local bulk = false
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -62,6 +65,9 @@ local function selected()
 end
 
 local function updateTotal()
+    if bulk then
+        return
+    end
     local picked = selected()
     local total = 0
     for _, entry in ipairs(picked) do
@@ -83,11 +89,13 @@ local function selectGrade(key)
             all = false
         end
     end
+    bulk = true
     for _, row in ipairs(rows) do
         if key == nil or row.entry.rarity == key then
             row.pick:setChecked(not all)
         end
     end
+    bulk = false
     updateTotal()
 end
 
@@ -116,9 +124,11 @@ local function fillGradeButtons(items)
     end
     local none = gradeButton(panel, tr('Clear'))
     none.onClick = function()
+        bulk = true
         for _, row in ipairs(rows) do
             row.pick:setChecked(false)
         end
+        bulk = false
         updateTotal()
     end
 end

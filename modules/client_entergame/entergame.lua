@@ -50,8 +50,12 @@ local function onError(protocol, message, errorCode)
         EnterGame.clearAccountFields()
     end
 
-    -- login.php answers in English: the known messages are in the locale files
-    local errorBox = displayErrorBox(tr('Login Error'), tr(message))
+    -- login.php answers in English: the known messages are in the locale files.
+    -- tr() formats the text, so a "%" in it (a ban reason like "bot 100%")
+    -- raised an error here and left the player on an empty screen
+    local text = tostring(message or '')
+    local translated, result = pcall(tr, text)
+    local errorBox = displayErrorBox(tr('Login Error'), translated and result or text)
     connect(errorBox, {
         onOk = EnterGame.show
     })
@@ -321,6 +325,11 @@ function EnterGame.showPanels()
         modules.client_bottommenu.show()
     end
     modules.client_topmenu.show()
+    -- back on the login screen: the players online count was not refreshed
+    -- during the game
+    if Services and Services.status then
+        EnterGame.postCacheInfo()
+    end
 end
 
 function EnterGame.showServerList()
@@ -421,6 +430,11 @@ local function reportRequestWarning(requestType, msg, errorCode)
 end
 
 function EnterGame.postCacheInfo()
+    -- in game the top bar with the players online count is hidden: no need
+    -- to ask the site every minute
+    if g_game.isOnline() then
+        return
+    end
     local requestType = 'cacheinfo'
 
     local onRecvInfo = function(message, err)

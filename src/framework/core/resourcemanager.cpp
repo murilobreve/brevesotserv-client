@@ -60,11 +60,36 @@ std::string normalizeVirtualPath(std::string path)
     return path;
 }
 
+// paths in the client are UTF-8, but on Windows std::filesystem::path reads a
+// narrow string in the ANSI code page: a Windows user named "João" would get
+// a path that does not exist. Go through UTF-16 there.
+std::filesystem::path utf8Path(const std::string& path)
+{
+#ifdef WIN32
+    return std::filesystem::path(stdext::utf8_to_utf16(path));
+#else
+    return std::filesystem::path(path);
+#endif
+}
+
+std::string pathToUtf8(const std::filesystem::path& path)
+{
+#ifdef WIN32
+    return stdext::utf16_to_utf8(path.generic_wstring());
+#else
+    return path.generic_string();
+#endif
+}
+
+std::filesystem::path workDirPath(const std::filesystem::path& relativePath)
+{
+    return utf8Path(g_resources.getWorkDir()) / relativePath;
+}
+
 std::filesystem::path safeRelativePath(std::string path)
 {
-    const auto normalized = std::filesystem::path(normalizeVirtualPath(std::move(path))).lexically_normal();
-    const auto normalizedString = normalized.generic_string();
-    if (normalized.empty() || normalized.is_absolute() || normalizedString == "." || normalizedString == ".." || normalizedString.starts_with("../"))
+    const auto normalized = utf8Path(normalizeVirtualPath(std::move(path))).lexically_normal();
+    if (normalized.empty() || normalized.is_absolute() || normalized.has_root_name() || normalized == "." || *normalized.begin() == "..")
         return {};
     return normalized;
 }
@@ -308,8 +333,10 @@ void ResourceManager::init(const char* argv0)
     PHYSFS_permitSymbolicLinks(1);
 
 #if defined(WIN32)
-    char fileName[255];
-    GetModuleFileNameA(nullptr, fileName, sizeof(fileName));
+    // wide: the restart after an update must find the .exe under a folder
+    // with accents too
+    wchar_t fileName[MAX_PATH];
+    GetModuleFileNameW(nullptr, fileName, MAX_PATH);
     m_binaryPath = std::filesystem::absolute(fileName);
 #elif defined(ANDROID)
     // nothing
@@ -317,6 +344,8 @@ void ResourceManager::init(const char* argv0)
     m_binaryPath = std::filesystem::absolute(argv0);
 #endif
 }
+
+std::string ResourceManager::getBinaryPath() { return pathToUtf8(m_binaryPath); }
 
 void ResourceManager::terminate()
 {
@@ -488,7 +517,7 @@ bool ResourceManager::fileExistsInWorkDir(const std::string& fileName)
         return false;
 
     std::error_code ec;
-    const auto fullPath = std::filesystem::path(getWorkDir()) / relativePath;
+    const auto fullPath = workDirPath(relativePath);
     return std::filesystem::is_regular_file(fullPath, ec);
 }
 
@@ -554,10 +583,10 @@ std::string ResourceManager::readFileContentsFromWorkDir(const std::string& file
     if (relativePath.empty())
         throw Exception("invalid workdir file path '{}'", fileName);
 
-    const auto fullPath = std::filesystem::path(getWorkDir()) / relativePath;
+    const auto fullPath = workDirPath(relativePath);
     std::ifstream file(fullPath, std::ios::binary);
     if (!file.is_open())
-        throw Exception("unable to open workdir file '{}'", fullPath.generic_string());
+        throw Exception("unable to open workdir file '{}'", pathToUtf8(fullPath));
 
     std::string buffer(std::istreambuf_iterator<char>(file), {});
     file.close();
@@ -978,16 +1007,21 @@ bool ResourceManager::installDownloadedFileInWorkDir(const std::string& path, st
     }
 
     std::error_code ec;
-    const auto target = std::filesystem::path(getWorkDir()) / relativePath;
+    const auto target = workDirPath(relativePath);
     std::filesystem::create_directories(target.parent_path(), ec);
 
     auto partial = target;
     partial += ".part";
     {
+        const auto& contents = downloadedFile->response;
         std::ofstream out(partial, std::ios::binary | std::ios::trunc);
-        out.write(downloadedFile->response.data(), static_cast<std::streamsize>(downloadedFile->response.size()));
-        if (!out.good()) {
-            g_logger.error("Cannot write '{}'", partial.string());
+        out.write(contents.data(), static_cast<std::streamsize>(contents.size()));
+        // the last block only reaches the disk when the file closes, so a full
+        // disk shows up there: check after closing, and the size on disk too
+        out.close();
+        const auto written = std::filesystem::file_size(partial, ec);
+        if (out.fail() || ec || written != contents.size()) {
+            g_logger.error("Cannot write '{}'", pathToUtf8(partial));
             std::filesystem::remove(partial, ec);
             return false;
         }
@@ -1006,7 +1040,7 @@ bool ResourceManager::installDownloadedFileInWorkDir(const std::string& path, st
         }
         std::filesystem::rename(target, aside, ec);
         if (ec) {
-            g_logger.error("Cannot move '{}' aside: {}", target.string(), ec.message());
+            g_logger.error("Cannot move '{}' aside: {}", pathToUtf8(target), ec.message());
             std::filesystem::remove(partial, ec);
             return false;
         }
@@ -1014,7 +1048,7 @@ bool ResourceManager::installDownloadedFileInWorkDir(const std::string& path, st
 
     std::filesystem::rename(partial, target, ec);
     if (ec) {
-        g_logger.error("Cannot put '{}' in place: {}", target.string(), ec.message());
+        g_logger.error("Cannot put '{}' in place: {}", pathToUtf8(target), ec.message());
         if (!aside.empty())
             std::filesystem::rename(aside, target, ec);
         return false;
@@ -1037,7 +1071,7 @@ bool ResourceManager::removeFileInWorkDir(std::string path)
         return false;
 
     std::error_code ec;
-    const auto target = std::filesystem::path(getWorkDir()) / relativePath;
+    const auto target = workDirPath(relativePath);
     if (!std::filesystem::is_regular_file(target, ec))
         return true;
     if (std::filesystem::remove(target, ec))
@@ -1047,7 +1081,7 @@ bool ResourceManager::removeFileInWorkDir(std::string path)
     aside += ".old" + std::to_string(time(nullptr));
     std::filesystem::rename(target, aside, ec);
     if (ec) {
-        g_logger.error("Cannot remove '{}': {}", target.string(), ec.message());
+        g_logger.error("Cannot remove '{}': {}", pathToUtf8(target), ec.message());
         return false;
     }
     return true;
@@ -1057,12 +1091,13 @@ int ResourceManager::cleanupOldFilesInWorkDir()
 {
     int removed = 0;
     std::error_code ec;
-    const std::filesystem::path root(getWorkDir());
+    const auto root = utf8Path(getWorkDir());
     for (auto it = std::filesystem::recursive_directory_iterator(root, std::filesystem::directory_options::skip_permission_denied, ec);
          !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
         const auto& entry = *it;
-        const auto name = entry.path().filename().string();
-        if (entry.is_directory(ec)) {
+        const auto name = pathToUtf8(entry.path().filename());
+        std::error_code typeEc;
+        if (entry.is_directory(typeEc)) {
             // the game assets are hundreds of files the updater never touches
             if (name == "things" || name == "sounds" || name == ".git")
                 it.disable_recursion_pending();

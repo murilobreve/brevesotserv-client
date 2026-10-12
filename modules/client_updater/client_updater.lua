@@ -36,6 +36,8 @@ local status = 'off'                  -- off checking uptodate available updatin
 local remoteVersion
 local lastManifest
 local remindedAt = {}                 -- version -> os.time() of the last in-game notice
+local currentOperation                -- the HTTP download running now
+local restartPending = false          -- installed while in game: restart after logout
 
 -- the fonts draw one glyph per byte (Latin-1); this file is UTF-8
 local function latin1(text)
@@ -225,6 +227,11 @@ end
 
 local function giveUp(message)
   closeBox()
+  -- a cancelled update must not keep downloading in the background
+  if currentOperation then
+    HTTP.cancel(currentOperation)
+    currentOperation = nil
+  end
   for _, name in ipairs(downloads) do
     pcall(g_resources.deleteFile, '/downloads/' .. name)
   end
@@ -278,6 +285,8 @@ local function openBox(onCancel)
   box:show()
   box:raise()
   box:focus()
+  -- nothing under it (the character list) can be clicked while it downloads
+  box:lock()
 end
 
 local function install(changed, manifest)
@@ -297,6 +306,17 @@ local function install(changed, manifest)
     removeStale(manifest)
   end
   log(string.format('updated to version %d (%d files)', manifest.versao, #changed))
+  -- never restart under a player in game: it waits for the logout
+  if g_game.isOnline() or g_game.isLogging() then
+    restartPending = true
+    closeBox()
+    log('installed while in game: restarting after the logout')
+    if modules.game_textmessage and modules.game_textmessage.displayBroadcastMessage then
+      modules.game_textmessage.displayBroadcastMessage(txt('Nova versão do Mythos instalada. O client reinicia quando você sair do jogo.',
+        'A new Mythos version is installed. The client restarts when you leave the game.'))
+    end
+    return
+  end
   if box then
     box.content:setText(txt('Mythos atualizado. Reiniciando...', 'Mythos updated. Restarting...'))
     box.track.fill:setWidth(box.track:getWidth() - 4)
@@ -361,6 +381,9 @@ local function downloadAll(changed, manifest, myGeneration)
     HTTP.timeout = DOWNLOAD_TIMEOUT
     arm()
     operation = HTTP.download(from .. 'objects/' .. entry.sha256, entry.download, function(path, checksum, err)
+      if currentOperation == operation then
+        currentOperation = nil
+      end
       if finished or myGeneration ~= generation then
         return
       end
@@ -374,19 +397,22 @@ local function downloadAll(changed, manifest, myGeneration)
       finished = true
       stopWatchdog()
       nextFile()
-    end, function(progress)
+    end, function(progress, speed)
       if finished or myGeneration ~= generation then
         return
       end
       -- the progress event also repeats while nothing arrives: only real
-      -- progress keeps the watchdog quiet
+      -- progress keeps the watchdog quiet. The percentage is a whole number
+      -- (1% of a big file takes a while on a slow line) and stays 0 when the
+      -- size is unknown, so bytes arriving (speed) count too
       progress = tonumber(progress) or 0
-      if progress > lastProgress then
-        lastProgress = progress
+      if progress > lastProgress or (tonumber(speed) or 0) > 0 then
+        lastProgress = math.max(progress, lastProgress)
         arm()
       end
       setProgress(index - 1, total, ((index - 1) + progress / 100) * 100 / total)
     end)
+    currentOperation = operation
     HTTP.timeout = oldTimeout
   end
 
@@ -448,6 +474,9 @@ local function startUpdate(manifest)
   if eg then
     eg.hide()
   end
+  if CharacterList and CharacterList.isVisible and CharacterList.isVisible() then
+    CharacterList.hide()
+  end
   openBox(function()
     generation = generation + 1
     box = nil
@@ -475,6 +504,10 @@ function Updater.check(autoInstall)
   local outerTimeout = HTTP.timeout
   HTTP.timeout = CHECK_TIMEOUT
   HTTP.getJSON(url, function(manifest, err)
+    -- a check that was already on its way when an update started
+    if status == 'updating' then
+      return
+    end
     if err or type(manifest) ~= 'table' or type(manifest.files) ~= 'table' then
       log('no update information: ' .. tostring(err))
       setStatus(remoteVersion and remoteVersion > localInfo.versao and 'available' or 'error')
@@ -488,7 +521,10 @@ function Updater.check(autoInstall)
       setStatus('uptodate')
       return
     end
-    if autoInstall and not g_game.isOnline() then
+    -- in game, or entering it: only report it. At the character list (an
+    -- autologin is faster than this check) the update goes ahead, and the
+    -- locked update window keeps the player from entering meanwhile
+    if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
       return startUpdate(manifest)
     end
     log(string.format('version %d is out (running %d)', remoteVersion, localInfo.versao))
@@ -500,13 +536,22 @@ function Updater.check(autoInstall)
   HTTP.timeout = oldTimeout
 end
 
+local function onGameEnd()
+  if restartPending then
+    log('restarting for the version installed during the game')
+    scheduleEvent(function() g_app.restart() end, 500)
+    return
+  end
+  renderStatus()
+end
+
 -- "Update now" on the login screen
 function Updater.isUpdating()
   return status == 'updating'
 end
 
 function Updater.update()
-  if g_game.isOnline() then
+  if g_game.isOnline() or g_game.isLogging() then
     return
   end
   if lastManifest and (tonumber(lastManifest.versao) or 0) > localInfo.versao then
@@ -539,7 +584,7 @@ function Updater.init()
   Updater.check(true)
   checkEvent = cycleEvent(function() Updater.check(false) end, checkInterval() * 1000)
   -- the login screen comes back after a logout: show the latest state there
-  connect(g_game, { onGameEnd = renderStatus, onGameStart = remindInGame })
+  connect(g_game, { onGameEnd = onGameEnd, onGameStart = remindInGame })
 end
 
 function Updater.terminate()
@@ -549,7 +594,7 @@ function Updater.terminate()
     removeEvent(checkEvent)
     checkEvent = nil
   end
-  disconnect(g_game, { onGameEnd = renderStatus, onGameStart = remindInGame })
+  disconnect(g_game, { onGameEnd = onGameEnd, onGameStart = remindInGame })
   if versionLabel then
     versionLabel:destroy()
     versionLabel = nil
