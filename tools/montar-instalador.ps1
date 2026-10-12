@@ -16,7 +16,10 @@ param(
     [string]$Pasta = "",
     [string]$Repositorio = "murilobreve/mythos-client",
     [string]$Tag = "instalador",
-    [switch]$SemEnviar
+    [switch]$SemEnviar,
+    # so para teste com um servidor falso
+    [string]$ApiBase = "https://api.github.com",
+    [string]$UploadBase = "https://uploads.github.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -84,7 +87,7 @@ $cabecalhos = @{
     Accept = "application/vnd.github+json"
     "User-Agent" = "mythos-instalador"
 }
-$api = "https://api.github.com/repos/$Repositorio"
+$api = "$ApiBase/repos/$Repositorio"
 
 try {
     try {
@@ -116,18 +119,60 @@ try {
         $enviar += @{ Arquivo = $zipLocal; Nome = $zipNome }
     }
 
+    # arquivos grandes: o Invoke-RestMethod do Windows carrega tudo na memoria
+    # e a conexao cai no meio. O curl.exe (vem no Windows 10/11) manda em
+    # partes e tenta de novo. O arquivo sobe com um nome provisorio e so
+    # depois troca de lugar com o antigo, entao uma falha nao deixa a
+    # release sem o arquivo.
+    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+    function Enviar-Arquivo($arquivo, $nome) {
+        $url = "$UploadBase/repos/$Repositorio/releases/$($release.id)/assets?name=$nome"
+        if ($curl) {
+            $saidaCurl = & $curl.Source -sS --fail-with-body --retry 3 --retry-delay 5 --connect-timeout 30 `
+                -X POST -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" `
+                -H "User-Agent: mythos-instalador" -H "Content-Type: application/octet-stream" `
+                -T $arquivo $url 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "curl falhou ($LASTEXITCODE): $saidaCurl" }
+            return ($saidaCurl | Out-String | ConvertFrom-Json)
+        }
+        return Invoke-RestMethod -Method Post -Headers $cabecalhos -Uri $url -InFile $arquivo -ContentType "application/octet-stream" -TimeoutSec 3600
+    }
+
     foreach ($item in $enviar) {
+        $provisorio = "enviando-$($item.Nome)"
+        $release = Invoke-RestMethod -Headers $cabecalhos -Uri "$api/releases/$($release.id)"
+        foreach ($velho in @($release.assets | Where-Object { $_.name -eq $provisorio })) {
+            Invoke-RestMethod -Method Delete -Headers $cabecalhos -Uri "$api/releases/assets/$($velho.id)" | Out-Null
+        }
+        $tamanho = [math]::Round((Get-Item $item.Arquivo).Length / 1MB, 1)
+        $novo = $null
+        for ($tentativa = 1; $tentativa -le 3 -and -not $novo; $tentativa++) {
+            Info "enviando $($item.Nome) ($tamanho MB), tentativa $tentativa..."
+            try {
+                $novo = Enviar-Arquivo $item.Arquivo $provisorio
+            } catch {
+                Info "  falhou: $($_.Exception.Message)"
+                # um envio quebrado deixa um arquivo pela metade com o nome provisorio
+                $release = Invoke-RestMethod -Headers $cabecalhos -Uri "$api/releases/$($release.id)"
+                foreach ($velho in @($release.assets | Where-Object { $_.name -eq $provisorio })) {
+                    Invoke-RestMethod -Method Delete -Headers $cabecalhos -Uri "$api/releases/assets/$($velho.id)" | Out-Null
+                }
+                if ($tentativa -lt 3) { Start-Sleep -Seconds 10 }
+            }
+        }
+        if (-not $novo) { throw "nao consegui enviar o $($item.Nome) depois de 3 tentativas" }
         foreach ($velho in @($release.assets | Where-Object { $_.name -eq $item.Nome })) {
             Invoke-RestMethod -Method Delete -Headers $cabecalhos -Uri "$api/releases/assets/$($velho.id)" | Out-Null
         }
-        Info "enviando $($item.Nome)..."
-        $url = "https://uploads.github.com/repos/$Repositorio/releases/$($release.id)/assets?name=$($item.Nome)"
-        Invoke-RestMethod -Method Post -Headers $cabecalhos -Uri $url -InFile $item.Arquivo -ContentType "application/octet-stream" | Out-Null
+        $corpo = @{ name = $item.Nome } | ConvertTo-Json
+        Invoke-RestMethod -Method Patch -Headers $cabecalhos -Uri "$api/releases/assets/$($novo.id)" -Body $corpo -ContentType "application/json" | Out-Null
+        Info "  $($item.Nome) no ar"
     }
 } catch {
     Write-Host ""
     Write-Host "Nao consegui mandar o instalador para o GitHub: $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "Mande o $setup a mao: https://github.com/$Repositorio/releases (release '$Tag')"
+    Write-Host "Para tentar de novo sem compilar, rode o montar-instalador.bat."
+    Write-Host "Ou mande a mao os arquivos de $Dist em https://github.com/$Repositorio/releases (release '$Tag')"
     exit 0
 }
 
