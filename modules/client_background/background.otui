@@ -1,7 +1,6 @@
 Panel
   id: background
-  image-source: /images/background
-  image-smooth: false
+  image-source: /images/background_fill
   image-fixed-ratio: true
   anchors.top: parent.top
   anchors.left: parent.left
@@ -9,6 +8,13 @@ Panel
   anchors.bottom: parent.bottom
   margin-top: 1
   focusable: false
+
+  UIWidget
+    id: artwork
+    image-source: /images/background
+    anchors.centerIn: parent
+    phantom: true
+    focusable: false
 
   UILabel
     id: clientVersionLabel

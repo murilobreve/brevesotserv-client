@@ -13,6 +13,11 @@ function init()
     clientVersionLabel = background:getChildById('clientVersionLabel')
     clientVersionLabel:hide()
 
+    -- the artwork is shown whole (scaled to fit), the blurred copy behind it
+    -- fills whatever is left when the window is not 16:9
+    connect(background, { onGeometryChange = fitArtwork })
+    fitArtwork()
+
     connect(g_game, {
         onGameStart = hide
     })
@@ -22,7 +27,23 @@ function init()
     startBackgroundEffectLoop() -- start the background effect loop
 end
 
+local ARTWORK_W, ARTWORK_H = 1672, 941
+
+function fitArtwork()
+    if not background then
+        return
+    end
+    local artwork = background:getChildById('artwork')
+    local size = background:getSize()
+    if size.width <= 0 or size.height <= 0 then
+        return
+    end
+    local scale = math.min(size.width / ARTWORK_W, size.height / ARTWORK_H)
+    artwork:setSize({ width = math.floor(ARTWORK_W * scale), height = math.floor(ARTWORK_H * scale) })
+end
+
 function terminate()
+    disconnect(background, { onGeometryChange = fitArtwork })
     disconnect(g_game, {
         onGameStart = hide
     })
