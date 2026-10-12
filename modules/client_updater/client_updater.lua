@@ -143,6 +143,8 @@ local function renderStatus()
     text = txt('Procurando atualização...', 'Checking for updates...')
   elseif status == 'uptodate' then
     text = txt('Client atualizado (versão %d)', 'Client up to date (version %d)', localInfo.versao)
+    -- check again on demand; a new version found this way installs right away
+    action = { txt('Verificar', 'Check'), function() Updater.check(true) end }
   elseif status == 'available' then
     text = txt('Nova versão %d disponível', 'New version %d available', remoteVersion or 0)
     action = { txt('Atualizar agora', 'Update now'), function() Updater.update() end }

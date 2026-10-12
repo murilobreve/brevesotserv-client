@@ -54,8 +54,8 @@ UpdaterWindow < MythosWindow
     font: verdana-11px-antialised
     color: #e6e0f2
 
-  MythosButton
+  MythosKitButton
     id: cancelButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    size: 80 22
+    size: 110 30

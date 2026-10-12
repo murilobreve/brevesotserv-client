@@ -65,6 +65,58 @@ MythosPrimaryButton < MythosButton
     image-source: /images/mythos/button_pearl_disabled
     color: #7d778a
 
+// the site's Calm & Chaos buttons: gold for the main action, dark with
+// gold trim for the rest (images from the theme kit, at client size)
+MythosKitGoldButton < UIButton
+  font: Verdana Bold-11px
+  color: #fff4d8
+  height: 40
+  text-offset: 0 1
+  image-source: /images/mythos/kit_gold
+  image-border-left: 30
+  image-border-right: 30
+  image-border-top: 8
+  image-border-bottom: 8
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover !disabled:
+    image-source: /images/mythos/kit_gold_hover
+    color: #ffffff
+
+  $pressed:
+    image-source: /images/mythos/kit_gold_pressed
+    text-offset: 0 2
+
+  $disabled:
+    image-source: /images/mythos/kit_gold_disabled
+    color: #6f6658
+
+MythosKitButton < UIButton
+  font: Verdana Bold-11px
+  color: #f1d399
+  height: 30
+  text-offset: 0 1
+  image-source: /images/mythos/kit_dark
+  image-border-left: 26
+  image-border-right: 26
+  image-border-top: 7
+  image-border-bottom: 7
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover !disabled:
+    image-source: /images/mythos/kit_dark_hover
+    color: #ffe7b0
+
+  $pressed:
+    image-source: /images/mythos/kit_dark_pressed
+    text-offset: 0 2
+
+  $disabled:
+    image-source: /images/mythos/kit_dark_disabled
+    color: #7d778a
+
 MythosTab < UIButton
   size: 118 24
   font: verdana-11px-antialised

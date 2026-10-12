@@ -296,7 +296,7 @@ EnterGameWindow
     @onSetup: |
       self:setVisible(Services ~= nil and Services.website ~= nil)
 
-  BrevesGoldButton
+  MythosKitGoldButton
     id: enterButton
     !text: tr('PLAY')
     anchors.top: rememberEmailBox.bottom
