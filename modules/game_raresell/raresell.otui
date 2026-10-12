@@ -58,7 +58,7 @@ RareSellRow < BrevesRow
     margin-top: 2
     height: 14
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
     phantom: true
 
 RareSellRowEven < RareSellRow

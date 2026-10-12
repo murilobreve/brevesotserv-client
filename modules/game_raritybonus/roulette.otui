@@ -21,15 +21,15 @@ RouletteLine < UIWidget
     anchors.fill: parent
     text-align: center
     font: Verdana Bold-13px
-    color: #a39db2
+    color: #ab9fc6
     phantom: true
 
 // a slot's result under the reel
 RouletteResult < UIWidget
   height: 26
-  background-color: #0f0e13f0
+  background-color: #0f0a19f0
   border-width: 1
-  border-color: #3a3446
+  border-color: #4a3670
   phantom: true
 
   Label
@@ -39,7 +39,7 @@ RouletteResult < UIWidget
     margin-left: 8
     width: 70
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
   Label
@@ -50,7 +50,7 @@ RouletteResult < UIWidget
     margin-right: 78
     text-align: center
     font: Verdana Bold-11px
-    color: #5d5869
+    color: #655780
     phantom: true
 
 MythosWindow
@@ -82,7 +82,7 @@ MythosWindow
     margin-top: 3
     height: 14
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
 
   // the reel: three lines, the slot's result stops on the middle one
   UIWidget
@@ -91,9 +91,9 @@ MythosWindow
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 12
     size: 400 106
-    background-color: #0f0e13f0
+    background-color: #0f0a19f0
     border-width: 1
-    border-color: #4a4358
+    border-color: #5a4384
     clipping: true
 
     UIWidget

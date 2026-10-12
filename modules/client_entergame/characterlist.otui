@@ -1,7 +1,7 @@
 // thin column rule between the table columns
 CharColumnLine < UIWidget
   width: 1
-  background-color: #322d3e
+  background-color: #3e2d5e
   phantom: true
 
 CharacterWidget < UIWidget
@@ -16,9 +16,9 @@ CharacterWidget < UIWidget
       end
       if self.rowColor then
         if focused then
-          self:setBackgroundColor("#8c7bd933")
+          self:setBackgroundColor("#9b7bff33")
           self:setBorderWidth(1)
-          self:setBorderColor("#8c7bd9")
+          self:setBorderColor("#9b7bff")
         else
           self:setBackgroundColor(self.rowColor)
           self:setBorderWidth(0)
@@ -52,7 +52,7 @@ CharacterWidget < UIWidget
 
   Label
     id: name
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.top: parent.top
     anchors.left: parent.left
     font: verdana-11px-monochrome
@@ -130,7 +130,7 @@ CharacterWidget < UIWidget
 
   Label
     id: level
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.top: parent.top
     anchors.left: parent.left
     margin-left: 350
@@ -148,7 +148,7 @@ CharacterWidget < UIWidget
 
   Label
     id: vocation
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.top: parent.top
     anchors.left: parent.left
     margin-left: 410
@@ -166,7 +166,7 @@ CharacterWidget < UIWidget
 
   Label
     id: worldName
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.top: parent.top
     font: verdana-11px-monochrome
     text-auto-resize: true
@@ -211,9 +211,9 @@ MythosWindow
 
   TextList
     id: characters
-    background-color: #0f0e13
+    background-color: #0f0a19
     border-width: 1
-    border-color: #322d3e
+    border-color: #3e2d5e
     padding: 1 1 1 1
     anchors.top: parent.top
     anchors.left: parent.left
@@ -226,10 +226,10 @@ MythosWindow
     auto-focus: first
     @onSetup: |
       if g_game.getFeature(GameEnterGameShowAppearance) then
-        self:setBackgroundColor("#0f0e13")
+        self:setBackgroundColor("#0f0a19")
         self:setPaddingTop(20)
       else
-        self:setBackgroundColor("#0f0e13")
+        self:setBackgroundColor("#0f0a19")
       end
 
   UIWidget
@@ -239,8 +239,8 @@ MythosWindow
     anchors.top: characters.top
     height: 19
     border-width: 1
-    border-color: #322d3e
-    background-color: #1d1a25
+    border-color: #3e2d5e
+    background-color: #22173a
     @onSetup: |
       if not(g_game.getFeature(GameEnterGameShowAppearance)) then
         self:hide()
@@ -255,14 +255,14 @@ MythosWindow
       !text: tr('Character')
       text-offset: -30 0
       font: verdana-11px-antialised
-      color: #8d869c
+      color: #9789b3
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 242 5
       @onClick: onSortButtonClick(self, 1)
       $hover:
-        color: #e4e0ec
+        color: #e6e0f2
       $pressed:
         color: #ece8f6
         image-clip: 0 4 7 4
@@ -283,14 +283,14 @@ MythosWindow
       !text: tr('Status')
       text-offset: -20 0
       font: verdana-11px-antialised
-      color: #8d869c
+      color: #9789b3
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 92 5
       @onClick: onSortButtonClick(self, 2)
       $hover:
-        color: #e4e0ec
+        color: #e6e0f2
       $pressed:
         color: #ece8f6
         image-clip: 0 4 7 4
@@ -311,14 +311,14 @@ MythosWindow
       !text: tr('Level')
       text-offset: -8 0
       font: verdana-11px-antialised
-      color: #8d869c
+      color: #9789b3
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 52 5
       @onClick: onSortButtonClick(self, 3)
       $hover:
-        color: #e4e0ec
+        color: #e6e0f2
       $pressed:
         color: #ece8f6
         image-clip: 0 4 7 4
@@ -339,14 +339,14 @@ MythosWindow
       !text: tr('Vocation')
       text-offset: -10 0
       font: verdana-11px-antialised
-      color: #8d869c
+      color: #9789b3
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 82 5
       @onClick: onSortButtonClick(self, 4)
       $hover:
-        color: #e4e0ec
+        color: #e6e0f2
       $pressed:
         color: #ece8f6
         image-clip: 0 4 7 4
@@ -367,14 +367,14 @@ MythosWindow
       !text: tr('World')
       text-offset: -85 0
       font: verdana-11px-antialised
-      color: #8d869c
+      color: #9789b3
       image-source: /images/game/entergame/sort-button
       image-clip: 0 0 7 4
       image-size: 7 4
       image-offset: 212 5
       @onClick: onSortButtonClick(self, 5)
       $hover:
-        color: #e4e0ec
+        color: #e6e0f2
       $pressed:
         color: #ece8f6
         image-clip: 0 4 7 4
@@ -657,7 +657,7 @@ MythosWindow
       checked: true
       !text: tr('Show Hidden Characters')
       text-auto-resize: true
-      color: #c9c3d6
+      color: #cbc0e0
       @onCheckChange: onShowHiddenCharacters(self, self:isChecked())
 
 
@@ -682,7 +682,7 @@ MythosWindow
       margin-left: 6      
       !text: tr('Show Outfit')
       text-auto-resize: true
-      color: #c9c3d6
+      color: #cbc0e0
       @onCheckChange: onShowOutfits(self, self:isChecked())
 
   MythosButton
@@ -697,7 +697,7 @@ MythosWindow
         self:setFont('small-9px')
       end
     $!on:
-      color: #8d869c
+      color: #9789b3
     $on:
       color: #7fd35a
 

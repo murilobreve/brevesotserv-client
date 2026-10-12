@@ -4,7 +4,7 @@ BrevesFeatureButton < UIButton
   image-source: /images/mythos/button
   image-border: 4
   font: verdana-11px-rounded
-  color: #e4e0ec
+  color: #e6e0f2
   text-align: left
   text-offset: 25 0
   change-cursor-image: true
@@ -38,17 +38,17 @@ BrevesFeatureButton < UIButton
     text-align: center
     padding: 1 5 0 5
     font: verdana-9px-bold
-    border-color: #3a3446
+    border-color: #4a3670
     phantom: true
     visible: false
     $hover:
-      border-color: #e4e0ec
+      border-color: #e6e0f2
 
 // the title of a group of rows (Hunting, Rarity, Tools)
 BrevesGroupLabel < Label
   height: 14
   font: verdana-11px-rounded
-  color: #8d869c
+  color: #9789b3
   text-offset: 2 0
   phantom: true
 
@@ -160,7 +160,7 @@ BrevesNewsRow < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #c9c3d6
+    color: #cbc0e0
 
   MythosButton
     id: open
@@ -184,7 +184,7 @@ BrevesNewsWindow < MythosWindow
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #e4e0ec
+    color: #e6e0f2
     !text: tr('The server has new systems. They are all in the right panel, under the Store button.')
 
   MythosSeparator

@@ -17,7 +17,7 @@ QuicLootIgnoreItem < UIWidget
   Label
     id: label
     !text: tr('bag')
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     text-auto-resize: true
@@ -54,7 +54,7 @@ QuickLootPickRow < UIWidget
     margin-right: 14
   Label
     id: label
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: item.right
     anchors.right: take.left
@@ -69,7 +69,7 @@ QuicklootBagLabel < UIWidget
   Label
     id: label
     !text: tr('Unassigned Loot')
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     text-auto-resize: true
@@ -159,7 +159,7 @@ MythosWindow
   Label
 
     !text: tr('Loot')
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.top: fallbackPanel.bottom
     anchors.left: parent.left
     margin-left: 85
@@ -167,7 +167,7 @@ MythosWindow
   Label
 
     !text: tr('Obtain')
-    color: #c9c3d6
+    color: #cbc0e0
     margin-right: 15
     anchors.top: fallbackPanel.bottom
     anchors.right: fallbackPanel.right
@@ -175,8 +175,8 @@ MythosWindow
     id: list
     focusable: false
     border-width: 1
-    border-color: #322d3e
-    background-color: #0f0e13
+    border-color: #3e2d5e
+    background-color: #0f0a19
     anchors.top: fallbackPanel.bottom
     anchors.bottom: parent.bottom
     anchors.left: fallbackPanel.left
@@ -211,7 +211,7 @@ MythosWindow
     Label
       id: label
       !text: tr('Quick Loot Filter:')
-      color: #c9c3d6
+      color: #cbc0e0
       anchors.top: parent.top
       anchors.left: parent.left
     CheckBoxCircle
@@ -221,7 +221,7 @@ MythosWindow
       anchors.top: label.bottom
       anchors.left: parent.left
       !text: tr('Skipped Loot')
-      color: #c9c3d6
+      color: #cbc0e0
       width: 84
       checked: true
       @onClick: QuickLoot.filter(self, self:isChecked())
@@ -232,14 +232,14 @@ MythosWindow
       anchors.top: skipped.bottom
       anchors.left: parent.left
       !text: tr('Accepted Loot')
-      color: #c9c3d6
+      color: #cbc0e0
       width: 84
       @onClick: QuickLoot.filter(self, self:isChecked())
     MythosButton
       id: clear
       size: 128 20
       !text: tr('Clear Skipped Loot List')
-      color: #c9c3d6
+      color: #cbc0e0
       anchors.top: accepted.bottom
       anchors.left: parent.left
       margin-top: 5
@@ -248,7 +248,7 @@ MythosWindow
       id: add
       size: 128 20
       !text: tr('Add to Skipped Loot List')
-      color: #c9c3d6
+      color: #cbc0e0
       anchors.bottom: parent.bottom
       anchors.left: parent.left
       @onClick: QuickLoot.focusSearch()
@@ -259,7 +259,7 @@ MythosWindow
     image-source: /images/mythos/panel
     image-border: 4
     text-wrap: true
-    color: #c9c3d6
+    color: #cbc0e0
     text-align: left
     text-offset: 2 2
     text-align: topLeft
@@ -333,7 +333,7 @@ MythosWindow
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text-auto-resize: true
-      color: #c9c3d6
+      color: #cbc0e0
       !text: tr('Take if Gersao pays >=')
       !tooltip: tr('Every item Gersao buys for this price or more is looted. Coins and rarity items are always looted. A Take box you change by hand wins over the price.')
       @onCheckChange: QuickLoot.setPriceRule(self:isChecked())
@@ -350,7 +350,7 @@ MythosWindow
 
   Label
     id: pickTitle
-    color: #e4e0ec
+    color: #e6e0f2
     text-wrap: true
     anchors.top: priceRule.bottom
     anchors.left: search.left
@@ -371,8 +371,8 @@ MythosWindow
     padding-bottom: 3
     vertical-scrollbar: ignoreScrollbar
     border-width: 1
-    border-color: #322d3e
-    background-color: #0f0e13
+    border-color: #3e2d5e
+    background-color: #0f0a19
     layout:
       type: grid
       cell-size: 244 38
@@ -388,7 +388,7 @@ MythosWindow
   MythosButton
     size: 43 20
     !text: tr('Close')
-    color: #c9c3d6
+    color: #cbc0e0
     anchors.bottom: parent.bottom
     anchors.right: parent.right
     @onClick: QuickLoot.toggle()

@@ -212,7 +212,7 @@ local function renderTrailCard()
         card.name:setText(step.name or '?')
         card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
-        setBar(card.bar, trail.kills, step.need, '#8c7bd9')
+        setBar(card.bar, trail.kills, step.need, '#9b7bff')
         local points = step.points or 0
         if step.milestone then
             card.badge:setText(tr('Etapa de marco: +%d pontos de bônus!', trail.milestonePoints or 0))

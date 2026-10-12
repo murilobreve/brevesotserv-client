@@ -48,7 +48,7 @@ BonusItemRow < BrevesRow
     margin-top: 2
     height: 14
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
     phantom: true
 
   Panel
@@ -98,7 +98,7 @@ BonusTotalRow < BrevesRow
     anchors.left: parent.left
     anchors.right: total.left
     height: 14
-    color: #e4e0ec
+    color: #e6e0f2
     phantom: true
 
   Label
@@ -118,7 +118,7 @@ BonusTotalRow < BrevesRow
     anchors.right: parent.right
     margin-top: 2
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
     phantom: true
 
 BonusTotalRowEven < BonusTotalRow

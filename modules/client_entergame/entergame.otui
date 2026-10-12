@@ -67,7 +67,7 @@ BrevesLink < UIButton
 
 BrevesLabel < Label
   font: verdana-11px-antialised
-  color: #a39db2
+  color: #ab9fc6
 
 BrevesFeature < Panel
   height: 38
@@ -94,7 +94,7 @@ BrevesFeature < Panel
   Label
     id: desc
     font: verdana-11px-antialised
-    color: #a39db2
+    color: #ab9fc6
     anchors.left: title.left
     anchors.right: parent.right
     anchors.top: title.bottom

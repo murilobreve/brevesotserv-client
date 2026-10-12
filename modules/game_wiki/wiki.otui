@@ -11,7 +11,7 @@ WikiGroupLabel < Label
 WikiTopic < UIButton
   height: 20
   font: verdana-11px-rounded
-  color: #c9c3d6
+  color: #cbc0e0
   text-align: left
   text-offset: 12 0
   $hover !checked:
@@ -25,14 +25,14 @@ WikiTopic < UIButton
 
 WikiLead < Label
   font: verdana-11px-rounded
-  color: #e4e0ec
+  color: #e6e0f2
   text-wrap: true
   text-auto-resize: true
   margin-bottom: 4
 
 WikiText < Label
   font: verdana-11px-monochrome
-  color: #b9b3c4
+  color: #bcb0d4
   text-wrap: true
   text-auto-resize: true
 
@@ -60,7 +60,7 @@ WikiNote < UIWidget
 
 WikiTable < UIWidget
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
   background-color: #00000026
   padding: 1
   layout:
@@ -131,7 +131,7 @@ WikiHuntRow < WikiTableRow
     width: 164
     height: 13
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
   Label
@@ -151,7 +151,7 @@ WikiHuntRow < WikiTableRow
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 6
     font: verdana-11px-monochrome
-    color: #b9b3c4
+    color: #bcb0d4
     text-wrap: true
     text-auto-resize: true
     phantom: true
@@ -164,7 +164,7 @@ WikiTableRowEven < WikiTableRow
 
 WikiCell < Label
   font: verdana-11px-monochrome
-  color: #c9c3d6
+  color: #cbc0e0
   text-wrap: true
   text-auto-resize: true
   text-align: topLeft
@@ -173,7 +173,7 @@ WikiCell < Label
 
 WikiHeadCell < Label
   font: verdana-11px-antialised
-  color: #e4e0ec99
+  color: #e6e0f299
   text-align: left
   text-offset: 6 0
   phantom: true
@@ -189,10 +189,10 @@ WikiStripCell < UIButton
   width: 133
   background-color: #00000059
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
   $hover:
     background-color: #ffffff07
-    border-color: #3a3446
+    border-color: #4a3670
 
   UICreature
     id: creature
@@ -223,14 +223,14 @@ WikiStripCell < UIButton
     height: 14
     text-align: center
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
 WikiStat < UIWidget
   height: 20
   background-color: #00000066
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
 
   Label
     id: key
@@ -239,7 +239,7 @@ WikiStat < UIWidget
     margin-left: 6
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
   Label
@@ -263,7 +263,7 @@ WikiTierCard < UIWidget
     size: 176 176
     background-color: #24221f
     border-width: 1
-    border-color: #322d3e
+    border-color: #3e2d5e
 
     UICreature
       id: creature
@@ -281,7 +281,7 @@ WikiTierCard < UIWidget
     height: 14
     text-align: center
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
 
   Label
     id: chance
@@ -299,7 +299,7 @@ WikiTierCard < UIWidget
     anchors.left: chance.left
     anchors.right: parent.right
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
     text-wrap: true
     text-auto-resize: true
 
@@ -324,7 +324,7 @@ WikiTierCard < UIWidget
     anchors.right: parent.right
     margin-top: 2
     font: verdana-11px-monochrome
-    color: #b9b3c4
+    color: #bcb0d4
     text-wrap: true
     text-auto-resize: true
 
@@ -332,7 +332,7 @@ WikiGradeRow < UIWidget
   height: 46
   background-color: #00000026
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
 
   UIWidget
     id: frame
@@ -368,7 +368,7 @@ WikiGradeRow < UIWidget
     width: 120
     height: 14
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
 
   Label
     id: bandLabel
@@ -378,7 +378,7 @@ WikiGradeRow < UIWidget
     height: 16
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     !text: tr('Faixa dos valores')
 
   Label
@@ -388,7 +388,7 @@ WikiGradeRow < UIWidget
     height: 14
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e4e0ec
+    color: #e6e0f2
 
   UIWidget
     id: bar
@@ -398,7 +398,7 @@ WikiGradeRow < UIWidget
     size: 160 8
     background-color: #00000099
     border-width: 1
-    border-color: #322d3e
+    border-color: #3e2d5e
 
     UIWidget
       id: fill
@@ -433,7 +433,7 @@ MythosWindow
     width: 176
     height: 22
     !placeholder: tr('Buscar...')
-    placeholder-color: #6d6779
+    placeholder-color: #75688f
     @onTextChange: modules.game_wiki.onSearch(self:getText())
 
   ScrollablePanel
@@ -446,7 +446,7 @@ MythosWindow
     width: 164
     vertical-scrollbar: topicsScroll
     border-width: 1
-    border-color: #322d3e
+    border-color: #3e2d5e
     background-color: #00000040
     padding: 1 1 4 1
     layout:
@@ -467,7 +467,7 @@ MythosWindow
     anchors.right: topics.right
     margin: 8 8 0 8
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     text-wrap: true
     text-auto-resize: true
     !text: tr('Nada encontrado. Tente "dodge", "lord" ou "xp".')

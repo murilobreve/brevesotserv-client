@@ -5,9 +5,9 @@ TaskTab < BrevesTab
 // progress bar: dark track, coloured fill, text on top
 TaskBar < UIWidget
   height: 18
-  background-color: #0f0e13
+  background-color: #0f0a19
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
   phantom: true
 
   UIWidget
@@ -41,7 +41,7 @@ TaskCard < BrevesSection
     height: 14
     text-align: center
     font: verdana-11px-monochrome
-    color: #e4e0ec
+    color: #e6e0f2
 
   BrevesCell
     id: portrait
@@ -77,7 +77,7 @@ TaskCard < BrevesSection
     height: 28
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #a39db2
+    color: #ab9fc6
 
   Label
     id: badge
@@ -103,7 +103,7 @@ TaskCard < BrevesSection
     margin-top: 8
     height: 48
     text-wrap: true
-    color: #c9c3d6
+    color: #cbc0e0
 
   Label
     id: extra
@@ -114,7 +114,7 @@ TaskCard < BrevesSection
     height: 30
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
 
   MythosPrimaryButton
     id: action
@@ -139,7 +139,7 @@ TrailRow < BrevesRow
     anchors.verticalCenter: parent.verticalCenter
     width: 34
     text-align: center
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
   UICreature
@@ -157,7 +157,7 @@ TrailRow < BrevesRow
     margin-right: 6
     width: 200
     text-align: right
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
   Label
@@ -179,7 +179,7 @@ TrailRow < BrevesRow
     margin-top: 3
     height: 14
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     phantom: true
 
 // task shop, drawn like the Store: offer rows on the left, the chosen
@@ -233,7 +233,7 @@ ShopPrice < ShopPanelDark
   text-align: center
   text-offset: -6 0
   font: verdana-11px-antialised
-  color: #e4e0ec
+  color: #e6e0f2
   icon: /game_brevespanel/images/tasks
   icon-align: right
   icon-offset: -4 0
@@ -260,7 +260,7 @@ ShopOffer < ShopPanelLight
     margin: 10 8 0 8
     text-align: center
     font: verdana-11px-antialised
-    color: #e4e0ec
+    color: #e6e0f2
     phantom: true
 
   Label
@@ -270,7 +270,7 @@ ShopOffer < ShopPanelLight
     margin-left: 12
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #e4e0ec
+    color: #e6e0f2
     phantom: true
 
   ShopPrice
@@ -281,7 +281,7 @@ ShopOffer < ShopPanelLight
 
 ShopDescLine < Label
   font: verdana-11px-antialised
-  color: #e4e0ec
+  color: #e6e0f2
   text-wrap: true
   text-auto-resize: true
 
@@ -318,7 +318,7 @@ MythosWindow
     anchors.right: parent.right
     anchors.verticalCenter: tasksTab.verticalCenter
     text-auto-resize: true
-    color: #e4e0ec
+    color: #e6e0f2
 
   MythosSeparator
     id: topSep
@@ -356,7 +356,7 @@ MythosWindow
       margin-top: 10
       text-auto-resize: true
       font: verdana-11px-monochrome
-      color: #c9c3d6
+      color: #cbc0e0
 
     Panel
       id: streakDots
@@ -378,7 +378,7 @@ MythosWindow
       margin-top: 8
       text-wrap: true
       font: verdana-11px-monochrome
-      color: #8d869c
+      color: #9789b3
 
   // ---------------------------------------------------------------- trail
   Panel
@@ -394,7 +394,7 @@ MythosWindow
       height: 30
       text-wrap: true
       font: verdana-11px-monochrome
-      color: #c9c3d6
+      color: #cbc0e0
 
     TaskList
       id: list
@@ -542,7 +542,7 @@ MythosWindow
     anchors.right: closeButton.left
     anchors.verticalCenter: closeButton.verticalCenter
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
 
   MythosButton
     id: closeButton
@@ -556,6 +556,6 @@ StreakDot < UIWidget
   size: 44 22
   text-align: center
   border-width: 1
-  border-color: #322d3e
+  border-color: #3e2d5e
   background-color: #00000060
-  color: #6d6779
+  color: #75688f

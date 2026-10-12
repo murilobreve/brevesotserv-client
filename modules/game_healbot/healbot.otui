@@ -46,7 +46,7 @@ HealBotRule < BrevesPanelBox
     margin-left: 8
     background-color: #00000066
     border-width: 1
-    border-color: #3a3446
+    border-color: #4a3670
 
   MythosComboBox
     id: choice
@@ -75,7 +75,7 @@ HealBotStatRule < HealBotRule
     anchors.left: below.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
-    color: #e4e0ec
+    color: #e6e0f2
 
 SpellRule < HealBotStatRule
 
@@ -101,7 +101,7 @@ FriendRule < HealBotRule
     anchors.left: below.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
-    color: #e4e0ec
+    color: #e6e0f2
 
   QtCheckBox
     id: party
@@ -119,7 +119,7 @@ SupportRule < HealBotRule
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 10
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     text-wrap: true
     text-auto-resize: true
 
@@ -139,7 +139,7 @@ CureRule < BrevesPanelBox
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 8
     font: verdana-11px-monochrome
-    color: #c9c3d6
+    color: #cbc0e0
     text-wrap: true
     text-auto-resize: true
 
@@ -226,7 +226,7 @@ MythosWindow
     margin-left: 12
     margin-right: 12
     font: verdana-11px-monochrome
-    color: #8d869c
+    color: #9789b3
     text-auto-resize: false
 
   MythosPrimaryButton

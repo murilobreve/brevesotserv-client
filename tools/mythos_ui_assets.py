@@ -14,14 +14,14 @@ from PIL import Image
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 OUT = os.path.join(ROOT, 'data', 'images', 'mythos')
 
-OBSIDIAN = (27, 24, 33)       # window body
-BAND = (17, 15, 22)           # title band
-EDGE = (5, 4, 8)              # outer line
-RIM = (58, 52, 72)            # inner light edge
-HAIR = (50, 45, 62)           # hairlines inside windows
-HALO = (140, 123, 217)        # halo violet (focus, selection, the title line)
+OBSIDIAN = (31, 21, 47)       # window body
+BAND = (19, 12, 31)           # title band
+EDGE = (6, 3, 11)              # outer line
+RIM = (78, 57, 118)            # inner light edge
+HAIR = (62, 45, 94)           # hairlines inside windows
+HALO = (155, 123, 255)        # halo violet (focus, selection, the title line)
 PEARL = (236, 232, 246)       # pearl (primary button, titles)
-INK = (15, 14, 19)            # wells: lists, inputs
+INK = (15, 10, 25)            # wells: lists, inputs
 
 
 def img(w, h, c=(0, 0, 0, 0)):
@@ -79,13 +79,13 @@ def window():
 def section():
     # sub panel with a title strip, image-border 4, top 21
     w = h = 64
-    im = img(w, h, (19, 17, 24, 235))
-    rect(im, 1, 1, w - 1, 20, (31, 28, 39, 255))
+    im = img(w, h, (22, 14, 35, 235))
+    rect(im, 1, 1, w - 1, 20, (38, 26, 60, 255))
     rect(im, 1, 20, w - 1, 21, HAIR)
     frame(im, HAIR)
     save(im, 'section')
     # same panel without a title strip, image-border 4
-    im = img(32, 32, (19, 17, 24, 235))
+    im = img(32, 32, (22, 14, 35, 235))
     frame(im, HAIR)
     save(im, 'panel')
 
@@ -93,7 +93,7 @@ def section():
 def well():
     # list or text area, sunk into the window
     im = img(32, 32, INK + (230,))
-    frame(im, (40, 36, 50))
+    frame(im, (50, 36, 76))
     rect(im, 1, 1, 31, 2, (0, 0, 0, 255))
     save(im, 'well')
 
@@ -112,14 +112,14 @@ def button(name, fill, border, top, bottom=None):
 
 
 def buttons():
-    button('button', (38, 34, 47), (66, 59, 82), (255, 255, 255, 20), (0, 0, 0, 60))
-    button('button_hover', (46, 41, 58), HALO, (255, 255, 255, 28), (0, 0, 0, 60))
-    button('button_pressed', (24, 21, 30), (66, 59, 82), (0, 0, 0, 90))
-    button('button_disabled', (30, 27, 37), (44, 40, 54), (255, 255, 255, 8))
+    button('button', (44, 30, 68), (88, 64, 132), (255, 255, 255, 20), (0, 0, 0, 60))
+    button('button_hover', (55, 38, 84), HALO, (255, 255, 255, 28), (0, 0, 0, 60))
+    button('button_pressed', (26, 17, 42), (88, 64, 132), (0, 0, 0, 90))
+    button('button_disabled', (34, 24, 50), (56, 42, 82), (255, 255, 255, 8))
     button('button_pearl', PEARL, (255, 255, 255), (255, 255, 255, 255), (196, 188, 214, 255))
     button('button_pearl_hover', (255, 255, 255), (255, 255, 255), (255, 255, 255, 255), (214, 207, 230, 255))
     button('button_pearl_pressed', (205, 198, 222), (226, 220, 238), (180, 172, 200, 255))
-    button('button_pearl_disabled', (58, 53, 70), (70, 64, 84), (255, 255, 255, 10))
+    button('button_pearl_disabled', (64, 50, 92), (80, 64, 112), (255, 255, 255, 10))
 
 
 def tabs():
@@ -139,7 +139,7 @@ def tabs():
 def inputs():
     w, h = 32, 22
     im = img(w, h, INK)
-    frame(im, (58, 52, 72))
+    frame(im, (78, 57, 118))
     rect(im, 1, 1, w - 1, 2, (0, 0, 0, 255))
     save(im, 'input')
     im = img(w, h, INK)
@@ -159,39 +159,39 @@ def combobox():
     # three states of 20 px stacked: normal, hover, open
     w, h = 91, 20
     im = img(w, h * 3)
-    for k, border in enumerate(((58, 52, 72), HALO, HALO)):
-        sub = img(w, h, (26, 24, 32))
+    for k, border in enumerate(((78, 57, 118), HALO, HALO)):
+        sub = img(w, h, (29, 19, 45))
         frame(sub, border)
         rect(sub, 1, 1, w - 1, 2, (255, 255, 255, 14))
         rect(sub, w - 19, 4, w - 18, h - 4, (58, 52, 72, 255))
-        chevron(sub, w - 10, h // 2, PEARL + (255,) if k else (176, 168, 196, 255))
+        chevron(sub, w - 10, h // 2, PEARL + (255,) if k else (186, 168, 220, 255))
         im.paste(sub, (0, k * h))
     save(im, 'combobox')
     # popup list behind the options
-    im = img(32, 32, (22, 20, 28, 250))
+    im = img(32, 32, (25, 16, 40, 250))
     frame(im, HALO)
     save(im, 'popup')
 
 
 def scrollbar():
     # track
-    im = img(10, 32, (13, 12, 17, 200))
-    frame(im, (36, 32, 45))
+    im = img(10, 32, (14, 9, 24, 200))
+    frame(im, (46, 33, 70))
     save(im, 'scroll_track')
     # thumb, image-border 4
-    im = img(10, 24, (74, 66, 92))
-    frame(im, (96, 87, 118))
+    im = img(10, 24, (86, 64, 128))
+    frame(im, (112, 86, 160))
     for x, y in ((0, 0), (9, 0), (0, 23), (9, 23)):
         im.putpixel((x, y), (0, 0, 0, 0))
     save(im, 'scroll_thumb')
-    im = img(10, 24, (112, 99, 170))
+    im = img(10, 24, (124, 96, 206))
     frame(im, HALO)
     for x, y in ((0, 0), (9, 0), (0, 23), (9, 23)):
         im.putpixel((x, y), (0, 0, 0, 0))
     save(im, 'scroll_thumb_hover')
     # arrows: 10x10, up and down, idle and pressed side by side
     im = img(20, 20)
-    for k, c in enumerate(((150, 142, 170, 255), PEARL + (255,))):
+    for k, c in enumerate(((164, 146, 200, 255), PEARL + (255,))):
         chevron(im, 4 + k * 10, 6, c, up=True)
         chevron(im, 4 + k * 10, 15, c)
     save(im, 'scroll_arrows')
@@ -206,18 +206,18 @@ def side_chevron(im, cx, cy, c, left=False):
 
 def slider():
     # horizontal versions for the percentage sliders
-    im = img(32, 10, (13, 12, 17, 200))
-    frame(im, (36, 32, 45))
+    im = img(32, 10, (14, 9, 24, 200))
+    frame(im, (46, 33, 70))
     save(im, 'scroll_track_h')
-    for name, fill, border in (('scroll_thumb_h', (74, 66, 92), (96, 87, 118)),
-                               ('scroll_thumb_h_hover', (112, 99, 170), HALO)):
+    for name, fill, border in (('scroll_thumb_h', (86, 64, 128), (112, 86, 160)),
+                               ('scroll_thumb_h_hover', (124, 96, 206), HALO)):
         im = img(24, 10, fill)
         frame(im, border)
         for x, y in ((0, 0), (23, 0), (0, 9), (23, 9)):
             im.putpixel((x, y), (0, 0, 0, 0))
         save(im, name)
     im = img(20, 20)
-    for k, c in enumerate(((150, 142, 170, 255), PEARL + (255,))):
+    for k, c in enumerate(((164, 146, 200, 255), PEARL + (255,))):
         side_chevron(im, 6 + k * 10, 4, c, left=True)
         side_chevron(im, 4 + k * 10, 15, c)
     save(im, 'scroll_arrows_h')
@@ -226,8 +226,8 @@ def slider():
 def corner_notice():
     # small toast in the corner of the map
     w = h = 32
-    im = img(w, h, (22, 20, 28, 242))
-    frame(im, (66, 59, 82))
+    im = img(w, h, (25, 16, 40, 242))
+    frame(im, (88, 64, 132))
     rect(im, 1, 1, w - 1, 2, HALO + (255,))
     save(im, 'notice')
 
@@ -273,8 +273,8 @@ def rounded(w, h, r, fill, border, top=None, scale=4):
 def login_kit():
     # the login card and its fields, in the same obsidian as the windows
     out = os.path.join(ROOT, 'data', 'images', 'brevesui')
-    rounded(64, 64, 8, (20, 18, 26, 245), (52, 47, 66, 255), (255, 255, 255, 14)).save(os.path.join(out, 'panel.png'))
-    rounded(32, 32, 4, INK + (255,), (52, 47, 66, 255)).save(os.path.join(out, 'input.png'))
+    rounded(64, 64, 8, (24, 15, 38, 245), (72, 53, 108, 255), (255, 255, 255, 14)).save(os.path.join(out, 'panel.png'))
+    rounded(32, 32, 4, INK + (255,), (72, 53, 108, 255)).save(os.path.join(out, 'input.png'))
     rounded(32, 32, 4, INK + (255,), HALO + (255,)).save(os.path.join(out, 'input_focus.png'))
     # hairline between the brand side and the form, halo-bright in the middle
     im = img(1, 64)

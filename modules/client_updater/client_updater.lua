@@ -99,7 +99,7 @@ local STATUS_COLORS = {
   checking = '#6b6b6b',
   uptodate = '#5fbf6a',
   available = '#e2a443',
-  updating = '#8c7bd9',
+  updating = '#9b7bff',
   error = '#c0574f',
 }
 

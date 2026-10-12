@@ -21,7 +21,7 @@ UpdaterWindow < MythosWindow
     margin-top: 2
     text-align: center
     font: verdana-11px-antialised
-    color: #a39db2
+    color: #ab9fc6
 
   UIWidget
     id: track
@@ -41,7 +41,7 @@ UpdaterWindow < MythosWindow
       anchors.bottom: parent.bottom
       margin: 2
       width: 0
-      background-color: #8c7bd9
+      background-color: #9b7bff
       phantom: true
 
   Label
@@ -52,7 +52,7 @@ UpdaterWindow < MythosWindow
     margin-top: 8
     text-align: center
     font: verdana-11px-antialised
-    color: #e4e0ec
+    color: #e6e0f2
 
   MythosButton
     id: cancelButton
