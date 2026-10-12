@@ -336,6 +336,11 @@ local OFFER_INFO = {
     pocao = { name = 'Poção de XP', lines = { '+50%% de experiência por 1 hora.', 'Vai para a Store Inbox.' } },
     arma = { name = 'Arma do Aprendiz', lines = { 'Uma arma aleatória de level baixo, até 28 de ataque.', 'Já vem Communis ou Rarus.', 'Escolha o tipo da arma na lista acima.' } },
     equipamento = { name = 'Equipamento do Aprendiz', lines = { 'Capacete, armadura, calça, bota ou escudo aleatório de level baixo.', 'Já vem Communis ou Rarus.' } },
+    armalendaria = { name = 'Arma do Aprendiz Legendarius', lines = { 'Uma arma aleatória de level baixo, até 28 de ataque.', 'Já vem Legendarius, o segundo grau mais alto.', 'Escolha o tipo da arma na lista acima.' } },
+    armamitica = { name = 'Arma do Aprendiz Mythicus', lines = { 'Uma arma aleatória de level baixo, até 28 de ataque.', 'Já vem Mythicus, o grau mais alto.', 'Escolha o tipo da arma na lista acima.' } },
+    equiplendario = { name = 'Equipamento do Aprendiz Legendarius', lines = { 'Capacete, armadura, calça, bota ou escudo aleatório de level baixo.', 'Já vem Legendarius, o segundo grau mais alto.' } },
+    equipmitico = { name = 'Equipamento do Aprendiz Mythicus', lines = { 'Capacete, armadura, calça, bota ou escudo aleatório de level baixo.', 'Já vem Mythicus, o grau mais alto.' } },
+    exercise500 = { name = 'Exercise Weapon', count = '500x', lines = { '500 cargas de treino.', 'Escolha o tipo na lista acima.', 'Vai para a Store Inbox.' } },
     exercise = { name = 'Lasting Exercise Weapon', count = '14400x', lines = { '14.400 cargas de treino.', 'Escolha o tipo na lista acima.', 'Vai para a Store Inbox.' } },
     pergaminho = { name = 'Pergaminho de Raridade', lines = { 'Use em uma arma ou armadura para sortear uma raridade nova.', 'Chances: Communis 40%%, Rarus 32%%, Praeclarus 18%%, Legendarius 8%%, Mythicus 2%%.' } },
     ascensao = { name = 'Pergaminho de Ascensão', lines = { 'Use em um item com raridade: ele sobe um grau e ganha um bônus novo.', 'Os bônus que o item já tem ficam iguais.' } },
@@ -454,7 +459,19 @@ local function renderShop()
     panel.listBox.list:destroyChildren()
     -- after a purchase the same offer stays chosen
     local focusRow, focusOffer
-    for _, offer in ipairs(state.shop or {}) do
+    -- cheapest first (a stable sort: equal prices keep the server's order)
+    local offers = {}
+    for i, offer in ipairs(state.shop or {}) do
+        offers[#offers + 1] = { offer = offer, index = i }
+    end
+    table.sort(offers, function(a, b)
+        if a.offer.price ~= b.offer.price then
+            return a.offer.price < b.offer.price
+        end
+        return a.index < b.index
+    end)
+    for _, sorted in ipairs(offers) do
+        local offer = sorted.offer
         local info = OFFER_INFO[offer.key] or {}
         local row = g_ui.createWidget('ShopOffer', panel.listBox.list)
         row.name:setText(info.name and tr(info.name) or offer.label)
