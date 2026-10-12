@@ -35,6 +35,8 @@ end
 local function tr(text, ...)
     if select('#', ...) > 0 then
         text = string.format(text, ...)
+    else
+        text = text:gsub('%%%%', '%%') -- texts are written with "%%" for a %
     end
     return latin1(text)
 end
