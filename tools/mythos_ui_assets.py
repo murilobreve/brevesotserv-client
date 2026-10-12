@@ -283,6 +283,50 @@ def panel_button():
     im.save(out)
 
 
+MYTHOS_COIN = [
+    "...######...",
+    "..#rrrrrr#..",
+    ".#rrkAkkrr#.",
+    "#rrkaAbkkrr#",
+    "#rkaAAbbkkr#",
+    "#rkddeeekkr#",
+    "#rkkddeekkr#",
+    "#rrkkdekkrr#",
+    "#rrrkkkkrrr#",
+    ".#rrrrrrrr#.",
+    "..#rrrrrr#..",
+    "...######...",
+]
+COIN_COLOURS = {'#': (22, 10, 40), 'r': (150, 118, 232), 'k': (44, 24, 82), 'a': (196, 168, 255),
+                'A': (240, 232, 255), 'b': (150, 112, 245), 'd': (112, 70, 214), 'e': (70, 40, 150)}
+
+
+def coin(target, ox, oy):
+    for y, row in enumerate(MYTHOS_COIN):
+        for x, c in enumerate(row):
+            if c != '.':
+                target.putpixel((ox + x, oy + y), COIN_COLOURS[c] + (255,))
+
+
+def coin_icons():
+    # Mythos Coins replace Tibia Coins: an obsidian coin with the gem of the
+    # Mythos panel button, in every place the store coin showed
+    for path in ('data/images/ui/tibiaCoin.png', 'data/images/store/icon-tibiacoin.png',
+                 'data/images/store/icon-tibiacointransferable.png',
+                 'modules/game_store/images/icon-tibiacointransferable.png'):
+        im = img(12, 12)
+        coin(im, 0, 0)
+        im.save(os.path.join(ROOT, path))
+    # buttons with the coin drawn in: the new coin covers the old one
+    for path, spots in (('data/images/ui/getCoins.png', ((35, 4), (35, 25))),
+                        ('data/images/options/store_large.png', ((35, 6), (36, 27)))):
+        full = os.path.join(ROOT, path)
+        im = Image.open(full).convert('RGBA')
+        for x, y in spots:
+            coin(im, x, y)
+        im.save(full)
+
+
 def corner_notice():
     # small toast in the corner of the map
     w = h = 32
@@ -357,6 +401,7 @@ if __name__ == '__main__':
     slider()
     fold_marks()
     panel_button()
+    coin_icons()
     corner_notice()
     bullets()
     login_kit()

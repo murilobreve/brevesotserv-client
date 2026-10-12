@@ -442,9 +442,9 @@ function togglePanel()
 end
 
 local function onGameStart()
-    if not panelButton and modules.game_mainpanel and modules.game_mainpanel.addSpecialToggleButton then
-        panelButton = modules.game_mainpanel.addSpecialToggleButton('mythosPanelButton', tr('Mythos panel: tasks, hunt rates, rarity, heal bot'),
-            '/game_brevespanel/images/button', togglePanel, true, 0)
+    if not panelButton and modules.game_mainpanel and modules.game_mainpanel.addToggleButton then
+        panelButton = modules.game_mainpanel.addToggleButton('mythosPanelButton', tr('Mythos panel: tasks, hunt rates, rarity, heal bot'),
+            '/game_brevespanel/images/button', togglePanel, true)
     end
     panel:setupOnStart()
     -- the first time, at the top of the right panel, where the old fixed
