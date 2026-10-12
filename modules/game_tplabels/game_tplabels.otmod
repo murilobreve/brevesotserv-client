@@ -1,0 +1,9 @@
+Module
+  name: game_tplabels
+  description: Fixed labels over the teleports (names sent by the server)
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ tplabels ]
+  @onLoad: init()
+  @onUnload: terminate()

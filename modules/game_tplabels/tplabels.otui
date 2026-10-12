@@ -1,0 +1,27 @@
+TeleportLabel < UIWidget
+  height: 17
+  padding: 0 7 0 18
+  background-color: #0e0a18e6
+  border-width: 1
+  border-color: #6e58c0
+  phantom: true
+  focusable: false
+  opacity: 0
+
+  UIWidget
+    id: gem
+    size: 10 10
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 5
+    image-smooth: true
+    phantom: true
+
+  Label
+    id: name
+    font: verdana-11px-rounded
+    text-auto-resize: true
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 18
+    phantom: true
