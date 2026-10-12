@@ -7,7 +7,7 @@
 local OPCODE = 126
 local RANGE_X, RANGE_Y = 9, 7
 
-local labels = {}   -- { pos = {x,y,z}, text, kind }
+local labels = {}   -- { pos = {x,y,z}, text }
 local shown = {}    -- key -> widget
 local refreshEvent
 local seen = {}     -- keys already faded in once, so a re-attach does not blink
@@ -136,7 +136,7 @@ local function onLabels(protocol, opcode, buffer)
     labels = {}
     for _, item in ipairs(data) do
         if item.x and item.t then
-            labels[#labels + 1] = { pos = { x = item.x, y = item.y, z = item.z }, text = item.t, kind = item.k }
+            labels[#labels + 1] = { pos = { x = item.x, y = item.y, z = item.z }, text = item.t }
         end
     end
     protocol:sendExtendedOpcode(OPCODE, 'ok')

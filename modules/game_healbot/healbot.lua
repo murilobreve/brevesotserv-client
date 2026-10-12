@@ -464,7 +464,13 @@ function toggle()
     end
 end
 
+-- set once the vocation of this session is known: a later change is a
+-- promotion in the middle of the game
+local vocationKnown = false
+
 local function onGameStart()
+    local player = g_game.getLocalPlayer()
+    vocationKnown = player ~= nil and (player:getVocation() or 0) ~= 0
     load()
     HealEngine.reset()
     setRunning(cfg and cfg.running, true)
@@ -485,9 +491,16 @@ local function onGameStart()
 end
 
 -- the vocation arrives after onGameStart, so defaults and the saved rules
--- are checked again once it is known
+-- are checked again once it is known. A promotion later on keeps the bot
+-- on or off as the player left it (load() starts it on, as on every login)
 local function onVocationChange()
+    local promotion = vocationKnown
+    local running = HealEngine.isRunning()
+    vocationKnown = true
     load()
+    if cfg and promotion then
+        cfg.running = running
+    end
     setRunning(cfg and cfg.running, true)
     if window and window:isVisible() then
         fill()
@@ -499,6 +512,7 @@ local function onGameEnd()
     setRunning(false, true)
     hide()
     cfg = nil
+    vocationKnown = false
 end
 
 function init()

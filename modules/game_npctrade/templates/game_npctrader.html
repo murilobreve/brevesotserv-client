@@ -158,16 +158,17 @@
         </div>
 
         <!-- List -->
+        <!-- Mythos: the row labels read plain fields built by npc_trader.lua, as their bindings run every 50 ms per row -->
         <div id="tradeListScroll" class="tradeListScroll fullWidth sunkenBorder" layout="type: verticalBox">
             <div *for="local item in self.tradeItems" *for-finished="self:onTradeListRendered()" class="tradeListItem flex fullWidth"
                 *trade-item="item"
                 *class-tradeListItemSelected="self.selectedItem == item">
                 <UIItem class="itemIcon item" *item="item.ptr" />
                 <div class="itemInfoBlock">
-                    <label id="nameLabel" class="tradeItemName" *text="self:displayName(item)"></label>
+                    <label id="nameLabel" class="tradeItemName" *text="item.displayName"></label>
                     <div class="tradeItemLine flex">
-                        <label id="infoLabel" class="tradeItemPrice" *text="self:formatGold(item.price) .. ' gp'"></label>
-                        <label id="sideLabel" class="tradeItemSide" *text="self:sideText(item)"></label>
+                        <label id="infoLabel" class="tradeItemPrice" *text="item.priceText"></label>
+                        <label id="sideLabel" class="tradeItemSide" *text="item.sideText"></label>
                     </div>
                 </div>
             </div>

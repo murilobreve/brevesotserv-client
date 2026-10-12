@@ -179,13 +179,15 @@ void ThingTypeManager::loadCustomAppearances()
         const auto document = nlohmann::json::parse(g_resources.readFileContents(dir + "catalog-content.json"));
         std::string appearancesFile;
         int spritesCount = g_spriteAppearances.getSpritesCount();
+        // at(): a missing key throws (and is reported below); operator[] on a
+        // const json is undefined behaviour
         for (const auto& obj : document) {
-            const auto& type = obj["type"];
+            const auto& type = obj.at("type");
             if (type == "appearances") {
-                appearancesFile = obj["file"];
+                appearancesFile = obj.at("file").get<std::string>();
             } else if (type == "sprite") {
                 // a full path: the sheet is not in the official assets folder
-                const auto& sheet = std::make_shared<SpriteSheet>(obj["firstspriteid"].get<int>(), obj["lastspriteid"].get<int>(), static_cast<SpriteLayout>(obj["spritetype"].get<int>()), dir + obj["file"].get<std::string>());
+                const auto& sheet = std::make_shared<SpriteSheet>(obj.at("firstspriteid").get<int>(), obj.at("lastspriteid").get<int>(), static_cast<SpriteLayout>(obj.at("spritetype").get<int>()), dir + obj.at("file").get<std::string>());
                 g_spriteAppearances.addSpriteSheet(sheet);
                 spritesCount = std::max<int>(spritesCount, sheet->lastId + 1);
             }

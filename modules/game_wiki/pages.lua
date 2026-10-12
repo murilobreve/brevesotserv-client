@@ -33,7 +33,7 @@ WIKI_TIERS = {
     },
     ashen = {
         name = 'Ashen', color = '#9aa0a8', shader = 'Rarity - Ashen', outfit = 55, monster = 'Behemoth',
-        chance = '1%', hp = 'x4,32', attack = 'x2,15', defense = 'x1', xp = 'x1,9',
+        chance = '0,7%', hp = 'x4,32', attack = 'x2,15', defense = 'x1', xp = 'x1,9',
         loot = 'x6', rolls = '+1', gold = 'x30', affix = '80%', skull = 'Vermelha',
         grades = { 45, 33, 15, 6, 1 },
         arrival = 'Fogo no chão, fumaça em volta e "*the ground scorches*".',
@@ -138,7 +138,7 @@ WIKI_PAGES.pale = tierPage('pale', 'Pale', {
 })
 
 WIKI_PAGES.ashen = tierPage('ashen', 'Ashen', {
-    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 1% das mortes, com caveira vermelha e fumaça em volta.' },
+    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,7% das mortes, com caveira vermelha e fumaça em volta.' },
     { 'p', 'O loot é 6 vezes maior e 80% das vezes um item do corpo vira raro.' },
     { 'links', { 'pale', 'obsidian' } },
 })

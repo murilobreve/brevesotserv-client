@@ -128,9 +128,16 @@ function QuickLoot.Define()
         QuickLoot.loadFilterItems()
     end
 
+    -- While the price rule decides, the server gets the rule's list and not
+    -- data.loots, so the loot list calls (right-click menu, stash, cyclopedia)
+    -- work on the rule's own per-item override instead: on Accepted Loot an
+    -- item is on the list when it is taken, on Skipped Loot when it is not.
     function QuickLoot.lootExists(itemId, filter)
         if not filter then
             filter = QuickLoot.data.filter
+        end
+        if QuickLoot.priceRuleActive() then
+            return QuickLoot.isWanted(itemId) == (filter == 2)
         end
         return table.contains(QuickLoot.data.loots[filter], itemId)
     end
@@ -139,13 +146,16 @@ function QuickLoot.Define()
         if not filter then
             filter = QuickLoot.data.filter
         end
-        if table.contains(QuickLoot.data.loots[filter], itemId) then
+        if QuickLoot.lootExists(itemId, filter) then
             return
         end
 
-        table.insert(QuickLoot.data.loots[filter], itemId)
-
-        QuickLoot.sendList()
+        if QuickLoot.priceRuleActive() then
+            QuickLoot.setWanted(itemId, filter == 2)
+        else
+            table.insert(QuickLoot.data.loots[filter], itemId)
+            QuickLoot.sendList()
+        end
         if quickLootController.ui:isVisible() then
             QuickLoot.loadFilterItems()
         end
@@ -169,13 +179,16 @@ function QuickLoot.Define()
         if not filter then
             filter = QuickLoot.data.filter
         end
-        if not table.contains(QuickLoot.data.loots[filter], itemId) then
+        if not QuickLoot.lootExists(itemId, filter) then
             return
         end
 
-        table.removevalue(QuickLoot.data.loots[filter], itemId)
-
-        QuickLoot.sendList()
+        if QuickLoot.priceRuleActive() then
+            QuickLoot.setWanted(itemId, filter ~= 2)
+        else
+            table.removevalue(QuickLoot.data.loots[filter], itemId)
+            QuickLoot.sendList()
+        end
         if quickLootController.ui:isVisible() then
             QuickLoot.loadFilterItems()
         end

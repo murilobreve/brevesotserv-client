@@ -5,6 +5,9 @@ local otmm = true
 local oldPos = nil
 local fullscreenWidget
 local virtualFloor = 7
+-- g_minimap keeps the merged map in memory between logins (only Lua calls
+-- clean), so the files are read once per client session, not on every relog.
+local minimapLoaded = false
 local currentDayTime = {
     h = 12,
     m = 0
@@ -113,28 +116,35 @@ function mapController:onGameStart()
     }):execute()
 
     -- Load Map
-    g_minimap.clean()
+    -- On a relog the previous character's map (already saved by onGameEnd) is
+    -- still in memory, so cleaning and decompressing both files again is skipped.
+    if not minimapLoaded then
+        g_minimap.clean()
 
-    local minimapFile = '/minimap'
-    local loadFnc = nil
+        local minimapFile = '/minimap'
+        local loadFnc = nil
 
-    if otmm then
-        minimapFile = minimapFile .. '.otmm'
-        loadFnc = g_minimap.loadOtmm
-    else
-        minimapFile = minimapFile .. '_' .. g_game.getClientVersion() .. '.otcm'
-        loadFnc = g_map.loadOtcm
-    end
+        if otmm then
+            minimapFile = minimapFile .. '.otmm'
+            loadFnc = g_minimap.loadOtmm
+        else
+            minimapFile = minimapFile .. '_' .. g_game.getClientVersion() .. '.otcm'
+            loadFnc = g_map.loadOtcm
+        end
 
-    if g_resources.fileExists(minimapFile) then
-        loadFnc(minimapFile)
-    end
+        if g_resources.fileExists(minimapFile) then
+            loadFnc(minimapFile)
+        end
 
-    -- the whole server map ships with the client (data/minimap/zorva.otmm).
-    -- It is loaded after the player's own file, so map changes always show.
-    local fullMap = '/minimap/zorva.otmm'
-    if otmm and g_resources.fileExists(fullMap) then
-        g_minimap.loadOtmm(fullMap)
+        -- the whole server map ships with the client (data/minimap/zorva.otmm).
+        -- It is loaded after the player's own file, so map changes always show.
+        local fullMap = '/minimap/zorva.otmm'
+        if otmm and g_resources.fileExists(fullMap) then
+            g_minimap.loadOtmm(fullMap)
+        end
+
+        -- the .otcm path fills g_map tiles instead, so it keeps reloading on every login
+        minimapLoaded = otmm
     end
 
     self.ui.minimapBorder.minimap:load()

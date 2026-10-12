@@ -87,7 +87,13 @@ function init()
         g_sounds.preload(musicFilename)
     end
 
-    autosaveEvent = cycleEvent(saveClientData, AUTOSAVE_INTERVAL)
+    -- every minute only config.otml: keybind and hotkey presets already write
+    -- their own file the moment they change, and rewriting all of them (two
+    -- per preset) every minute was disk work on the main thread for nothing.
+    -- The logout and the close still save everything (saveClientData).
+    autosaveEvent = cycleEvent(function()
+        g_settings.save()
+    end, AUTOSAVE_INTERVAL)
 end
 
 function terminate()

@@ -16,6 +16,16 @@ local SECTIONS = {
 }
 local tickEvent
 local messageEvent
+-- the "Trocar task" confirmation: closed with the window and on logout, so a
+-- "Sim" can never reroll (and charge) the next character
+local rerollBox
+
+local function closeRerollBox()
+    if rerollBox then
+        rerollBox:destroy()
+        rerollBox = nil
+    end
+end
 
 local currentTab = 'tasks'
 local state -- last "state" from the server
@@ -178,20 +188,14 @@ local function renderDaily()
     card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar monstro (grátis)'))
     card.action.onClick = function()
         if cost > 0 then
-            local box
-            local function close()
-                if box then
-                    box:destroy()
-                    box = nil
-                end
-            end
-            box = displayGeneralBox(tr('Trocar task'), tr('Trocar o monstro custa %s gold (banco ou mochila). Continuar?', formatNumber(cost)), {
+            closeRerollBox()
+            rerollBox = displayGeneralBox(tr('Trocar task'), tr('Trocar o monstro custa %s gold (banco ou mochila). Continuar?', formatNumber(cost)), {
                 { text = tr('Sim'), callback = function()
-                    close()
+                    closeRerollBox()
                     send({ action = 'reroll' })
                 end },
-                { text = tr('Não'), callback = close },
-            }, close, close)
+                { text = tr('Não'), callback = closeRerollBox },
+            }, closeRerollBox, closeRerollBox)
             return
         end
         send({ action = 'reroll' })
@@ -614,6 +618,13 @@ function handlers.pointsReady(data)
     modules.game_brevespanel.notify('tasks',
         tr('Você tem %d Hunt Points! Gaste na loja das tasks.', tonumber(data.points) or 0),
         tr('Abrir loja'), function()
+            -- the notice stays up a while: the window may be open by now,
+            -- and toggle() would close it
+            if window and window:isVisible() then
+                selectTab('shop')
+                window:raise()
+                return
+            end
             currentTab = 'shop'
             toggle()
         end)
@@ -685,6 +696,7 @@ function show()
 end
 
 function hide()
+    closeRerollBox()
     if not window then
         return
     end
@@ -785,6 +797,7 @@ function terminate()
         removeEvent(messageEvent)
         messageEvent = nil
     end
+    closeRerollBox()
     if toolbarButton then
         toolbarButton:destroy()
         toolbarButton = nil
