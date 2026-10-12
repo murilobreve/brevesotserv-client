@@ -334,7 +334,8 @@ local OFFER_INFO = {
     desire = { name = 'Bag You Desire', lines = { 'Abre um item da Soul War: arma, armadura, calça, bota ou o Soulbastion.' } },
     coins = { name = '25 Mythos Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
     pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
-    rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os bônus dos itens raros que você usa, na janela Rarity Bonuses.', 'Reroll: um valor novo para um bônus. Trocar: outro bônus aleatório.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
+    rarityxp50 = { name = '50 Rarity XP', count = '50x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
+    rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
     montaria = { name = 'Montaria', lines = { 'Qualquer montaria que você ainda não tem.', 'Escolha na lista acima; a montaria já sai liberada.' } },
 }
 
