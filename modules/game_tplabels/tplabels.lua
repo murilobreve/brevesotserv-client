@@ -54,10 +54,10 @@ local function makeWidget(label)
     widget:setBorderColor(style.border)
     widget:getChildById('gem'):setImageSource('/images/mythos/' .. style.gem)
     local name = widget:getChildById('name')
-    name:setText(label.text)
+    name:setText((label.text:gsub(' ', '  '))) -- the 7px font has a very thin space
     name:setColor(style.text)
     -- size the plate from the measured text so it always fits: gem + text + margins
-    widget:setWidth(18 + name:getTextSize().width + 10)
+    widget:setWidth(11 + name:getTextSize().width + 6)
     return widget
 end
 
