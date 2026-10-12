@@ -56,6 +56,44 @@ COINS = [
 ]
 
 
+# Grounds (art_obsidian.py draws them): art/<folder>/<i>.png, 32x32, in the
+# order of their pattern (x fastest), then the animation phases. The flags are
+# the white temple marble's (id 409): walkable at speed 100, fills the tile.
+GROUNDS = [
+    {'id': 60001, 'name': 'obsidian floor', 'folder': 'obsidian_floor', 'pattern': (4, 4), 'phases': 1},
+    {'id': 60002, 'name': 'inlaid obsidian floor', 'folder': 'obsidian_inlay', 'pattern': (1, 1), 'phases': 1},
+    # the arrival point of the temple: a soft violet light like the old flame slab
+    {'id': 60003, 'name': 'obsidian rune', 'folder': 'obsidian_rune', 'pattern': (1, 1), 'phases': 4, 'duration': 450,
+     'light': (3, 125)},
+]
+
+
+def make_ground(ground, first):
+    o = A.Appearance()
+    o.id = ground['id']
+    o.name = ground['name']
+    fg = o.frame_group.add()
+    si = fg.sprite_info
+    pw, ph = ground['pattern']
+    si.pattern_width, si.pattern_height, si.pattern_depth, si.layers = pw, ph, 1, 1
+    count = pw * ph * ground['phases']
+    si.sprite_id.extend(range(first, first + count))
+    if ground['phases'] > 1:
+        si.animation.synchronized = True
+        si.animation.loop_type = A.ANIMATION_LOOP_TYPE_INFINITE
+        for _ in range(ground['phases']):
+            phase = si.animation.sprite_phase.add()
+            phase.duration_min = phase.duration_max = ground.get('duration', 300)
+    si.is_opaque = True
+    o.flags.bank.waypoints = 100
+    o.flags.unmove = True
+    o.flags.fullbank = True
+    o.flags.automap.color = 129
+    if 'light' in ground:
+        o.flags.light.brightness, o.flags.light.color = ground['light']
+    return o, count
+
+
 def car(mount, d, bob=0):
     art = np.array(Image.open(os.path.join(ART, mount['folder'], NAMES[d] + '.png')).convert('RGBA'))
     back, front = np.zeros_like(art), np.zeros_like(art)
@@ -190,14 +228,36 @@ for first in range(0, len(small), 144):
     cip = sheet_bytes(small[first:first + 144], 32)
     small_sheets.append(('sprites-items-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, first_small + first, first_small + min(first + 144, len(small)) - 1))
 
+# effects added to the pack by hand (the Last Stand text) are kept as they
+# are: their appearances, sheet files and sprite ids
+old_catalog = []
+if os.path.exists(os.path.join(CLIENT_DIR, 'catalog-content.json')):
+    old_catalog = json.load(open(os.path.join(CLIENT_DIR, 'catalog-content.json')))
+kept_sheets = [e for e in old_catalog if e.get('type') == 'sprite' and e['file'].startswith('sprites-effects-')]
+old_custom = A.Appearances()
+if os.path.exists(os.path.join(CLIENT_DIR, 'appearances-custom.dat')):
+    old_custom.ParseFromString(open(os.path.join(CLIENT_DIR, 'appearances-custom.dat'), 'rb').read())
+
+# grounds go on their own 32x32 sheet after every sprite id in use
+last_used = max([last for _n, _c, _f, last in sheets + small_sheets] + [e['lastspriteid'] for e in kept_sheets])
+ground_tiles = []
+for ground in GROUNDS:
+    obj, count = make_ground(ground, last_used + 1 + len(ground_tiles))
+    objects.append(obj)
+    ground_tiles += [Image.open(os.path.join(ART, ground['folder'], f'{i}.png')).convert('RGBA') for i in range(count)]
+for first in range(0, len(ground_tiles), 144):
+    cip = sheet_bytes(ground_tiles[first:first + 144], 32)
+    small_sheets.append(('sprites-grounds-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, last_used + 1 + first, last_used + min(first + 144, len(ground_tiles))))
+
 custom = A.Appearances()
+custom.effect.extend(old_custom.effect)
 custom.outfit.extend(outfits)
 custom.object.extend(objects)
 dat_name = 'appearances-custom.dat'
 
 os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
-    if f.startswith('sprites-'):
+    if f.startswith('sprites-') and not f.startswith('sprites-effects-'):
         os.remove(os.path.join(CLIENT_DIR, f))
 for name, cip, _first, _last in sheets + small_sheets:
     with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
@@ -211,7 +271,7 @@ with open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w') as f:
     ] + [
         {'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first, 'lastspriteid': last, 'area': 32}
         for name, cip, first, last in small_sheets
-    ], f, indent=2)
+    ] + kept_sheets, f, indent=2)
 
 # server: register the looktypes (replace older copies of them)
 srv = A.Appearances()
@@ -222,7 +282,7 @@ keep = [x for x in srv.outfit if x.id not in ids]
 del srv.outfit[:]
 srv.outfit.extend(keep)
 srv.outfit.extend(outfits)
-ids = {c['id'] for c in COINS}
+ids = {c['id'] for c in COINS} | {g['id'] for g in GROUNDS}
 keep = [x for x in srv.object if x.id not in ids]
 del srv.object[:]
 srv.object.extend(keep)
