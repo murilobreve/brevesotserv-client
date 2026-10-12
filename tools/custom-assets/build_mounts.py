@@ -97,6 +97,39 @@ def make_ground(ground, first):
     return o, count
 
 
+# Walls and counters (art/obsidian_walls, from the obsidiana-nativa pack): the
+# Tibia pieces recoloured pixel for pixel, so each copies the flags of the
+# piece it was drawn from (blocking, sight, hooks, height). Several files make
+# a pattern: the client picks the variation by the tile position.
+REF_ITEMS = [
+    {'id': 60010, 'name': 'obsidian wall', 'ref': 49282, 'files': ['horizontal_01', 'horizontal_02', 'horizontal_03'], 'pattern': (3, 1)},
+    {'id': 60011, 'name': 'obsidian wall', 'ref': 49288, 'files': ['vertical_01', 'vertical_02', 'vertical_03'], 'pattern': (1, 3)},
+    {'id': 60012, 'name': 'obsidian wall', 'ref': 49294, 'files': ['canto']},
+    {'id': 60013, 'name': 'obsidian pillar', 'ref': 49297, 'files': ['ponta']},
+    {'id': 60014, 'name': 'low obsidian wall', 'ref': 49298, 'files': ['horizontal_baixo']},
+    {'id': 60015, 'name': 'low obsidian wall', 'ref': 49299, 'files': ['vertical_baixo']},
+    {'id': 60016, 'name': 'obsidian window', 'ref': 49655, 'files': ['janela_horizontal']},
+    {'id': 60017, 'name': 'obsidian counter', 'ref': 2317, 'files': ['balcao_vertical']},
+    {'id': 60018, 'name': 'obsidian counter', 'ref': 2318, 'files': ['balcao_horizontal']},
+    {'id': 60019, 'name': 'obsidian counter', 'ref': 2320, 'files': ['balcao_ponta_a']},
+    {'id': 60020, 'name': 'obsidian counter', 'ref': 2321, 'files': ['balcao_ponta_b']},
+]
+SPRITE_TYPES = {(32, 32): 0, (32, 64): 1, (64, 32): 2, (64, 64): 3}
+
+
+def make_ref_item(item, ref, sprite_ids):
+    o = A.Appearance()
+    o.CopyFrom(ref)
+    o.id = item['id']
+    o.name = item['name']
+    si = o.frame_group[0].sprite_info
+    del si.sprite_id[:]
+    si.sprite_id.extend(sprite_ids)
+    pw, ph = item.get('pattern', (1, 1))
+    si.pattern_width, si.pattern_height, si.pattern_depth, si.layers = pw, ph, 1, 1
+    return o
+
+
 def car(mount, d, bob=0):
     art = np.array(Image.open(os.path.join(ART, mount['folder'], NAMES[d] + '.png')).convert('RGBA'))
     back, front = np.zeros_like(art), np.zeros_like(art)
@@ -131,6 +164,10 @@ def sheet_bytes(chunk, size=64):
         region = Image.new('RGBA', (size, size), (255, 0, 255, 255))
         region.paste(f, (0, 0), f)
         sheet.paste(region, (x, y))
+    return sheet_bytes_from(sheet)
+
+
+def sheet_bytes_from(sheet):
     # BMP (32 bit BGRA, bottom-up) wrapped in CIP's LZMA container
     w, h = sheet.size
     pixels = np.array(sheet)[::-1, :, [2, 1, 0, 3]].tobytes()
@@ -252,6 +289,38 @@ for first in range(0, len(ground_tiles), 144):
     cip = sheet_bytes(ground_tiles[first:first + 144], 32)
     small_sheets.append(('sprites-grounds-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, last_used + 1 + first, last_used + min(first + 144, len(ground_tiles))))
 
+# walls and counters: one sheet per sprite size, after the grounds
+srv_ref = A.Appearances()
+with open(SERVER_DAT, 'rb') as f:
+    srv_ref.ParseFromString(f.read())
+refs = {o.id: o for o in srv_ref.object}
+next_id = max([last for _n, _c, _f, last in sheets + small_sheets] + [e['lastspriteid'] for e in kept_sheets]) + 1
+by_size = {}
+for item in REF_ITEMS:
+    imgs = [Image.open(os.path.join(ART, 'obsidian_walls', f + '.png')).convert('RGBA') for f in item['files']]
+    by_size.setdefault(imgs[0].size, []).append((item, imgs))
+sized_sheets = []
+for size, entries in sorted(by_size.items()):
+    w, h = size
+    per_sheet = (384 // w) * (384 // h)
+    frames_here = []
+    for item, imgs in entries:
+        ids = list(range(next_id + len(frames_here), next_id + len(frames_here) + len(imgs)))
+        objects.append(make_ref_item(item, refs[item['ref']], ids))
+        frames_here += imgs
+    for first in range(0, len(frames_here), per_sheet):
+        chunk = frames_here[first:first + per_sheet]
+        sheet = Image.new('RGBA', (384, 384), (255, 0, 255, 255))
+        cols = 384 // w
+        for k, f in enumerate(chunk):
+            region = Image.new('RGBA', (w, h), (255, 0, 255, 255))
+            region.paste(f, (0, 0), f)
+            sheet.paste(region, ((k % cols) * w, (k // cols) * h))
+        cip = sheet_bytes_from(sheet)
+        sized_sheets.append(('sprites-walls-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip,
+                             next_id + first, next_id + first + len(chunk) - 1, SPRITE_TYPES[size]))
+    next_id += len(frames_here)
+
 custom = A.Appearances()
 custom.effect.extend(old_custom.effect)
 custom.outfit.extend(outfits)
@@ -262,6 +331,9 @@ os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
     if f.startswith('sprites-') and not f.startswith('sprites-effects-'):
         os.remove(os.path.join(CLIENT_DIR, f))
+for name, cip, _first, _last, _t in sized_sheets:
+    with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
+        f.write(cip)
 for name, cip, _first, _last in sheets + small_sheets:
     with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
         f.write(cip)
@@ -274,6 +346,9 @@ with open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w') as f:
     ] + [
         {'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first, 'lastspriteid': last, 'area': 32}
         for name, cip, first, last in small_sheets
+    ] + [
+        {'type': 'sprite', 'file': name, 'spritetype': t, 'firstspriteid': first, 'lastspriteid': last, 'area': 64}
+        for name, cip, first, last, t in sized_sheets
     ] + kept_sheets, f, indent=2)
 
 # server: register the looktypes (replace older copies of them)
@@ -285,7 +360,7 @@ keep = [x for x in srv.outfit if x.id not in ids]
 del srv.outfit[:]
 srv.outfit.extend(keep)
 srv.outfit.extend(outfits)
-ids = {c['id'] for c in COINS} | {g['id'] for g in GROUNDS}
+ids = {c['id'] for c in COINS} | {g['id'] for g in GROUNDS} | {r['id'] for r in REF_ITEMS}
 keep = [x for x in srv.object if x.id not in ids]
 del srv.object[:]
 srv.object.extend(keep)

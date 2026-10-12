@@ -69,6 +69,30 @@
   },
   {
     "type": "sprite",
+    "file": "sprites-walls-e789cf8eb9ec4f9e.bmp.lzma",
+    "spritetype": 1,
+    "firstspriteid": 1000289,
+    "lastspriteid": 1000290,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-walls-457a7d5e48466fa2.bmp.lzma",
+    "spritetype": 2,
+    "firstspriteid": 1000291,
+    "lastspriteid": 1000292,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-walls-f3708766ec24957e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1000293,
+    "lastspriteid": 1000303,
+    "area": 64
+  },
+  {
+    "type": "sprite",
     "file": "sprites-effects-610b8632e11ff210.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1000225,

@@ -1,0 +1,417 @@
+{
+  "pecas": [
+    {
+      "arquivo": "pecas/horizontal_01.png",
+      "referencia": "01_horizontal_49282_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    },
+    {
+      "arquivo": "pecas/vertical_01.png",
+      "referencia": "02_vertical_49288_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    },
+    {
+      "arquivo": "pecas/canto.png",
+      "referencia": "03_canto_49294_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 28,
+      "pixels_opacos": 2464
+    },
+    {
+      "arquivo": "pecas/ponta.png",
+      "referencia": "04_ponta_49297_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 10,
+      "pixels_dourados": 8,
+      "pixels_opacos": 544
+    },
+    {
+      "arquivo": "pecas/horizontal_baixo.png",
+      "referencia": "05_horizontal_baixo_49298_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 11,
+      "pixels_dourados": 8,
+      "pixels_opacos": 944
+    },
+    {
+      "arquivo": "pecas/vertical_baixo.png",
+      "referencia": "06_vertical_baixo_49299_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 11,
+      "pixels_dourados": 8,
+      "pixels_opacos": 944
+    },
+    {
+      "arquivo": "pecas/janela_horizontal.png",
+      "referencia": "07_janela_49655_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 11,
+      "pixels_dourados": 13,
+      "pixels_opacos": 1482
+    },
+    {
+      "arquivo": "pecas/balcao_vertical.png",
+      "referencia": "08_balcao_vertical_2317_64x32.png",
+      "tamanho": [
+        64,
+        32
+      ],
+      "tile_dono": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1168
+    },
+    {
+      "arquivo": "pecas/balcao_horizontal.png",
+      "referencia": "09_balcao_horizontal_2318_64x32.png",
+      "tamanho": [
+        64,
+        32
+      ],
+      "tile_dono": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 19,
+      "pixels_opacos": 1168
+    },
+    {
+      "arquivo": "pecas/balcao_ponta_a.png",
+      "referencia": "10_balcao_ponta_a_2320_32x64.png",
+      "tamanho": [
+        32,
+        64
+      ],
+      "tile_dono": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 19,
+      "pixels_opacos": 1168
+    },
+    {
+      "arquivo": "pecas/balcao_ponta_b.png",
+      "referencia": "11_balcao_ponta_b_2321_32x64.png",
+      "tamanho": [
+        32,
+        64
+      ],
+      "tile_dono": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1168
+    },
+    {
+      "arquivo": "pecas/horizontal_02.png",
+      "referencia": "01_horizontal_49282_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 9,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    },
+    {
+      "arquivo": "pecas/horizontal_03.png",
+      "referencia": "01_horizontal_49282_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    },
+    {
+      "arquivo": "pecas/vertical_02.png",
+      "referencia": "02_vertical_49288_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 9,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    },
+    {
+      "arquivo": "pecas/vertical_03.png",
+      "referencia": "02_vertical_49288_64x64.png",
+      "tamanho": [
+        64,
+        64
+      ],
+      "tile_dono": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "alfa": "0 ou 255; idêntico à referência",
+      "cores_opacas": 12,
+      "pixels_dourados": 18,
+      "pixels_opacos": 1504
+    }
+  ],
+  "paleta": [
+    [
+      5,
+      4,
+      8
+    ],
+    [
+      9,
+      8,
+      14
+    ],
+    [
+      16,
+      13,
+      23
+    ],
+    [
+      25,
+      21,
+      34
+    ],
+    [
+      36,
+      30,
+      46
+    ],
+    [
+      45,
+      19,
+      60
+    ],
+    [
+      49,
+      42,
+      60
+    ],
+    [
+      63,
+      28,
+      82
+    ],
+    [
+      67,
+      57,
+      76
+    ],
+    [
+      83,
+      41,
+      103
+    ],
+    [
+      93,
+      80,
+      98
+    ],
+    [
+      215,
+      174,
+      119
+    ],
+    [
+      239,
+      209,
+      162
+    ]
+  ],
+  "montagem_sala": {
+    "interior_tiles": [
+      5,
+      4
+    ],
+    "passo_px": 32,
+    "posicoes": [
+      [
+        "canto",
+        1,
+        1
+      ],
+      [
+        "horizontal_01",
+        2,
+        1
+      ],
+      [
+        "horizontal_01",
+        3,
+        1
+      ],
+      [
+        "horizontal_01",
+        4,
+        1
+      ],
+      [
+        "horizontal_01",
+        5,
+        1
+      ],
+      [
+        "horizontal_01",
+        6,
+        1
+      ],
+      [
+        "ponta",
+        7,
+        1
+      ],
+      [
+        "vertical_01",
+        1,
+        2
+      ],
+      [
+        "vertical_01",
+        1,
+        3
+      ],
+      [
+        "vertical_01",
+        1,
+        4
+      ],
+      [
+        "vertical_01",
+        1,
+        5
+      ],
+      [
+        "ponta",
+        1,
+        6
+      ]
+    ]
+  },
+  "validacao": {
+    "dimensoes_exatas": true,
+    "mascaras_identicas_referencias": true,
+    "alfa_binario": true,
+    "sem_redimensionar_sprites": true,
+    "mascara_montagem_identica_referencia": true
+  }
+}
