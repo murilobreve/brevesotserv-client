@@ -169,7 +169,7 @@ end
 function showXpBadge(xp)
     if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
         -- the row sits under the Rarity title: a short name leaves room for the badge
-        modules.game_brevespanel.setFeatureLabel('bonus', tr('Bonuses'), '#dfdfdf')
+        modules.game_brevespanel.setFeatureLabel('bonus', tr('Roulette'), '#dfdfdf')
         modules.game_brevespanel.setFeatureState('bonus', tr('%d XP', xp), '#e0c060')
     end
 end

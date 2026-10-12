@@ -586,6 +586,8 @@ end
 
 -- public functions
 function CharacterList.init()
+    -- auto reconnect is off on Mythos: it logged back in at odd moments
+    g_settings.set('autoReconnect', false)
     connect(g_game, {
         onLoginError = onGameLoginError
     })

@@ -88,6 +88,10 @@ def section():
     im = img(32, 32, (22, 14, 35, 235))
     frame(im, HAIR)
     save(im, 'panel')
+    # the same panel chosen in a list: halo border over a violet tint
+    im = img(32, 32, (44, 28, 74, 245))
+    frame(im, HALO)
+    save(im, 'panel_on')
 
 
 def well():

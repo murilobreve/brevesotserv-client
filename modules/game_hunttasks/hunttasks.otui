@@ -185,23 +185,17 @@ TrailRow < BrevesRow
 // task shop, drawn like the Store: offer rows on the left, the chosen
 // offer on the right (images from game_store)
 ShopPanelDark < UIWidget
-  image-source: /game_store/images/panel
+  image-source: /images/mythos/well
   image-border: 3
 
 ShopPanelLight < UIWidget
-  image-source: /game_store/images/panel_container
-  image-border: 3
+  image-source: /images/mythos/panel
+  image-border: 4
 
 ShopImageBox < UIWidget
-  border-width-top: 1
-  border-color-top: black
-  border-width-left: 1
-  border-color-left: black
-  border-width-bottom: 1
-  border-color-bottom: gray
-  border-width-right: 1
-  border-color-right: gray
-  background-color: #00000040
+  border-width: 1
+  border-color: #3e2d5e
+  background-color: #0f0a19
   phantom: true
 
   UIItem
@@ -241,9 +235,10 @@ ShopPrice < ShopPanelDark
 ShopOffer < ShopPanelLight
   height: 78
   focusable: true
-  border: 0 white
+  $hover !focus:
+    image-source: /images/mythos/button_hover
   $focus:
-    border: 2 white
+    image-source: /images/mythos/panel_on
 
   ShopImageBox
     id: image

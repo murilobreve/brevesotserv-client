@@ -127,17 +127,28 @@ BrevesPanel < PhantomMiniWindow
       $pressed:
         image-clip: 112 28 14 14
 
-  UIWidget
+  // scrolls when the side panel has no room for every row
+  UIScrollArea
     id: list
     anchors.top: header.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     margin: 4 8 4 8
-    phantom: true
+    vertical-scrollbar: listScroll
     layout:
       type: verticalBox
       spacing: 2
+
+  MythosScrollBar
+    id: listScroll
+    anchors.top: list.top
+    anchors.bottom: list.bottom
+    anchors.right: parent.right
+    margin-right: 3
+    step: 22
+    pixels-scroll: true
+    visible: false
 
 // ---------------------------------------------------------------- news window
 

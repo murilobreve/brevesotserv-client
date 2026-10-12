@@ -20,11 +20,11 @@ local FEATURES = {
       news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
     { id = 'trail', group = 'tasks', label = "Hunter's Trail", icon = 'trail',
       news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
-    { id = 'taskshop', group = 'tasks', label = 'Task Shop', icon = 'taskshop',
+    { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
-    { id = 'bonus', group = 'rarity', label = 'Rarity Bonuses', icon = 'bonus',
+    { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
       news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
     { id = 'healbot', group = 'tools', label = 'Heal Bot', icon = 'healbot',
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
@@ -170,6 +170,24 @@ local function rowVisible(id)
     return not (feature and folded[feature.group])
 end
 
+local function availableHeight()
+    -- the main right panel (map, inventory, options, this one) hangs from
+    -- the top of the game screen; the containers take what is left below
+    local game = modules.game_interface
+    local mainRight = game and game.getMainRightPanel and game.getMainRightPanel()
+    local screen = mainRight and mainRight:getParent()
+    if not screen or panel:getParent() ~= mainRight or screen:getHeight() <= 0 then
+        return nil
+    end
+    local others = 0
+    for _, child in ipairs(mainRight:getChildren()) do
+        if child ~= panel and child:isVisible() then
+            others = others + child:getHeight()
+        end
+    end
+    return screen:getHeight() - (mainRight:getY() - screen:getY()) - others - 4
+end
+
 local function resize()
     if not panel then
         return
@@ -199,6 +217,15 @@ local function resize()
         local lines = shown + groups
         height = HEADER + shown * ROW_HEIGHT + groups * GROUP_HEIGHT + (lines - 1) * ROW_SPACING + 4
     end
+    -- the side panel is as tall as the game window: when the rows do not
+    -- fit under the other panels, the list scrolls instead of being cut
+    local room = availableHeight()
+    local scroll = room ~= nil and height > room and room >= HEADER + 2 * ROW_HEIGHT and view ~= 'closed'
+    if scroll then
+        height = room
+    end
+    panel.listScroll:setVisible(scroll)
+    panel.list:setMarginRight(scroll and 16 or 8)
     panel.panelHeight = height
     panel:setHeight(height)
     panel:setVisible(rows > 0)
@@ -445,8 +472,20 @@ function showNews()
     newsWindow:focus()
 end
 
+local function onRightPanelResize(widget, oldRect, newRect)
+    if oldRect.height ~= newRect.height then
+        resize()
+    end
+end
+
 local function onGameStart()
     placeInRightPanel()
+    local mainRight = modules.game_interface.getMainRightPanel()
+    local right = mainRight and mainRight:getParent()
+    if right then
+        disconnect(right, { onGeometryChange = onRightPanelResize })
+        connect(right, { onGeometryChange = onRightPanelResize })
+    end
     resize()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
