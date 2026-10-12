@@ -278,6 +278,7 @@ WIKI_PAGES.pools = {
             { 'Crit Chance', '1% a 10%', '' }, { 'Crit Damage', '1% a 25%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Perfect Shot', '5 a 40', 'a 3, 4 ou 5 sqm' },
             { 'Spell Damage', '2% a 12%', '' }, { 'Bônus de magia', '5% a 35%', 'até dois; paladin' },
+            { 'Life Leech', '1% a 12%', '' }, { 'Mana Leech', '2% a 20%', '' },
         }),
         { 'h', 'Wands e rods' },
         poolTable({
@@ -305,6 +306,7 @@ WIKI_PAGES.pools = {
             { 'Skill da vocação', '1% a 10%', 'ML, melee, distance ou fist' },
             { 'Dodge', '1% a 4%', '' }, { 'Reflect', '1% a 8%', '' }, { 'Cooldown', '2% a 14%', '' },
             { 'Speed', '1 a 40', 'só calças' },
+            { 'Life Leech', '1% a 6%', 'só capacete e armadura' }, { 'Mana Leech', '1% a 10%', 'só capacete e armadura' },
         }),
         { 'h', 'Botas' },
         poolTable({
@@ -316,7 +318,7 @@ WIKI_PAGES.pools = {
         poolTable({
             { 'Max Health', '1% a 8%', '' }, { 'Max Mana', '2% a 12%', '' }, { 'Resistência', '1% a 12%', '' },
             { 'Experience', '1% a 8%', '' }, { 'Loot', '1% a 10%', '' }, { 'Rarity Find', '1% a 10%', '' },
-            { 'Health Regen', '1 a 5', '' }, { 'Mana Regen', '1 a 5', '' },
+            { 'Health Regen', '20 a 100', 'por tick' }, { 'Mana Regen', '20 a 100', 'por tick' },
         }),
         { 'links', { 'affixes', 'stacking' } },
     },
@@ -384,8 +386,8 @@ WIKI_PAGES.affixes = {
             { 'Experience', 'XP a mais por monstro.', '15%' },
             { 'Loot', 'Multiplica a chance de cada item do loot do monstro.', '20%' },
             { 'Rarity Find', 'Multiplica a chance de um item virar raro.', '20%' },
-            { 'Health Regen', 'Vida a mais em cada tick de regeneração.', '10' },
-            { 'Mana Regen', 'Mana a mais em cada tick de regeneração.', '10' },
+            { 'Health Regen', 'Vida a mais em cada tick de regeneração.', '200' },
+            { 'Mana Regen', 'Mana a mais em cada tick de regeneração.', '200' },
         }),
         { 'h', 'Resistências e a cor da gema' },
         { 'table', widths = { 120, 120 }, head = { 'Elemento', 'Nome no item' },
