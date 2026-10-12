@@ -170,7 +170,12 @@ def sheet_bytes(chunk, size=64):
 def sheet_bytes_from(sheet):
     # BMP (32 bit BGRA, bottom-up) wrapped in CIP's LZMA container
     w, h = sheet.size
-    pixels = np.array(sheet)[::-1, :, [2, 1, 0, 3]].tobytes()
+    arr = np.array(sheet.convert('RGBA'))
+    # empty space is magenta; also make it fully transparent, since the game
+    # client keys out magenta but map editors only look at the alpha channel
+    key = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 255)
+    arr[key, 3] = 0
+    pixels = arr[::-1, :, [2, 1, 0, 3]].tobytes()
     bmp = b'BM' + struct.pack('<IHHI', 54 + len(pixels), 0, 0, 54)
     bmp += struct.pack('<IiiHHIIiiII', 40, w, h, 1, 32, 0, len(pixels), 2835, 2835, 0, 0)
     bmp += pixels
