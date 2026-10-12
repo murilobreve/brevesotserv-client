@@ -12,11 +12,11 @@
 --   links           buttons to other pages
 
 WIKI_GRADES = {
-    { key = 'uncommon', name = 'Communis', color = '#3ddc2e', frame = 1, item = 3264, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%' },
-    { key = 'rare', name = 'Rarus', color = '#3d9bff', frame = 2, item = 3369, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%' },
-    { key = 'epic', name = 'Praeclarus', color = '#b45cff', frame = 3, item = 3079, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%' },
-    { key = 'legendary', name = 'Legendarius', color = '#ff9a1f', frame = 4, item = 3409, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '20% a 85%' },
-    { key = 'mythic', name = 'Mythicus', color = '#66f0ff', frame = 5, item = 3366, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '30% a 100%' },
+    { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3264, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%' },
+    { key = 'rare', name = 'Rarus', color = '#4f8fe8', frame = 2, item = 3369, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%' },
+    { key = 'epic', name = 'Praeclarus', color = '#a679e6', frame = 3, item = 3079, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%' },
+    { key = 'legendary', name = 'Legendarius', color = '#e2a443', frame = 4, item = 3409, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '20% a 85%' },
+    { key = 'mythic', name = 'Mythicus', color = '#e8e4ff', frame = 5, item = 3366, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '30% a 100%' },
 }
 
 -- stack: forge stack the tier gives the monster. The engine turns it into
@@ -214,18 +214,18 @@ WIKI_PAGES.items = {
         { 'p', 'Por isso um item com menos bônus pode passar do máximo da tabela de cada tipo de item, até 1,5 vez a faixa. Attack, que vai de 1 a 20, chega a:' },
         { 'table', widths = { 110, 70, 70, 70, 70, 70 }, head = { 'Grau', '1 bônus', '2 bônus', '3 bônus', '4 bônus', '5 bônus' },
           rows = {
-              { { 'Rarus', '#3d9bff' }, '15', '11', '', '', '' },
-              { { 'Praeclarus', '#b45cff' }, '21', '21', '14', '', '' },
-              { { 'Legendarius', '#ff9a1f' }, '25', '25', '23', '17', '' },
-              { { 'Mythicus', '#66f0ff' }, '30', '30', '30', '25', '20' },
+              { { 'Rarus', '#4f8fe8' }, '15', '11', '', '', '' },
+              { { 'Praeclarus', '#a679e6' }, '21', '21', '14', '', '' },
+              { { 'Legendarius', '#e2a443' }, '25', '25', '23', '17', '' },
+              { { 'Mythicus', '#e8e4ff' }, '30', '30', '30', '25', '20' },
           } },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Quantos bônus', '1', '2', '3', '4', '5' },
           rows = {
-              { { 'Communis', '#3ddc2e' }, '100%', '', '', '', '' },
-              { { 'Rarus', '#3d9bff' }, '45%', '55%', '', '', '' },
-              { { 'Praeclarus', '#b45cff' }, '25%', '35%', '40%', '', '' },
-              { { 'Legendarius', '#ff9a1f' }, '15%', '25%', '30%', '30%', '' },
-              { { 'Mythicus', '#66f0ff' }, '10%', '20%', '25%', '25%', '20%' },
+              { { 'Communis', '#63c08a' }, '100%', '', '', '', '' },
+              { { 'Rarus', '#4f8fe8' }, '45%', '55%', '', '', '' },
+              { { 'Praeclarus', '#a679e6' }, '25%', '35%', '40%', '', '' },
+              { { 'Legendarius', '#e2a443' }, '15%', '25%', '30%', '30%', '' },
+              { { 'Mythicus', '#e8e4ff' }, '10%', '20%', '25%', '25%', '20%' },
           } },
         { 'p', 'Nenhum grau passa do teto que só o grau acima alcança, e nenhum bônus fica abaixo da metade do começo da faixa do grau (num Mythicus, nunca abaixo de 15% da faixa do bônus). Refazer o item na janela Rarity Bonuses sorteia tudo de novo, inclusive quantos bônus ele tem.' },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Origem', 'Communis', 'Rarus', 'Praeclarus', 'Legendarius', 'Mythicus' },

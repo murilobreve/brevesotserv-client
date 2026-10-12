@@ -9,11 +9,11 @@ local FRAME_SIZE = 34
 -- one entry per rarity grade the server writes into rar_rarity
 local RARITIES = {
     none      = { label = 'Common',    color = '#c8c8c8', badge = '#e6e6e6', frame = 0 },
-    uncommon  = { label = 'Communis',  color = '#3ddc2e', badge = '#a6ff9a', frame = 1 },
-    rare      = { label = 'Rarus',     color = '#3d9bff', badge = '#b0d6ff', frame = 2 },
-    epic      = { label = 'Praeclarus',color = '#b45cff', badge = '#e2c2ff', frame = 3 },
-    legendary = { label = 'Legendarius',color = '#ff9a1f', badge = '#ffd49a', frame = 4 },
-    mythic    = { label = 'Mythicus',  color = '#66f0ff', badge = '#dffbff', frame = 5 },
+    uncommon  = { label = 'Communis',  color = '#63c08a', badge = '#c4ead3', frame = 1 },
+    rare      = { label = 'Rarus',     color = '#4f8fe8', badge = '#c3d6f6', frame = 2 },
+    epic      = { label = 'Praeclarus',color = '#a679e6', badge = '#ded0f7', frame = 3 },
+    legendary = { label = 'Legendarius',color = '#e2a443', badge = '#f3dcae', frame = 4 },
+    mythic    = { label = 'Mythicus',  color = '#e8e4ff', badge = '#f6f4ff', frame = 5 },
 }
 
 local ELEMENT_COLORS = {

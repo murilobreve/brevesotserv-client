@@ -397,7 +397,7 @@ function displayMessage(mode, text)
             local targetTab = modules.game_console.getTab(lootTabName) and lootTabName or tr("Server Log")
             modules.game_console.addText(lootColoredText, msgtype, targetTab)
         elseif hasColorMarks(text) then
-            -- "{+17 Attack, #ff9a1f}": a rarity bonus near its top (Look)
+            -- "{+17 Attack, #e2a443}": a rarity bonus near its top (Look)
             modules.game_console.addText(text, coloredCopy(msgtype), tr(msgtype.consoleTab))
         else
             modules.game_console.addText(text, msgtype, tr(msgtype.consoleTab))

@@ -8,11 +8,11 @@ local OPCODE = 125
 local FRAME_SIZE = 34
 
 local GRADES = {
-    { key = 'uncommon',  label = 'Communis',    color = '#3ddc2e', frame = 1 },
-    { key = 'rare',      label = 'Rarus',       color = '#3d9bff', frame = 2 },
-    { key = 'epic',      label = 'Praeclarus',  color = '#b45cff', frame = 3 },
-    { key = 'legendary', label = 'Legendarius', color = '#ff9a1f', frame = 4 },
-    { key = 'mythic',    label = 'Mythicus',    color = '#66f0ff', frame = 5 },
+    { key = 'uncommon',  label = 'Communis',    color = '#63c08a', frame = 1 },
+    { key = 'rare',      label = 'Rarus',       color = '#4f8fe8', frame = 2 },
+    { key = 'epic',      label = 'Praeclarus',  color = '#a679e6', frame = 3 },
+    { key = 'legendary', label = 'Legendarius', color = '#e2a443', frame = 4 },
+    { key = 'mythic',    label = 'Mythicus',    color = '#e8e4ff', frame = 5 },
 }
 local GRADE_BY_KEY = {}
 for index, grade in ipairs(GRADES) do

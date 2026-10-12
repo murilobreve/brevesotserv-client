@@ -91,11 +91,11 @@ end
 -- tooltip as a "#rarity:<grade>" first line, optionally followed by an
 -- "#elements:<Tag>[,<Tag>]" line with the item's element tags (Latin names).
 ItemsDatabase.itemRarity = {
-    uncommon  = { frame = 0, label = "Communis",    color = "#3ddc2e" },
-    rare      = { frame = 1, label = "Rarus",       color = "#3d9bff" },
-    epic      = { frame = 2, label = "Praeclarus",  color = "#b45cff" },
-    legendary = { frame = 3, label = "Legendarius", color = "#ff9a1f" },
-    mythic    = { frame = 4, label = "Mythicus",    color = "#66f0ff" },
+    uncommon  = { frame = 0, label = "Communis",    color = "#63c08a" },
+    rare      = { frame = 1, label = "Rarus",       color = "#4f8fe8" },
+    epic      = { frame = 2, label = "Praeclarus",  color = "#a679e6" },
+    legendary = { frame = 3, label = "Legendarius", color = "#e2a443" },
+    mythic    = { frame = 4, label = "Mythicus",    color = "#e8e4ff" },
 }
 
 -- frame gem colour per element tag

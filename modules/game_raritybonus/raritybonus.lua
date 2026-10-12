@@ -8,11 +8,11 @@ local FRAME_SIZE = 34
 local LINE = 14
 
 local GRADES = {
-    uncommon  = { label = 'Communis',    color = '#3ddc2e', frame = 1 },
-    rare      = { label = 'Rarus',       color = '#3d9bff', frame = 2 },
-    epic      = { label = 'Praeclarus',  color = '#b45cff', frame = 3 },
-    legendary = { label = 'Legendarius', color = '#ff9a1f', frame = 4 },
-    mythic    = { label = 'Mythicus',    color = '#66f0ff', frame = 5 },
+    uncommon  = { label = 'Communis',    color = '#63c08a', frame = 1 },
+    rare      = { label = 'Rarus',       color = '#4f8fe8', frame = 2 },
+    epic      = { label = 'Praeclarus',  color = '#a679e6', frame = 3 },
+    legendary = { label = 'Legendarius', color = '#e2a443', frame = 4 },
+    mythic    = { label = 'Mythicus',    color = '#e8e4ff', frame = 5 },
 }
 
 local window
@@ -149,7 +149,7 @@ local function fillTotals(totals, items)
             total = total .. ' / ' .. number(entry.cap) .. (entry.unit or '')
         end
         row.total:setText(total)
-        row.total:setColor(entry.capped and '#ff9a1f' or '#7fd35a')
+        row.total:setColor(entry.capped and '#e2a443' or '#7fd35a')
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
         end
@@ -275,16 +275,16 @@ local REEL_TOP = 2 -- the strip's margin when its first line is at the top
 local FRAME_MS = 6
 
 local QUALITY_COLORS = {
-    { 0.9, '#ff9a1f' }, -- near the top
-    { 0.7, '#c060ff' },
-    { 0.45, '#3d9bff' },
-    { 0.2, '#3ddc2e' },
+    { 0.9, '#e2a443' }, -- near the top
+    { 0.7, '#a679e6' },
+    { 0.45, '#4f8fe8' },
+    { 0.2, '#63c08a' },
     { 0, '#b8b8b8' },
 }
 
 local function qualityColor(quality, perfect)
     if perfect then
-        return '#ffe24a'
+        return '#ffe7a6'
     end
     for _, entry in ipairs(QUALITY_COLORS) do
         if (quality or 0) >= entry[1] then
@@ -367,7 +367,7 @@ local function finishSpin()
         summary = tr('%d bonuses.', #rolled)
     end
     roulette.status:setText(summary)
-    roulette.status:setColor(result.perfect and '#ffe24a' or qualityColor(best))
+    roulette.status:setColor(result.perfect and '#ffe7a6' or qualityColor(best))
     roulette.closeButton:setText(tr('Close'))
     if spin.onDone then
         local done = spin.onDone
