@@ -45,12 +45,23 @@ BrevesFeatureButton < UIButton
       border-color: #e6e0f2
 
 // the title of a group of rows (Hunting, Rarity, Tools)
-BrevesGroupLabel < Label
+// a click folds or opens the group
+BrevesGroupLabel < UIButton
   height: 14
   font: verdana-11px-rounded
   color: #9789b3
-  text-offset: 2 0
-  phantom: true
+  text-align: left
+  text-offset: 12 0
+  icon-source: /images/mythos/fold_open
+  icon-size: 8 8
+  icon-align: left
+  icon-offset: 1 0
+  change-cursor-image: true
+  cursor: pointer
+  $hover:
+    color: #e6e0f2
+  $on:
+    icon-source: /images/mythos/fold_closed
 
 // the small buttons on the panel's title line, drawn like a mini window's
 BrevesPanelButton < UIButton

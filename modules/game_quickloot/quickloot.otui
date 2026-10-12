@@ -3,6 +3,9 @@ SelectBagButton < UIWidget
   image-source: /game_quickloot/images/choose
   image-clip: 0 0 20 20
   size: 20 20
+  image-color: #c4b2ec
+  $hover:
+    image-color: #ffffff
   $pressed:
     image-source: /game_quickloot/images/choose
     image-clip: 0 0 20 20
@@ -10,6 +13,9 @@ RemoveBagButton < UIWidget
   image-clip: 0 0 20 20
   size: 20 20
   image-source: /game_quickloot/images/remove
+  image-color: #c4b2ec
+  $hover:
+    image-color: #ffffff
   $pressed:
     image-clip: 0 20 20 20
 QuicLootIgnoreItem < UIWidget
@@ -98,6 +104,7 @@ QuicklootBagLabel < UIWidget
     anchors.right: removeBag.left
     margin-right: 5
     opacity: 1.0
+    image-color: #9a86c8
     &click: 2
     &Select:4
     &borrar:5
@@ -132,6 +139,7 @@ QuicklootBagLabel < UIWidget
     &Select:0
     &borrar:1
     opacity: 1.0
+    image-color: #9a86c8
     @onClick: modules.game_quickloot.QuickLoot.openContainer(self)
     $pressed:
       opacity: 0.5
@@ -159,6 +167,7 @@ MythosWindow
   Label
 
     !text: tr('Loot')
+    font: verdana-11px-antialised
     color: #cbc0e0
     anchors.top: fallbackPanel.bottom
     anchors.left: parent.left
@@ -167,6 +176,7 @@ MythosWindow
   Label
 
     !text: tr('Obtain')
+    font: verdana-11px-antialised
     color: #cbc0e0
     margin-right: 15
     anchors.top: fallbackPanel.bottom

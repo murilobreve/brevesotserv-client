@@ -106,7 +106,7 @@ function QuickLoot.Define()
         local accepted = quickLootController.ui.filters.accepted
         local skipped = quickLootController.ui.filters.skipped
         local add_text = tr("Search an item")
-        local clear_text = string.format("Clear %s Loot List", widget:getId():gsub("^%l", string.upper))
+        local clear_text = widget:getId() == 'accepted' and tr('Clear Accepted Loot List') or tr('Clear Skipped Loot List')
 
         if widget == skipped and isChecked then
             quickLootController.ui.filters.accepted:setChecked(false)
@@ -270,31 +270,31 @@ function QuickLoot.Define()
         quickLootController.ui.fallbackPanel.checkbox:setChecked(fallback)
         -- LuaFormatter off
 		local slotBags = {
-			{ color = "#484848", name = "Unassigned", type = 31 },
-			{ color = "#414141", name = "Gold", type = 30 },
-			{ color = "#484848", name = "Armors", type = 1 },
-			{ color = "#414141", name = "Amulets", type = 2  },
-			{ color = "#484848", name = "Boots", type = 3 },
-			{ color = "#414141", name = "Containers", type = 4 },
-			{ color = "#484848", name = "Creature\nProducts", type = 24 },
-			{ color = "#414141", name = "Decoration", type = 5 },
-			{ color = "#484848", name = "Food", type = 6 },
-			{ color = "#414141", name = "Helmets\nand Hats", type =7 },
-			{ color = "#484848", name = "Legs", type = 8 },
-			{ color = "#414141", name = "Others", type = 9 },
+			{ color = "#00000000", name = "Unassigned", type = 31 },
+			{ color = "#ffffff07", name = "Gold", type = 30 },
+			{ color = "#00000000", name = "Armors", type = 1 },
+			{ color = "#ffffff07", name = "Amulets", type = 2  },
+			{ color = "#00000000", name = "Boots", type = 3 },
+			{ color = "#ffffff07", name = "Containers", type = 4 },
+			{ color = "#00000000", name = "Creature\nProducts", type = 24 },
+			{ color = "#ffffff07", name = "Decoration", type = 5 },
+			{ color = "#00000000", name = "Food", type = 6 },
+			{ color = "#ffffff07", name = "Helmets\nand Hats", type =7 },
+			{ color = "#00000000", name = "Legs", type = 8 },
+			{ color = "#ffffff07", name = "Others", type = 9 },
 
-			{ color = "#414141", name = "Potions", type = 10 },
-			{ color = "#484848", name = "Rings", type = 11 },
-			{ color = "#414141", name = "Runes", type = 12 },
-			{ color = "#484848", name = "Shields", type = 13 },
-			{ color = "#414141", name = "Tools", type = 14 },
-			{ color = "#484848", name = "Valuables", type = 15 },
-			{ color = "#414141", name = "Weapons:\nAmmo", type = 16 },
-			{ color = "#484848", name = "Weapons:\nAxes", type = 17 },
-			{ color = "#414141", name = "Weapons:\nClubs", type = 18 },
-			{ color = "#484848", name = "Weapons:\nDistance", type = 19 },
-			{ color = "#414141", name = "Weapons:\nSwords", type = 20 },
-			{ color = "#484848", name = "Weapons:\nWands", type = 21 },
+			{ color = "#00000000", name = "Potions", type = 10 },
+			{ color = "#ffffff07", name = "Rings", type = 11 },
+			{ color = "#00000000", name = "Runes", type = 12 },
+			{ color = "#ffffff07", name = "Shields", type = 13 },
+			{ color = "#00000000", name = "Tools", type = 14 },
+			{ color = "#ffffff07", name = "Valuables", type = 15 },
+			{ color = "#00000000", name = "Weapons:\nAmmo", type = 16 },
+			{ color = "#ffffff07", name = "Weapons:\nAxes", type = 17 },
+			{ color = "#00000000", name = "Weapons:\nClubs", type = 18 },
+			{ color = "#ffffff07", name = "Weapons:\nDistance", type = 19 },
+			{ color = "#00000000", name = "Weapons:\nSwords", type = 20 },
+			{ color = "#ffffff07", name = "Weapons:\nWands", type = 21 },
 			--{ color = "#414141", name = "Quivers" , type = 25 },
 
 		}
@@ -306,7 +306,7 @@ function QuickLoot.Define()
 
             widget:setId(id)
             widget:setBackgroundColor(slot.color)
-            widget.label:setText(slot.name)
+            widget.label:setText(tr(slot.name))
 
             for _, container in pairs(lootContainers) do
                 if container[1] == id then

@@ -313,6 +313,16 @@ MythosWindow
     !text: tr('Loja')
     @onClick: modules.game_hunttasks.selectTab('shop')
 
+  // the section name when the window opens from a panel row
+  Label
+    id: sectionIntro
+    anchors.left: parent.left
+    anchors.verticalCenter: tasksTab.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #e6e0f2
+    visible: false
+
   Label
     id: points
     anchors.right: parent.right

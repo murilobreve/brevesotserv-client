@@ -6,18 +6,22 @@
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
 
-local NEWS_VERSION = 5
+local NEWS_VERSION = 6
 
 -- rows are shown in this order, whatever order the modules load in
 local FEATURES = {
-    { id = 'tasks', group = 'hunt', label = 'Hunt Tasks', icon = 'tasks',
-      news = "A daily task and the Hunter's Trail, with 70 steps. The points buy items in the task shop, such as the Bag of Mythical." },
     { id = 'rates', group = 'hunt', label = 'Hunt Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
     { id = 'loot', group = 'hunt', label = 'Auto Loot', icon = 'loot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
+    { id = 'tasks', group = 'tasks', label = 'Daily Task', icon = 'tasks',
+      news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
+    { id = 'trail', group = 'tasks', label = "Hunter's Trail", icon = 'trail',
+      news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
+    { id = 'taskshop', group = 'tasks', label = 'Task Shop', icon = 'taskshop',
+      news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Rarity Bonuses', icon = 'bonus',
@@ -33,6 +37,7 @@ local FEATURES = {
 -- the rows are grouped under these titles (hidden in the icon grid)
 local GROUPS = {
     { id = 'hunt', label = 'Hunting' },
+    { id = 'tasks', label = 'Tasks' },
     { id = 'rarity', label = 'Rarity' },
     { id = 'tools', label = 'Tools' },
 }
@@ -45,10 +50,20 @@ local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
 local groupLabels = {} -- group id -> title widget
 
--- the title line's two buttons: collapsed hides the rows (vertical),
--- compact shows them as a grid of icons without names (horizontal)
-local collapsed = false
+-- the title line's two buttons. The first one cycles the view: every row
+-- (full), only the rows with something to show such as the task kills or
+-- the Rarity XP (info), or just the title line (closed). The second one
+-- shows the full view as a grid of icons without names. A click on a group
+-- title folds that group.
+local VIEWS = { 'full', 'info', 'closed' }
+local view = 'full'
 local compact = false
+local folded = {} -- group id -> true
+
+-- the icon grid only exists in the full view
+local function iconGrid()
+    return compact and view == 'full'
+end
 
 local ROW_HEIGHT, ROW_SPACING = 20, 2
 local CELL, CELL_SPACING = 22, 2
@@ -90,9 +105,10 @@ local function updateGroups()
                 break
             end
         end
-        local visible = used and not compact
+        local visible = used and view == 'full' and not compact
         if label then
             label:setVisible(visible)
+            label:setOn(folded[group.id] == true)
         end
         if visible then
             count = count + 1
@@ -113,13 +129,13 @@ local function refreshBadge(id)
     local badge = button.badge
     local state = states[id]
     local feature = featureOf(id)
-    button:setTooltip((labels[id] and (tr(feature.label) .. ': ' .. labels[id]) or tr(feature.label)) .. ((compact and state) and (' (' .. state.text .. ')') or ''))
+    button:setTooltip((labels[id] and (tr(feature.label) .. ': ' .. labels[id]) or tr(feature.label)) .. ((iconGrid() and state) and (' (' .. state.text .. ')') or ''))
     -- no room for the badge next to an icon: the state colours the icon's frame
-    button:setBorderWidth((compact and state) and 1 or 0)
+    button:setBorderWidth((iconGrid() and state) and 1 or 0)
     if state then
         button:setBorderColor(state.color)
     end
-    if state and compact then
+    if state and iconGrid() then
         badge:hide()
     elseif state then
         badge:setText(state.text)
@@ -142,19 +158,36 @@ local function refreshBadge(id)
     end
 end
 
+-- the info view keeps the rows that carry a value (kills, XP, ON / OFF)
+local function rowVisible(id)
+    if view == 'info' then
+        return labels[id] ~= nil or states[id] ~= nil
+    end
+    if iconGrid() then
+        return true
+    end
+    local feature = featureOf(id)
+    return not (feature and folded[feature.group])
+end
+
 local function resize()
     if not panel then
         return
     end
-    local rows = 0
-    for _ in pairs(buttons) do
+    local rows, shown = 0, 0
+    for id, button in pairs(buttons) do
         rows = rows + 1
+        local visible = rowVisible(id)
+        button:setVisible(visible)
+        if visible then
+            shown = shown + 1
+        end
     end
     local groups = updateGroups()
     local height = 0
-    if rows > 0 and collapsed then
+    if rows > 0 and (view == 'closed' or shown + groups == 0) then
         height = HEADER
-    elseif rows > 0 and compact then
+    elseif rows > 0 and iconGrid() then
         local width = panel.list:getWidth()
         local columns = math.max(1, math.floor((width + CELL_SPACING) / (CELL + CELL_SPACING)))
         if width <= 0 then
@@ -163,8 +196,8 @@ local function resize()
         local lines = math.ceil(rows / columns)
         height = HEADER + lines * CELL + (lines - 1) * CELL_SPACING + 4
     elseif rows > 0 then
-        local lines = rows + groups
-        height = HEADER + rows * ROW_HEIGHT + groups * GROUP_HEIGHT + (lines - 1) * ROW_SPACING + 4
+        local lines = shown + groups
+        height = HEADER + shown * ROW_HEIGHT + groups * GROUP_HEIGHT + (lines - 1) * ROW_SPACING + 4
     end
     panel.panelHeight = height
     panel:setHeight(height)
@@ -180,9 +213,9 @@ local function styleButton(id)
     if not button or not feature then
         return
     end
-    button:setText(compact and '' or (labels[id] or tr(feature.label)))
-    button:setSize({ width = compact and CELL or button:getWidth(), height = compact and CELL or ROW_HEIGHT })
-    button.icon:setMarginLeft(compact and 3 or 5)
+    button:setText(iconGrid() and '' or (labels[id] or tr(feature.label)))
+    button:setSize({ width = iconGrid() and CELL or button:getWidth(), height = iconGrid() and CELL or ROW_HEIGHT })
+    button.icon:setMarginLeft(iconGrid() and 3 or 5)
     refreshBadge(id)
 end
 
@@ -192,7 +225,7 @@ local function applyLayout()
         return
     end
     local list = panel.list
-    if compact then
+    if iconGrid() then
         local layout = UIGridLayout.create(list)
         layout:setCellSize({ width = CELL, height = CELL })
         layout:setCellSpacing(CELL_SPACING)
@@ -206,20 +239,36 @@ local function applyLayout()
     for id in pairs(buttons) do
         styleButton(id)
     end
-    list:setVisible(not collapsed)
+    list:setVisible(view ~= 'closed')
 
     local header = panel.header
-    header.collapseButton:setOn(collapsed)
-    header.collapseButton:setTooltip(collapsed and tr('Show') or tr('Hide'))
+    header.collapseButton:setOn(view ~= 'full')
+    local nextTip = { full = tr('Only the info'), info = tr('Hide'), closed = tr('Show everything') }
+    header.collapseButton:setTooltip(nextTip[view])
     header.compactButton:setTooltip(compact and tr('Show the names') or tr('Only the icons'))
-    -- with the rows hidden there is nothing to switch between names and icons
-    header.compactButton:setVisible(not collapsed)
+    -- names or icons only means something in the full view
+    header.compactButton:setVisible(view == 'full')
     resize()
 end
 
 function toggleCollapsed()
-    collapsed = not collapsed
-    g_settings.set('breves_panel_collapsed', collapsed)
+    for index, name in ipairs(VIEWS) do
+        if name == view then
+            view = VIEWS[index % #VIEWS + 1]
+            break
+        end
+    end
+    g_settings.set('breves_panel_view', view)
+    applyLayout()
+end
+
+function toggleGroup(groupId)
+    folded[groupId] = not folded[groupId] or nil
+    local names = {}
+    for id in pairs(folded) do
+        table.insert(names, id)
+    end
+    g_settings.set('breves_panel_folded', table.concat(names, ','))
     applyLayout()
 end
 
@@ -296,6 +345,9 @@ end
 function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
     refreshBadge(id)
+    if view == 'info' then
+        resize()
+    end
 end
 
 -- replaces the name shown on a row (nil puts the feature name back), e.g.
@@ -306,6 +358,9 @@ function setFeatureLabel(id, text, color)
     if button then
         button:setColor(text and color or '#dfdfdf')
         styleButton(id)
+    end
+    if view == 'info' then
+        resize()
     end
 end
 
@@ -417,13 +472,25 @@ function init()
         label:setId('group_' .. group.id)
         label:setText(tr(group.label))
         label:hide()
+        label.onClick = function()
+            toggleGroup(group.id)
+            return true
+        end
         groupLabels[group.id] = label
     end
-    collapsed = g_settings.getBoolean('breves_panel_collapsed')
+    view = g_settings.getString('breves_panel_view')
+    if view ~= 'info' and view ~= 'closed' then
+        -- older clients saved only collapsed or not
+        view = g_settings.getBoolean('breves_panel_collapsed') and 'closed' or 'full'
+    end
     compact = g_settings.getBoolean('breves_panel_compact')
+    folded = {}
+    for id in (g_settings.getString('breves_panel_folded') or ''):gmatch('[^,]+') do
+        folded[id] = true
+    end
     -- the icon grid's line count follows the panel's width
     panel.list.onGeometryChange = function(widget, oldRect, newRect)
-        if compact and oldRect.width ~= newRect.width then
+        if iconGrid() and oldRect.width ~= newRect.width then
             resize()
         end
     end

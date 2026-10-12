@@ -7,6 +7,13 @@ local TASK_OPCODE = 122
 
 local window
 local toolbarButton
+local sectionButtons = {} -- tasks / trail / shop rows in the Mythos panel
+local SECTION_ROWS = { tasks = 'tasks', trail = 'trail', shop = 'taskshop' }
+local SECTIONS = {
+    tasks = { title = 'Task diária', intro = 'A task do dia e a etapa atual da trilha' },
+    trail = { title = 'Trilha do Caçador', intro = 'As 70 etapas, da mais fraca à mais forte' },
+    shop = { title = 'Loja de Tasks', intro = 'O que os Hunt Points compram' },
+}
 local tickEvent
 local messageEvent
 
@@ -522,22 +529,28 @@ local function updateBadge()
     if not panel or not panel.setFeatureLabel then
         return
     end
-    if not state then
-        panel.setFeatureLabel('tasks', nil)
-        return
-    end
-    local daily = state.daily
+    local split = next(sectionButtons) ~= nil
+    local daily = state and state.daily
+    local dailyText
     if daily and daily.monster and not daily.done and (daily.need or 0) > 0 then
-        panel.setFeatureLabel('tasks', string.format('%s %d/%d', shortName(daily.monster), daily.kills or 0, daily.need), '#e0c060')
+        dailyText = string.format('%s %d/%d', shortName(daily.monster), daily.kills or 0, daily.need)
+    end
+    local trail = state and state.trail
+    local step = trail and not trail.finished and trail.steps and trail.steps[trail.index]
+    local trailText = step and string.format('%s %d/%d', shortName(step.name), trail.kills or 0, step.need or 0)
+    if not split then
+        -- one row for everything: the daily task, else the trail step
+        if dailyText then
+            panel.setFeatureLabel('tasks', dailyText, '#e0c060')
+        else
+            panel.setFeatureLabel('tasks', trailText, '#7fb2ff')
+        end
         return
     end
-    local trail = state.trail
-    local step = trail and not trail.finished and trail.steps and trail.steps[trail.index]
-    if step then
-        panel.setFeatureLabel('tasks', string.format('%s %d/%d', shortName(step.name), trail.kills or 0, step.need or 0), '#7fb2ff')
-    else
-        panel.setFeatureLabel('tasks', nil)
-    end
+    panel.setFeatureLabel('tasks', dailyText, '#e0c060')
+    panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#7fd35a')
+    panel.setFeatureLabel('trail', trailText, '#b7a2ff')
+    panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#e2a443')
 end
 
 -- ---------------------------------------------------------------- server messages
@@ -603,6 +616,13 @@ end
 
 -- ---------------------------------------------------------------- public (otui)
 
+local function updateSectionButtons()
+    local visible = window and window:isVisible()
+    for tab, button in pairs(sectionButtons) do
+        button:setOn(visible and currentTab == tab)
+    end
+end
+
 function selectTab(tab)
     currentTab = tab
     window.tasksTab:setChecked(tab == 'tasks')
@@ -611,6 +631,17 @@ function selectTab(tab)
     window.tasksPanel:setVisible(tab == 'tasks')
     window.trailPanel:setVisible(tab == 'trail')
     window.shopPanel:setVisible(tab == 'shop')
+    -- opened from one of the three panel rows: no tabs, the row says where
+    local split = next(sectionButtons) ~= nil
+    window.tasksTab:setVisible(not split)
+    window.trailTab:setVisible(not split)
+    window.shopTab:setVisible(not split)
+    window.sectionIntro:setVisible(split)
+    if split then
+        window:setText(tr(SECTIONS[tab].title))
+        window.sectionIntro:setText(tr(SECTIONS[tab].intro))
+    end
+    updateSectionButtons()
     if state then
         if tab == 'shop' then
             renderShop()
@@ -630,6 +661,7 @@ function show()
     if toolbarButton then
         toolbarButton:setOn(true)
     end
+    updateSectionButtons()
     startTick()
 end
 
@@ -641,6 +673,7 @@ function hide()
     if toolbarButton then
         toolbarButton:setOn(false)
     end
+    updateSectionButtons()
 end
 
 function toggle()
@@ -656,11 +689,36 @@ function toggle()
     send({ action = 'open' })
 end
 
+-- open the window on one section, or close it when that section is showing
+function openSection(tab)
+    if not window then
+        return
+    end
+    if window:isVisible() then
+        if currentTab == tab then
+            hide()
+        else
+            selectTab(tab)
+            window:raise()
+            window:focus()
+        end
+        return
+    end
+    currentTab = tab
+    toggle()
+end
+
 -- ---------------------------------------------------------------- lifecycle
 
 local function onGameStart()
-    if not toolbarButton and modules.game_brevespanel then
-        toolbarButton = modules.game_brevespanel.addFeature('tasks', toggle)
+    if not next(sectionButtons) and modules.game_brevespanel then
+        for tab, row in pairs(SECTION_ROWS) do
+            sectionButtons[tab] = modules.game_brevespanel.addFeature(row, function() openSection(tab) end)
+        end
+        if not next(sectionButtons) then
+            sectionButtons = {}
+        end
+        updateBadge()
     end
     -- ask for the tasks once, quietly, so the panel row can show them
     scheduleEvent(function()
@@ -668,7 +726,7 @@ local function onGameStart()
             send({ action = 'open' })
         end
     end, 3000)
-    if not toolbarButton and modules.game_mainpanel then
+    if not next(sectionButtons) and not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntTasksButton', tr('Tasks do Caçador (task diária, trilha e loja)'),
             '/game_hunttasks/images/button', toggle, false, 22)
     end
@@ -712,6 +770,10 @@ function terminate()
         toolbarButton:destroy()
         toolbarButton = nil
     end
+    for _, button in pairs(sectionButtons) do
+        button:destroy()
+    end
+    sectionButtons = {}
     if window then
         window:destroy()
         window = nil

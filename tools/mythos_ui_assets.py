@@ -223,6 +223,17 @@ def slider():
     save(im, 'scroll_arrows_h')
 
 
+def fold_marks():
+    # the small marks before a Mythos panel group title: open and folded
+    for name, left in (('fold_open', False), ('fold_closed', True)):
+        im = img(8, 8)
+        if left:
+            side_chevron(im, 2, 3, (176, 160, 214, 255))
+        else:
+            chevron(im, 3, 3, (176, 160, 214, 255))
+        save(im, name)
+
+
 def corner_notice():
     # small toast in the corner of the map
     w = h = 32
@@ -295,6 +306,7 @@ if __name__ == '__main__':
     combobox()
     scrollbar()
     slider()
+    fold_marks()
     corner_notice()
     bullets()
     login_kit()
