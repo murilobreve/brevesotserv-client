@@ -1,6 +1,7 @@
 -- Rare Sell: the rarity items in the player's bags that Gersao buys, to tick
 -- and sell. No NPC buys rarity items in the trade window, so they are never
--- sold by accident; saying "rare" to Gersao opens this window. The list and
+-- sold by accident; asking Gersao for "trade" opens this list next to the
+-- trade window (when there is something to sell), "rare" opens it alone. The list and
 -- the sale are on the server (scripts/rarity/sell_window.lua, extended
 -- opcode 125), which checks every item again before selling it.
 
@@ -200,6 +201,50 @@ local function resultText(result)
     return nil
 end
 
+local docked = false -- opened with Gersao's trade window
+
+-- the NPC trade window on screen (new dialog or legacy), if any
+local function tradeWindow()
+    for _, id in ipairs({ 'windowTrader', 'npcWindow' }) do
+        local widget = rootWidget:recursiveGetChildById(id)
+        if widget and widget:isVisible() then
+            return widget
+        end
+    end
+    return nil
+end
+
+-- side by side with the trade window, the pair centred on screen; on a small
+-- screen the trade window goes to the left edge and this list takes the rest
+-- of the width (never narrower than MIN_DOCK_WIDTH)
+local DOCK_GAP = 6
+local MIN_DOCK_WIDTH = 380
+local FULL_WIDTH = 600
+
+local function dockBesideTrade()
+    local trade = tradeWindow()
+    if not trade then
+        return
+    end
+    local screenW, screenH = rootWidget:getWidth(), rootWidget:getHeight()
+    local rect = trade:getRect()
+    local width = FULL_WIDTH
+    local tradeX
+    if rect.width + DOCK_GAP + FULL_WIDTH <= screenW then
+        tradeX = math.floor((screenW - rect.width - DOCK_GAP - FULL_WIDTH) / 2)
+    else
+        tradeX = 0
+        width = math.max(MIN_DOCK_WIDTH, screenW - rect.width - DOCK_GAP)
+    end
+    local y = math.max(0, math.min(rect.y, screenH - window:getHeight()))
+    trade:breakAnchors()
+    trade:setPosition({ x = tradeX, y = rect.y })
+    window:breakAnchors()
+    window:setWidth(width)
+    window:setPosition({ x = math.min(tradeX + rect.width + DOCK_GAP, screenW - width), y = y })
+    window:raise()
+end
+
 local function show()
     if not window:isVisible() then
         window:show()
@@ -212,6 +257,13 @@ local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' or data.action ~= 'list' or not window then
         return
     end
+    -- with the trade window: only when there is a rarity item to sell
+    if data.docked then
+        if #(data.items or {}) == 0 then
+            return
+        end
+        docked = true
+    end
     closeConfirm()
     token = tonumber(data.token) or 0
     fillItems(data.items or {})
@@ -222,7 +274,26 @@ local function onOpcode(protocol, opcode, data)
     else
         window.status:setText('')
     end
+    local wasVisible = window:isVisible()
     show()
+    if data.docked and not wasVisible then
+        -- the trade window is created in the same tick: dock once it is laid out
+        scheduleEvent(dockBesideTrade, 50)
+    end
+end
+
+-- the trade window closed: the list opened with it goes too. The NPC dialog
+-- also fires these while it turns into the trade window, so look again a
+-- moment later and only hide when no trade window is left on screen.
+local function onTradeClosed()
+    if not docked then
+        return
+    end
+    scheduleEvent(function()
+        if docked and not tradeWindow() then
+            hide()
+        end
+    end, 300)
 end
 
 function sellSelected()
@@ -275,6 +346,10 @@ function sellSelected()
 end
 
 function hide()
+    docked = false
+    if window then
+        window:setWidth(FULL_WIDTH)
+    end
     closeConfirm()
     if window then
         window:hide()
@@ -290,11 +365,11 @@ function init()
     window = g_ui.displayUI('raresell')
     window:hide()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
-    connect(g_game, { onGameEnd = onGameEnd })
+    connect(g_game, { onGameEnd = onGameEnd, onCloseNpcTrade = onTradeClosed, onNpcChatWindowClose = onTradeClosed })
 end
 
 function terminate()
-    disconnect(g_game, { onGameEnd = onGameEnd })
+    disconnect(g_game, { onGameEnd = onGameEnd, onCloseNpcTrade = onTradeClosed, onNpcChatWindowClose = onTradeClosed })
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     closeConfirm()
     if window then
