@@ -150,6 +150,14 @@ TrailRow < BrevesRow
     creature-size: 36
     phantom: true
 
+  MythosButton
+    id: go
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    size: 120 24
+    visible: false
+
   Label
     id: status
     anchors.right: parent.right

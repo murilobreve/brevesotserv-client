@@ -145,8 +145,7 @@ end
 -- free with a cooldown, out of a fight only. The button shows the time left.
 local teleportReadyAt = 0
 
-local function updateTeleportButton(card, which, available)
-    local button = card.action2
+local function updateTeleportButton(button, which, available)
     button:setVisible(available and true or false)
     if not available then
         return
@@ -206,7 +205,7 @@ local function renderDaily()
     end
 
     setBar(card.bar, daily.kills, daily.need)
-    updateTeleportButton(card, 'daily', state.teleportDaily)
+    updateTeleportButton(card.action2, 'daily', state.teleportDaily)
     card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(state.dailyExp), daily.points or 0))
     card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
     local cost = state.rerollCost or 0
@@ -266,7 +265,7 @@ local function renderTrailCard()
         card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(trail.exp), points))
         local following = steps[trail.index + 1]
         card.extra:setText(following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!'))
-        updateTeleportButton(card, 'trail', state.teleportTrail)
+        updateTeleportButton(card.action2, 'trail', state.teleportTrail)
     end
     card.action:setText(tr('Ver trilha completa'))
     card.action:setEnabled(true)
@@ -302,6 +301,18 @@ end
 
 -- ---------------------------------------------------------------- trail tab
 
+-- "Ir para a hunt" on the current step's row of the trail tab
+local function updateTrailRowButton()
+    if not window or not state or not state.trail or state.trail.finished then
+        return
+    end
+    local row = window.trailPanel.list:getChildById('step' .. (state.trail.index or 0))
+    if row then
+        updateTeleportButton(row.go, 'trail', state.teleportTrail)
+        row.status:setMarginRight(row.go:isVisible() and 132 or 6)
+    end
+end
+
 local function renderTrailList()
     local panel = window.trailPanel
     local trail = state.trail
@@ -326,6 +337,8 @@ local function renderTrailList()
     for i in ipairs(steps) do
         local row = panel.list:getChildById('step' .. i)
         if row then
+            row.go:setVisible(false)
+            row.status:setMarginRight(6)
             if i <= done then
                 row.status:setText(tr('Completa'))
                 row.status:setColor('#7fd35a')
@@ -344,6 +357,7 @@ local function renderTrailList()
             end
         end
     end
+    updateTrailRowButton()
 end
 
 local function scrollToCurrent()
@@ -557,10 +571,11 @@ local function tick()
     if state and teleportReadyAt >= os.time() - 1 then
         local cards = window.tasksPanel
         if state.daily and not state.daily.done then
-            updateTeleportButton(cards.dailyCard, 'daily', state.teleportDaily)
+            updateTeleportButton(cards.dailyCard.action2, 'daily', state.teleportDaily)
         end
         if state.trail and not state.trail.finished then
-            updateTeleportButton(cards.trailCard, 'trail', state.teleportTrail)
+            updateTeleportButton(cards.trailCard.action2, 'trail', state.teleportTrail)
+            updateTrailRowButton()
         end
     end
     tickEvent = scheduleEvent(tick, 1000)

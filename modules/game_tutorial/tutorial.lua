@@ -1,8 +1,8 @@
 -- Mythos tour: on the first login a small window walks the player through
 -- the server's own systems, one short step at a time. Each step opens the
 -- window it talks about (and closes it again on the next step), so the
--- player sees the real thing instead of reading about it. "Tutorial" in the
--- Mythos panel starts it again; Esc or "Skip" ends it.
+-- player sees the real thing instead of reading about it. The small "?" next
+-- to the Mythos panel's title starts it again; Esc or "Skip" ends it.
 
 local window
 local index = 0
@@ -93,7 +93,7 @@ local STEPS = {
           if s and s.hide then s.hide() end
       end } },
     { title = 'Questions? The Wiki',
-      text = 'Rare monsters, every rarity bonus and the real numbers of the server are in the Wiki. Useful commands: !hunt, !task, !vip and !bless. Good hunting!',
+      text = 'Rare monsters, every rarity bonus and the real numbers of the server are in the Wiki. Useful commands: !hunt, !task, !vip and !bless. To see this tour again, click the small ? next to the Mythos title. Good hunting!',
       window = { plain('game_wiki', 'show', 'hide') } },
 }
 
@@ -193,9 +193,6 @@ end
 local startEvent
 
 local function onGameStart()
-    if mod('game_brevespanel') and mod('game_brevespanel').addFeature then
-        mod('game_brevespanel').addFeature('tutorial', start)
-    end
     if not g_settings.getBoolean('mythos_tutorial_done') then
         -- after the panel rows and the news window had their turn
         startEvent = scheduleEvent(function()

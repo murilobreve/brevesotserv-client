@@ -89,6 +89,22 @@ BrevesPanel < MiniWindow
     text: Mythos
     phantom: true
 
+  // starts the Mythos tour again (game_tutorial)
+  UIButton
+    id: tutorialButton
+    anchors.left: miniwindowTitle.right
+    anchors.verticalCenter: miniwindowTitle.verticalCenter
+    margin-left: 4
+    size: 10 12
+    text: ?
+    font: verdana-11px-rounded
+    color: #6f6488
+    cursor: pointer
+    !tooltip: tr('Tutorial: a quick tour of Mythos')
+    @onClick: if modules.game_tutorial then modules.game_tutorial.start() end
+    $hover:
+      color: #e6e0f2
+
   // full rows or only the rows with a value (task kills, XP, ON / OFF)
   BrevesPanelButton
     id: collapseButton

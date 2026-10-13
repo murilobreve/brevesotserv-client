@@ -32,8 +32,6 @@ local FEATURES = {
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
     { id = 'messages', group = 'tools', label = 'Interface', icon = 'messages',
       news = 'Interface settings, such as where the look, loot and warning messages show on the game screen.' },
-    { id = 'tutorial', group = 'tools', label = 'Tutorial', icon = 'tutorial',
-      news = 'A quick tour of every Mythos system, opening each window as it explains it.' },
     { id = 'wiki', group = 'tools', label = 'Wiki', icon = 'wiki',
       news = 'Rare monsters, rarity items and every bonus explained, with the real numbers from the server.' },
 }
