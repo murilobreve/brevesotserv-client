@@ -338,3 +338,4 @@ CMakeUserPresets.json
 
 # client package (empacotar-cliente.bat)
 /dist/
+diagnostico-vps.txt
