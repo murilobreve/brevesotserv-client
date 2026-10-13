@@ -6,10 +6,12 @@
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
 
-local NEWS_VERSION = 6
+local NEWS_VERSION = 7
 
 -- rows are shown in this order, whatever order the modules load in
 local FEATURES = {
+    { id = 'vip', group = 'vip', label = 'Mythos VIP', icon = 'vip',
+      news = 'Mythos VIP: +10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. The row shows your days left and opens the Store.' },
     { id = 'rates', group = 'hunt', label = 'Hunt Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
@@ -36,6 +38,7 @@ local FEATURES = {
 
 -- the rows are grouped under these titles (hidden in the icon grid)
 local GROUPS = {
+    { id = 'vip', label = 'Account' },
     { id = 'hunt', label = 'Hunting' },
     { id = 'tasks', label = 'Tasks' },
     { id = 'rarity', label = 'Rarity' },

@@ -479,12 +479,11 @@ MythosWindow
     $on:
       color: #FF0000
 
-  MythosButton
+  MythosKitGoldButton
     id: premiumButton
     !text: tr('Get Premium')
     anchors.right: parent.right
-    text-auto-resize: true
-    image-color: green
+    size: 150 28
     @onClick: onPremiumButtonClick(self)
     @onSetup: |
       if g_game.getFeature(GameEnterGameShowAppearance) then
@@ -701,19 +700,19 @@ MythosWindow
     $on:
       color: #7fd35a
 
-  MythosPrimaryButton
+  MythosKitGoldButton
     id: buttonOk
     !text: tr('Ok')
-    width: 64
+    size: 110 28
     anchors.right: next.left
     anchors.bottom: parent.bottom
     margin-right: 10
     @onClick: CharacterList.doLogin()
 
-  MythosButton
+  MythosKitButton
     id: buttonCancel
     !text: tr('Cancel')
-    width: 64
+    size: 110 28
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     @onClick: CharacterList.hide(true)

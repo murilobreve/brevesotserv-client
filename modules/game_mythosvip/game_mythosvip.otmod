@@ -1,0 +1,9 @@
+Module
+  name: game_mythosvip
+  description: Mythos VIP row in the Mythos panel (days left, opens the Store)
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ mythosvip ]
+  @onLoad: init()
+  @onUnload: terminate()

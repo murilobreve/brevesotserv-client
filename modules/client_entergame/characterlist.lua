@@ -104,6 +104,63 @@ local function isPremiumAccount(account)
     return premDays ~= nil and premDays > 0
 end
 
+-- Mythos VIP: MyAAC's login answer has no room for it, so the site tells
+-- (plugins/brevesot/vip-status.php, with the same account and password).
+-- The account line turns gold with the days left and the button below
+-- opens the VIP page of the site (buy or renew).
+local vipRequest = 0
+
+local function vipUrl()
+    return Services and Services.website and (Services.website:gsub('/+$', '') .. '/index.php/vip') or nil
+end
+
+local function applyVipStatus(info)
+    if not charactersWindow then
+        return
+    end
+    local label = charactersWindow:getChildById('accountStatusLabel')
+    local icon = charactersWindow:getChildById('accountStatusIcon')
+    if info and info.vip then
+        local untilText = os.date('%d/%m/%Y', tonumber(info.expires) or 0)
+        label:setText(tr('Mythos VIP until %s (%d days left)', untilText, tonumber(info.days) or 0))
+        label:setColor('#ffd77a')
+        if icon and g_resources.fileExists('/images/game/entergame/vip.png') then
+            icon:setImageSource('/images/game/entergame/vip')
+            icon:setImageClip('0 0 22 20')
+        end
+    end
+    if premiumButton and vipUrl() then
+        local renew = info and info.vip
+        premiumButton:setText(renew and tr('Renew VIP') or tr('Become VIP'))
+        premiumButton:setTooltip(tr('+10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. Opens the VIP page of the site.'))
+        premiumButton:setVisible(true)
+    end
+end
+
+local function requestVipStatus()
+    local url = Services and Services.website and (Services.website:gsub('/+$', '') .. '/plugins/brevesot/vip-status.php')
+    if not url or not G.account or G.account == '' or not G.password or G.password == '' then
+        return
+    end
+    vipRequest = vipRequest + 1
+    local request = vipRequest
+    local body = { password = G.password }
+    if G.account:find('@', 1, true) then
+        body.email = G.account
+    else
+        body.accountname = G.account
+    end
+    HTTP.post(url, json.encode(body), function(data, err)
+        if err or request ~= vipRequest then
+            return
+        end
+        local ok, info = pcall(json.decode, data or '')
+        if ok and type(info) == 'table' and info.vip ~= nil then
+            applyVipStatus(info)
+        end
+    end, false)
+end
+
 local function updatePremiumBenefitsVisibility(account)
     local showBenefits = shouldShowAppearance() and SHOW_PREMIUM_WIDGETS and not isPremiumAccount(account)
     if premiumBenefitsPanel then
@@ -117,7 +174,8 @@ local function updatePremiumBenefitsVisibility(account)
         end
     end
     if premiumButton then
-        premiumButton:setVisible(showBenefits)
+        -- on Mythos the button sells VIP (applyVipStatus), always shown
+        premiumButton:setVisible(showBenefits or vipUrl() ~= nil)
     end
 end
 
@@ -564,6 +622,11 @@ function onPinCharacter(widget, isChecked)
 end
 
 function onPremiumButtonClick(widget)
+    -- Mythos: the button sells VIP (premium is free)
+    if vipUrl() then
+        g_platform.openUrl(vipUrl())
+        return
+    end
     -- its own key: getCoinsUrl is the Mythos Coins page, not a premium page
     if Services and Services.premiumUrl and Services.premiumUrl ~= '' then
         g_platform.openUrl(Services.premiumUrl)
@@ -760,6 +823,8 @@ function CharacterList.create(characters, account, otui)
     end
 
     updatePremiumBenefitsVisibility(account)
+    applyVipStatus(nil)
+    requestVipStatus()
 
     CharacterList.rebuildCharactersList()
 

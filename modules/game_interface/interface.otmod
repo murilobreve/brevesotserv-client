@@ -60,6 +60,7 @@ Module
     - game_tplabels
     - game_healbot
     - game_hunttasks
+    - game_mythosvip
     - game_forge
     - game_inspect
     - game_taskboard
