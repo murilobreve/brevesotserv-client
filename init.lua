@@ -60,9 +60,9 @@ local SERVER_HOST = ('%s://%s/login.php'):format(SERVER_SCHEME, SERVER_IP)
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
     website = SITE_URL, --./client_entergame "Create a free account"
-    -- Mythos Coins are earned in game, not bought: the store "Get" button and
-    -- the market "Get coins" button open the site page that explains how
-    getCoinsUrl = SITE_URL:gsub('/+$', '') .. '/index.php/leaderboard', --./game_store | ./game_market
+    -- Mythos has no shop: the store "Get" button and the market "Get coins"
+    -- button open the site's donation page (R$ 1 = 10 Mythos Coins)
+    getCoinsUrl = SITE_URL:gsub('/+$', '') .. '/index.php/apoie', --./game_store | ./game_market
     premiumUrl = '', --./client_entergame "Get Premium" (none: the server gives free premium)
     clientAssets = {
         enabled = true,
