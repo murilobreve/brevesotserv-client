@@ -1,0 +1,9 @@
+Module
+  name: game_tutorial
+  description: First-login tour of the Mythos systems, step by step
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ tutorial ]
+  @onLoad: init()
+  @onUnload: terminate()
