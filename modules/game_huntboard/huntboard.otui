@@ -496,7 +496,7 @@ MythosWindow
       id: prevPage
       anchors.left: parent.left
       anchors.bottom: parent.bottom
-      size: 60 22
+      size: 78 22
       !text: tr('< Prev')
       @onClick: modules.game_huntboard.changePage(-1)
 
@@ -504,7 +504,7 @@ MythosWindow
       id: nextPage
       anchors.right: parent.right
       anchors.bottom: parent.bottom
-      size: 60 22
+      size: 78 22
       !text: tr('Next >')
       @onClick: modules.game_huntboard.changePage(1)
 

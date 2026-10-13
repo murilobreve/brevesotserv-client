@@ -188,7 +188,7 @@ WIKI_PAGES.huntboard = {
 }
 
 WIKI_PAGES.items = {
-    menu = 'Como um item vira raro',
+    menu = 'Item vira raro',
     title = 'Como um item vira raro',
     blocks = {
         { 'lead', 'Itens raros caem de monstros e de baús de quest. Eles têm de 1 a 5 bônus, uma cor própria e uma moldura com a cor do grau.' },

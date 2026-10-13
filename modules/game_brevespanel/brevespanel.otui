@@ -95,7 +95,7 @@ BrevesPanel < MiniWindow
     anchors.left: miniwindowTitle.right
     anchors.verticalCenter: miniwindowTitle.verticalCenter
     margin-left: 4
-    size: 10 12
+    size: 12 14
     text: ?
     font: verdana-11px-rounded
     color: #6f6488
