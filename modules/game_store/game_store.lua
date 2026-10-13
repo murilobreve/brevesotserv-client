@@ -149,6 +149,12 @@ local CATEGORY_ITEMS = {
     ['Category_Tickets.png'] = 22722,
     ['Category_ExclusiveOffers.png'] = 3381,
     ['Category_Rarity.png'] = 39546,
+    ['Category_MythosVip.png'] = 3385, -- crown helmet, until images/13 has the crown
+}
+
+-- these use their own picture (images/13/...) when the client has it
+local CATEGORY_PICTURES = {
+    ['Category_MythosVip.png'] = true,
 }
 
 local function setCategoryItem(widget, itemId)
@@ -167,14 +173,19 @@ local function setCategoryItem(widget, itemId)
 end
 
 local function setImagenHttp(widget, url, isIcon)
-    local categoryItem = isIcon and CATEGORY_ITEMS[url:match('([^/]+)$') or '']
+    local fileName = url:match('([^/]+)$') or ''
+    local categoryItem = isIcon and CATEGORY_ITEMS[fileName]
+    if categoryItem and CATEGORY_PICTURES[fileName] and g_resources.fileExists("/game_store/images/13/" .. fileName) then
+        categoryItem = nil
+    end
     if categoryItem then
         setCategoryItem(widget, categoryItem)
         return
     end
-    -- images shipped with the client (the Home banners) win over the website
-    local localPath = "/game_store/images/" .. url
-    if url:find("^home/") and g_resources.fileExists(localPath) then
+    -- images shipped with the client (the Home banners, the Mythos VIP
+    -- icons) win over the website
+    local localPath = "/game_store/images/" .. url:gsub("^/+", "")
+    if g_resources.fileExists(localPath) then
         if isIcon then
             widget:setIcon(localPath)
         else
