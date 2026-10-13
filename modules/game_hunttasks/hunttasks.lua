@@ -141,6 +141,30 @@ local function levelAndRooms(level, rooms)
     return text
 end
 
+-- "Ir para a hunt": the server's hunt teleport (hunt_tasks/05_teleport.lua),
+-- free with a cooldown, out of a fight only. The button shows the time left.
+local teleportReadyAt = 0
+
+local function updateTeleportButton(card, which, available)
+    local button = card.action2
+    button:setVisible(available and true or false)
+    if not available then
+        return
+    end
+    local left = teleportReadyAt - os.time()
+    if left > 0 then
+        button:setText(tr('Hunt em %d:%02d', math.floor(left / 60), left % 60))
+        button:setEnabled(false)
+    else
+        button:setText(tr('Ir para a hunt'))
+        button:setEnabled(true)
+    end
+    button:setTooltip(tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 5 minutos.'))
+    button.onClick = function()
+        send({ action = 'teleport', which = which })
+    end
+end
+
 local function renderDaily()
     local card = window.tasksPanel.dailyCard
     local daily = state.daily
@@ -182,6 +206,7 @@ local function renderDaily()
     end
 
     setBar(card.bar, daily.kills, daily.need)
+    updateTeleportButton(card, 'daily', state.teleportDaily)
     card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(state.dailyExp), daily.points or 0))
     card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
     local cost = state.rerollCost or 0
@@ -241,6 +266,7 @@ local function renderTrailCard()
         card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(trail.exp), points))
         local following = steps[trail.index + 1]
         card.extra:setText(following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!'))
+        updateTeleportButton(card, 'trail', state.teleportTrail)
     end
     card.action:setText(tr('Ver trilha completa'))
     card.action:setEnabled(true)
@@ -527,6 +553,16 @@ local function tick()
             send({ action = 'open' })
         end
     end
+    -- the hunt teleport countdown on the two cards
+    if state and teleportReadyAt >= os.time() - 1 then
+        local cards = window.tasksPanel
+        if state.daily and not state.daily.done then
+            updateTeleportButton(cards.dailyCard, 'daily', state.teleportDaily)
+        end
+        if state.trail and not state.trail.finished then
+            updateTeleportButton(cards.trailCard, 'trail', state.teleportTrail)
+        end
+    end
     tickEvent = scheduleEvent(tick, 1000)
 end
 
@@ -582,6 +618,7 @@ local handlers = {}
 
 function handlers.state(data)
     timeOffset = (data.now or os.time()) - os.time()
+    teleportReadyAt = os.time() + (tonumber(data.teleportWait) or 0)
     state = data
     render()
     updateBadge()
