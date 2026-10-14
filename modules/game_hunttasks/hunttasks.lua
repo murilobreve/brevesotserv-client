@@ -309,7 +309,8 @@ local function updateTrailRowButton()
     local row = window.trailPanel.list:getChildById('step' .. (state.trail.index or 0))
     if row then
         updateTeleportButton(row.go, 'trail', state.teleportTrail)
-        row.status:setMarginRight(row.go:isVisible() and 132 or 6)
+        -- isVisible() is false while the trail tab is hidden: ask the state
+        row.status:setMarginRight(state.teleportTrail and 132 or 6)
     end
 end
 
