@@ -133,8 +133,15 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
     local MINIMUM_WIDTH = g_game.getFeature(GameEnterGameShowAppearance) and MINIMUM_WIDTH_OLD or MINIMUM_WIDTH_QT
     controllerModal:loadHtml('modaldialog.html')
     local ui = controllerModal.ui
+    -- the server's anti-bot check (data-otservbr-global/scripts/antibot) comes
+    -- while the player is fighting: it must not take the keyboard, or the
+    -- spell and potion hotkeys stop and the player can die. It opens in the
+    -- top-right corner of the game screen and is answered with the mouse.
+    local passive = title == 'Anti-bot'
     ui:hide()
-    ui:grabKeyboard()
+    if not passive then
+        ui:grabKeyboard()
+    end
     local messageLabel = controllerModal:findWidget('#messageLabel')
     local choiceList = controllerModal:findWidget('#choiceList')
     local buttonsPanel = controllerModal:findWidget('#buttonsPanel')
@@ -229,6 +236,14 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
         applyFinalHeight(ui, messageLabel, additionalHeight)
         ui:show()
         ui:raise()
+        if passive then
+            local map = modules.game_interface and modules.game_interface.getMapPanel()
+            if map then
+                ui:breakAnchors()
+                ui:setPosition({ x = map:getX() + map:getWidth() - ui:getWidth() - 10, y = map:getY() + 10 })
+            end
+            return
+        end
         ui:focus()
         ui:grabKeyboard()
         confirmKeysEnabledAt = g_clock.millis() + 180
