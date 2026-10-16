@@ -1,0 +1,801 @@
+{
+  "tamanho_png": [
+    32,
+    32
+  ],
+  "variacoes_por_tipo": 16,
+  "peso_percentual": [
+    12,
+    10,
+    9,
+    8,
+    8,
+    7,
+    7,
+    6,
+    6,
+    5,
+    5,
+    4,
+    4,
+    3,
+    3,
+    3
+  ],
+  "familias": [
+    {
+      "grupo": "templo",
+      "tipo": "01_placas_pretas",
+      "arquivos": [
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_01.png",
+          "sha256_pixels": "df34b968a9029419b1b38d32dbf1f9901df037d5e14f42d2d9160ce89955f89b",
+          "peso_percentual": 12
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_02.png",
+          "sha256_pixels": "ba6f3b21838ec49aba54f88218e248cc105bed0cfa81de62b7aae5033a2068c1",
+          "peso_percentual": 10
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_03.png",
+          "sha256_pixels": "38aa4cf1da60164548d1d43b94046f88867241cef4d013a662ec433a8da639b3",
+          "peso_percentual": 9
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_04.png",
+          "sha256_pixels": "79a42784d2fa757515ada3d1dfc0b906ade860b59ddb471bba71e52a41d0f198",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_05.png",
+          "sha256_pixels": "ca384e5f20bf42b23b5f59af766adec7c194fc37b0d8c2237ef3d7565f84eab7",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_06.png",
+          "sha256_pixels": "0f21351df18ea5023f54917468cab143c01f2d05d5d04ecd72f5b473f927a63d",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_07.png",
+          "sha256_pixels": "5563b09c79d8ab0455950275b01646f005a1c5916a2e1afd0178bdf4a7043311",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_08.png",
+          "sha256_pixels": "8508d013a9358c5cdd6c56039d160ec97f817d287cbdeb19646f384cce24bfe1",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_09.png",
+          "sha256_pixels": "b23481946effe85da2514a0a3f11c6eb301e1bb5a6b0512ba6ddc4794b4d98ab",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_10.png",
+          "sha256_pixels": "6c471ce63237d74e606678687d19db9175487db90673f8cfc248135e14fcf351",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_11.png",
+          "sha256_pixels": "5b7d6c5ca557819341b33a6a66cc85548990f2e891f291d5549732031457cec5",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_12.png",
+          "sha256_pixels": "2f688cb65462ac7a83afafddc5a82880a5c1e46b1c72df4585a5bf932fd36d47",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_13.png",
+          "sha256_pixels": "a8d0583578cddef95bb44d3a4f2e57e6c499fac1aa130ce04da4d38377afd2be",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_14.png",
+          "sha256_pixels": "a808a7a1a1331526e616dd57623398f0fac56cf0e83ba00ebf6d2aa9a3acc313",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_15.png",
+          "sha256_pixels": "eccbfe7d6316472d5b29e4ad32d48fdc333ec946e41e9951c71df732d86f41b3",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/01_placas_pretas/png/01_placas_pretas_16.png",
+          "sha256_pixels": "cb28b9d9190175c2246d5fb6b68aed8ee78ed67e1d5375e84684d73b1ce833a6",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "templo",
+      "tipo": "02_placas_roxas",
+      "arquivos": [
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_01.png",
+          "sha256_pixels": "fdd97892f872fe1c6f412c59768b37d46b6639a0a2bb602b44395c76fb469129",
+          "peso_percentual": 12
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_02.png",
+          "sha256_pixels": "4d1c020ac75c7dd0e46533a341f5f035b4e0cd6887d11c9afa918795e5ffded4",
+          "peso_percentual": 10
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_03.png",
+          "sha256_pixels": "36c006ae01177e49773af3aa641230f026ce02698f8054b5c87761330aa34a34",
+          "peso_percentual": 9
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_04.png",
+          "sha256_pixels": "695b0672ccc386246eea6f3cd119a343ef37ce38db6efd8fd52b3b913c2c62c5",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_05.png",
+          "sha256_pixels": "7206a884d752d7d61f0bb8319bcb32b4af086c562a5e474d7e3f06bf40f600e9",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_06.png",
+          "sha256_pixels": "5e7083218f179c80135609edc097f0c0089f491e4bcea0972cfcb4fec66aad55",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_07.png",
+          "sha256_pixels": "5ecd3c60d80f420290fc3e354d97e5ca44f054a0538fe41a290cd8baee416571",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_08.png",
+          "sha256_pixels": "b78ccd32b008f6333e08741cccba97e191928936c321c115a8d5abda691f97d5",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_09.png",
+          "sha256_pixels": "97442dfd7202caa3319730e0e1284ca7cdb77ec0c659f91809482af8ebb3e94f",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_10.png",
+          "sha256_pixels": "c62b23ac629153f09a858f487309c625c8f829e3197cf30db512db581145060b",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_11.png",
+          "sha256_pixels": "7b6ca8f83be7c343e104be2de4709ca45cfda6bbdb51fa896b30b674e178095d",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_12.png",
+          "sha256_pixels": "29067fc66367e7d63c07d343ab5264f66b50bb068d65f7d3f32bd43a7f584659",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_13.png",
+          "sha256_pixels": "3ea19ba12680aa16eb7c2f568dd42923648c75e1bc9289524a268b91037fbb10",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_14.png",
+          "sha256_pixels": "1d4d315c3ba9df8a52dc2519357a4e4c38e8e59ee0b58605db23ef123500eccd",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_15.png",
+          "sha256_pixels": "154bfc6d60958a19882b4843a3f1735e0b74030a90022733516d594ed8037f9a",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/02_placas_roxas/png/02_placas_roxas_16.png",
+          "sha256_pixels": "224ac1e6d6395af4ce162197e861feebfa56e182a67e59b7302dcef752bf00ba",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "templo",
+      "tipo": "03_placas_mistas",
+      "arquivos": [
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_01.png",
+          "sha256_pixels": "4d64d3204e4b0489941df2fd058ea1e9cc7441dd688fbc1c187fe2f9c3e0e01c",
+          "peso_percentual": 12
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_02.png",
+          "sha256_pixels": "ffac10a705ddf0f30aee0b8f956d97ad4df7029ba3555d8d9807dd66ce42e590",
+          "peso_percentual": 10
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_03.png",
+          "sha256_pixels": "a0291d5994f38f35a6bb2a746da6e11f1cd09051aa3d117d263bc473f3835db9",
+          "peso_percentual": 9
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_04.png",
+          "sha256_pixels": "15299323b179c241b9ce230ddb0de6dbaedae4390065cace85ecf2e08988a276",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_05.png",
+          "sha256_pixels": "624b122e60cd58e8142d6c2652b60b3ce876fe0b4e2e51b81409b323c562abe0",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_06.png",
+          "sha256_pixels": "95a3f666fec88cf451f99a0a11b4d312018bff8ac87bccf517869cf37f83871f",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_07.png",
+          "sha256_pixels": "cc797068b11b9ab8501cd422d30a5952fd4427d7f81dc0c210a85f57b16ace34",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_08.png",
+          "sha256_pixels": "d0a92fe82992a620f4b6a925fc6097be546a1c4e31f13202615a49642255a49d",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_09.png",
+          "sha256_pixels": "6dbb3c3fbf520a37265e992f151e1fc116e6e88535cc5f3f50b7297459ade6a3",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_10.png",
+          "sha256_pixels": "85d9721a33c752aba2346588260888b39b894c3cb1a11aadf124fca07158da26",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_11.png",
+          "sha256_pixels": "de9048b41cba6671e223277d662cd14fbfc9d566a11a37fa95708ffd68818881",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_12.png",
+          "sha256_pixels": "b02ac97f5483afad28d965d0c0ce8fdf7575572d814d10c018d88f8e3d35eeda",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_13.png",
+          "sha256_pixels": "30ae4f1354411831fb78f75aec8e743ad3896ae9cf74e661bf5cc4bc3e413182",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_14.png",
+          "sha256_pixels": "8dc1e22a023a89188fb7f493f454301f5497228141bdb836550747d765949ab5",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_15.png",
+          "sha256_pixels": "6b2c442505b799cfd58a6fd1e5a36d7b11d6c701c13530395eb41d159bc38f20",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/03_placas_mistas/png/03_placas_mistas_16.png",
+          "sha256_pixels": "5d51101d4fe485cfeef1214c7f001e43c07ebd345fce807cdb8b6d1dc4f4337f",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "templo",
+      "tipo": "04_pavimento_retangular",
+      "arquivos": [
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_01.png",
+          "sha256_pixels": "f2d567334d49032ddc5a189ab7936692bd46fdd1507793b570eb0c685e3239aa",
+          "peso_percentual": 12
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_02.png",
+          "sha256_pixels": "049557ccc94f6c8cf00836e536a4939be6cd796714677453d5674b0d4e59723e",
+          "peso_percentual": 10
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_03.png",
+          "sha256_pixels": "fb9357f4e00b6a57e6a6421ac0abab2ff410795ececbf2d196d2e499e4b6bbb9",
+          "peso_percentual": 9
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_04.png",
+          "sha256_pixels": "6ad798e3c1929b3de696945bab48474a17f1b1fe1cf1207003d5d5b234885951",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_05.png",
+          "sha256_pixels": "16aea7abba90d53e6f502478a5ac7ff6d7a9fc194ae2baef3fd553fe85355989",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_06.png",
+          "sha256_pixels": "c0ea029a4adc4f0cec5ecdef98a8c7ebc8fd288c24a7c2f062a80c09cbe0c5bc",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_07.png",
+          "sha256_pixels": "7100c23f56728940f529eab71fdd3b495d81a6a16c0d52fcad58ced8d19146df",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_08.png",
+          "sha256_pixels": "35de24704dd27339687422f0194fad4e741cfc646b3307c228600db4491267b3",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_09.png",
+          "sha256_pixels": "1f4d2029cf78c4db31a14e6da5eeb3783c3d2dab2b86ba765f0a3883e12e488f",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_10.png",
+          "sha256_pixels": "357c5134ed25642b2d89cca85ad75b033a20d1c0bd909da87ee38007b774ebb0",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_11.png",
+          "sha256_pixels": "68373930e40ee73038184bf83a5e46c5ab587fe23c327c416f7a298ee1b09991",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_12.png",
+          "sha256_pixels": "bf8c0fb6c18f6a86b563b0e3e33550dfa7ffe9287f1fde783feb660aff9a7c51",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_13.png",
+          "sha256_pixels": "4f9773f6887398fda7f1bccff73a4ee6cd30b5fe2e4e29b6a337d35c30f3d09a",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_14.png",
+          "sha256_pixels": "9836b8944f370912e1cf93ea10aa7de5aeaa38579dfb6ba6e63e381bed69486f",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_15.png",
+          "sha256_pixels": "0d5ecab4e82b98a99d81c6efa470699c27e4d303dda59f719f02cfe65283ef54",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/04_pavimento_retangular/png/04_pavimento_retangular_16.png",
+          "sha256_pixels": "27e59efa3f11ad892af41aecb4dc61067f9f09db3ed12b7cc7abadea47b1a62e",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "templo",
+      "tipo": "05_pavimento_irregular",
+      "arquivos": [
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_01.png",
+          "sha256_pixels": "5ba715def1edbbb2bf9d1b15080c5954e2973e7d65968c2641a9706b4f46a891",
+          "peso_percentual": 12
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_02.png",
+          "sha256_pixels": "1e8b7df223703319dfefc64716f021c1254c2a4ac3be3578b3977846081f7952",
+          "peso_percentual": 10
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_03.png",
+          "sha256_pixels": "a84bac9a2b67384aebb6bc86700682e9c604259a9acbcbcde5087cc3fb9f7103",
+          "peso_percentual": 9
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_04.png",
+          "sha256_pixels": "c64cd80f1e171b78dc210a3b8e74e2a5f2f4292b7106ffe5176cd77f2fd54667",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_05.png",
+          "sha256_pixels": "4598b55f75ebb347dc29529eea9e74b47fb92539a0b86d4aec63b673f7df259a",
+          "peso_percentual": 8
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_06.png",
+          "sha256_pixels": "019f170e52b360f6de4095ca16eb3f10262fcb43eb486e8c301376065bf1e65d",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_07.png",
+          "sha256_pixels": "bbf5af2eaaaf16d0e3df39889f6f939b5c528884c632733b8163f49e9dc07a9c",
+          "peso_percentual": 7
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_08.png",
+          "sha256_pixels": "eeb9f9aab747ea22403838bd7cb66f49d961101d55b2619e4f5e0540a0feb294",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_09.png",
+          "sha256_pixels": "4b3d0a218c1c181fc9ccedd62e9291972fdaa704bfad1e22b802ef923e502250",
+          "peso_percentual": 6
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_10.png",
+          "sha256_pixels": "2eb5c749fe61cd42e9287ee6532a6fe7fe509bed5a79e81730692b5b17641702",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_11.png",
+          "sha256_pixels": "617ed813dea37cf469af6560838c4ed153bd21ae44aa7fcc98da967811999f34",
+          "peso_percentual": 5
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_12.png",
+          "sha256_pixels": "48369a0241c90cd8caf49c60551bff62b0ed24772a2bc9a529157062bab1743a",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_13.png",
+          "sha256_pixels": "a267a5293c4c9528ea732d0cd999c29c00d38e9d688392fe85310d77a3867c23",
+          "peso_percentual": 4
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_14.png",
+          "sha256_pixels": "d41e52ac02beb28f518472804053e28ec92706c9cd61e1a0fa1fcbefea32d3e7",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_15.png",
+          "sha256_pixels": "434fa4e196abf4853c8af1be33aa7e0f6e076b15ffd758736dad254c2c88fbb8",
+          "peso_percentual": 3
+        },
+        {
+          "png": "templo/05_pavimento_irregular/png/05_pavimento_irregular_16.png",
+          "sha256_pixels": "0dbee3a645ce64e54cb658ab1f77e78db4690ac6dd2fe9a15a7101f09a1527b7",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "cidade",
+      "tipo": "01_pedra_envelhecida",
+      "arquivos": [
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_01.png",
+          "sha256_pixels": "0332d3aeb07460735c2940a454c05ad7567772a2f3ac2d240890b92a1e82cd2f",
+          "peso_percentual": 12
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_02.png",
+          "sha256_pixels": "f62ffccfe2cf36a55e28031fba27cac115adf7d7e37c13ef2c44f76bf9f7e5a7",
+          "peso_percentual": 10
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_03.png",
+          "sha256_pixels": "5aec2f7f1ebb1d31f387c30e4bc79b3b312218f34cabe1a723bf96394d984935",
+          "peso_percentual": 9
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_04.png",
+          "sha256_pixels": "c4ec0eb255ed3a18a5cbcb2968f04b33e76e650ff4f558c34d3052c2b0a5a6a9",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_05.png",
+          "sha256_pixels": "9723ee3638b4c4d440850aa4992f2aec9dd2023ebb24f0da122b304d95eabd33",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_06.png",
+          "sha256_pixels": "199d35b1c43e05738d3f75227c997c810a1ef8acf691536d0c2ec661b73d95d2",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_07.png",
+          "sha256_pixels": "d9ce4b8b803efaa9fb9423563afbd08b2cd828f35015926459a304673a9789b4",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_08.png",
+          "sha256_pixels": "ed2cae0bb6dca9b1ffca35d96050bc49b7539f69f8895fab8fb0f145a2d26d4d",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_09.png",
+          "sha256_pixels": "935eb4db72d6a86ab746d3b47a2dc43bd9995d28ff02f66e1b18c2d9caccd15c",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_10.png",
+          "sha256_pixels": "ab6ab0f359d9848a44dc9e8e3a0b576fc6ae2cb2601f3bce16081da8d29104a9",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_11.png",
+          "sha256_pixels": "6faa3d7c8f04a377c38c1fc1e723e3f4b02ee00f64628488b5dd885699b11d15",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_12.png",
+          "sha256_pixels": "e87adb8ce6c5087a02e46c9dc96def917ccb99c74af63691ab5061e8da330534",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_13.png",
+          "sha256_pixels": "88c3965f7af039cd86f0e86b67633c2bdb0e4c09456d90bfcaaec466cfb0a752",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_14.png",
+          "sha256_pixels": "df5d05a0df3222147e48dfc072026ecbf744ca16f927ea73de56b343d1facbcf",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_15.png",
+          "sha256_pixels": "01938c8ab645c42cb061c9dc120fef2cc4ed38b05dca699f229220a142daad16",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/01_pedra_envelhecida/png/01_pedra_envelhecida_16.png",
+          "sha256_pixels": "b0eebfec96c860d0e4fef396448ff77ad418aa2c429f850d4f517f16bc004d6c",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "cidade",
+      "tipo": "02_arenito",
+      "arquivos": [
+        {
+          "png": "cidade/02_arenito/png/02_arenito_01.png",
+          "sha256_pixels": "131e9daf1df9876e7b65be15b759443a4149a1e53d501e52d43815a988f9e5ee",
+          "peso_percentual": 12
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_02.png",
+          "sha256_pixels": "727bffb8e439bfef16eaeb9b63a7e9d9fd6b27504215d81a4c345ef98c7edaf3",
+          "peso_percentual": 10
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_03.png",
+          "sha256_pixels": "df737293e0b9125ae1a4f1e7a58caa859e6a476f770bc6db03db55c9b53e5dda",
+          "peso_percentual": 9
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_04.png",
+          "sha256_pixels": "b18f81b433030ad674e0b538a353fe3ea2adb79801ad6008d61ccc5646de0c53",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_05.png",
+          "sha256_pixels": "fb3b508d509991f3753c965f159b39266836266e1c008ecc30485a702fd2fce6",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_06.png",
+          "sha256_pixels": "d1d6aef551509480dea7015a68898d04854da0128b4ee032476172598d36da8f",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_07.png",
+          "sha256_pixels": "753368f5b36fd299e8bdfa024230ff21c980253bc9e633e2a71bbfb47213f47b",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_08.png",
+          "sha256_pixels": "d68dced7a6563003a81cfdaffa84ceb586ea51faf5eb870299d1ab1d4b137ef7",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_09.png",
+          "sha256_pixels": "51a41b4542c6ec64c73a5c5a68946ab94a69599891d68958d5a6120932e26e63",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_10.png",
+          "sha256_pixels": "7c6cfb3a765b4881c34d46cce455f6bd70f992d684d2c3098a20f7decec6433b",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_11.png",
+          "sha256_pixels": "1cf448fa6b182510f7ac2d678d4b94e9a251f73d6fa1447ee47d87b3160a9fb3",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_12.png",
+          "sha256_pixels": "68d1c77836eae2b8b05694a9116f0a1488ca25dc300e1d4714ee5c183958cef9",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_13.png",
+          "sha256_pixels": "69ab944d82897c1022c04b9c07082567ac2b4e18c5583cd2a4808c3fa44e0de7",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_14.png",
+          "sha256_pixels": "852c3dedd6caa5b1607255da30dbe3809f7807359bc8f603aea3daf694f2d7e5",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_15.png",
+          "sha256_pixels": "7aa0d05a3e67cbe7fbb302a4cb413b13f22373ac22b2f972d1699a8189e10fd6",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/02_arenito/png/02_arenito_16.png",
+          "sha256_pixels": "161bf19b5b158519a4647b3257509c30320969d6903b91c008451147fb0ea327",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "cidade",
+      "tipo": "03_terracota",
+      "arquivos": [
+        {
+          "png": "cidade/03_terracota/png/03_terracota_01.png",
+          "sha256_pixels": "4acdf1a6e6a8014ca36f60607fa6147ad612f3f0240fed00e9c342a4ff07d384",
+          "peso_percentual": 12
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_02.png",
+          "sha256_pixels": "a32f7bb2437323989c5c037ccf31b710e1d15451656bf13199ca484a3310a58a",
+          "peso_percentual": 10
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_03.png",
+          "sha256_pixels": "603108c151617684c7c52031ecf25294c3cd5cc50c9acc2373c67df7548c2005",
+          "peso_percentual": 9
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_04.png",
+          "sha256_pixels": "98e369cf7ff0c4f4a01bf692f527c639a80b5bdc1d493d53f3e96a40ee94ba39",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_05.png",
+          "sha256_pixels": "a69c0f09150b1ff1ae0087ff7b22e28febeb6300f9f3ba79ab9df7d67b9e6bfc",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_06.png",
+          "sha256_pixels": "4edc24899890f1f2d46f2a36dd59c7d78b5967a45d265bef5f302e1c42d08dcb",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_07.png",
+          "sha256_pixels": "cff9686e6908cc3a0fb9d4d3ef9f04478c00745a0ecbef95df304058b537179a",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_08.png",
+          "sha256_pixels": "e3d0873de63c98ee724e4394f088abacdd20b209abb4580c71214d5098c9a984",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_09.png",
+          "sha256_pixels": "baf3037f70905a30c769b34ebfa73e1518fab771169c33d29af80393c10b3752",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_10.png",
+          "sha256_pixels": "33bcddd896d1eac5174520fe6648fe2fc86aa72a86f604244f1338c7993bfeb9",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_11.png",
+          "sha256_pixels": "2c529796a591f65d049a51e5e6822791192b480a8f71c536a5147bb5c3861a68",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_12.png",
+          "sha256_pixels": "7faf6ff886b7633c5a1aa5168954ad6a37a6c0403ebb3a16c9b18e65e99f54e3",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_13.png",
+          "sha256_pixels": "f95cde3108569af876c897ad912e9d89f5495bb71e2550179ab8dde9c6236429",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_14.png",
+          "sha256_pixels": "e9551fabb6a586d3be928d49284bf4ac303f923ceb142c6aba7758b6676464a3",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_15.png",
+          "sha256_pixels": "20eab9bfc568eb25f46a14c13c68aed40f9f2eec47b7611b48935d09803f0875",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/03_terracota/png/03_terracota_16.png",
+          "sha256_pixels": "f8645a24a79ba6b5685575c5cefd8fc610b9572278d6978dc1e754c897a18a14",
+          "peso_percentual": 3
+        }
+      ]
+    },
+    {
+      "grupo": "cidade",
+      "tipo": "04_pedra_grafite",
+      "arquivos": [
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_01.png",
+          "sha256_pixels": "05608c7b561773322cc438204a13e625ebac2f6d856244de61a254cfe79742ba",
+          "peso_percentual": 12
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_02.png",
+          "sha256_pixels": "fbaca431048cb5354d14d19d737b1a40516fbb1dfbaf7aa9446952d43d419471",
+          "peso_percentual": 10
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_03.png",
+          "sha256_pixels": "c304251a992ba2f73bb67b602ad61087389650cb88f18681781417c25010c592",
+          "peso_percentual": 9
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_04.png",
+          "sha256_pixels": "965da71bb1e48b6c4f30a85839942ae4f07f44dd8604235f1903ba40b37b38f7",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_05.png",
+          "sha256_pixels": "2fa6011172456fc1390bcea5d97d54b965cd6c1bbded70d721ec7ffe3686af31",
+          "peso_percentual": 8
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_06.png",
+          "sha256_pixels": "262ed0e640ee57a560df63d3793f554af8c60ed9c078113ed5493fe0b8a7d029",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_07.png",
+          "sha256_pixels": "56c071cd78b3f7163aa143d71dbfe2818c7209e58c1e5213ec6aac3e7921e6f2",
+          "peso_percentual": 7
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_08.png",
+          "sha256_pixels": "9f6171fd9a66a8ac6d2f646f7290c08ba3506d62c29ae9d0313ac07a8bab96fd",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_09.png",
+          "sha256_pixels": "094944e6d3f1b1765b86f0f887e66049a601b605d3fd6e5ba2af4227d6786b5c",
+          "peso_percentual": 6
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_10.png",
+          "sha256_pixels": "4aa3b08bc1bbc590c8529c2b6ab73fef3ec766755bec50979024274af27416ba",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_11.png",
+          "sha256_pixels": "893b1815d5baa13d38af57087465f49585977359a0bba4465913cca44781a2ad",
+          "peso_percentual": 5
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_12.png",
+          "sha256_pixels": "eaf02b816c58727441da73873250d51fc83e06a06aa4b10ba32b83ae86ca544d",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_13.png",
+          "sha256_pixels": "5975bd2bcaeae7a63e5ce0852e5c822cdf5f5529de494ba75ace86f05d5559d6",
+          "peso_percentual": 4
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_14.png",
+          "sha256_pixels": "8f906babff1b68dab680715bffaf979d4d20e33b58b24973bb42d197a0ea8492",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_15.png",
+          "sha256_pixels": "15828f28f03037d2de6812b1ebed0260ce60166c08f50978cfad4779582aec4d",
+          "peso_percentual": 3
+        },
+        {
+          "png": "cidade/04_pedra_grafite/png/04_pedra_grafite_16.png",
+          "sha256_pixels": "42d8d486823122836c8aa578306d554f3eb6b5b109323e7bc4f5d92c1ca116ae",
+          "peso_percentual": 3
+        }
+      ]
+    }
+  ]
+}

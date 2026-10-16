@@ -1,0 +1,17 @@
+MYTHOS — PISOS DE TEMPLO E CIDADE
+
+16 variações por tipo. São 9 tipos e 144 PNGs individuais de 32x32 pixels.
+
+TEMPLO: placas pretas, placas roxas, placas mistas, pavimento retangular e pavimento irregular de obsidiana.
+CIDADE: pedra envelhecida, arenito, terracota e pedra grafite.
+
+INSTRUÇÕES RÁPIDAS
+1. Importe os 16 arquivos da pasta "png" de cada tipo. Cada PNG é 1 SQM de chão, 32x32, RGB opaco. Preto não deve virar transparência.
+2. Cadastre as 16 aparências no mesmo pincel/tipo e selecione-as aleatoriamente. O arquivo pesos.csv sugere a frequência de cada uma; adapte ao formato do seu editor.
+3. atlas-128x128.png reúne as 16 peças em 4 colunas e 4 linhas, em ordem de 01 a 16. As imagens em previews e os catálogos não são novos pisos.
+4. Evite repetir o atlas inteiro como um bloco: sorteie as peças individuais. Evite girar os sprites, pois a luz vem de cima à esquerda.
+5. Confira as emendas no mapa antes de publicar. Este conjunto não inclui bordas de terreno, transições com grama, IDs de itens ou um sistema de autotile universal.
+
+As prévias de mistura usam os PNGs reais e os pesos sugeridos. Foram conferidos os tamanhos, os 16 conteúdos distintos por tipo e a integridade do ZIP. Não houve importação no cliente do jogo.
+
+As artes foram criadas no gerador de imagens integrado e exportadas por vizinho mais próximo para 32x32, sem interpolação suave. As seis novas peças de cada tipo usam a mesma paleta das primeiras dez. Não são desenhos manuais feitos originalmente em 32x32.
