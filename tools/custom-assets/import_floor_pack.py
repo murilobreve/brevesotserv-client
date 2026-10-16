@@ -7,6 +7,11 @@ the pack's own 16 PNGs mirror the drawing at the edges and read as a kaleidoscop
 
   03_placas_mistas/modulo-128.png -> art/obsidian_floor/0..15  (60001, the temple of Ventera and the TP rooms)
   03_placas_mistas/modulo-128.png -> art/obsidian_inlay/0..7   (60002, rows 0-1; no longer on the map)
+  05_pavimento_irregular/modulo-128.png  -> art/obsidian_flagstones/0..15 (60006, TP rooms: Iniciantes, Novas Hunts, floor 10)
+  04_pavimento_retangular/modulo-128.png -> art/obsidian_bricks/0..15     (60007, TP rooms: Hunts, Quests/Castle)
+
+The 04 source is 1536x1024 and does not repeat top to bottom; its module is the 660x660 square at (134, 320), where the
+brick rows and the left and right edges line up best.
 
 From the 16-variation pack (art/source/pisos-templo-cidade-16):
 
@@ -38,7 +43,9 @@ FLOORS = [('cidade', '02_arenito', 'obsidian_city_paving', 16),
 
 MODULE_PACK = os.path.join(ART, 'source', 'pisos-templo-continuo')
 MODULES = [('03_placas_mistas', 'obsidian_floor', 16),
-           ('03_placas_mistas', 'obsidian_inlay', 8)]
+           ('03_placas_mistas', 'obsidian_inlay', 8),
+           ('05_pavimento_irregular', 'obsidian_flagstones', 16),
+           ('04_pavimento_retangular', 'obsidian_bricks', 16)]
 
 
 def copy(group, family, folder, cells):
