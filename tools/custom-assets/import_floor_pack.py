@@ -10,7 +10,8 @@ the pack's own 16 PNGs mirror the drawing at the edges and read as a kaleidoscop
 
 From the 16-variation pack (art/source/pisos-templo-cidade-16):
 
-  cidade/04_pedra_grafite  -> art/obsidian_city_paving/0..15  (60004, the streets of Ventera)
+  cidade/02_arenito        -> art/obsidian_city_paving/0..15     (60004, the paved streets of Ventera)
+  cidade/02_arenito        -> art/obsidian_irregular_paving/0..15 (60005, the cobbled streets)
 
 The client draws a 4x4 ground by the tile's position (cell x % 4, y % 4), so the 16 drawings repeat every 4 squares.
 The pack numbers them from the quietest (01, weight 12%) to the most marked (16, 3%); LAYOUT puts 13..16 on cells two
@@ -32,7 +33,8 @@ LAYOUT = [16, 1, 15, 2,
           14, 5, 13, 6,
           7, 10, 8, 9]
 
-FLOORS = [('cidade', '04_pedra_grafite', 'obsidian_city_paving', 16)]
+FLOORS = [('cidade', '02_arenito', 'obsidian_city_paving', 16),
+          ('cidade', '02_arenito', 'obsidian_irregular_paving', 16)]
 
 MODULE_PACK = os.path.join(ART, 'source', 'pisos-templo-continuo')
 MODULES = [('03_placas_mistas', 'obsidian_floor', 16),
