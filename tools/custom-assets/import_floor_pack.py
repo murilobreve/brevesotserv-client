@@ -1,7 +1,15 @@
-"""Copies the chosen floors of the 16-variation pack (art/source/pisos-templo-cidade-16) into the ground art folders.
+"""Copies the chosen floors into the ground art folders.
 
-  templo/01_placas_pretas  -> art/obsidian_floor/0..15        (60001, the temple hall of Ventera)
-  templo/01_placas_pretas  -> art/obsidian_inlay/0..7         (60002, was purple; now the same black slabs, 4x2)
+From the continuous temple pack (art/source/pisos-templo-continuo): one drawing cut into a 4x4 module of 32x32, so the
+slabs run across the sprite cuts. The client draws a 4x4 ground by the tile's position (x % 4, y % 4), which is the
+fixed origin the pack asks for. The module is the pack's source image (03_placas_mistas) scaled straight to 128x128;
+the pack's own 16 PNGs mirror the drawing at the edges and read as a kaleidoscope in game.
+
+  03_placas_mistas/modulo-128.png -> art/obsidian_floor/0..15  (60001, the temple of Ventera and the TP rooms)
+  03_placas_mistas/modulo-128.png -> art/obsidian_inlay/0..7   (60002, rows 0-1; no longer on the map)
+
+From the 16-variation pack (art/source/pisos-templo-cidade-16):
+
   cidade/04_pedra_grafite  -> art/obsidian_city_paving/0..15  (60004, the streets of Ventera)
 
 The client draws a 4x4 ground by the tile's position (cell x % 4, y % 4), so the 16 drawings repeat every 4 squares.
@@ -13,6 +21,8 @@ change, because the sprite ids are sequential and the server appearances.dat wou
 import os
 import shutil
 
+from PIL import Image
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.join(HERE, 'art')
 PACK = os.path.join(ART, 'source', 'pisos-templo-cidade-16')
@@ -22,9 +32,11 @@ LAYOUT = [16, 1, 15, 2,
           14, 5, 13, 6,
           7, 10, 8, 9]
 
-FLOORS = [('templo', '01_placas_pretas', 'obsidian_floor', 16),
-          ('templo', '01_placas_pretas', 'obsidian_inlay', 8),
-          ('cidade', '04_pedra_grafite', 'obsidian_city_paving', 16)]
+FLOORS = [('cidade', '04_pedra_grafite', 'obsidian_city_paving', 16)]
+
+MODULE_PACK = os.path.join(ART, 'source', 'pisos-templo-continuo')
+MODULES = [('03_placas_mistas', 'obsidian_floor', 16),
+           ('03_placas_mistas', 'obsidian_inlay', 8)]
 
 
 def copy(group, family, folder, cells):
@@ -38,6 +50,20 @@ def copy(group, family, folder, cells):
     return cells
 
 
+def cut(family, folder, cells):
+    module = Image.open(os.path.join(MODULE_PACK, family, 'modulo-128.png')).convert('RGBA')
+    dst = os.path.join(ART, folder)
+    os.makedirs(dst, exist_ok=True)
+    for f in os.listdir(dst):
+        os.remove(os.path.join(dst, f))
+    for cell in range(cells):
+        x, y = cell % 4, cell // 4
+        module.crop((x * 32, y * 32, x * 32 + 32, y * 32 + 32)).save(os.path.join(dst, f'{cell}.png'))
+    return cells
+
+
 if __name__ == '__main__':
+    for family, folder, cells in MODULES:
+        print(cut(family, folder, cells), 'tiles:', family, '->', folder)
     for group, family, folder, cells in FLOORS:
         print(copy(group, family, folder, cells), 'tiles:', family, '->', folder)
