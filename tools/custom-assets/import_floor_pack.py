@@ -13,10 +13,13 @@ the pack's own 16 PNGs mirror the drawing at the edges and read as a kaleidoscop
 The 04 source is 1536x1024 and does not repeat top to bottom; its module is the 660x660 square at (134, 320), where the
 brick rows and the left and right edges line up best.
 
-From the 16-variation pack (art/source/pisos-templo-cidade-16):
+The streets (gen_street_paving.py draws them in the arenito colours; 8x8, so the block repeats every 8 squares):
 
-  cidade/02_arenito        -> art/obsidian_city_paving/0..15     (60004, the paved streets of Ventera)
-  cidade/02_arenito        -> art/obsidian_irregular_paving/0..15 (60005, the cobbled streets)
+  ruas-arenito-continuo/arenito-256.png -> art/obsidian_city_paving/0..63     (60004, the paved streets of Ventera)
+  ruas-arenito-continuo/arenito-256.png -> art/obsidian_irregular_paving/0..63 (60005, the cobbled streets; the same
+                                           drawing, so the two meet without a seam)
+
+The 16-variation pack (art/source/pisos-templo-cidade-16) is no longer copied: its drawings end at the tile edge.
 
 The client draws a 4x4 ground by the tile's position (cell x % 4, y % 4), so the 16 drawings repeat every 4 squares.
 The pack numbers them from the quietest (01, weight 12%) to the most marked (16, 3%); LAYOUT puts 13..16 on cells two
@@ -38,14 +41,14 @@ LAYOUT = [16, 1, 15, 2,
           14, 5, 13, 6,
           7, 10, 8, 9]
 
-FLOORS = [('cidade', '02_arenito', 'obsidian_city_paving', 16),
-          ('cidade', '02_arenito', 'obsidian_irregular_paving', 16)]
+FLOORS = []
 
-MODULE_PACK = os.path.join(ART, 'source', 'pisos-templo-continuo')
-MODULES = [('03_placas_mistas', 'obsidian_floor', 16),
-           ('03_placas_mistas', 'obsidian_inlay', 8),
-           ('05_pavimento_irregular', 'obsidian_flagstones', 16),
-           ('04_pavimento_retangular', 'obsidian_bricks', 16)]
+MODULES = [('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_floor', 4, 16),
+           ('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_inlay', 4, 8),
+           ('pisos-templo-continuo/05_pavimento_irregular/modulo-128.png', 'obsidian_flagstones', 4, 16),
+           ('pisos-templo-continuo/04_pavimento_retangular/modulo-128.png', 'obsidian_bricks', 4, 16),
+           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_city_paving', 8, 64),
+           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_irregular_paving', 8, 64)]
 
 
 def copy(group, family, folder, cells):
@@ -59,20 +62,20 @@ def copy(group, family, folder, cells):
     return cells
 
 
-def cut(family, folder, cells):
-    module = Image.open(os.path.join(MODULE_PACK, family, 'modulo-128.png')).convert('RGBA')
+def cut(source, folder, width, cells):
+    module = Image.open(os.path.join(ART, 'source', source)).convert('RGBA')
     dst = os.path.join(ART, folder)
     os.makedirs(dst, exist_ok=True)
     for f in os.listdir(dst):
         os.remove(os.path.join(dst, f))
     for cell in range(cells):
-        x, y = cell % 4, cell // 4
+        x, y = cell % width, cell // width
         module.crop((x * 32, y * 32, x * 32 + 32, y * 32 + 32)).save(os.path.join(dst, f'{cell}.png'))
     return cells
 
 
 if __name__ == '__main__':
-    for family, folder, cells in MODULES:
-        print(cut(family, folder, cells), 'tiles:', family, '->', folder)
+    for source, folder, width, cells in MODULES:
+        print(cut(source, folder, width, cells), 'tiles:', source, '->', folder)
     for group, family, folder, cells in FLOORS:
         print(copy(group, family, folder, cells), 'tiles:', family, '->', folder)

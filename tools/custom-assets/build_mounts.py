@@ -65,9 +65,9 @@ GROUNDS = [
     # the arrival point of the temple: a soft violet light like the old flame slab
     {'id': 60003, 'name': 'obsidian rune', 'folder': 'obsidian_rune', 'pattern': (1, 1), 'phases': 4, 'duration': 450,
      'light': (3, 125)},
-    # city streets, from the obsidian city sprite pack (art/source/obsidian-city-sprites)
-    {'id': 60004, 'name': 'obsidian paving', 'folder': 'obsidian_city_paving', 'pattern': (4, 4), 'phases': 1},
-    {'id': 60005, 'name': 'obsidian cobbles', 'folder': 'obsidian_irregular_paving', 'pattern': (4, 4), 'phases': 1},
+    # city streets: one continuous sandstone drawing (gen_street_paving.py), 8x8 so it repeats every 8 squares
+    {'id': 60004, 'name': 'obsidian paving', 'folder': 'obsidian_city_paving', 'pattern': (8, 8), 'phases': 1},
+    {'id': 60005, 'name': 'obsidian cobbles', 'folder': 'obsidian_irregular_paving', 'pattern': (8, 8), 'phases': 1},
     # the TP rooms of the temple, from the continuous temple pack (art/source/pisos-templo-continuo)
     {'id': 60006, 'name': 'obsidian flagstones', 'folder': 'obsidian_flagstones', 'pattern': (4, 4), 'phases': 1},
     {'id': 60007, 'name': 'obsidian bricks', 'folder': 'obsidian_bricks', 'pattern': (4, 4), 'phases': 1},
