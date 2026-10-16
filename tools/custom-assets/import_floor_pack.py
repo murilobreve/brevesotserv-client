@@ -2,7 +2,8 @@
 
   templo/01_placas_pretas  -> art/obsidian_floor/0..15        (60001, the temple hall of Ventera)
   templo/01_placas_pretas  -> art/obsidian_inlay/0..7         (60002, was purple; now the same black slabs, 4x2)
-  cidade/04_pedra_grafite  -> art/obsidian_city_paving/0..15  (60004, the streets of Ventera)
+  cidade/02_arenito        -> art/obsidian_city_paving/0..15  (60004, the streets of Ventera)
+  cidade/02_arenito        -> art/obsidian_irregular_paving/0..15 (60005, the cobbled streets)
 
 The client draws a 4x4 ground by the tile's position (cell x % 4, y % 4), so the 16 drawings repeat every 4 squares.
 The pack numbers them from the quietest (01, weight 12%) to the most marked (16, 3%); LAYOUT puts 13..16 on cells two
@@ -24,7 +25,8 @@ LAYOUT = [16, 1, 15, 2,
 
 FLOORS = [('templo', '01_placas_pretas', 'obsidian_floor', 16),
           ('templo', '01_placas_pretas', 'obsidian_inlay', 8),
-          ('cidade', '04_pedra_grafite', 'obsidian_city_paving', 16)]
+          ('cidade', '02_arenito', 'obsidian_city_paving', 16),
+          ('cidade', '02_arenito', 'obsidian_irregular_paving', 16)]
 
 
 def copy(group, family, folder, cells):
