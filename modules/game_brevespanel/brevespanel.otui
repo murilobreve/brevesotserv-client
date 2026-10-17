@@ -42,9 +42,11 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #f1d399
 
-// the VIP button: the site's gold button, at the left end of the bar
+// the VIP button: the site's gold button, at the right end of the bar
 BrevesVipButton < BrevesFeatureButton
   height: 24
+  anchors.left: parent.left
+  anchors.verticalCenter: parent.verticalCenter
   font: Verdana Bold-11px
   color: #fff4d8
   text-align: center
@@ -64,6 +66,11 @@ BrevesVipButton < BrevesFeatureButton
     image-source: /images/mythos/kit_gold_24_pressed
     background-color: #00000000
     color: #ffffff
+
+// holds the VIP button at its own 24px height: the bar's line layout would
+// stretch it to the sections' height and repeat the gold art
+BrevesVipHolder < UIWidget
+  phantom: true
 
 // one of the four sections (Tasks, Hunts, Rarity, Tools): a framed block with
 // a gold-trimmed title and its buttons in a line under it
@@ -142,12 +149,13 @@ BrevesBar < UIWidget
       fit-children: true
 
   // starts the Mythos tour again (game_tutorial)
+  // on the left corner, clear of the VIP button at the right end
   UIButton
     id: tutorialButton
-    anchors.right: parent.right
+    anchors.left: parent.left
     anchors.top: parent.top
     margin-top: 3
-    margin-right: 4
+    margin-left: 4
     size: 12 14
     text: ?
     font: verdana-11px-rounded

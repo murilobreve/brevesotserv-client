@@ -1,7 +1,7 @@
 -- Mythos bar: the server's own systems (tasks, hunt rates, leaderboard,
 -- rarity market, heal bot) in a bar under the game screen, just above the
--- spell bar: the VIP button and four framed sections side by side, Tasks,
--- Hunts, Rarity and Tools. It cannot be closed; the map gives up its height.
+-- spell bar: four framed sections side by side, Tasks, Hunts, Rarity and
+-- Tools, and the VIP button after them. It cannot be closed; the map gives up its height.
 -- The news window lists the systems on the first login after an update.
 --
 -- The feature modules register their row with addFeature() and get back the
@@ -52,6 +52,7 @@ local states = {}
 local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
 local sectors = {} -- section id -> section widget
+local vipHolder -- the VIP button's box in the bar
 
 local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
 local SECTOR_SPACING = 6 -- between the sections (otui)
@@ -127,6 +128,7 @@ local function resize()
         local blocks = 0
         if buttons.vip then
             buttons.vip:setWidth(math.max(110, buttons.vip:getTextSize().width + 56))
+            vipHolder:setWidth(buttons.vip:getWidth())
             total = total + buttons.vip:getWidth()
             blocks = blocks + 1
         end
@@ -203,10 +205,11 @@ function addFeature(id, callback)
     local button = buttons[id]
     if not button then
         if feature.group == 'vip' then
-            button = g_ui.createWidget('BrevesVipButton', panel.strip)
-            panel.strip:moveChildToIndex(button, 1)
-            -- centred on the sections' height, the crown clear of the pointed end
-            button:setMarginTop(11)
+            -- last in the bar, after Tools, where the eye ends its sweep
+            vipHolder = vipHolder or g_ui.createWidget('BrevesVipHolder', panel.strip)
+            panel.strip:moveChildToIndex(vipHolder, panel.strip:getChildCount())
+            button = g_ui.createWidget('BrevesVipButton', vipHolder)
+            -- the crown clear of the pointed end
             button.icon:setMarginLeft(18)
         else
             button = g_ui.createWidget('BrevesFeatureButton', sectors[feature.group].rows)
@@ -430,4 +433,5 @@ function terminate()
     buttons = {}
     callbacks = {}
     sectors = {}
+    vipHolder = nil
 end
