@@ -125,15 +125,17 @@ BrevesSector < UIWidget
       type: horizontalBox
       spacing: 2
 
-// the Mythos bar: under the game screen, just above the spell bar, across the
-// width of the map. It cannot be closed; the map gives up its height.
+// the Mythos bar: over the bottom of the game screen, just above the spell
+// bar, across the width of the map. Its background lets the game show
+// through, and a click off its buttons reaches the map.
 BrevesBar < UIWidget
   id: brevespanel
   height: 53
-  background-color: #0d0915
+  background-color: #0d091570
   border-width-top: 1
-  border-color-top: #6a5226
+  border-color-top: #6a522699
   focusable: false
+  phantom: true
 
   UIWidget
     id: strip

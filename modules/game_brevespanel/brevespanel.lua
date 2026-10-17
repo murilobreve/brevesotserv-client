@@ -1,7 +1,8 @@
 -- Mythos bar: the server's own systems (tasks, hunt rates, leaderboard,
 -- rarity market, heal bot) in a bar under the game screen, just above the
 -- spell bar: four framed sections side by side, Tasks, Hunts, Rarity and
--- Tools, and the VIP button after them. It cannot be closed; the map gives up its height.
+-- Tools, and the VIP button after them. It cannot be closed; it lies over
+-- the bottom of the map, which shows through it.
 -- The news window lists the systems on the first login after an update.
 --
 -- The feature modules register their row with addFeature() and get back the
@@ -351,7 +352,7 @@ end
 local BAR_HEIGHT, FOLDED_HEIGHT = 53, 22
 local collapsed = false
 
--- folds the bar to one line or opens it; the map takes or gives back the room
+-- folds the bar to one line or opens it
 local function setCollapsed(fold)
     collapsed = fold
     if not panel then
@@ -377,21 +378,17 @@ function togglePanel()
     end
 end
 
--- the bar takes the place of the map's bottom edge: the map ends on its top
--- and the bar ends on the splitter above the spell bars
+-- the bar lies over the bottom of the map, just above the spell bars; the map
+-- keeps its size and shows through the bar's background
 local function placeBar()
     local root = modules.game_interface and modules.game_interface.getRootPanel()
     if panel or not root then
         return panel ~= nil
     end
     panel = g_ui.createWidget('BrevesBar', root)
-    panel:addAnchor(AnchorLeft, 'gameLeftActionPanel', AnchorRight)
-    panel:addAnchor(AnchorRight, 'gameRightActionPanel', AnchorLeft)
-    panel:addAnchor(AnchorBottom, 'bottomSplitter', AnchorTop)
-    local map = root:getChildById('gameMapPanel')
-    if map then
-        map:addAnchor(AnchorBottom, 'brevespanel', AnchorTop)
-    end
+    panel:addAnchor(AnchorLeft, 'gameMapPanel', AnchorLeft)
+    panel:addAnchor(AnchorRight, 'gameMapPanel', AnchorRight)
+    panel:addAnchor(AnchorBottom, 'gameMapPanel', AnchorBottom)
     for _, sector in ipairs(SECTORS) do
         local widget = g_ui.createWidget('BrevesSector', panel.strip)
         widget:setId('sector_' .. sector.id)
@@ -446,11 +443,6 @@ function terminate()
     hideNews()
     hideNotice()
     if panel then
-        local root = panel:getParent()
-        local map = root and root:getChildById('gameMapPanel')
-        if map then
-            map:addAnchor(AnchorBottom, 'bottomSplitter', AnchorTop)
-        end
         panel:destroy()
         panel = nil
     end
