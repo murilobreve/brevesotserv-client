@@ -1,8 +1,6 @@
-// one row per server feature, under the store and control buttons
+// one row per server feature, inside its section
 BrevesFeatureButton < UIButton
-  height: 20
-  image-source: /images/mythos/button
-  image-border: 4
+  height: 19
   font: verdana-11px-rounded
   color: #e6e0f2
   text-align: left
@@ -10,12 +8,12 @@ BrevesFeatureButton < UIButton
   change-cursor-image: true
   cursor: pointer
   $hover !on:
-    image-source: /images/mythos/button_hover
-    color: #ffffff
+    background-color: #f1d39916
+    color: #ffe7b0
   $pressed:
-    image-source: /images/mythos/button_pressed
+    background-color: #f1d39926
   $on:
-    image-source: /images/mythos/button_pressed
+    background-color: #f1d39922
     color: #f3dcae
     text-offset: 26 1
 
@@ -32,45 +30,98 @@ BrevesFeatureButton < UIButton
     id: badge
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 5
+    margin-right: 4
     height: 14
     text-auto-resize: true
     text-align: center
     padding: 1 5 0 5
     font: verdana-9px-bold
-    border-color: #4a3670
+    border-color: #6a5226
     phantom: true
     visible: false
     $hover:
-      border-color: #e6e0f2
+      border-color: #f1d399
 
-// the title of a group of rows (Hunting, Rarity, Tools)
-// a click folds or opens the group
-BrevesGroupLabel < UIButton
-  height: 14
-  font: verdana-11px-rounded
-  color: #9789b3
-  text-align: left
-  text-offset: 12 0
-  icon-source: /images/mythos/fold_open
-  icon-size: 8 8
-  icon-align: left
-  icon-offset: 1 0
-  change-cursor-image: true
-  cursor: pointer
-  $hover:
-    color: #e6e0f2
+// the VIP row: the site's gold button, above the sections
+BrevesVipButton < BrevesFeatureButton
+  height: 24
+  font: Verdana Bold-11px
+  color: #fff4d8
+  text-align: center
+  text-offset: 8 1
+  image-source: /images/mythos/kit_gold
+  image-border-left: 30
+  image-border-right: 30
+  image-border-top: 8
+  image-border-bottom: 8
+  $hover !on:
+    image-source: /images/mythos/kit_gold_hover
+    background-color: #00000000
+    color: #ffffff
+  $pressed:
+    image-source: /images/mythos/kit_gold_pressed
+    background-color: #00000000
   $on:
-    icon-source: /images/mythos/fold_closed
+    image-source: /images/mythos/kit_gold_pressed
+    background-color: #00000000
+    color: #ffffff
+    text-offset: 8 2
 
-// the small buttons on the panel's title line, drawn like a mini window's
-BrevesPanelButton < UIButton
-  size: 12 12
-  image-size: 14 14
-  image-source: /images/ui/miniwindow_buttons
+// one of the four sections (Tasks, Hunts, Rarity, Tools): a framed block with
+// a gold-trimmed title, the site's panel look; it cannot be folded or closed
+BrevesSector < UIWidget
+  image-source: /images/mythos/sector
+  image-border: 4
+  phantom: true
 
-// a Tibia mini window: it moves between the side panels, the bottom border
-// resizes it and the header minimizes it, like Skills or Battle
+  UIWidget
+    id: header
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 22
+    // the site's dark gold button scaled evenly to 22px, so the trim above
+    // and below stays the same; only the middle stretches sideways
+    image-source: /images/mythos/sector_header
+    image-border-left: 20
+    image-border-right: 20
+    phantom: true
+
+  UIWidget
+    id: icon
+    size: 16 16
+    anchors.left: header.left
+    anchors.verticalCenter: header.verticalCenter
+    margin-left: 18
+    phantom: true
+
+  Label
+    id: title
+    anchors.left: icon.right
+    anchors.verticalCenter: header.verticalCenter
+    margin-left: 6
+    margin-top: 1
+    text-auto-resize: true
+    color: #f1d399
+    ttf-font: cinzel-bold
+    ttf-font-size: 12
+    phantom: true
+
+  UIWidget
+    id: rows
+    anchors.top: header.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin: 2 4 4 4
+    phantom: true
+    layout:
+      type: verticalBox
+      spacing: 1
+
+// a Tibia mini window that stays open: no close, minimize or fold, so the
+// sections are always in front of the player; it still moves between the
+// side panels
 BrevesPanel < MiniWindow
   id: brevespanel
   height: 300
@@ -83,7 +134,7 @@ BrevesPanel < MiniWindow
     margin-top: 1
     margin-left: 6
     text-auto-resize: true
-    color: #ece8f6
+    color: #f1d399
     ttf-font: cinzel-bold
     ttf-font-size: 12
     text: Mythos
@@ -98,50 +149,22 @@ BrevesPanel < MiniWindow
     size: 12 14
     text: ?
     font: verdana-11px-rounded
-    color: #6f6488
+    color: #8a7650
     cursor: pointer
     !tooltip: tr('Tutorial: a quick tour of Mythos')
     @onClick: if modules.game_tutorial then modules.game_tutorial.start() end
     $hover:
-      color: #e6e0f2
+      color: #ffe7b0
 
-  // full rows or only the rows with a value (task kills, XP, ON / OFF)
-  BrevesPanelButton
-    id: collapseButton
-    anchors.top: lockButton.top
-    anchors.right: lockButton.left
-    margin-right: 2
-    image-clip: 0 0 14 14
-    @onClick: modules.game_brevespanel.toggleCollapsed()
-    $hover:
-      image-clip: 0 14 14 14
-    $pressed:
-      image-clip: 0 28 14 14
-    $on:
-      image-clip: 14 0 14 14
-    $on hover:
-      image-clip: 14 14 14 14
-    $on pressed:
-      image-clip: 14 28 14 14
-
-  // names or only the icons
-  BrevesPanelButton
-    id: compactButton
-    anchors.top: collapseButton.top
-    anchors.right: collapseButton.left
-    margin-right: 2
-    image-clip: 112 0 14 14
-    @onClick: modules.game_brevespanel.toggleCompact()
-    $hover:
-      image-clip: 112 14 14 14
-    $pressed:
-      image-clip: 112 28 14 14
-
+  // the panel is as tall as its sections, so the contents take the scroll
+  // bar's place too
   MiniWindowContents
-    padding: 3 4 3 4
+    anchors.right: parent.right
+    margin-right: 3
+    padding: 4 3 4 3
     layout:
       type: verticalBox
-      spacing: 2
+      spacing: 4
 
 // ---------------------------------------------------------------- news window
 
