@@ -407,7 +407,10 @@ function controllerNpcTrader:stopEquippedImbuementsTracking()
     g_game.imbuementDurations(trackerOn)
 end
 
--- count of each id_subType in the equipment slots, read once per call site
+-- count of each id_subType in the equipment slots, read once per call site.
+-- Rarity items are left out: the server never counts them as sellable, so
+-- taking a worn Legendarius golden armor off the total would hide the plain
+-- one in the backpack.
 function controllerNpcTrader:getEquippedCounts()
     local counts = {}
     local player = g_game.getLocalPlayer()
@@ -416,7 +419,7 @@ function controllerNpcTrader:getEquippedCounts()
     end
     for i = 1, 10 do
         local item = player:getInventoryItem(i)
-        if item then
+        if item and not ItemsDatabase.getItemRarityGrade(item) then
             local key = item:getId() .. "_" .. item:getSubType()
             counts[key] = (counts[key] or 0) + item:getCount()
         end
