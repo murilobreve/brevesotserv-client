@@ -1,8 +1,8 @@
--- Mythos panel: the server's own systems (tasks, hunt rates, leaderboard,
--- rarity market, heal bot) in the right panel, in four framed sections the
--- player always sees: Tasks, Hunts, Rarity and Tools, with the VIP bar above
--- them. The panel cannot be closed, minimized or folded. The news window
--- lists the systems on the first login after an update.
+-- Mythos bar: the server's own systems (tasks, hunt rates, leaderboard,
+-- rarity market, heal bot) in a bar under the game screen, just above the
+-- spell bar: the VIP button and four framed sections side by side, Tasks,
+-- Hunts, Rarity and Tools. It cannot be closed; the map gives up its height.
+-- The news window lists the systems on the first login after an update.
 --
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
@@ -53,10 +53,14 @@ local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
 local sectors = {} -- section id -> section widget
 
-local ROW_HEIGHT, ROW_SPACING = 19, 1
-local VIP_HEIGHT = 24
-local SECTOR_HEADER, SECTOR_PADDING = 22, 2 + 4 -- the rows' margins above and below
-local SECTOR_SPACING = 4
+local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
+local SECTOR_SPACING = 6 -- between the sections (otui)
+local SECTOR_PADDING = 8 -- the buttons' margins, left and right
+local TITLE_ROOM = 18 + 16 + 6 + 22 -- header art end, icon, gap, the other end
+local ICON_ONLY = 24 -- a button's width when the screen is too narrow for names
+local compact = false -- names hidden for lack of room
+
+local styleButton
 
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
@@ -100,47 +104,78 @@ local function refreshBadge(id)
     end
 end
 
--- each section is as tall as its rows and the window as tall as its
--- sections, so nothing is ever cut off or scrolled away; the bottom border
--- cannot make it smaller
+-- a button is as wide as its icon, its name and its badge
+local function buttonWidth(button)
+    if compact and button:getId() ~= 'vip' then
+        return ICON_ONLY
+    end
+    local width = 23 + button:getTextSize().width + 6
+    if button.badge:isVisible() then
+        width = width + button.badge:getWidth() + 4
+    end
+    return width
+end
+
+-- widths of the buttons and the sections; names give way to icons alone when
+-- the bar is narrower than everything with names
 local function resize()
     if not panel then
         return
     end
-    local list = panel.contentsPanel
-    local content = list:getPaddingTop() + list:getPaddingBottom()
-    local blocks = 0
-    if buttons.vip then
-        content = content + VIP_HEIGHT
-        blocks = blocks + 1
-    end
-    for _, sector in ipairs(SECTORS) do
-        local widget = sectors[sector.id]
-        local rows = widget.rows:getChildCount()
-        widget:setVisible(rows > 0)
-        if rows > 0 then
-            local height = SECTOR_HEADER + SECTOR_PADDING + rows * ROW_HEIGHT + (rows - 1) * ROW_SPACING
-            widget:setHeight(height)
-            content = content + height
+    local function measure()
+        local total = 0
+        local blocks = 0
+        if buttons.vip then
+            buttons.vip:setWidth(math.max(110, buttons.vip:getTextSize().width + 56))
+            total = total + buttons.vip:getWidth()
             blocks = blocks + 1
         end
+        for _, sector in ipairs(SECTORS) do
+            local widget = sectors[sector.id]
+            local children = widget.rows:getChildren()
+            widget:setVisible(#children > 0)
+            if #children > 0 then
+                local rows = 0
+                for _, button in ipairs(children) do
+                    button:setWidth(buttonWidth(button))
+                    rows = rows + button:getWidth()
+                end
+                rows = rows + (#children - 1) * BUTTON_SPACING
+                local title = TITLE_ROOM + widget.title:getWidth()
+                widget:setWidth(math.max(rows, title) + SECTOR_PADDING)
+                total = total + widget:getWidth()
+                blocks = blocks + 1
+            end
+        end
+        return total + math.max(0, blocks - 1) * SECTOR_SPACING
     end
-    content = content + math.max(0, blocks - 1) * SECTOR_SPACING
-    -- the mini window's content sizes leave out the header strip
-    content = content + panel.miniwindowHeader:getHeight()
-    panel:setContentMinimumHeight(content)
-    panel:setContentMaximumHeight(content)
-    panel:setContentHeight(content)
+    -- names first; icons alone only if the names do not fit
+    local function apply(iconsOnly)
+        compact = iconsOnly
+        for id in pairs(buttons) do
+            styleButton(id)
+        end
+        return measure()
+    end
+    local room = panel:getWidth() - 24
+    if apply(false) > room and room > 0 then
+        apply(true)
+    end
 end
 
-local function styleButton(id)
+styleButton = function(id)
     local button = buttons[id]
     local feature = featureOf(id)
     if not button or not feature then
         return
     end
-    button:setText(labels[id] or tr(feature.label))
+    -- the VIP button keeps its text: it is the one that sells
+    local iconsOnly = compact and id ~= 'vip'
+    button:setText(iconsOnly and '' or (labels[id] or tr(feature.label)))
     refreshBadge(id)
+    if iconsOnly then
+        button.badge:hide()
+    end
 end
 
 local function sortRows(parent)
@@ -168,10 +203,11 @@ function addFeature(id, callback)
     local button = buttons[id]
     if not button then
         if feature.group == 'vip' then
-            button = g_ui.createWidget('BrevesVipButton', panel.contentsPanel)
-            panel.contentsPanel:moveChildToIndex(button, 1)
-            -- the crown inside the gold frame, clear of its pointed end
-            button.icon:setMarginLeft(24)
+            button = g_ui.createWidget('BrevesVipButton', panel.strip)
+            panel.strip:moveChildToIndex(button, 1)
+            -- centred on the sections' height, the crown clear of the pointed end
+            button:setMarginTop(11)
+            button.icon:setMarginLeft(18)
         else
             button = g_ui.createWidget('BrevesFeatureButton', sectors[feature.group].rows)
         end
@@ -200,7 +236,8 @@ end
 -- a short state on the right of a row, e.g. ON / OFF
 function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
-    refreshBadge(id)
+    styleButton(id)
+    resize()
 end
 
 -- replaces the name shown on a row (nil puts the feature name back), e.g.
@@ -211,6 +248,7 @@ function setFeatureLabel(id, text, color)
     if button then
         button:setColor(text and color or (id == 'vip' and '#fff4d8' or '#e6e0f2'))
         styleButton(id)
+        resize()
     end
 end
 
@@ -307,31 +345,47 @@ function showNews()
 end
 
 
--- the panel is always open; kept for the tour, which calls it
+-- the bar is always shown; kept for the tour, which calls it
 function togglePanel()
-    if not panel then
-        return
+    if panel then
+        panel:show()
     end
-    panel:open()
-    if panel:isOn() then
-        panel:maximize()
+end
+
+-- the bar takes the place of the map's bottom edge: the map ends on its top
+-- and the bar ends on the splitter above the spell bars
+local function placeBar()
+    local root = modules.game_interface and modules.game_interface.getRootPanel()
+    if panel or not root then
+        return panel ~= nil
     end
-    panel:raise()
+    panel = g_ui.createWidget('BrevesBar', root)
+    panel:addAnchor(AnchorLeft, 'gameLeftActionPanel', AnchorRight)
+    panel:addAnchor(AnchorRight, 'gameRightActionPanel', AnchorLeft)
+    panel:addAnchor(AnchorBottom, 'bottomSplitter', AnchorTop)
+    local map = root:getChildById('gameMapPanel')
+    if map then
+        map:addAnchor(AnchorBottom, 'brevespanel', AnchorTop)
+    end
+    for _, sector in ipairs(SECTORS) do
+        local widget = g_ui.createWidget('BrevesSector', panel.strip)
+        widget:setId('sector_' .. sector.id)
+        widget.title:setText(tr(sector.label))
+        widget.icon:setImageSource(iconPath(sector.icon))
+        widget:hide()
+        sectors[sector.id] = widget
+    end
+    -- names or icons follow the width of the map
+    panel.onGeometryChange = function(widget, oldRect, newRect)
+        if oldRect.width ~= newRect.width then
+            resize()
+        end
+    end
+    return true
 end
 
 local function onGameStart()
-    panel:setupOnStart()
-    -- the first time, at the top of the right panel, where the old fixed
-    -- panel was; after that the mini window settings remember the place
-    if not g_settings.getBoolean('breves_panel_placed') then
-        g_settings.set('breves_panel_placed', true)
-        local right = modules.game_interface.getRightPanel()
-        if right and panel:getParent() == right then
-            right:moveChildToIndex(panel, 1)
-        end
-    end
-    -- open and unfolded on every login, whatever a saved setting says
-    togglePanel()
+    placeBar()
     resize()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
@@ -353,37 +407,7 @@ end
 
 function init()
     g_ui.importStyle('brevespanel')
-    panel = g_ui.createWidget('BrevesPanel')
-    panel:setId('brevespanel')
-    panel:setup()
-    -- no close, minimize, lock or filter buttons: the panel stays
-    for _, id in ipairs({ 'closeButton', 'minimizeButton', 'lockButton', 'toggleFilterButton', 'contextMenuButton', 'newWindowButton' }) do
-        local button = panel:getChildById(id)
-        if button then
-            button:hide()
-        end
-    end
-    -- its height always fits the sections (resize), so no scroll bar
-    if panel.miniwindowScrollBar then
-        panel.miniwindowScrollBar:hide()
-    end
-    -- and nothing else (a double click on the header, a saved state) hides it
-    panel.minimize = function() end
-    panel.close = function() end
-    -- Mythos colours on the Tibia frame
-    panel:setImageSource('/images/mythos/panel')
-    panel:setImageBorder(4)
-    panel.miniwindowHeader:setImageSource('')
-    panel.miniwindowHeader:setBackgroundColor('#140e1f')
-    for _, sector in ipairs(SECTORS) do
-        local widget = g_ui.createWidget('BrevesSector', panel.contentsPanel)
-        widget:setId('sector_' .. sector.id)
-        widget.title:setText(tr(sector.label))
-        widget.icon:setImageSource(iconPath(sector.icon))
-        widget:hide()
-        sectors[sector.id] = widget
-    end
-    resize()
+    placeBar()
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     if g_game.isOnline() then
         onGameStart()
@@ -395,6 +419,11 @@ function terminate()
     hideNews()
     hideNotice()
     if panel then
+        local root = panel:getParent()
+        local map = root and root:getChildById('gameMapPanel')
+        if map then
+            map:addAnchor(AnchorBottom, 'bottomSplitter', AnchorTop)
+        end
         panel:destroy()
         panel = nil
     end

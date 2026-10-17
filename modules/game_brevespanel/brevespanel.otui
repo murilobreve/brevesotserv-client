@@ -1,10 +1,11 @@
-// one row per server feature, inside its section
+// one button per server feature, in a line under its section's title; its
+// width follows the text (brevespanel.lua), or only the icon on a narrow screen
 BrevesFeatureButton < UIButton
-  height: 19
+  height: 20
   font: verdana-11px-rounded
   color: #e6e0f2
   text-align: left
-  text-offset: 25 0
+  text-offset: 23 0
   change-cursor-image: true
   cursor: pointer
   $hover !on:
@@ -15,14 +16,13 @@ BrevesFeatureButton < UIButton
   $on:
     background-color: #f1d39922
     color: #f3dcae
-    text-offset: 26 1
 
   UIWidget
     id: icon
     size: 16 16
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 5
+    margin-left: 4
     phantom: true
 
   // a state such as ON / OFF
@@ -30,11 +30,11 @@ BrevesFeatureButton < UIButton
     id: badge
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 4
+    margin-right: 3
     height: 14
     text-auto-resize: true
     text-align: center
-    padding: 1 5 0 5
+    padding: 1 4 0 4
     font: verdana-9px-bold
     border-color: #6a5226
     phantom: true
@@ -42,7 +42,7 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #f1d399
 
-// the VIP row: the site's gold button, above the sections
+// the VIP button: the site's gold button, at the left end of the bar
 BrevesVipButton < BrevesFeatureButton
   height: 24
   font: Verdana Bold-11px
@@ -64,11 +64,11 @@ BrevesVipButton < BrevesFeatureButton
     image-source: /images/mythos/kit_gold_24_pressed
     background-color: #00000000
     color: #ffffff
-    text-offset: 8 2
 
 // one of the four sections (Tasks, Hunts, Rarity, Tools): a framed block with
-// a gold-trimmed title, the site's panel look; it cannot be folded or closed
+// a gold-trimmed title and its buttons in a line under it
 BrevesSector < UIWidget
+  height: 47
   image-source: /images/mythos/sector
   image-border: 4
   phantom: true
@@ -112,39 +112,42 @@ BrevesSector < UIWidget
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    margin: 2 4 4 4
+    margin: 2 4 3 4
     phantom: true
     layout:
-      type: verticalBox
-      spacing: 1
+      type: horizontalBox
+      spacing: 2
 
-// a Tibia mini window that stays open: no close, minimize or fold, so the
-// sections are always in front of the player; it still moves between the
-// side panels
-BrevesPanel < MiniWindow
+// the Mythos bar: under the game screen, just above the spell bar, across the
+// width of the map. It cannot be closed; the map gives up its height.
+BrevesBar < UIWidget
   id: brevespanel
-  height: 300
-  &save: true
+  height: 53
+  background-color: #0d0915
+  border-width-top: 1
+  border-color-top: #6a5226
+  focusable: false
 
-  Label
-    id: miniwindowTitle
-    anchors.top: miniwindowHeader.top
-    anchors.left: miniwindowHeader.left
-    margin-top: 1
-    margin-left: 6
-    text-auto-resize: true
-    color: #f1d399
-    ttf-font: cinzel-bold
-    ttf-font-size: 12
-    text: Mythos
+  UIWidget
+    id: strip
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 3
+    margin-bottom: 3
     phantom: true
+    layout:
+      type: horizontalBox
+      spacing: 6
+      fit-children: true
 
   // starts the Mythos tour again (game_tutorial)
   UIButton
     id: tutorialButton
-    anchors.left: miniwindowTitle.right
-    anchors.verticalCenter: miniwindowTitle.verticalCenter
-    margin-left: 4
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-top: 3
+    margin-right: 4
     size: 12 14
     text: ?
     font: verdana-11px-rounded
@@ -154,16 +157,6 @@ BrevesPanel < MiniWindow
     @onClick: if modules.game_tutorial then modules.game_tutorial.start() end
     $hover:
       color: #ffe7b0
-
-  // the panel is as tall as its sections, so the contents take the scroll
-  // bar's place too
-  MiniWindowContents
-    anchors.right: parent.right
-    margin-right: 3
-    padding: 4 3 4 3
-    layout:
-      type: verticalBox
-      spacing: 4
 
 // ---------------------------------------------------------------- news window
 
@@ -222,7 +215,7 @@ BrevesNewsWindow < MythosWindow
     text-auto-resize: true
     font: verdana-11px-monochrome
     color: #e6e0f2
-    !text: tr('The server has new systems. They are all in the right panel, under the Store button.')
+    !text: tr('The server has new systems. They are all in the Mythos bar, under the game screen and above your spells.')
 
   MythosSeparator
     id: topSep
