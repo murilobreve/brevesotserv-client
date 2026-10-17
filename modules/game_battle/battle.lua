@@ -1478,6 +1478,20 @@ function init()
     -- Setup keybind
     Keybind.new("Windows", "Show/hide battle list", "Ctrl+B", "")
     Keybind.bind("Windows", "Show/hide battle list", {{ type = KEY_DOWN, callback = toggle }})
+    -- the next or the previous creature of the battle list, on a key of the
+    -- player's choice (Options, General Hotkeys); no key by default
+    Keybind.new("Battle", "Attack Next Target", "", "")
+    Keybind.bind("Battle", "Attack Next Target", {{ type = KEY_DOWN, callback = function()
+        if g_game.isOnline() then
+            attackNext()
+        end
+    end }})
+    Keybind.new("Battle", "Attack Previous Target", "", "")
+    Keybind.bind("Battle", "Attack Previous Target", {{ type = KEY_DOWN, callback = function()
+        if g_game.isOnline() then
+            attackNext(true)
+        end
+    end }})
 
     -- Setup scrollbar - use default MiniWindow behavior
     local scrollbar = battleWindow:getChildById('miniwindowScrollBar')
@@ -1986,6 +2000,50 @@ function toggleFilterPanel() -- Switching modes of filter panel (hide/show)
     end
 end
 
+-- with the battle list closed or empty: the monsters on screen, nearest
+-- first; never players, so a key press cannot skull anyone
+local function attackNearby(previous)
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return false
+    end
+    local pos = player:getPosition()
+    local list = {}
+    for _, creature in ipairs(g_map.getSpectators(pos, false)) do
+        local cpos = creature:getPosition()
+        if creature:isMonster() and not creature:isDead() and creature:getHealthPercent() > 0
+            and creature:canBeSeen() and creature:getMasterId() ~= player:getId() and cpos.z == pos.z then
+            local distance = math.max(math.abs(cpos.x - pos.x), math.abs(cpos.y - pos.y))
+            table.insert(list, { creature = creature, distance = distance })
+        end
+    end
+    if #list == 0 then
+        return false
+    end
+    table.sort(list, function(a, b)
+        if a.distance ~= b.distance then
+            return a.distance < b.distance
+        end
+        return a.creature:getId() < b.creature:getId()
+    end)
+    local current = g_game.getAttackingCreature()
+    local index
+    for i, entry in ipairs(list) do
+        if current and entry.creature:getId() == current:getId() then
+            index = i
+        end
+    end
+    if not index then
+        index = previous and #list or 1
+    elseif previous then
+        index = index == 1 and #list or index - 1
+    else
+        index = index == #list and 1 or index + 1
+    end
+    g_game.attack(list[index].creature)
+    return true
+end
+
 function attackNext(previous)
     local foundTarget = false
     local firstElement = nil
@@ -1994,14 +2052,19 @@ function attackNext(previous)
     local nextElement = nil
 
     local mainInstance = BattleListManager.instances[0]
-    if not mainInstance or not mainInstance.panel then
-        return
+    if not mainInstance or not mainInstance.panel or not battleWindow or not battleWindow:isVisible() then
+        return attackNearby(previous)
     end
 
-    local children = mainInstance.panel:getChildren()
+    -- NPCs and your own summons are in the list but cannot be attacked: a
+    -- refused attack would leave the key stuck on them
+    local player = g_game.getLocalPlayer()
+    local function attackable(creature)
+        return creature and not creature:isNpc() and not (player and creature:getMasterId() == player:getId())
+    end
 
     for _, battleButton in pairs(mainInstance.panel:getChildren()) do
-        if battleButton:isVisible() then
+        if battleButton:isVisible() and attackable(battleButton.creature) then
             -- select visible first child
             if not firstElement then
                 firstElement = battleButton
@@ -2035,7 +2098,7 @@ function attackNext(previous)
     elseif firstElement then
         g_game.attack(firstElement.creature)
     else
-        return false
+        return attackNearby(previous)
     end
     return true
 end
@@ -2609,6 +2672,8 @@ function terminate() -- Terminating the Module (unload)
     toggleFilterButton = nil
 
     Keybind.delete("Windows", "Show/hide battle list")
+    Keybind.delete("Battle", "Attack Next Target")
+    Keybind.delete("Battle", "Attack Previous Target")
 
     disconnect(g_game, {
         onAttackingCreatureChange = onAttack,
