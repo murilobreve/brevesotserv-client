@@ -14,25 +14,25 @@ local NEWS_VERSION = 8
 local FEATURES = {
     { id = 'vip', group = 'vip', label = 'Mythos VIP', icon = 'vip',
       news = 'Mythos VIP: +10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. The row shows your days left and opens the Store.' },
-    { id = 'tasks', group = 'tasks', label = 'Daily Task', icon = 'tasks',
+    { id = 'tasks', group = 'tasks', label = 'Daily Task', short = 'Task', icon = 'tasks',
       news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
-    { id = 'trail', group = 'tasks', label = "Hunter's Trail", icon = 'trail',
+    { id = 'trail', group = 'tasks', label = "Hunter's Trail", short = 'Trail', icon = 'trail',
       news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
-    { id = 'rates', group = 'hunt', label = 'Hunt Rates', icon = 'rates',
+    { id = 'rates', group = 'hunt', label = 'Hunt Rates', short = 'Rates', icon = 'rates',
       news = 'The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
-    { id = 'loot', group = 'hunt', label = 'Auto Loot', icon = 'loot',
+    { id = 'loot', group = 'hunt', label = 'Auto Loot', short = 'Loot', icon = 'loot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
-    { id = 'rarity', group = 'rarity', label = 'Rarity Market', icon = 'rarity',
+    { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
       news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
     { id = 'incense', group = 'rarity', label = 'Incense', icon = 'incense',
       news = 'Hunting incense: for an hour, more rare monsters and more Rarity XP. One a day, priced by your level.' },
-    { id = 'healbot', group = 'tools', label = 'Heal Bot', icon = 'healbot',
+    { id = 'healbot', group = 'tools', label = 'Heal Bot', short = 'Bot', icon = 'healbot',
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
     { id = 'messages', group = 'tools', label = 'Interface', icon = 'messages',
       news = 'Interface settings, such as where the look, loot and warning messages show on the game screen.' },
@@ -62,8 +62,16 @@ local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
 local SECTOR_SPACING = 6 -- between the sections (otui)
 local SECTOR_PADDING = 8 -- the buttons' margins, left and right
 local TITLE_ROOM = 18 + 16 + 6 + 22 -- header art end, icon, gap, the other end
-local ICON_ONLY = 24 -- a button's width when the screen is too narrow for names
-local compact = false -- names hidden for lack of room
+local ICON_ONLY = 24 -- a button's width with its icon alone
+-- how much the buttons show, as the screen narrows: their names, short
+-- names, the icon with its state (ON / OFF, points, minutes), the icon alone
+local FULL, SHORT, STATES, ICONS = 0, 1, 2, 3
+local density = FULL
+local TOGGLE_WIDTH = 28 -- a switch's badge, as wide for ON as for OFF
+-- the widest each button has been at each level since login: a name or a
+-- badge that changes by itself (the teleport countdown, points, minutes)
+-- never makes the bar jump between levels; only the window size does
+local widest = {}
 
 local styleButton
 
@@ -97,6 +105,11 @@ local function refreshBadge(id)
         badge:setPhantom(toggles[id] == nil)
         badge:setBorderWidth(toggles[id] and 1 or 0)
         badge:setTooltip(toggles[id] and tr('Click to turn it on or off') or '')
+        -- a switch keeps one width, so turning it on or off never moves the bar
+        badge:setTextAutoResize(not toggles[id])
+        if toggles[id] then
+            badge:setWidth(math.max(TOGGLE_WIDTH, badge:getTextSize().width + 8))
+        end
         badge.onClick = function()
             if toggles[id] then
                 toggles[id]()
@@ -111,10 +124,10 @@ end
 
 -- a button is as wide as its icon, its name and its badge
 local function buttonWidth(button)
-    if compact and button:getId() ~= 'vip' then
+    if density == ICONS and button:getId() ~= 'vip' then
         return ICON_ONLY
     end
-    local width = 23 + button:getTextSize().width + 6
+    local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 6
     if button.badge:isVisible() then
         width = width + button.badge:getWidth() + 4
     end
@@ -124,8 +137,9 @@ local function buttonWidth(button)
     return width
 end
 
--- widths of the buttons and the sections; names give way to icons alone when
--- the bar is narrower than everything with names
+-- widths of the buttons and the sections; when everything does not fit, the
+-- names get short, then give way to the icons with their state, and only on a
+-- very narrow screen to the icons alone
 local function resize()
     if not panel then
         return
@@ -146,7 +160,9 @@ local function resize()
             if #children > 0 then
                 local rows = 0
                 for _, button in ipairs(children) do
-                    button:setWidth(buttonWidth(button))
+                    local key = button:getId() .. ':' .. density
+                    widest[key] = math.max(widest[key] or 0, buttonWidth(button))
+                    button:setWidth(widest[key])
                     rows = rows + button:getWidth()
                 end
                 rows = rows + (#children - 1) * BUTTON_SPACING
@@ -158,17 +174,18 @@ local function resize()
         end
         return total + math.max(0, blocks - 1) * SECTOR_SPACING
     end
-    -- names first; icons alone only if the names do not fit
-    local function apply(iconsOnly)
-        compact = iconsOnly
+    local function apply(level)
+        density = level
         for id in pairs(buttons) do
             styleButton(id)
         end
         return measure()
     end
     local room = panel:getWidth() - 24
-    if apply(false) > room and room > 0 then
-        apply(true)
+    for level = FULL, ICONS do
+        if apply(level) <= room or room <= 0 then
+            break
+        end
     end
 end
 
@@ -179,9 +196,12 @@ styleButton = function(id)
         return
     end
     -- the VIP button keeps its text: it is the one that sells
-    local iconsOnly = compact and id ~= 'vip'
-    button:setText(iconsOnly and '' or (labels[id] or tr(feature.label)))
+    local level = id == 'vip' and FULL or density
+    local name = labels[id] or tr(level == SHORT and feature.short or feature.label)
+    button:setText(level >= STATES and '' or name)
+    -- without its name, the name is in the tooltip (refreshBadge)
     refreshBadge(id)
+    local iconsOnly = level == ICONS
     if iconsOnly then
         button.badge:hide()
     end
@@ -189,7 +209,7 @@ styleButton = function(id)
     local action = actions[id]
     button.action:setVisible(action ~= nil and not iconsOnly)
     if action then
-        button.action:setText(action.text)
+        button.action:setText(level >= SHORT and action.short or action.text)
         button.action:setTooltip(action.tooltip or '')
         button.action:setEnabled(action.enabled ~= false)
         button.action.onClick = function()
@@ -323,7 +343,7 @@ end
 -- gold, and the badge blinks when it lands on the new value
 local function animateGain(id, from, to, text)
     local button = buttons[id]
-    if not button or compact or not button.badge:isVisible() then
+    if not button or density == ICONS or not button.badge:isVisible() then
         return
     end
     if gainEvents[id] then
@@ -398,9 +418,10 @@ function setFeatureLabel(id, text, color)
 end
 
 -- a small button on the right of a row (nil text removes it), e.g. the Trail
--- row's hunt teleport; `enabled` false greys it, for a cooldown
-function setFeatureAction(id, text, tooltip, callback, enabled)
-    actions[id] = (text and callback) and { text = text, tooltip = tooltip, callback = callback, enabled = enabled } or nil
+-- row's hunt teleport; `enabled` false greys it, for a cooldown; `short` is
+-- its text when the bar is short of room
+function setFeatureAction(id, text, tooltip, callback, enabled, short)
+    actions[id] = (text and callback) and { text = text, short = short or text, tooltip = tooltip, callback = callback, enabled = enabled } or nil
     if buttons[id] then
         styleButton(id)
         resize()
@@ -558,6 +579,8 @@ local function placeBar()
 end
 
 local function onGameStart()
+    -- another character: its rows measure afresh
+    widest = {}
     placeBar()
     -- open on every login, whatever it was when the player left
     setCollapsed(false)

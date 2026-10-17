@@ -288,6 +288,19 @@ function consoleController:onInit()
           callback = sendCurrentMessage,
         }
       }, consolePanel)
+    -- Chat On / Chat Off on a key of the player's choice (Options, General
+    -- Hotkeys); Enter and Escape keep working as before
+    Keybind.new("Chat", "Toggle Chat On/Off", "", "")
+    Keybind.bind("Chat", "Toggle Chat On/Off", {
+        {
+          type = KEY_DOWN,
+          callback = function()
+              if g_game.isOnline() then
+                  toggleChat()
+              end
+          end,
+        }
+      }, gameRootPanel)
     Keybind.new("Chat Channel", "Open Channel List", "Ctrl+O", "")
     Keybind.bind("Chat Channel", "Open Channel List", {
         {
@@ -508,6 +521,7 @@ function consoleController:onTerminate()
     Keybind.delete("Chat Channel", "Open Channel List")
     Keybind.delete("Chat Channel", "Open Help Channel")
     Keybind.delete("Chat", "Send current chat line")
+    Keybind.delete("Chat", "Toggle Chat On/Off")
     saveCommunicationSettings()
     clearReadOnlyTab()
     if readOnlyModeEnabled then

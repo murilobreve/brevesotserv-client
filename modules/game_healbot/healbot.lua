@@ -232,16 +232,46 @@ local function bindCheck(check, rule, field)
     end
 end
 
+-- the slider and the box next to it set the same percentage: drag one or type
+-- in the other
 local function bindSlider(widget, rule)
+    local edit = widget.belowEdit
+    local syncing = false
     local function show(value)
-        widget.belowLabel:setText(value .. '%')
+        syncing = true
+        edit:setText(tostring(value))
+        syncing = false
     end
     widget.below:setValue(rule.below)
     show(rule.below)
     widget.below.onValueChange = function(_, value)
         rule.below = value
-        show(value)
+        if not syncing then
+            show(value)
+        end
         save()
+    end
+    edit:setTooltip(tr('Type the percentage, from %d to %d.', widget.below:getMinimum(), widget.below:getMaximum()))
+    edit.onTextChange = function(_, text)
+        if syncing then
+            return
+        end
+        local digits = text:gsub('[^%d]', '')
+        if digits ~= text then
+            show(digits)
+        end
+        local value = tonumber(digits)
+        if value and value >= widget.below:getMinimum() and value <= widget.below:getMaximum() then
+            syncing = true
+            widget.below:setValue(value)
+            syncing = false
+        end
+    end
+    -- an empty box or a number out of range goes back to the rule's value
+    edit.onFocusChange = function(_, focused)
+        if not focused then
+            show(rule.below)
+        end
     end
 end
 

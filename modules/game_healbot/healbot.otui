@@ -24,10 +24,17 @@ HealBotPage < UIWidget
   visible: false
 
 HealBotSlider < MythosHSlider
-  width: 110
-  minimum: 5
-  maximum: 95
+  width: 96
+  minimum: 1
+  maximum: 99
   step: 1
+
+// the percentage, typed; the slider follows it (healbot.lua)
+HealBotPercent < MythosTextEdit
+  width: 34
+  height: 20
+  max-length: 2
+  text-align: center
 
 HealBotRule < BrevesPanelBox
   height: 42
@@ -69,13 +76,20 @@ HealBotStatRule < HealBotRule
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 10
 
-  Label
-    id: belowLabel
-    width: 34
+  HealBotPercent
+    id: belowEdit
     anchors.left: below.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
     color: #e6e0f2
+    text: %
 
 SpellRule < HealBotStatRule
 
@@ -95,13 +109,20 @@ FriendRule < HealBotRule
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 10
 
-  Label
-    id: belowLabel
-    width: 34
+  HealBotPercent
+    id: belowEdit
     anchors.left: below.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
     color: #e6e0f2
+    text: %
 
   QtCheckBox
     id: party
