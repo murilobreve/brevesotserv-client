@@ -26,8 +26,17 @@ BonusItemRow < BrevesRow
     id: rerollItemButton
     anchors.top: parent.top
     anchors.right: parent.right
-    width: 116
+    width: 136
     icon: /game_raritybonus/images/reroll
+
+  // raises the item one grade: gold and Rarity XP, with a chance to fail
+  BonusActionButton
+    id: upgradeItemButton
+    anchors.top: rerollItemButton.bottom
+    anchors.right: parent.right
+    margin-top: 3
+    width: 136
+    icon: /game_raritybonus/images/improve
 
   Label
     id: name
@@ -72,15 +81,29 @@ BonusActionButton < MythosButton
   $disabled:
     opacity: 0.7
 
-// one bonus of an item
+// one bonus of an item; the padlock keeps it on the next reroll (gold)
 BonusLine < Panel
   height: 16
 
+  UIButton
+    id: lock
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 12 12
+    image-source: /game_raritybonus/images/lock_off
+    cursor: pointer
+    visible: false
+    $hover !on:
+      opacity: 0.8
+    $on:
+      image-source: /game_raritybonus/images/lock_on
+
   Label
     id: text
-    anchors.left: parent.left
+    anchors.left: lock.right
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
     font: verdana-11px-monochrome
     color: #7fd35a
 

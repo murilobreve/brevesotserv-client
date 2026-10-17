@@ -420,7 +420,9 @@ function onAction()
         if not price or price <= 0 then
             return
         end
-        confirm(tr('Confirm listing'), tr('List %s for %s gold?\nThe item leaves your inventory until it sells or you cancel the listing.', entry.name, formatNumber(price)), function()
+        -- the market keeps 5% of the sale (custom_market.lua SALE_TAX_PERCENT)
+        local net = price - math.floor(price * 5 / 100)
+        confirm(tr('Confirm listing'), tr('List %s for %s gold?\nWhen it sells you get %s gold: the market keeps 5%%.\nThe item leaves your inventory until it sells or you cancel the listing.', entry.name, formatNumber(price), formatNumber(net)), function()
             send({ action = 'sell', token = entry.token, price = price })
         end)
     elseif selected.kind == 'own' then

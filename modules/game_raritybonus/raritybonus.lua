@@ -20,6 +20,8 @@ local featureButton
 local refreshEvent
 local confirmBox
 local rarityXp = 0
+local gold = 0 -- backpack + bank, for the gold prices (lock, upgrade)
+local locks = {} -- slot id -> affix key kept on that item's next reroll
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -46,6 +48,18 @@ local function formatCost(cost)
         return string.format('%.1fk', math.floor(cost / 100) / 10)
     end
     return tostring(cost)
+end
+
+-- 25000000 -> "25kk", 3500000 -> "3.5kk", 800000 -> "800k"
+local function formatGold(value)
+    value = tonumber(value) or 0
+    if value >= 1000000 then
+        local kk = value / 1000000
+        return (math.floor(kk) == kk and string.format('%dkk', kk) or string.format('%.1fkk', math.floor(kk * 10) / 10))
+    elseif value >= 1000 then
+        return string.format('%dk', math.floor(value / 1000))
+    end
+    return tostring(value)
 end
 
 local function bonusText(bonus)
@@ -83,14 +97,28 @@ local function setRerollState(row)
     local entry = row.entry
     local grade = GRADES[entry.rarity] or GRADES.uncommon
     local cost = entry.rerollCost or 0
+    local lockGold = locks[entry.slotId] and (entry.lockCost or 0) or 0
     row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
-    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost)
+    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost and gold >= lockGold)
     if cost > 0 and rarityXp < cost then
         row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
+    elseif lockGold > gold then
+        row.rerollItemButton:setTooltip(tr('Keeping a bonus costs %s gold and you have %s.', formatGold(lockGold), formatGold(gold)))
+    end
+    -- one grade up: gold and Rarity XP, with a chance
+    local up = entry.upgrade
+    row.upgradeItemButton:setVisible(up ~= nil)
+    if up then
+        row.upgradeItemButton:setText(tr('%s %d%%', up.label, up.chance))
+        row.upgradeItemButton:setEnabled(gold >= up.gold and rarityXp >= up.xp)
+        row.upgradeItemButton:setTooltip(tr('Raise to %s: %s gold and %d Rarity XP, %d%% chance. On success the item rolls again at %s; on a failure it stays as it is and the price is spent.', up.label, formatGold(up.gold), up.xp, up.chance, up.label))
     end
 end
 
-local function fillItems(items)
+local lastItems
+
+function fillItems(items)
+    lastItems = items
     local list = window.itemsSection.itemsList
     list:destroyChildren()
     window.itemsSection.itemsEmpty:setVisible(#items == 0)
@@ -117,6 +145,15 @@ local function fillItems(items)
         end
         row.info:setText(info)
         local count = 0
+        local lockable = (entry.lockCost or 0) > 0
+        -- a kept bonus the item no longer has (rerolled elsewhere) is dropped
+        local kept = false
+        for _, bonus in ipairs(entry.bonuses or {}) do
+            kept = kept or bonus.key == locks[entry.slotId]
+        end
+        if not kept then
+            locks[entry.slotId] = nil
+        end
         for _, bonus in ipairs(entry.bonuses or {}) do
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
@@ -125,23 +162,54 @@ local function fillItems(items)
             if bonus.color and bonus.color ~= '' then
                 line.text:setColor(bonus.color)
             end
+            -- the padlock: keep this bonus on the next reroll, for gold
+            line.lock:setVisible(lockable)
+            line.text:setMarginLeft(lockable and 4 or -12)
+            if lockable then
+                line.lock:setOn(locks[entry.slotId] == bonus.key)
+                line.lock:setTooltip(tr('Keep this bonus with its value on the next reroll: %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
+                line.lock.onClick = function()
+                    locks[entry.slotId] = locks[entry.slotId] ~= bonus.key and bonus.key or nil
+                    fillItems(lastItems or {})
+                end
+            end
         end
         local cost = entry.rerollCost or 0
-        row.rerollItemButton:setText(tr('Reroll %s', formatCost(cost)))
+        local lockKey = locks[entry.slotId]
+        row.rerollItemButton:setText(lockKey and tr('Reroll %s +%s', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s', formatCost(cost)))
         row.entry = entry
         setRerollState(row)
         row.rerollItemButton.onClick = function()
-            local lines = {}
+            local lines, keptText = {}, nil
             for _, bonus in ipairs(entry.bonuses or {}) do
-                table.insert(lines, bonusText(bonus))
+                if bonus.key == lockKey then
+                    keptText = bonusText(bonus)
+                else
+                    table.insert(lines, bonusText(bonus))
+                end
             end
-            confirm(tr('Reroll item'), tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n')), function()
-                send({ action = 'rerollItem', slot = entry.slotId })
+            local text
+            if keptText then
+                text = tr('Reroll %s for %d Rarity XP and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
+            else
+                text = tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n'))
+            end
+            confirm(tr('Reroll item'), text, function()
+                send({ action = 'rerollItem', slot = entry.slotId, lock = lockKey })
+            end)
+        end
+        row.upgradeItemButton.onClick = function()
+            local up = entry.upgrade
+            if not up then
+                return
+            end
+            confirm(tr('Raise the grade'), tr('Raise %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid even if it fails.\nChance: %d%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. On a failure it stays exactly as it is.', titleCase(entry.name or ''), up.label, formatGold(up.gold), up.xp, up.chance, up.label), function()
+                send({ action = 'upgradeItem', slot = entry.slotId })
             end)
         end
         local linesHeight = count * 18
         row.bonuses:setHeight(linesHeight)
-        row:setHeight(math.max(42, 3 + 15 + 16 + 3 + linesHeight + 6))
+        row:setHeight(math.max(48, 3 + 15 + 16 + 3 + linesHeight + 6))
     end
 end
 
@@ -199,7 +267,72 @@ local applyBonuses
 local rouletteTakes
 local updateRouletteXp
 
+-- ---------------------------------------------------------------------------
+-- Hunting incense (server: rarity/incense.lua): a row of the Mythos bar. It
+-- offers "Light" while today's incense is unused, counts the minutes while it
+-- burns, and says "tomorrow" once used.
+-- ---------------------------------------------------------------------------
+
+local incenseButton
+local incense -- last status from the server
+local incenseEvent
+
+local function incenseLeft()
+    if not incense then
+        return 0
+    end
+    return math.max(0, (incense.left or 0) - (os.time() - (incense.receivedAt or os.time())))
+end
+
+local function updateIncense()
+    local panel = modules.game_brevespanel
+    if incenseEvent then
+        removeEvent(incenseEvent)
+        incenseEvent = nil
+    end
+    if not panel or not panel.setFeatureState or not incense then
+        return
+    end
+    local left = incenseLeft()
+    local tip = tr('Hunting incense: for %d minutes, +%d%% chance of rare monsters and +%d%% Rarity XP. One a day, %s gold (your level x 2,000).', incense.minutes or 60, incense.rareMonster or 10, incense.rarityXp or 5, formatGold(incense.price))
+    if left > 0 then
+        panel.setFeatureAction('incense', nil)
+        panel.setFeatureState('incense', tr('%d min', math.ceil(left / 60)), '#9be36b')
+        if incenseButton then
+            incenseButton:setTooltip(tr('Hunting incense burning: %d minutes left.', math.ceil(left / 60)))
+        end
+        incenseEvent = scheduleEvent(updateIncense, 20000)
+    elseif incense.usedToday then
+        panel.setFeatureAction('incense', nil)
+        panel.setFeatureState('incense', tr('tomorrow'), '#8d8270')
+        if incenseButton then
+            incenseButton:setTooltip(tip .. ' ' .. tr('You already used today\'s.'))
+        end
+    else
+        panel.setFeatureState('incense', nil)
+        panel.setFeatureAction('incense', tr('Light'), tip, lightIncense, true)
+        if incenseButton then
+            incenseButton:setTooltip(tip)
+        end
+    end
+end
+
+function lightIncense()
+    if not incense or incenseLeft() > 0 or incense.usedToday then
+        return
+    end
+    confirm(tr('Hunting incense'), tr('Light the hunting incense for %s gold?\n\nFor %d minutes: +%d%% chance of rare monsters and +%d%% Rarity XP.\nOne a day. The gold comes from your backpack, then your bank.', formatGold(incense.price), incense.minutes or 60, incense.rareMonster or 10, incense.rarityXp or 5), function()
+        send({ action = 'incense' })
+    end)
+end
+
 local function onOpcode(protocol, opcode, data)
+    if type(data) == 'table' and data.action == 'incense' then
+        incense = data
+        incense.receivedAt = os.time()
+        updateIncense()
+        return
+    end
     -- the balance, after every change: shown on the Rarity Bonuses row; past
     -- a multiple of 50 a notice offers the window without opening it
     if type(data) == 'table' and data.action == 'xp' then
@@ -229,6 +362,7 @@ end
 
 applyBonuses = function(data)
     rarityXp = tonumber(data.rarityXp) or 0
+    gold = tonumber(data.gold) or gold
     showXpBadge(rarityXp)
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
     window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the items you wear; items of a higher grade or level cost more.'))
@@ -246,6 +380,15 @@ applyBonuses = function(data)
             message = tr('You need %d Rarity XP and have %d. Kill Pale, Ashen, Obsidian and Lord of Death monsters to earn more.', tonumber(result.cost) or 0, tonumber(result.balance) or 0)
         elseif result.code == 'gone' then
             message = tr('That item is no longer equipped.')
+        elseif result.code == 'gold' then
+            message = tr('You need %s gold in your backpack and bank.', formatGold(result.gold))
+        elseif result.code == 'upgradeFailed' then
+            message = tr('The upgrade to %s failed (%d%% chance): %s stays as it was. (-%s gold, -%d Rarity XP)', result.to or '', tonumber(result.chance) or 0, titleCase(result.name or ''), formatGold(result.gold), tonumber(result.xp) or 0)
+        end
+        if result.code == 'rerolled' and result.upgrade then
+            message = tr('Upgrade! %s: %s. (-%s gold, -%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), formatGold(result.gold), tonumber(result.cost) or 0)
+        elseif result.code == 'rerolled' and (tonumber(result.gold) or 0) > 0 then
+            message = message .. ' ' .. tr('(-%s gold to keep a bonus)', formatGold(result.gold))
         end
     end
     if message then
@@ -342,9 +485,12 @@ local function setAgainButton()
     if not spin or not spin.result then
         return
     end
+    -- an upgrade is not spun again: the item is rerolled from the list
+    roulette.againButton:setVisible(not spin.result.upgrade)
     local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
-    roulette.againButton:setText(tr('Spin again (%d)', cost))
-    roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost)
+    local lockGold = spin.result.lock and (tonumber(spin.result.nextGold) or 0) or 0
+    roulette.againButton:setText(lockGold > 0 and tr('Spin again (%d + %s)', cost, formatGold(lockGold)) or tr('Spin again (%d)', cost))
+    roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost and gold >= lockGold)
     -- the balance only once the reel stops: it is updated with the result
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
 end
@@ -659,14 +805,26 @@ local function startStrips(result)
     spin.count = math.max(1, #rolled)
     spin.assumed = total
     spin.bump = nil
-    -- the empty slots fall anywhere among the bonuses
-    local slots = {}
-    for i = 1, total do
-        slots[i] = rolled[i] or false
+    -- the empty slots fall anywhere among the bonuses; a kept bonus is the
+    -- first line and doesn't spin
+    local slots, kept = {}, nil
+    for _, entry in ipairs(rolled) do
+        if entry.locked then
+            kept = entry
+        else
+            slots[#slots + 1] = entry
+        end
     end
-    for i = total, 2, -1 do
+    local free = total - (kept and 1 or 0)
+    for i = #slots + 1, free do
+        slots[i] = false
+    end
+    for i = free, 2, -1 do
         local j = math.random(i)
         slots[i], slots[j] = slots[j], slots[i]
+    end
+    if kept then
+        table.insert(slots, 1, kept)
     end
     for i = 1, total do
         local widget = g_ui.createWidget('RouletteResult', roulette.results)
@@ -678,8 +836,16 @@ local function startStrips(result)
     end
     roulette.results:setHeight(total * 29)
     spin.current = 1
-    loadReel(spin.rows[1])
-    spin.rows[1].startsAt = g_clock.millis() + 300
+    if kept then
+        local row = spin.rows[1]
+        row.stopped = true
+        row.result.slot:setText(tr('Kept'))
+        paintResult(row, kept.text, qualityColor(kept.quality, kept.perfect))
+        row.result:setBorderWidth(1)
+        spin.current = 2
+    end
+    loadReel(spin.rows[spin.current])
+    spin.rows[spin.current].startsAt = g_clock.millis() + 300
     spin.finished = false
     roulette.status:setText(tr('Spinning...'))
     roulette.status:setColor('#e0c060')
@@ -704,7 +870,14 @@ local function showRoulette(result, onDone)
     roulette.frame.item:setItem(item)
     roulette.name:setText(titleCase(result.name or ''))
     roulette.name:setColor(grade.color)
-    roulette.subtitle:setText(tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0))
+    local subtitle = tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0)
+    if (tonumber(result.gold) or 0) > 0 then
+        subtitle = subtitle .. '  ' .. tr('-%s gold', formatGold(result.gold))
+    end
+    if result.upgrade then
+        subtitle = tr('Upgrade to %s!', grade.label) .. '  ' .. subtitle
+    end
+    roulette.subtitle:setText(subtitle)
     roulette:show()
     roulette:raise()
     roulette:focus()
@@ -772,7 +945,8 @@ function spinAgain()
     roulette.status:setText(tr('Spinning...'))
     roulette.status:setColor('#e0c060')
     roulette.againButton:setEnabled(false)
-    send({ action = 'rerollItem', slot = spin.result.slot })
+    -- the same bonus stays kept, for gold again
+    send({ action = 'rerollItem', slot = spin.result.slot, lock = spin.result.lock })
 end
 
 function closeRoulette()
@@ -836,6 +1010,9 @@ local function onGameStart()
     if not featureButton and modules.game_brevespanel then
         featureButton = modules.game_brevespanel.addFeature('bonus', toggle)
     end
+    if not incenseButton and modules.game_brevespanel then
+        incenseButton = modules.game_brevespanel.addFeature('incense', lightIncense)
+    end
 end
 
 local function onGameEnd()
@@ -868,6 +1045,14 @@ function terminate()
     if featureButton then
         featureButton:destroy()
         featureButton = nil
+    end
+    if incenseButton then
+        incenseButton:destroy()
+        incenseButton = nil
+    end
+    if incenseEvent then
+        removeEvent(incenseEvent)
+        incenseEvent = nil
     end
     if window then
         window:destroy()
