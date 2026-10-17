@@ -42,6 +42,13 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #f1d399
 
+// the "+N" that rises from a badge when its number goes up
+BrevesGainLabel < Label
+  text-auto-resize: true
+  font: Verdana Bold-11px
+  phantom: true
+  focusable: false
+
 // the VIP button: the site's gold button, at the right end of the bar
 BrevesVipButton < BrevesFeatureButton
   height: 24

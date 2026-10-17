@@ -237,11 +237,103 @@ function addFeature(id, callback)
     return button
 end
 
--- a short state on the right of a row, e.g. ON / OFF
+-- ---------------------------------------------------------------- gains
+
+local GAIN_STEPS, GAIN_STEP_MS = 14, 40 -- the count up takes about half a second
+local FLOAT_STEPS, FLOAT_STEP_MS = 18, 50 -- the "+N" rises and fades in about a second
+local gainEvents = {} -- row id -> the running count up
+
+-- the first number in a badge ("2.990 pts", "65 XP"), whatever thousands mark it uses
+local function numberIn(text)
+    local digits = text and text:match('%d[%d.,]*')
+    if not digits then
+        return nil
+    end
+    return tonumber((digits:gsub('[.,]', ''))), digits
+end
+
+-- `template` with its number swapped for `value`, written with the same thousands mark
+local function withNumber(template, value)
+    local _, digits = numberIn(template)
+    local mark = digits and digits:match('[.,]')
+    local text = tostring(math.floor(value))
+    if mark then
+        text = text:reverse():gsub('(%d%d%d)', '%1' .. mark):reverse():gsub('^%' .. mark, '')
+    end
+    return (template:gsub('%d[%d.,]*', text, 1))
+end
+
+-- a "+N" over the badge that rises and fades; it never takes a click
+local function floatGain(badge, amount, color)
+    local root = panel and panel:getParent()
+    if not root or not badge:isVisible() then
+        return
+    end
+    local label = g_ui.createWidget('BrevesGainLabel', root)
+    label:setText('+' .. withNumber(tostring(amount), amount))
+    label:setColor(color)
+    local pos = badge:getPosition()
+    local x = pos.x + math.floor((badge:getWidth() - label:getWidth()) / 2)
+    local y = pos.y - 12
+    label:setPosition({ x = x, y = y })
+    label:raise()
+    for step = 1, FLOAT_STEPS do
+        scheduleEvent(function()
+            if label:isDestroyed() then
+                return
+            end
+            if step == FLOAT_STEPS then
+                label:destroy()
+                return
+            end
+            label:setPosition({ x = x, y = y - step })
+            label:setOpacity(1 - step / FLOAT_STEPS)
+        end, step * FLOAT_STEP_MS)
+    end
+end
+
+-- the badge counts from `from` up to the number in `text`, glowing gold
+local function animateGain(id, from, to, text, color)
+    local button = buttons[id]
+    if not button or compact or not button.badge:isVisible() then
+        return
+    end
+    if gainEvents[id] then
+        removeEvent(gainEvents[id])
+        gainEvents[id] = nil
+    end
+    local badge = button.badge
+    floatGain(badge, to - from, color)
+    local step = 0
+    local function tick()
+        step = step + 1
+        if buttons[id] ~= button or not states[id] or states[id].text ~= text then
+            gainEvents[id] = nil
+            return
+        end
+        local done = step >= GAIN_STEPS
+        -- eases out: fast at first, settling on the new value
+        local t = 1 - (1 - step / GAIN_STEPS) ^ 2
+        badge:setText(done and text or withNumber(text, from + (to - from) * t))
+        badge:setBackgroundColor(done and '#00000080' or '#f1d39940')
+        badge:setBorderColor(done and '#6a5226' or '#f1d399')
+        badge:setBorderWidth(done and (toggles[id] and 1 or 0) or 1)
+        gainEvents[id] = not done and scheduleEvent(tick, GAIN_STEP_MS) or nil
+    end
+    tick()
+end
+
+-- a short state on the right of a row, e.g. ON / OFF; when the number in it
+-- goes up (Hunt Points, Rarity XP) the badge counts up to the new value
 function setFeatureState(id, text, color)
+    local before = numberIn(states[id] and states[id].text)
     states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
     styleButton(id)
     resize()
+    local after = numberIn(text)
+    if before and after and after > before then
+        animateGain(id, before, after, text, color or '#dfdfdf')
+    end
 end
 
 -- replaces the name shown on a row (nil puts the feature name back), e.g.
@@ -446,6 +538,10 @@ function terminate()
         panel:destroy()
         panel = nil
     end
+    for id, event in pairs(gainEvents) do
+        removeEvent(event)
+    end
+    gainEvents = {}
     buttons = {}
     callbacks = {}
     sectors = {}
