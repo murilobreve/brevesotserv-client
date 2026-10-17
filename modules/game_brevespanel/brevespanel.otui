@@ -49,20 +49,19 @@ BrevesVipButton < BrevesFeatureButton
   color: #fff4d8
   text-align: center
   text-offset: 8 1
-  image-source: /images/mythos/kit_gold
-  image-border-left: 30
-  image-border-right: 30
-  image-border-top: 8
-  image-border-bottom: 8
+  // the site's gold button scaled evenly to 24px (see MythosKitGoldButton28)
+  image-source: /images/mythos/kit_gold_24
+  image-border-left: 18
+  image-border-right: 18
   $hover !on:
-    image-source: /images/mythos/kit_gold_hover
+    image-source: /images/mythos/kit_gold_24_hover
     background-color: #00000000
     color: #ffffff
   $pressed:
-    image-source: /images/mythos/kit_gold_pressed
+    image-source: /images/mythos/kit_gold_24_pressed
     background-color: #00000000
   $on:
-    image-source: /images/mythos/kit_gold_pressed
+    image-source: /images/mythos/kit_gold_24_pressed
     background-color: #00000000
     color: #ffffff
     text-offset: 8 2

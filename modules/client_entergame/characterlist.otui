@@ -479,7 +479,7 @@ MythosWindow
     $on:
       color: #FF0000
 
-  MythosKitGoldButton
+  MythosKitGoldButton28
     id: premiumButton
     !text: tr('Get Premium')
     anchors.right: parent.right
@@ -700,7 +700,7 @@ MythosWindow
     $on:
       color: #7fd35a
 
-  MythosKitGoldButton
+  MythosKitGoldButton28
     id: buttonOk
     !text: tr('Ok')
     size: 110 28
@@ -709,7 +709,7 @@ MythosWindow
     margin-right: 10
     @onClick: CharacterList.doLogin()
 
-  MythosKitButton
+  MythosKitButton28
     id: buttonCancel
     !text: tr('Cancel')
     size: 110 28

@@ -117,6 +117,42 @@ MythosKitButton < UIButton
     image-source: /images/mythos/kit_dark_disabled
     color: #7d778a
 
+// the same buttons at 28px: the art scaled evenly to that height (the 40px
+// and 30px art squeezed into 28 leaves the trim above and below uneven)
+MythosKitGoldButton28 < MythosKitGoldButton
+  height: 28
+  image-source: /images/mythos/kit_gold_28
+  image-border-left: 21
+  image-border-right: 21
+  image-border-top: 0
+  image-border-bottom: 0
+
+  $hover !disabled:
+    image-source: /images/mythos/kit_gold_28_hover
+
+  $pressed:
+    image-source: /images/mythos/kit_gold_28_pressed
+
+  $disabled:
+    image-source: /images/mythos/kit_gold_28_disabled
+
+MythosKitButton28 < MythosKitButton
+  height: 28
+  image-source: /images/mythos/kit_dark_28
+  image-border-left: 24
+  image-border-right: 24
+  image-border-top: 0
+  image-border-bottom: 0
+
+  $hover !disabled:
+    image-source: /images/mythos/kit_dark_28_hover
+
+  $pressed:
+    image-source: /images/mythos/kit_dark_28_pressed
+
+  $disabled:
+    image-source: /images/mythos/kit_dark_28_disabled
+
 MythosTab < UIButton
   size: 118 24
   font: verdana-11px-antialised
