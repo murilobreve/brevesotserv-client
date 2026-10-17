@@ -47,8 +47,8 @@ MODULES = [('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_f
            ('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_inlay', 4, 8),
            ('pisos-templo-continuo/05_pavimento_irregular/modulo-128.png', 'obsidian_flagstones', 4, 16),
            ('pisos-templo-continuo/04_pavimento_retangular/modulo-128.png', 'obsidian_bricks', 4, 16),
-           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_city_paving', 8, 64),
-           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_irregular_paving', 8, 64)]
+           ('ruas-arenito-continuo/designer-teste-256.png', 'obsidian_city_paving', 8, 64),
+           ('ruas-arenito-continuo/designer-teste-256.png', 'obsidian_irregular_paving', 8, 64)]
 
 
 def copy(group, family, folder, cells):
