@@ -204,6 +204,15 @@ local function setup()
 
     setupComboBox()
 
+    -- Mythos plays with Classic Controls: once, also on installs that saved
+    -- the old default (Regular Controls); a player can change it afterwards
+    if not g_settings.getBoolean('breves_classic_controls') then
+        g_settings.set('breves_classic_controls', true)
+        g_settings.set('mouseControlMode', 1)
+        g_settings.set('classicControl', true)
+        g_settings.set('smartLeftClick', false)
+    end
+
     -- load options
     for k, obj in pairs(options) do
         local v = obj.value

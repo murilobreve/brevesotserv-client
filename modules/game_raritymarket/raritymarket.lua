@@ -482,8 +482,32 @@ function handlers.myOffers(data)
     fillList(panel.soldList, data.sold, 'sold', panel.soldEmpty)
 end
 
+-- the server answers in English (custom_market.lua): the sentences with a
+-- name or a price are read back and translated with their numbers
+local function translateResult(message)
+    if type(message) ~= 'string' then
+        return message
+    end
+    local name, price, net, fee = message:match("^'(.+)' is now listed for (%d+) gold%. When it sells you get (%d+) %((%d+)%% market fee%)%.$")
+    if name then
+        return tr("'%s' is now listed for %s gold. When it sells you get %s (%d%% market fee).", name, formatNumber(tonumber(price)), formatNumber(tonumber(net)), tonumber(fee))
+    end
+    name, price = message:match("^You bought '(.+)' for (%d+) gold%.$")
+    if name then
+        return tr("You bought '%s' for %s gold.", name, formatNumber(tonumber(price)))
+    end
+    name = message:match("^Your listing was cancelled%. '(.+)' has been returned to you%.$")
+    if name then
+        return tr("Your listing was cancelled. '%s' has been returned to you.", name)
+    end
+    if message:find('%', 1, true) then
+        return message
+    end
+    return tr(message)
+end
+
 function handlers.result(data)
-    setStatus(data.message, data.ok)
+    setStatus(translateResult(data.message), data.ok)
     if data.ok then
         clearDetails()
     end

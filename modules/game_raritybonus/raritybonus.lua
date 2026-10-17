@@ -112,6 +112,12 @@ local function setRerollState(row)
         row.upgradeItemButton:setText(tr('%s %d%%', up.label, up.chance))
         row.upgradeItemButton:setEnabled(gold >= up.gold and rarityXp >= up.xp)
         row.upgradeItemButton:setTooltip(tr('Raise to %s: %s gold and %d Rarity XP, %d%% chance. On success the item rolls again at %s; on a failure it stays as it is and the price is spent.', up.label, formatGold(up.gold), up.xp, up.chance, up.label))
+        -- off: say what is missing
+        if rarityXp < up.xp then
+            row.upgradeItemButton:setTooltip(tr('Raising to %s needs %d Rarity XP and you have %d.', up.label, up.xp, rarityXp))
+        elseif gold < up.gold then
+            row.upgradeItemButton:setTooltip(tr('Raising to %s costs %s gold and you have %s.', up.label, formatGold(up.gold), formatGold(gold)))
+        end
     end
 end
 
@@ -166,10 +172,29 @@ function fillItems(items)
             line.lock:setVisible(lockable)
             line.text:setMarginLeft(lockable and 4 or -12)
             if lockable then
-                line.lock:setOn(locks[entry.slotId] == bonus.key)
-                line.lock:setTooltip(tr('Keep this bonus with its value on the next reroll: %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
+                local locked = locks[entry.slotId] == bonus.key
+                line.lock:setOn(locked)
+                line.lock:setTooltip(locked and tr('Locked: this bonus keeps its value on the next reroll. Click to unlock it.')
+                    or tr('Keep this bonus with its value on the next reroll: %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
+                -- the whole line lights up, so a locked bonus is never missed
+                if locked then
+                    line:setBackgroundColor('#e0c06024')
+                    line:setBorderWidth(1)
+                    line:setBorderColor('#e0c06070')
+                    line.tag:setText(tr('Locked: kept on the next reroll (+%s)', formatGold(entry.lockCost)))
+                    line.tag:show()
+                end
                 line.lock.onClick = function()
-                    locks[entry.slotId] = locks[entry.slotId] ~= bonus.key and bonus.key or nil
+                    local name = titleCase(entry.name or '')
+                    if locks[entry.slotId] == bonus.key then
+                        locks[entry.slotId] = nil
+                        window.status:setText(tr('%s unlocked: the next reroll of %s rolls every bonus again.', bonusText(bonus), name))
+                        window.status:setColor('#ab9fc6')
+                    else
+                        locks[entry.slotId] = bonus.key
+                        window.status:setText(tr('%s locked on %s: the next reroll keeps it with this value and rolls only the others, for %s gold on top of the Rarity XP.', bonusText(bonus), name, formatGold(entry.lockCost)))
+                        window.status:setColor('#e0c060')
+                    end
                     fillItems(lastItems or {})
                 end
             end
@@ -177,6 +202,7 @@ function fillItems(items)
         local cost = entry.rerollCost or 0
         local lockKey = locks[entry.slotId]
         row.rerollItemButton:setText(lockKey and tr('Reroll %s +%s', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s', formatCost(cost)))
+        row.rerollItemButton:setIcon(lockKey and '/game_raritybonus/images/lock_on' or '/game_raritybonus/images/reroll')
         row.entry = entry
         setRerollState(row)
         row.rerollItemButton.onClick = function()
@@ -382,6 +408,9 @@ applyBonuses = function(data)
             message = tr('That item is no longer equipped.')
         elseif result.code == 'gold' then
             message = tr('You need %s gold in your backpack and bank.', formatGold(result.gold))
+        elseif result.code == 'cannot' or result.code == 'busy' then
+            -- fixed sentences from the server, translated here
+            message = tr(data.message or '')
         elseif result.code == 'upgradeFailed' then
             message = tr('The upgrade to %s failed (%d%% chance): %s stays as it was. (-%s gold, -%d Rarity XP)', result.to or '', tonumber(result.chance) or 0, titleCase(result.name or ''), formatGold(result.gold), tonumber(result.xp) or 0)
         end
@@ -641,6 +670,11 @@ local function paintResult(row, text, color)
     widget.text:setColor(text and color or '#5a5a5a')
     widget:setBorderColor(text and color or '#2a2a2a')
     widget:setBackgroundColor(text and (color .. '22') or '#0b0b0bee')
+    -- the locked bonus stays gold, whatever repaints it (skip, grow)
+    if row.kept then
+        widget:setBorderColor('#e0c060')
+        widget:setBackgroundColor('#e0c06026')
+    end
 end
 
 -- an empty slot: one bonus fewer, so the bonuses already out grow to their
@@ -839,7 +873,11 @@ local function startStrips(result)
     if kept then
         local row = spin.rows[1]
         row.stopped = true
-        row.result.slot:setText(tr('Kept'))
+        row.result.slot:setText(tr('Locked'))
+        row.result.slot:setMarginLeft(24)
+        row.result.slot:setColor('#f0cf6a')
+        row.result.lock:show()
+        row.kept = true
         paintResult(row, kept.text, qualityColor(kept.quality, kept.perfect))
         row.result:setBorderWidth(1)
         spin.current = 2
@@ -872,7 +910,7 @@ local function showRoulette(result, onDone)
     roulette.name:setColor(grade.color)
     local subtitle = tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0)
     if (tonumber(result.gold) or 0) > 0 then
-        subtitle = subtitle .. '  ' .. tr('-%s gold', formatGold(result.gold))
+        subtitle = subtitle .. '  ' .. (result.lock and tr('-%s gold (lock)', formatGold(result.gold)) or tr('-%s gold', formatGold(result.gold)))
     end
     if result.upgrade then
         subtitle = tr('Upgrade to %s!', grade.label) .. '  ' .. subtitle

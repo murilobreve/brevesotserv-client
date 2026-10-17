@@ -101,11 +101,22 @@ BonusLine < Panel
   Label
     id: text
     anchors.left: lock.right
-    anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
+    text-auto-resize: true
     font: verdana-11px-monochrome
     color: #7fd35a
+
+  // shown on the locked bonus, next to it
+  Label
+    id: tag
+    anchors.left: text.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    color: #f0cf6a
+    visible: false
 
 BonusItemRowEven < BonusItemRow
   background-color: #ffffff07

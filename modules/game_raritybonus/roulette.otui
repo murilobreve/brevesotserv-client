@@ -32,6 +32,17 @@ RouletteResult < UIWidget
   border-color: #4a3670
   phantom: true
 
+  // the locked bonus: it doesn't spin
+  UIWidget
+    id: lock
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    size: 12 12
+    image-source: /game_raritybonus/images/lock_on
+    visible: false
+    phantom: true
+
   Label
     id: slot
     anchors.left: parent.left
@@ -204,7 +215,7 @@ MythosWindow
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom
     margin-right: 6
-    size: 150 22
+    size: 210 22
     @onClick: modules.game_raritybonus.spinAgain()
 
   MythosButton
