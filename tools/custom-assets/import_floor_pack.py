@@ -13,11 +13,12 @@ the pack's own 16 PNGs mirror the drawing at the edges and read as a kaleidoscop
 The 04 source is 1536x1024 and does not repeat top to bottom; its module is the 660x660 square at (134, 320), where the
 brick rows and the left and right edges line up best.
 
-The streets (gen_street_paving.py draws them in the arenito colours; 8x8, so the block repeats every 8 squares):
+The streets: the designer's sandstone and obsidian block (ventera-sprites, one 256x256 drawing, 8x8 squares, row
+major), so the block repeats every 8 squares. gen_street_paving.py drew the earlier arenito-256.png, kept as a fallback.
 
-  ruas-arenito-continuo/arenito-256.png -> art/obsidian_city_paving/0..63     (60004, the paved streets of Ventera)
-  ruas-arenito-continuo/arenito-256.png -> art/obsidian_irregular_paving/0..63 (60005, the cobbled streets; the same
-                                           drawing, so the two meet without a seam)
+  ruas-arenito-continuo/ventera-designer-256.png -> art/obsidian_city_paving/0..63     (60004, the paved streets)
+  ruas-arenito-continuo/ventera-designer-256.png -> art/obsidian_irregular_paving/0..63 (60005, the cobbled streets; the
+                                                    same drawing, so the two meet without a seam)
 
 The 16-variation pack (art/source/pisos-templo-cidade-16) is no longer copied: its drawings end at the tile edge.
 
@@ -47,8 +48,8 @@ MODULES = [('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_f
            ('pisos-templo-continuo/03_placas_mistas/modulo-128.png', 'obsidian_inlay', 4, 8),
            ('pisos-templo-continuo/05_pavimento_irregular/modulo-128.png', 'obsidian_flagstones', 4, 16),
            ('pisos-templo-continuo/04_pavimento_retangular/modulo-128.png', 'obsidian_bricks', 4, 16),
-           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_city_paving', 8, 64),
-           ('ruas-arenito-continuo/arenito-256.png', 'obsidian_irregular_paving', 8, 64)]
+           ('ruas-arenito-continuo/ventera-designer-256.png', 'obsidian_city_paving', 8, 64),
+           ('ruas-arenito-continuo/ventera-designer-256.png', 'obsidian_irregular_paving', 8, 64)]
 
 
 def copy(group, family, folder, cells):
