@@ -599,6 +599,33 @@ local function shortName(name)
     return #name > 16 and (name:sub(1, 15) .. '.') or name
 end
 
+-- "Teleport" on the daily task and Trail rows of the Mythos bar: the same
+-- hunt teleport as "Ir para a hunt", with its cooldown counting down
+local barTeleportEvent
+
+function updateBarTeleports()
+    local panel = modules.game_brevespanel
+    if not panel or not panel.setFeatureAction then
+        return
+    end
+    if barTeleportEvent then
+        removeEvent(barTeleportEvent)
+        barTeleportEvent = nil
+    end
+    local left = teleportReadyAt - os.time()
+    local text = left > 0 and string.format('%d:%02d', math.floor(left / 60), left % 60) or tr('Teleportar')
+    local tooltip = tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 5 minutos.')
+    local daily = state and state.daily
+    local dailyOn = state and state.teleportDaily and daily and daily.monster and not daily.done
+    local trail = state and state.trail
+    local trailOn = state and state.teleportTrail and trail and not trail.finished
+    panel.setFeatureAction('tasks', dailyOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'daily' }) end, left <= 0)
+    panel.setFeatureAction('trail', trailOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'trail' }) end, left <= 0)
+    if left > 0 and (dailyOn or trailOn) then
+        barTeleportEvent = scheduleEvent(updateBarTeleports, 1000)
+    end
+end
+
 local function updateBadge()
     local panel = modules.game_brevespanel
     if not panel or not panel.setFeatureLabel then
@@ -626,6 +653,7 @@ local function updateBadge()
     panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#7fd35a')
     panel.setFeatureLabel('trail', trailText, '#b7a2ff')
     panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#e2a443')
+    updateBarTeleports()
 end
 
 -- ---------------------------------------------------------------- server messages
@@ -849,6 +877,10 @@ function terminate()
     if messageEvent then
         removeEvent(messageEvent)
         messageEvent = nil
+    end
+    if barTeleportEvent then
+        removeEvent(barTeleportEvent)
+        barTeleportEvent = nil
     end
     closeRerollBox()
     if toolbarButton then

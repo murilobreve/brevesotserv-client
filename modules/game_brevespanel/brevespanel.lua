@@ -52,6 +52,7 @@ local callbacks = {}
 local states = {}
 local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
+local actions = {} -- row id -> { text, tooltip, enabled, callback }: a small button on the row
 local sectors = {} -- section id -> section widget
 local vipHolder -- the VIP button's box in the bar
 
@@ -114,6 +115,9 @@ local function buttonWidth(button)
     local width = 23 + button:getTextSize().width + 6
     if button.badge:isVisible() then
         width = width + button.badge:getWidth() + 4
+    end
+    if button.action:isVisible() then
+        width = width + button.action:getWidth() + 6
     end
     return width
 end
@@ -179,6 +183,19 @@ styleButton = function(id)
     if iconsOnly then
         button.badge:hide()
     end
+    -- the row's quick action, left of the badge; none in the icons-only bar
+    local action = actions[id]
+    button.action:setVisible(action ~= nil and not iconsOnly)
+    if action then
+        button.action:setText(action.text)
+        button.action:setTooltip(action.tooltip or '')
+        button.action:setEnabled(action.enabled ~= false)
+        button.action.onClick = function()
+            action.callback()
+            return true
+        end
+    end
+    button.badge:setMarginRight((action and not iconsOnly) and (button.action:getWidth() + 6) or 3)
 end
 
 local function sortRows(parent)
@@ -343,6 +360,16 @@ function setFeatureLabel(id, text, color)
     local button = buttons[id]
     if button then
         button:setColor(text and color or (id == 'vip' and '#fff4d8' or '#e6e0f2'))
+        styleButton(id)
+        resize()
+    end
+end
+
+-- a small button on the right of a row (nil text removes it), e.g. the Trail
+-- row's hunt teleport; `enabled` false greys it, for a cooldown
+function setFeatureAction(id, text, tooltip, callback, enabled)
+    actions[id] = (text and callback) and { text = text, tooltip = tooltip, callback = callback, enabled = enabled } or nil
+    if buttons[id] then
         styleButton(id)
         resize()
     end
@@ -544,6 +571,7 @@ function terminate()
     gainEvents = {}
     buttons = {}
     callbacks = {}
+    actions = {}
     sectors = {}
     vipHolder = nil
 end

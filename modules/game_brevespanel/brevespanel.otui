@@ -42,6 +42,31 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #f1d399
 
+  // a quick action on the row, e.g. the hunt teleport of the Trail row
+  UIButton
+    id: action
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 3
+    height: 15
+    text-auto-resize: true
+    padding: 1 5 0 5
+    font: verdana-9px-bold
+    color: #f3dcae
+    background-color: #f1d39926
+    border-width: 1
+    border-color: #a7843f
+    cursor: pointer
+    visible: false
+    $hover !disabled:
+      background-color: #f1d39950
+      color: #ffffff
+      border-color: #f1d399
+    $disabled:
+      color: #8d8270
+      background-color: #00000060
+      border-color: #4a3d28
+
 // the "+N" that rises from a badge when its number goes up
 BrevesGainLabel < Label
   text-auto-resize: true
