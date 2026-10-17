@@ -149,13 +149,50 @@ BrevesBar < UIWidget
       fit-children: true
 
   // starts the Mythos tour again (game_tutorial)
-  // on the left corner, clear of the VIP button at the right end
+  // folds the bar to a thin line (open again on every login)
+  UIButton
+    id: collapseButton
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-top: 4
+    margin-left: 4
+    size: 14 14
+    icon-source: /images/mythos/fold_open
+    icon-size: 8 8
+    icon-align: center
+    cursor: pointer
+    !tooltip: tr('Hide the Mythos bar')
+    @onClick: modules.game_brevespanel.toggleCollapsed()
+    $hover:
+      background-color: #f1d39922
+    $on:
+      icon-source: /images/mythos/fold_closed
+
+  // the folded bar: one line, a click anywhere opens it again
+  UIButton
+    id: collapsedLabel
+    anchors.left: collapseButton.right
+    anchors.right: parent.right
+    anchors.verticalCenter: collapseButton.verticalCenter
+    margin-left: 4
+    height: 14
+    text-align: left
+    font: verdana-11px-rounded
+    color: #c9a96a
+    cursor: pointer
+    visible: false
+    !text: tr('Mythos: Tasks, Hunts, Rarity, Tools and VIP. Click to open.')
+    @onClick: modules.game_brevespanel.toggleCollapsed()
+    $hover:
+      color: #ffe7b0
+
+  // on the left corner, under the fold button, clear of the VIP button
   UIButton
     id: tutorialButton
     anchors.left: parent.left
-    anchors.top: parent.top
-    margin-top: 3
-    margin-left: 4
+    anchors.top: collapseButton.bottom
+    margin-top: 4
+    margin-left: 5
     size: 12 14
     text: ?
     font: verdana-11px-rounded

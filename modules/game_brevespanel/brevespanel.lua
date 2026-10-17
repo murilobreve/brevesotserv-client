@@ -348,10 +348,32 @@ function showNews()
 end
 
 
--- the bar is always shown; kept for the tour, which calls it
+local BAR_HEIGHT, FOLDED_HEIGHT = 53, 22
+local collapsed = false
+
+-- folds the bar to one line or opens it; the map takes or gives back the room
+local function setCollapsed(fold)
+    collapsed = fold
+    if not panel then
+        return
+    end
+    panel:setHeight(fold and FOLDED_HEIGHT or BAR_HEIGHT)
+    panel.strip:setVisible(not fold)
+    panel.tutorialButton:setVisible(not fold)
+    panel.collapsedLabel:setVisible(fold)
+    panel.collapseButton:setOn(fold)
+    panel.collapseButton:setTooltip(fold and tr('Show the Mythos bar') or tr('Hide the Mythos bar'))
+end
+
+function toggleCollapsed()
+    setCollapsed(not collapsed)
+end
+
+-- the bar is always there; the tour calls this to have it open
 function togglePanel()
     if panel then
         panel:show()
+        setCollapsed(false)
     end
 end
 
@@ -389,6 +411,8 @@ end
 
 local function onGameStart()
     placeBar()
+    -- open on every login, whatever it was when the player left
+    setCollapsed(false)
     resize()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
