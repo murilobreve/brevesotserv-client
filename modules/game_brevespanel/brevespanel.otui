@@ -76,15 +76,15 @@ BrevesFeatureButton < UIButton
       border-color: #4a3d28
 
 // the "+N" that rises from a badge when its number goes up
+// sized from its text in brevespanel.lua (auto resize misreads the TTF font)
 BrevesGainLabel < Label
-  text-auto-resize: true
+  text-align: center
   ttf-font: cinzel-bold
   ttf-font-size: 18
   color: #ffe7b0
   background-color: #120c1ee6
   border-width: 1
   border-color: #f1d399
-  padding: 3 10 2 10
   phantom: true
   focusable: false
 

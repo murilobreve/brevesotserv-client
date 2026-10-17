@@ -290,6 +290,8 @@ local function floatGain(button, text)
     end
     local label = g_ui.createWidget('BrevesGainLabel', root)
     label:setText(text)
+    local size = label:getTextSize()
+    label:setSize({ width = size.width + 24, height = size.height + 10 })
     local pos = button:getPosition()
     local x = math.max(0, pos.x + math.floor((button:getWidth() - label:getWidth()) / 2))
     local y = pos.y - label:getHeight() - 8
