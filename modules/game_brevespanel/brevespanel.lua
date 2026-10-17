@@ -256,8 +256,9 @@ end
 
 -- ---------------------------------------------------------------- gains
 
-local GAIN_STEPS, GAIN_STEP_MS = 14, 40 -- the count up takes about half a second
-local FLOAT_STEPS, FLOAT_STEP_MS = 18, 50 -- the "+N" rises and fades in about a second
+local GAIN_STEPS, GAIN_STEP_MS = 40, 40 -- the count up takes about 1.6 seconds
+local FLOAT_STEPS, FLOAT_STEP_MS = 70, 40 -- the "+N" pill rises for about 2.8 seconds
+local FLOAT_RISE = 46 -- pixels the pill climbs
 local gainEvents = {} -- row id -> the running count up
 
 -- the first number in a badge ("2.990 pts", "65 XP"), whatever thousands mark it uses
@@ -280,18 +281,18 @@ local function withNumber(template, value)
     return (template:gsub('%d[%d.,]*', text, 1))
 end
 
--- a "+N" over the badge that rises and fades; it never takes a click
-local function floatGain(badge, amount, color)
+-- a gold pill with "+500 pts" over the row: it pops in, climbs, holds and
+-- fades; it never takes a click
+local function floatGain(button, text)
     local root = panel and panel:getParent()
-    if not root or not badge:isVisible() then
+    if not root then
         return
     end
     local label = g_ui.createWidget('BrevesGainLabel', root)
-    label:setText('+' .. withNumber(tostring(amount), amount))
-    label:setColor(color)
-    local pos = badge:getPosition()
-    local x = pos.x + math.floor((badge:getWidth() - label:getWidth()) / 2)
-    local y = pos.y - 12
+    label:setText(text)
+    local pos = button:getPosition()
+    local x = math.max(0, pos.x + math.floor((button:getWidth() - label:getWidth()) / 2))
+    local y = pos.y - label:getHeight() - 8
     label:setPosition({ x = x, y = y })
     label:raise()
     for step = 1, FLOAT_STEPS do
@@ -303,14 +304,20 @@ local function floatGain(badge, amount, color)
                 label:destroy()
                 return
             end
-            label:setPosition({ x = x, y = y - step })
-            label:setOpacity(1 - step / FLOAT_STEPS)
+            local t = step / FLOAT_STEPS
+            -- climbs fast, then slows; a small pop at the start
+            local rise = math.floor(FLOAT_RISE * (1 - (1 - t) ^ 3))
+            local pop = step <= 4 and (4 - step) * 2 or 0
+            label:setPosition({ x = x, y = y - rise - pop })
+            -- fully visible for the first 60%, then fades out
+            label:setOpacity(t < 0.6 and 1 or math.max(0, 1 - (t - 0.6) / 0.4))
         end, step * FLOAT_STEP_MS)
     end
 end
 
--- the badge counts from `from` up to the number in `text`, glowing gold
-local function animateGain(id, from, to, text, color)
+-- the badge counts from `from` up to the number in `text`; the row pulses
+-- gold, and the badge blinks when it lands on the new value
+local function animateGain(id, from, to, text)
     local button = buttons[id]
     if not button or compact or not button.badge:isVisible() then
         return
@@ -320,22 +327,43 @@ local function animateGain(id, from, to, text, color)
         gainEvents[id] = nil
     end
     local badge = button.badge
-    floatGain(badge, to - from, color)
+    floatGain(button, '+' .. withNumber(text, to - from))
+    button.glow:show()
     local step = 0
+    local blinks = 6 -- after the count: three gold flashes of the badge
     local function tick()
         step = step + 1
         if buttons[id] ~= button or not states[id] or states[id].text ~= text then
+            button.glow:hide()
             gainEvents[id] = nil
             return
         end
-        local done = step >= GAIN_STEPS
-        -- eases out: fast at first, settling on the new value
-        local t = 1 - (1 - step / GAIN_STEPS) ^ 2
-        badge:setText(done and text or withNumber(text, from + (to - from) * t))
-        badge:setBackgroundColor(done and '#00000080' or '#f1d39940')
-        badge:setBorderColor(done and '#6a5226' or '#f1d399')
-        badge:setBorderWidth(done and (toggles[id] and 1 or 0) or 1)
-        gainEvents[id] = not done and scheduleEvent(tick, GAIN_STEP_MS) or nil
+        if step <= GAIN_STEPS then
+            -- eases out: fast at first, settling on the new value
+            local t = 1 - (1 - step / GAIN_STEPS) ^ 3
+            badge:setText(step == GAIN_STEPS and text or withNumber(text, from + (to - from) * t))
+            badge:setBackgroundColor('#f1d39955')
+            badge:setBorderColor('#ffe7b0')
+            badge:setBorderWidth(1)
+            -- the row breathes: two slow pulses during the count
+            button.glow:setOpacity(0.18 + 0.32 * (0.5 + 0.5 * math.cos(step / GAIN_STEPS * math.pi * 4)))
+        else
+            local blink = step - GAIN_STEPS
+            local on = blink % 2 == 1
+            badge:setBackgroundColor(on and '#f1d399aa' or '#f1d39933')
+            button.glow:setOpacity(on and 0.5 or 0.12)
+            if blink >= blinks then
+                badge:setBackgroundColor('#00000080')
+                badge:setBorderColor('#6a5226')
+                badge:setBorderWidth(toggles[id] and 1 or 0)
+                button.glow:hide()
+                gainEvents[id] = nil
+                return
+            end
+            gainEvents[id] = scheduleEvent(tick, 140)
+            return
+        end
+        gainEvents[id] = scheduleEvent(tick, GAIN_STEP_MS)
     end
     tick()
 end
@@ -349,7 +377,7 @@ function setFeatureState(id, text, color)
     resize()
     local after = numberIn(text)
     if before and after and after > before then
-        animateGain(id, before, after, text, color or '#dfdfdf')
+        animateGain(id, before, after, text)
     end
 end
 

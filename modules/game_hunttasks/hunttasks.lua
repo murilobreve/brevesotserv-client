@@ -158,7 +158,7 @@ local function updateTeleportButton(button, which, available)
         button:setText(tr('Ir para a hunt'))
         button:setEnabled(true)
     end
-    button:setTooltip(tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 5 minutos.'))
+    button:setTooltip(tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 2 minutos.'))
     button.onClick = function()
         send({ action = 'teleport', which = which })
     end
@@ -614,7 +614,7 @@ function updateBarTeleports()
     end
     local left = teleportReadyAt - os.time()
     local text = left > 0 and string.format('%d:%02d', math.floor(left / 60), left % 60) or tr('Teleportar')
-    local tooltip = tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 5 minutos.')
+    local tooltip = tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 2 minutos.')
     local daily = state and state.daily
     local dailyOn = state and state.teleportDaily and daily and daily.monster and not daily.done
     local trail = state and state.trail

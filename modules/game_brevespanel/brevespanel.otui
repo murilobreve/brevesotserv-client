@@ -17,6 +17,14 @@ BrevesFeatureButton < UIButton
     background-color: #f1d39922
     color: #f3dcae
 
+  // the gold light that pulses over the row when its number goes up
+  UIWidget
+    id: glow
+    anchors.fill: parent
+    background-color: #f1d399
+    phantom: true
+    visible: false
+
   UIWidget
     id: icon
     size: 16 16
@@ -70,7 +78,13 @@ BrevesFeatureButton < UIButton
 // the "+N" that rises from a badge when its number goes up
 BrevesGainLabel < Label
   text-auto-resize: true
-  font: Verdana Bold-11px
+  ttf-font: cinzel-bold
+  ttf-font-size: 18
+  color: #ffe7b0
+  background-color: #120c1ee6
+  border-width: 1
+  border-color: #f1d399
+  padding: 3 10 2 10
   phantom: true
   focusable: false
 
