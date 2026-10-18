@@ -103,6 +103,34 @@ local OUTFIT_SHADERS = { {
     name = 'Rarity - Lord of Death',
     frag = 'shaders/fragment/rarity_lord_of_death.frag'
 }, {
+    -- The revive of a Pale / Ashen / Obsidian / Lord of Death monster
+    -- (scripts/rarity/revive.lua): the corpse wakes (Revive), then flickers
+    -- and the monster stands up made of light (Rise) before taking its tier
+    -- shader. Assigned server-side, like the tier shaders above.
+    name = 'Rarity - Revive Pale',
+    frag = 'shaders/fragment/rarity_revive_pale.frag'
+}, {
+    name = 'Rarity - Rise Pale',
+    frag = 'shaders/fragment/rarity_rise_pale.frag'
+}, {
+    name = 'Rarity - Revive Ashen',
+    frag = 'shaders/fragment/rarity_revive_ashen.frag'
+}, {
+    name = 'Rarity - Rise Ashen',
+    frag = 'shaders/fragment/rarity_rise_ashen.frag'
+}, {
+    name = 'Rarity - Revive Obsidian',
+    frag = 'shaders/fragment/rarity_revive_obsidian.frag'
+}, {
+    name = 'Rarity - Rise Obsidian',
+    frag = 'shaders/fragment/rarity_rise_obsidian.frag'
+}, {
+    name = 'Rarity - Revive Lord of Death',
+    frag = 'shaders/fragment/rarity_revive_lord_of_death.frag'
+}, {
+    name = 'Rarity - Rise Lord of Death',
+    frag = 'shaders/fragment/rarity_rise_lord_of_death.frag'
+}, {
     -- Baiak Rarity System: item-rarity tints, one per grade. Assigned
     -- server-side (item:setShader(...) in scripts/rarity/loot.lua), not
     -- selectable from this module's own UI, same reasoning as the three
