@@ -1,29 +1,31 @@
-// Rarity revive - Lord of Death, rising: the last moment before the monster stands up,
-// on the corpse, and the first moment of the monster itself, made of light.
-// Fast flicker towards the tier's glow; the server swaps it for the tier's
-// own shader (rarity_lord_of_death.frag) once the monster is up.
+// Rarity revive - Lord of Death, rising: the heart races. The veins blaze
+// red over a black body and a red rim burns around it.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
-const vec3 TINT = vec3(0.18, 0.04, 0.06);
-const vec3 GLOW = vec3(0.95, 0.15, 0.12);
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
-    vec3 c = col.rgb;
-    float lum = dot(c, vec3(0.299, 0.587, 0.114));
-
-    vec3 tinted = mix(c, TINT * (0.45 + lum), 0.60);
-    float flicker = 0.5 + 0.5 * sin(u_Time * 24.0);
-    float surge = 0.5 + 0.5 * sin(u_Time * 7.0);
-    float body = smoothstep(0.02, 0.45, lum + 0.15);
-    vec3 result = mix(tinted, GLOW, (0.35 + 0.45 * flicker * surge) * body);
-
-    // a bright rim where the sprite meets the background
-    float edge = smoothstep(0.0, 0.6, 1.0 - col.a) * step(0.01, col.a);
-    result += GLOW * edge;
-
+    vec2 fc = gl_FragCoord.xy;
+    vec3 result = mix(col.rgb, vec3(0.05, 0.02, 0.03), 0.80);
+    float beat = 0.5 + 0.5 * sin(u_Time * 20.0);
+    float n = noise(fc * 0.06) * 0.6 + noise(fc * 0.15) * 0.4;
+    float vein = 1.0 - smoothstep(0.0, 0.07, abs(n - 0.5));
+    result = mix(result, vec3(1.0, 0.10, 0.06), vein * (0.5 + 0.5 * beat) * step(0.01, col.a));
+    result = mix(result, vec3(0.7, 0.0, 0.0), 0.25 * beat * step(0.01, col.a));
+    float rim = step(0.01, col.a) * (1.0 - smoothstep(0.0, 0.7, col.a));
+    result += vec3(1.0, 0.1, 0.05) * rim;
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }

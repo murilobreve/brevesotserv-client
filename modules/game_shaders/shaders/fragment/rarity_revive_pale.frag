@@ -1,33 +1,39 @@
-// Rarity revive - Pale, waking: the corpse of a monster that is about to come
-// back as Pale. It takes the tier's colour and beats like a heart, twice
-// every 1.4 s, while bands of light climb up through it. Set on the corpse by
-// the server (scripts/rarity/revive.lua) for the first seconds of the revive.
+// Rarity revive - Pale, waking: the corpse turns into a ghost of itself. It
+// goes cold and pale, fades in and out like a spirit that cannot hold its
+// shape, and white mist climbs out of it into the air around the body.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
-const vec3 TINT = vec3(0.86, 0.88, 0.92);
-const vec3 GLOW = vec3(0.95, 0.97, 1.00);
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
-    vec3 c = col.rgb;
-    float lum = dot(c, vec3(0.299, 0.587, 0.114));
+    vec2 fc = gl_FragCoord.xy;
+    float lum = luma(col.rgb);
 
-    // the tier's colour at the corpse's own light and shade
-    vec3 result = mix(c, TINT * (0.45 + lum), 0.60);
+    // cold, drained body
+    vec3 body = mix(col.rgb, vec3(0.80, 0.86, 0.95) * (0.55 + lum), 0.70);
+    // it breathes in and out of sight
+    float fade = 0.55 + 0.35 * (0.5 + 0.5 * sin(u_Time * 2.2)) + 0.10 * noise(fc * 0.05 + u_Time);
+    vec4 result = vec4(body, col.a * fade);
 
-    // heartbeat: a strong beat and a softer one
-    float t = mod(u_Time, 1.4);
-    float beat = exp(-pow((t - 0.10) * 14.0, 2.0)) + 0.65 * exp(-pow((t - 0.40) * 14.0, 2.0));
+    // mist rising from the body, also over the empty pixels around it
+    float mist = noise(vec2(fc.x * 0.045, fc.y * 0.030 - u_Time * 1.6));
+    mist *= noise(vec2(fc.x * 0.09 + 3.0, fc.y * 0.06 - u_Time * 2.4));
+    float wisp = smoothstep(0.30, 0.62, mist);
+    result.rgb = mix(result.rgb, vec3(0.95, 0.97, 1.0), wisp * 0.6 * result.a);
+    result.a = max(result.a, wisp * 0.45);
 
-    // light climbing up the body (screen space, so it does not jump between
-    // sprite frames)
-    float band = smoothstep(0.80, 1.0, sin(gl_FragCoord.y * 0.11 - u_Time * 5.0));
-
-    float body = smoothstep(0.02, 0.45, lum + 0.15);
-    result += GLOW * (0.55 * beat + 0.30 * band) * body;
-
-    gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
+    gl_FragColor = vec4(clamp(result.rgb, 0.0, 1.0), clamp(result.a, 0.0, 1.0));
 }
