@@ -825,6 +825,7 @@ function CharacterList.create(characters, account, otui)
     updatePremiumBenefitsVisibility(account)
     applyVipStatus(nil)
     requestVipStatus()
+    PatchNotes.attach(charactersWindow, G.account)
 
     CharacterList.rebuildCharactersList()
 

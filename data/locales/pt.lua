@@ -8,6 +8,10 @@ locale = {
   thousandsSeperator = '.',
 
   translation = {
+    ["Patch notes"] = "Novidades",
+    ["A new patch is out. Click to see what changed."] = "Saiu um patch novo. Clique para ver o que mudou.",
+    ["What changed in each patch."] = "O que mudou em cada patch.",
+    ["Every patch is also on the site, under Patch notes."] = "Todos os patches também ficam no site, em Novidades.",
     ["New on Mythos"] = "Novidades no Mythos",
     ["Sell all"] = "Vender tudo",
     ["Sell everything in your bags that this NPC buys?\nEquipped items, rarity items, tools and the supplies this NPC sells are kept."] = "Vender tudo das suas bolsas que este NPC compra?\nItens equipados, itens com raridade, ferramentas e os suprimentos que este NPC vende ficam com você.",

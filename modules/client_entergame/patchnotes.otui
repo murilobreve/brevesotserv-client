@@ -1,0 +1,66 @@
+PatchNoteTitle < Label
+  font: verdana-11px-rounded
+  color: #eee6d4
+  height: 16
+  margin-top: 10
+
+PatchNoteDate < Label
+  font: verdana-11px-monochrome
+  color: #9789b3
+  height: 14
+  margin-bottom: 4
+
+PatchNoteLine < Label
+  font: verdana-11px-monochrome
+  color: #cbc0e0
+  text-wrap: true
+  text-auto-resize: true
+  margin-top: 3
+
+MythosWindow
+  id: patchNotesWindow
+  !text: tr('Patch notes')
+  size: 520 460
+  @onEscape: PatchNotes.close()
+
+  ScrollablePanel
+    id: notes
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: notesScroll.left
+    anchors.bottom: closeButton.top
+    margin-bottom: 10
+    margin-right: 4
+    vertical-scrollbar: notesScroll
+    padding: 0 8 8 4
+    layout:
+      type: verticalBox
+
+  MythosScrollBar
+    id: notesScroll
+    anchors.top: parent.top
+    anchors.bottom: closeButton.top
+    anchors.right: parent.right
+    margin-bottom: 10
+    step: 24
+    pixels-scroll: true
+
+  Label
+    id: siteHint
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 10
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('Every patch is also on the site, under Patch notes.')
+    height: 28
+    text-wrap: true
+
+  MythosKitButton28
+    id: closeButton
+    !text: tr('Close')
+    size: 110 28
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: PatchNotes.close()

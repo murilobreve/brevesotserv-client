@@ -14,10 +14,13 @@ Module
     dofile 'characterlist'
     dofile 'createAccount'
     dofile 'crashreport'
+    dofile 'patchnotes'
     EnterGame.init()
     CharacterList.init()
     pcall(CrashReport.init)
+    PatchNotes.init()
 
   @onUnload: |
     EnterGame.terminate()
     CharacterList.terminate()
+    PatchNotes.terminate()

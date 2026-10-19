@@ -492,6 +492,35 @@ MythosWindow
         self:addAnchor(AnchorBottom, 'separator', AnchorBottom)
       end
 
+  // patch notes of the site (patchnotes.lua); the badge shows "!" until the
+  // newest patch is opened on this account
+  MythosKitButton28
+    id: patchNotesButton
+    !text: tr('Patch notes')
+    anchors.right: premiumButton.left
+    anchors.verticalCenter: premiumButton.verticalCenter
+    margin-right: 8
+    size: 120 28
+    visible: false
+    @onClick: PatchNotes.open()
+
+    Label
+      id: patchNotesBadge
+      anchors.top: parent.top
+      anchors.right: parent.right
+      margin-top: -7
+      margin-right: -7
+      size: 17 17
+      text: !
+      text-align: center
+      font: verdana-11px-rounded
+      color: #ffffff
+      background-color: #d8402c
+      border-width: 1
+      border-color: #ffd0a0
+      phantom: true
+      visible: false
+
 
   MythosSeparator
     id: separator
