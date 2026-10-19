@@ -324,6 +324,18 @@ function togglePositionWindow()
     zoom.onOptionChange = function(widget, text, data)
         modules.client_options.setOption('mapZoom', data)
     end
+    local cards = positionWindow:getChildById('itemCards')
+    if modules.game_itemcard then
+        cards:addOption(tr('On a look and on hover'), 'both')
+        cards:addOption(tr('Only on a look'), 'look')
+        cards:addOption(tr('Off (green text)'), 'off')
+        cards:setCurrentOptionByData(modules.game_itemcard.getMode(), true)
+        cards.onOptionChange = function(widget, text, data)
+            modules.game_itemcard.setMode(data)
+        end
+    else
+        cards:setEnabled(false)
+    end
     positionWindow:getChildById('closeButton').onClick = hidePositionWindow
     positionWindow.onEscape = hidePositionWindow
     positionWindow:raise()
@@ -405,6 +417,10 @@ function displayMessage(mode, text)
     end
 
     if msgtype.screenTarget then
+        -- an item look the item card already shows on screen (game_itemcard)
+        if mode == MessageModes.Look and modules.game_itemcard and modules.game_itemcard.takeLookText() then
+            return
+        end
         local label = messagesPanel:recursiveGetChildById(msgtype.screenTarget)
         if msgtype == MessageSettings.loot and not modules.client_options.getOption('showLootMessagesOnScreen') then
             return

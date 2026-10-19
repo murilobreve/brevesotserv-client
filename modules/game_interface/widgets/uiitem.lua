@@ -8,6 +8,9 @@ function UIItem:onDragEnter(mousePos)
         return false
     end
 
+    if modules.game_itemcard then
+        modules.game_itemcard.hideHover()
+    end
     UIDragIcon:display(item)
     self:setBorderWidth(1)
     self.currentDragThing = item
@@ -107,6 +110,12 @@ function UIItem:onDestroy()
 end
 
 function UIItem:onHoverChange(hovered)
+    -- items in a slot or a backpack show the Mythos item card instead of the
+    -- plain tooltip (game_itemcard)
+    local carded = modules.game_itemcard and modules.game_itemcard.onItemHover(self, hovered)
+    if carded then
+        self:removeTooltip()
+    end
     UIWidget.onHoverChange(self, hovered)
 
     if self:isVirtual() or not self:isDraggable() then
@@ -130,7 +139,7 @@ function UIItem:onHoverChange(hovered)
         end
     end
 
-    if g_game.getFeature(GameItemTooltipV8) then
+    if not carded and g_game.getFeature(GameItemTooltipV8) then
         local function splitTextIntoLines(text, maxLineLength)
             local words = {}
             for word in text:gmatch("%S+") do
@@ -167,6 +176,9 @@ function UIItem:onHoverChange(hovered)
 end
 
 function UIItem:onMouseRelease(mousePosition, mouseButton)
+    if modules.game_itemcard then
+        modules.game_itemcard.hideHover()
+    end
     if self.cancelNextRelease then
         self.cancelNextRelease = false
         return true
