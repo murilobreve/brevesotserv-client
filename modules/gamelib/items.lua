@@ -93,7 +93,7 @@ end
 ItemsDatabase.itemRarity = {
     uncommon  = { frame = 0, label = "Communis",    color = "#63c08a" },
     rare      = { frame = 1, label = "Rarus",       color = "#4f8fe8" },
-    epic      = { frame = 2, label = "Praeclarus",  color = "#a679e6" },
+    epic      = { frame = 2, label = "Praeclarus",  color = "#af78ea" },
     legendary = { frame = 3, label = "Legendarius", color = "#e2a443" },
     mythic    = { frame = 4, label = "Mythicus",    color = "#e8e4ff" },
 }

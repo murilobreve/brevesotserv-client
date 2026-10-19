@@ -10,7 +10,7 @@ local LINE = 14
 local GRADES = {
     uncommon  = { label = 'Communis',    color = '#63c08a', frame = 1 },
     rare      = { label = 'Rarus',       color = '#4f8fe8', frame = 2 },
-    epic      = { label = 'Praeclarus',  color = '#a679e6', frame = 3 },
+    epic      = { label = 'Praeclarus',  color = '#af78ea', frame = 3 },
     legendary = { label = 'Legendarius', color = '#e2a443', frame = 4 },
     mythic    = { label = 'Mythicus',    color = '#e8e4ff', frame = 5 },
 }
@@ -352,25 +352,6 @@ function lightIncense()
     end)
 end
 
--- a find floats over the corpse's tile for a few seconds, in the grade's
--- colour: the grade, the item, and whether it went into the backpack
--- (server: scripts/rarity/loot.lua, RarityConfig.floatOverCorpse)
-local function showDrop(data)
-    local rarity = ItemsDatabase.itemRarity and ItemsDatabase.itemRarity[data.grade]
-    if not rarity or not data.x then
-        return
-    end
-    local lines = { rarity.label, data.name or '' }
-    if data.picked then
-        table.insert(lines, tr('(na mochila)'))
-    end
-    local text = StaticText.create()
-    text:addMessage('', MessageModes.MonsterSay, table.concat(lines, '\n'))
-    text:setColor(rarity.color)
-    text:setFont('Verdana Bold-11px')
-    g_map.addStaticText(text, { x = data.x, y = data.y, z = data.z })
-end
-
 -- A rare monster rising from its corpse (art and motion: the design kit
 -- "Renascimento, quatro presencas"). Each tier is a material coming alive: a
 -- veil of mist (Pale), a flower of ash (Ashen), a crown of glass (Obsidian),
@@ -485,6 +466,11 @@ local function designTime(elapsed, delay)
     return DESIGN_REVIVE + (elapsed - delay) / 1000
 end
 
+-- a corpse that is rising right now (lootfind.lua leaves it its floor)
+function reviveActiveAt(key)
+    return revivals[key] ~= nil
+end
+
 local function dropRevive(key)
     local entry = revivals[key]
     revivals[key] = nil
@@ -577,7 +563,19 @@ end
 
 local function onOpcode(protocol, opcode, data)
     if type(data) == 'table' and data.action == 'drop' then
-        showDrop(data)
+        showLootDrop(data)
+        return
+    end
+    if type(data) == 'table' and data.action == 'dropgone' then
+        removeLootDrop(data)
+        return
+    end
+    if type(data) == 'table' and data.action == 'find' then
+        showLootCard(data)
+        return
+    end
+    if type(data) == 'table' and data.action == 'banner' then
+        showLootBanner(data)
         return
     end
     if type(data) == 'table' and data.action == 'revive' then
@@ -1288,6 +1286,7 @@ local function onGameEnd()
     for key in pairs(revivals) do
         dropRevive(key)
     end
+    clearLootFinds()
     hide()
     if roulette then
         roulette:hide()
@@ -1297,6 +1296,8 @@ end
 
 function init()
     registerReviveTextures()
+    registerLootTextures()
+    g_ui.importStyle('lootfind')
     window = g_ui.displayUI('raritybonus')
     window:hide()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
@@ -1340,4 +1341,6 @@ function terminate()
         dropRevive(key)
     end
     unregisterReviveTextures()
+    clearLootFinds()
+    unregisterLootTextures()
 end

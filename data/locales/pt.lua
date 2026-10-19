@@ -1003,6 +1003,12 @@ locale = {
     ["Sent to the staff. Thank you!"] = "Enviado para a staff. Obrigado!",
     ["Wait %d seconds before sending another report."] = "Espere %d segundos para enviar outro relato.",
     ["You sent many reports today. Thank you! Try again tomorrow."] = "Você já enviou muitos relatos hoje. Obrigado! Tente de novo amanhã.",
+    ["In your backpack"] = "Recebido na mochila",
+    ["In the corpse, ready to loot"] = "No corpo, disponível para saque",
+    ["No room or capacity: it stayed in the corpse"] = "Sem espaço ou capacidade: ficou no corpo",
+    ["A Mythicus find"] = "Um achado Mythicus",
+    ["%s found %s"] = "%s encontrou %s",
+    ["A find for the history of the server."] = "Uma descoberta para a história do servidor.",
     ["Report a bug or send an idea to the staff"] = "Reporte um bug ou mande uma ideia para a staff",
   }
 }

@@ -1,0 +1,157 @@
+// a rare find (lootfind.lua; art: the design kit "Loot raro"): the finder's
+// card in the lower right corner of the map and the Mythicus banner at its top
+
+LootFindText < Label
+  font: verdana-11px-antialised
+  color: #d0ceca
+  text-auto-resize: true
+  phantom: true
+
+LootFindCard < UIWidget
+  size: 352 156
+  image-border: 12
+  phantom: true
+  focusable: false
+
+  UIWidget
+    id: iconBox
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 17
+    margin-left: 16
+    size: 44 44
+    background-color: #1a1822
+    border-width: 1
+    border-color: #34303f
+    phantom: true
+    focusable: false
+
+  Item
+    id: icon
+    anchors.centerIn: iconBox
+    size: 34 34
+    virtual: true
+    phantom: true
+    focusable: false
+
+  Label
+    id: grade
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 22
+    margin-left: 78
+    font: Verdana Bold-10px
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 36
+    margin-left: 78
+    margin-right: 16
+    height: 24
+    ttf-font: cinzel-bold
+    ttf-font-size: 17
+    color: #f3ead9
+    phantom: true
+
+  UIWidget
+    id: rule
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 75
+    margin-left: 16
+    margin-right: 16
+    height: 1
+    background-color: #2c2838
+    phantom: true
+    focusable: false
+
+  UIWidget
+    id: bonuses
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 86
+    margin-left: 16
+    margin-right: 16
+    height: 52
+    phantom: true
+    focusable: false
+
+  UIWidget
+    id: dot
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 145
+    margin-left: 17
+    size: 4 4
+    phantom: true
+    focusable: false
+
+  Label
+    id: destination
+    anchors.verticalCenter: dot.verticalCenter
+    anchors.left: dot.right
+    margin-left: 6
+    font: verdana-11px-antialised
+    color: #a39fab
+    text-auto-resize: true
+    phantom: true
+
+LootFindBanner < UIWidget
+  size: 608 80
+  image-source: /game_raritybonus/images/loot/skin_mythicus
+  image-border: 12
+  phantom: true
+  focusable: false
+
+  UIWidget
+    id: star
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.left: parent.left
+    margin-left: 14
+    size: 56 56
+    image-source: /game_raritybonus/images/loot/banner_star
+    phantom: true
+    focusable: false
+
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 17
+    margin-left: 82
+    font: Verdana Bold-10px
+    color: #e8e4ff
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: line
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 32
+    margin-left: 82
+    margin-right: 16
+    height: 22
+    ttf-font: cinzel-bold
+    ttf-font-size: 15
+    color: #f3ead9
+    phantom: true
+
+  Label
+    id: note
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 56
+    margin-left: 82
+    font: verdana-11px-antialised
+    color: #a39fab
+    text-auto-resize: true
+    phantom: true

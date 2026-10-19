@@ -424,6 +424,9 @@ function displayMessage(mode, text)
         local label = messagesPanel:recursiveGetChildById(msgtype.screenTarget)
         if msgtype == MessageSettings.loot and not modules.client_options.getOption('showLootMessagesOnScreen') then
             return
+        elseif (msgtype == MessageSettings.loot or msgtype == MessageSettings.valuableLoot) and text:find('{%d+|[^{}|]+|%a+}') then
+            -- a rare find: its card says it (game_raritybonus), the line stays in the console
+            return
         elseif msgtype == MessageSettings.loot or msgtype == MessageSettings.valuableLoot then
             local coloredText = ItemsDatabase.setColorLootMessage(text)
             label:setColoredText(coloredText)

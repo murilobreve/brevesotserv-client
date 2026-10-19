@@ -4,6 +4,6 @@ Module
   author: Mythos
   website: http://25.18.172.192
   sandboxed: true
-  scripts: [ raritybonus ]
+  scripts: [ raritybonus, lootfind ]
   @onLoad: init()
   @onUnload: terminate()
