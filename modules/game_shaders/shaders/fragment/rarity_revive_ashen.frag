@@ -1,10 +1,17 @@
-// Rarity revive - Ashen, waking: the corpse burns out into grey ash. Cracks
-// of ember glow open across it and breathe, and sparks drift up from it like
-// from a fire that is about to catch again.
+// Rarity revive - Ashen, waking: the corpse turns to charcoal, with a few
+// warm cracks that breathe slowly, like a fire about to catch again.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+// the kit's three stops: shadow, material, light
+vec3 ramp(float l, vec3 shadow, vec3 mid, vec3 light)
+{
+    return mix(mix(shadow, mid, smoothstep(0.0, 0.55, l)), light, smoothstep(0.55, 1.0, l));
+}
+// the red of eyes and mouth stays, so the monster keeps its face
+float face(vec3 c) { return smoothstep(0.22, 0.45, c.r - max(c.g, c.b)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p)
 {
@@ -14,34 +21,19 @@ float noise(vec2 p)
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
-float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
-
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
-    vec2 fc = gl_FragCoord.xy;
-    float lum = luma(col.rgb);
-
-    // ash: grey, with the light and shade of the body
-    vec3 result = mix(col.rgb, vec3(0.42, 0.42, 0.44) * (0.5 + lum), 0.80);
-
-    // ember cracks that breathe
-    float n = noise(fc * 0.045);
-    float crack = 1.0 - smoothstep(0.0, 0.11, abs(n - 0.5));
-    float breath = 0.55 + 0.45 * sin(u_Time * 3.0 + n * 6.0);
-    vec3 ember = mix(vec3(0.95, 0.30, 0.05), vec3(1.0, 0.75, 0.25), breath);
-    result = mix(result, ember, crack * breath * step(0.01, col.a));
-    float alpha = col.a;
-
-    // sparks rising: tiny bright dots climbing through the body (never on
-    // the empty pixels around it, they hold leftovers of other sprites)
-    vec2 p = vec2(fc.x * 0.07, fc.y * 0.07 - u_Time * 1.8);
-    vec2 cell = floor(p);
-    float h = hash(cell);
-    vec2 inCell = fract(p) - vec2(0.5);
-    float spark = step(0.86, h) * (1.0 - smoothstep(0.08, 0.30, length(inCell)));
-    spark *= 0.5 + 0.5 * sin(u_Time * 8.0 + h * 40.0);
-    result = mix(result, vec3(1.0, 0.65, 0.20), spark * step(0.01, col.a));
-
-    gl_FragColor = vec4(clamp(result, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
+    vec3 c = col.rgb;
+    float l = luma(c);
+    vec3 shadow = vec3(0.161, 0.133, 0.141);
+    vec3 mid = vec3(0.788, 0.443, 0.208);
+    vec3 light = vec3(0.953, 0.741, 0.451);
+    vec3 result = mix(shadow, vec3(0.36, 0.33, 0.33), smoothstep(0.05, 0.8, l));
+    float n = noise(gl_FragCoord.xy * 0.08);
+    float crack = smoothstep(0.60, 0.66, n) * (1.0 - smoothstep(0.66, 0.72, n));
+    crack *= 0.45 + 0.35 * (0.5 + 0.5 * sin(u_Time * 1.6));
+    result = mix(result, mid, crack * smoothstep(0.08, 0.3, l));
+    result = mix(result, c, face(c) * 0.5);
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }

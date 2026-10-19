@@ -1,151 +1,33 @@
-// Baiak Rarity System - Pale Tier
-// Ghostly White / Pale Pearl
-//
-// Permanent white/pale theme.
-// Original monster remains recognizable.
-// Dark areas remain dark.
-// Light areas become pale white.
-// Soft white sheen moves across the monster.
-
+// Baiak Rarity System - Pale tier, alive (kit "Renascimento, quatro presencas":
+// the veil). Strongly drained, cold light: grey-blue shadows, sea-glass
+// tones, pearl on the lit parts. It never turns back to its own green and
+// stays opaque while it fights. A slow cold sheen is keyed by brightness, not
+// by v_TexCoord (a place in the sprite atlas that changes every animation
+// frame), so it does not jump while the monster walks.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+// the kit's three stops: shadow, material, light
+vec3 ramp(float l, vec3 shadow, vec3 mid, vec3 light)
+{
+    return mix(mix(shadow, mid, smoothstep(0.0, 0.55, l)), light, smoothstep(0.55, 1.0, l));
+}
+// the red of eyes and mouth stays, so the monster keeps its face
+float face(vec3 c) { return smoothstep(0.22, 0.45, c.r - max(c.g, c.b)); }
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
     vec3 c = col.rgb;
-
-    // --------------------------------------------------
-    // Original brightness
-    // --------------------------------------------------
-
-    float lum = dot(c, vec3(0.299, 0.587, 0.114));
-    vec3 gray = vec3(lum);
-
-
-    // --------------------------------------------------
-    // Drain most of the original color
-    // --------------------------------------------------
-
-    // Still preserves a little of the original material.
-    vec3 result = mix(
-        c,
-        gray,
-        0.62
-    );
-
-
-    // --------------------------------------------------
-    // Pale white base
-    // --------------------------------------------------
-
-    // Slightly cold/off-white.
-    // Avoid pure white so the monster doesn't look glowing.
-    vec3 paleWhite = vec3(
-        0.86,
-        0.87,
-        0.89
-    );
-
-    // Light pixels become considerably paler.
-    float whiteMask =
-        smoothstep(0.28, 0.88, lum);
-
-    result = mix(
-        result,
-        paleWhite,
-        whiteMask * 0.46
-    );
-
-
-    // --------------------------------------------------
-    // Dead/pale midtones
-    // --------------------------------------------------
-
-    vec3 deadPale = vec3(
-        0.66,
-        0.67,
-        0.68
-    );
-
-    float midMask =
-        smoothstep(0.18, 0.45, lum) *
-        (1.0 - smoothstep(0.60, 0.84, lum));
-
-    result = mix(
-        result,
-        deadPale,
-        midMask * 0.22
-    );
-
-
-    // --------------------------------------------------
-    // Preserve dark parts
-    // --------------------------------------------------
-
-    // Belts, outlines, dark armor, etc. should remain dark.
-    float darkMask =
-        1.0 - smoothstep(0.08, 0.30, lum);
-
-    result = mix(
-        result,
-        c * 0.72,
-        darkMask * 0.80
-    );
-
-
-    // --------------------------------------------------
-    // Soft moving white sheen
-    // --------------------------------------------------
-
-    // screen-space, not v_TexCoord: v_TexCoord is a position inside the
-    // shared sprite atlas, so a wave built from it jumped to a different
-    // phase on every animation frame and the monster flickered while walking
-    float wave =
-        sin(
-            gl_FragCoord.x * 0.045 +
-            gl_FragCoord.y * 0.030 -
-            u_Time * 1.5
-        );
-
-    // Wider and softer than Mythic.
-    float sheen =
-        smoothstep(0.72, 0.98, wave);
-
-    // Mostly visible on lighter areas.
-    sheen *=
-        smoothstep(0.28, 0.80, lum);
-
-    vec3 shineWhite = vec3(
-        0.96,
-        0.97,
-        1.00
-    );
-
-    result = mix(
-        result,
-        shineWhite,
-        sheen * 3.22
-    );
-
-
-    // --------------------------------------------------
-    // Very gentle breathing brightness
-    // --------------------------------------------------
-
-    float pulse =
-        0.5 +
-        0.5 * sin(u_Time * 0.9);
-
-    result +=
-        vec3(0.012) *
-        pulse *
-        whiteMask;
-
-
-    gl_FragColor = vec4(
-        clamp(result, 0.0, 1.0),
-        col.a
-    );
+    float l = luma(c);
+    vec3 shadow = vec3(0.161, 0.220, 0.267);
+    vec3 mid = vec3(0.471, 0.671, 0.722);
+    vec3 light = vec3(0.898, 0.957, 0.945);
+    vec3 result = ramp(clamp(l * 1.25, 0.0, 1.0), shadow, mid, light);
+    result = mix(result, vec3(l) * vec3(0.92, 1.0, 1.04), 0.12);
+    float sheen = smoothstep(0.85, 1.0, sin(l * 14.0 + u_Time * 0.9)) * smoothstep(0.35, 0.8, l);
+    result = mix(result, light, sheen * 0.35);
+    result = mix(result, c, face(c) * 0.8);
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }

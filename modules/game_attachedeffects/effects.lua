@@ -106,6 +106,44 @@ AttachedEffectManager.register(20, 'Lord of Death Aura', '/images/game/effects/p
     offset = { 50, 45 }
 })
 
+-- Baiak Rarity System: the aura of a living rare monster (design kit
+-- "Renascimento, quatro presencas"), attached by the server
+-- (RarityConfig.tiers attachedEffect). It shows up as the monster settles out
+-- of its rise: 0.35 s after it stands up it fades in over 0.55 s. The Lord of
+-- Death's broken five-point seal lies under it; the other auras float around
+-- it. The kit's sizes are for a one-tile creature: a bigger one (a 2x2
+-- dragon) gets it twice as big, around the middle of its sprite.
+local function rareMonsterAura(id, name, folder, tiles, opacity, onTop)
+    AttachedEffectManager.register(id, name, '/game_raritybonus/images/revive/' .. folder .. '/revive_' .. folder .. '_aura', ThingExternalTexture, {
+        smooth = true,
+        offset = { 0, 0, onTop },
+        onAttach = function(effect, owner)
+            local span = 1
+            local outfit = owner.getOutfit and owner:getOutfit()
+            local thingType = outfit and outfit.type > 0 and g_things.getThingType(outfit.type, ThingCategoryCreature)
+            if thingType then
+                span = math.max(1, math.min(2, math.max(thingType:getWidth(), thingType:getHeight())))
+            end
+            local side = math.floor(tiles * span * 32 + 0.5)
+            local half = math.floor(side / 2) - 16 + (span - 1) * 16
+            effect:setSize({ width = side, height = side })
+            effect:setOffset(half, half + 2)
+            effect:setOpacity(0)
+            for step = 1, 11 do
+                scheduleEvent(function()
+                    local x = step / 11
+                    effect:setOpacity(opacity * x * x * (3 - 2 * x))
+                end, 350 + step * 50)
+            end
+        end
+    })
+end
+
+rareMonsterAura(21, 'Pale Aura', 'pale', 0.95, 0.30, true)
+rareMonsterAura(22, 'Ashen Aura', 'ashen', 1.05, 0.38, true)
+rareMonsterAura(23, 'Obsidian Aura', 'obsidian', 1.15, 0.46, true)
+rareMonsterAura(24, 'Lord of Death Seal', 'lord-of-death', 1.40, 0.56, false)
+
 AttachedEffectManager.register(8, 'Ki', '/images/game/effects/ki', ThingExternalTexture, {
     size = { 140, 110 },
     offset = { 60, 75, true },

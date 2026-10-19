@@ -118,7 +118,7 @@ AttachedEffectManager = {
     register = function(id, name, thingId, thingCategory, config)
         local attachedEffect = nil
         if thingCategory == ThingExternalTexture then
-            attachedEffect = g_attachedEffects.registerByImage(id, name, thingId)
+            attachedEffect = g_attachedEffects.registerByImage(id, name, thingId, config.smooth == true)
         else
             attachedEffect = g_attachedEffects.registerByThing(id, name, thingId, thingCategory)
         end

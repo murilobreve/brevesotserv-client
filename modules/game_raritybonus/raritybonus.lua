@@ -371,144 +371,204 @@ local function showDrop(data)
     g_map.addStaticText(text, { x = data.x, y = data.y, z = data.z })
 end
 
--- A rare monster rising from its corpse, told without words: thin rings of
--- light in the tier's colour open wide around the body and close in on it,
--- as if the soul were being pulled back, faster and faster as the moment
--- nears, over a soft glow that breathes with the corpse's heartbeat. When the
--- monster stands up a single ring opens out from it and fades. The server
--- sends it (scripts/rarity/revive.lua).
-local REVIVE_COLORS = {
-    pale = '#dce8f5',
-    ashen = '#f2a46a',
-    obsidian = '#b39bff',
-    deathlord = '#ff6a5e',
+-- A rare monster rising from its corpse (art and motion: the design kit
+-- "Renascimento, quatro presencas"). Each tier is a material coming alive: a
+-- veil of mist (Pale), a flower of ash (Ashen), a crown of glass (Obsidian),
+-- an eclipse (Lord of Death). Three textures follow the corpse's tile: the
+-- floor under the body and every creature, the air around it, and the burst
+-- when the monster stands up. The living monster's aura is an attached effect
+-- the server puts on it (game_attachedeffects, ids 21 to 24). The server sends
+-- the tier and the time left (scripts/rarity/revive.lua).
+local REVIVE_FOLDERS = { pale = 'pale', ashen = 'ashen', obsidian = 'obsidian', deathlord = 'lord-of-death' }
+local REVIVE_LAYERS = { chao = 1, ar = 2, eclosao = 3 }
+local REVIVE_EFFECT_BASE = 3000
+local DESIGN_REVIVE = 7       -- the curves are drawn for a 7 s wait...
+local DESIGN_SETTLE = 0.9     -- ...and 0.9 s of arrival
+-- sizes (side of the texture, in tiles), peak opacities, how far the air lifts
+local REVIVE_MOTION = {
+    pale = { tier = 1, g = 1.9, a = 2.15, r = 2.45, go = .42, ao = .58, ro = .42, lift = .20 },
+    ashen = { tier = 2, g = 2.2, a = 2.45, r = 2.7, go = .56, ao = .67, ro = .60, lift = .16 },
+    obsidian = { tier = 3, g = 2.45, a = 2.8, r = 3.05, go = .62, ao = .77, ro = .68, lift = .20 },
+    deathlord = { tier = 4, g = 2.85, a = 3.15, r = 3.35, go = .72, ao = .85, ro = .66, lift = .16 },
 }
-local RING_LIFE = 900       -- ms a ring takes to close in
-local FLASH_LIFE = 650      -- ms of the last ring opening out
 local revivals = {}
 
-local function mapTileWidth()
-    local panel = modules.game_interface and modules.game_interface.getMapPanel()
-    local dim = panel and panel:getVisibleDimension()
-    if not dim or dim.width <= 0 then
-        return 32
-    end
-    return math.min(panel:getWidth() / dim.width, panel:getHeight() / dim.height)
+local function clamp01(x)
+    return math.max(0, math.min(1, x))
 end
 
-local function attachRevive(entry)
-    if entry.box:getParent() then
-        return true
+local function smooth(x)
+    x = clamp01(x)
+    return x * x * (3 - 2 * x)
+end
+
+local function reviveEffectId(tierKey, layer)
+    return REVIVE_EFFECT_BASE + REVIVE_MOTION[tierKey].tier * 10 + REVIVE_LAYERS[layer]
+end
+
+-- the floor goes in the ground-border pass, under corpses and every creature;
+-- the air and the burst over them
+local function registerReviveTextures()
+    for tierKey, folder in pairs(REVIVE_FOLDERS) do
+        for layer in pairs(REVIVE_LAYERS) do
+            local id = reviveEffectId(tierKey, layer)
+            local path = string.format('/game_raritybonus/images/revive/%s/revive_%s_%s', folder, folder, layer)
+            -- a module reload finds them still registered
+            g_attachedEffects.remove(id)
+            local effect = g_attachedEffects.registerByImage(id, 'Revive ' .. folder .. ' ' .. layer, path, true)
+            if effect then
+                effect:setPermanent(true)
+                effect:setOnTop(layer ~= 'chao')
+                effect:setDrawOrder(layer == 'chao' and 1 or 3)
+            end
+        end
     end
-    local tile = g_map.getTile(entry.pos)
-    if not tile then
-        return false
+end
+
+local function unregisterReviveTextures()
+    for tierKey in pairs(REVIVE_FOLDERS) do
+        for layer in pairs(REVIVE_LAYERS) do
+            g_attachedEffects.remove(reviveEffectId(tierKey, layer))
+        end
     end
-    tile:attachWidget(entry.box)
-    return true
+end
+
+-- The designer's curves: which layers show at design time t (seconds, 0 = the
+-- death, 7 = the monster stands up), how big, how opaque, how far up.
+local function reviveLayers(t, tierKey)
+    local c = REVIVE_MOTION[tierKey]
+    local out = {}
+    local function add(layer, size, opacity, lift)
+        out[layer] = { size = size, opacity = clamp01(opacity), lift = lift or 0 }
+    end
+    if t < DESIGN_REVIVE then
+        local p = clamp01(t / DESIGN_REVIVE)
+        local entry = smooth(t / .85)
+        local tension = smooth((t - 5.5) / 1.5)
+        local breath = math.sin(2 * math.pi * (.35 * t + .4 * t * t / 14))
+        add('chao', c.g * (.66 + .34 * smooth(p)), c.go * entry * (.60 + .40 * p) * (1 + .035 * breath))
+        local gather = smooth((t - .55) / 5.2)
+        local scale = .72 + .28 * gather
+        local lift = c.lift * (.3 + .7 * gather)
+        if tierKey == 'pale' then
+            scale = scale * (1 + .035 * breath)
+            lift = lift + .035 * math.sin(t * 1.3)
+        elseif tierKey == 'ashen' then
+            scale = scale * (1 + .02 * math.sin(t * 1.6))
+            lift = lift + .045 * gather
+        elseif tierKey == 'obsidian' then
+            scale = scale * (1 - .10 * tension)
+            lift = lift + .025 * math.sin(t * 1.1)
+        else
+            scale = scale * (1 - .06 * tension)
+            lift = lift + .06 * tension
+        end
+        add('ar', c.a * scale, c.ao * entry * gather * (.68 + .32 * tension), lift)
+    else
+        local q = clamp01((t - DESIGN_REVIVE) / DESIGN_SETTLE)
+        local exit = 1 - smooth(q)
+        local eclipse = tierKey == 'deathlord'
+        -- Pale, Ashen and Obsidian open out; the Lord's shadow implodes into it
+        add('chao', c.g * (eclipse and (1 - .58 * smooth(q)) or (1 + .08 * q)), c.go * exit)
+        add('ar', c.a * (1 - .1 * q), c.ao * exit, c.lift + .08 * q)
+        add('eclosao', c.r * (eclipse and (1 - .7 * smooth(q)) or (.74 + .26 * smooth(q))), c.ro * math.sin(math.pi * q), eclipse and 0 or .18 * q)
+    end
+    return out
+end
+
+-- the server's real delay maps onto the 7 s of the curves; after the rise the
+-- clock runs in real seconds
+local function designTime(elapsed, delay)
+    if elapsed < delay then
+        return elapsed / delay * DESIGN_REVIVE
+    end
+    return DESIGN_REVIVE + (elapsed - delay) / 1000
 end
 
 local function dropRevive(key)
     local entry = revivals[key]
     revivals[key] = nil
-    if entry then
-        removeEvent(entry.event)
-        if not entry.box:isDestroyed() then
-            entry.box:destroy()
+    if not entry then
+        return
+    end
+    removeEvent(entry.event)
+    local tile = g_map.getTile(entry.pos)
+    for _, effect in pairs(entry.effects) do
+        if tile then
+            tile:detachEffect(effect)
         end
     end
 end
 
--- a centred square child of the box, `size` pixels wide
-local function setCircle(widget, size, opacity)
-    size = math.max(1, math.floor(size))
-    widget:setSize({ width = size, height = size })
-    widget:setOpacity(math.max(0, math.min(1, opacity)))
-end
-
-local function newCircle(entry, style)
-    local widget = g_ui.createWidget(style, entry.box)
-    widget:setImageColor(entry.color)
-    widget:setOpacity(0)
-    return widget
+-- a texture of `size` tiles centred on the tile, `lift` tiles up (an attached
+-- effect is drawn at the tile's corner minus its offset, in 32 px units)
+local function placeLayer(entry, tile, layer, state)
+    local effect = entry.effects[layer]
+    if not effect then
+        -- getById hands out a copy of the registered effect
+        effect = g_attachedEffects.getById(reviveEffectId(entry.tier, layer))
+        if not effect then
+            return
+        end
+        entry.effects[layer] = effect
+    end
+    local side = math.max(1, math.floor(state.size * 32 + 0.5))
+    local half = math.floor(side / 2) - 16
+    effect:setSize({ width = side, height = side })
+    effect:setOffset(half + entry.shift, half + entry.shift + math.floor(state.lift * 32 + 0.5))
+    effect:setOpacity(state.opacity)
+    -- the tile is rebuilt when it leaves the screen and comes back
+    if not tile:getAttachedEffectById(effect:getId()) then
+        tile:attachEffect(effect)
+    end
 end
 
 local function showRevive(data)
-    if not data.x or not tonumber(data.ms) then
+    if not data.x or not tonumber(data.ms) or not REVIVE_MOTION[data.tier] then
         return
     end
     local pos = { x = data.x, y = data.y, z = data.z }
     local key = pos.x .. ':' .. pos.y .. ':' .. pos.z
     dropRevive(key)
-    local box = g_ui.createWidget('ReviveBox')
     local entry = {
         pos = pos,
-        box = box,
-        color = REVIVE_COLORS[data.tier] or '#ffffff',
-        total = tonumber(data.ms),
+        tier = data.tier,
+        delay = math.max(1, tonumber(data.ms)),
         starts = g_clock.millis(),
-        rings = {},
-        nextRing = 0,
+        effects = {},
+        shift = 0,
     }
-    entry.glow = newCircle(entry, 'ReviveGlow')
+    -- a 2x2 corpse (a dragon's) is drawn up and left of its tile: centre on it
+    local tile = g_map.getTile(pos)
+    local corpse = tile and tile:getTopUseThing()
+    if corpse and corpse:isItem() then
+        local thingType = g_things.getThingType(corpse:getId(), ThingCategoryItem)
+        if thingType then
+            entry.shift = (math.max(1, math.min(2, math.max(thingType:getWidth(), thingType:getHeight()))) - 1) * 16
+        end
+    end
     revivals[key] = entry
 
     local function frame()
-        if box:isDestroyed() then
-            revivals[key] = nil
+        if revivals[key] ~= entry then
             return
         end
-        local now = g_clock.millis()
-        local elapsed = now - entry.starts
-        local p = math.min(1, elapsed / entry.total)
-        local tile = mapTileWidth()
-        local span = math.floor(tile * 3.4)
-        box:setSize({ width = span, height = span })
-        box:setMarginLeft(math.floor((tile - span) / 2))
-        box:setMarginTop(math.floor((tile - span) / 2))
-        attachRevive(entry)
-
-        if p < 1 then
-            -- a new ring every 1.1 s at first, every 0.32 s at the end
-            if elapsed >= entry.nextRing then
-                table.insert(entry.rings, { widget = newCircle(entry, 'ReviveRing'), born = now })
-                entry.nextRing = elapsed + 1100 - 780 * p
-            end
-            -- the glow breathes: one breath every 1.2 s, three a second at the end
-            local rate = 0.8 + 2.2 * p * p
-            local breath = 0.5 + 0.5 * math.cos(elapsed / 1000 * rate * 2 * math.pi)
-            local fadeIn = math.min(1, elapsed / 800)
-            setCircle(entry.glow, tile * (1.3 + 0.3 * breath), fadeIn * (0.22 + 0.30 * p + 0.15 * breath))
+        local t = designTime(g_clock.millis() - entry.starts, entry.delay)
+        if t >= DESIGN_REVIVE + DESIGN_SETTLE then
+            dropRevive(key)
+            return
         end
-
-        for i = #entry.rings, 1, -1 do
-            local ring = entry.rings[i]
-            local t = (now - ring.born) / RING_LIFE
-            if t >= 1 then
-                ring.widget:destroy()
-                table.remove(entry.rings, i)
-            else
-                -- closes in fast and slows down as it reaches the body
-                local ease = 1 - (1 - t) * (1 - t)
-                setCircle(ring.widget, tile * (3.2 - 2.6 * ease), 0.95 * math.sin(math.pi * t))
+        local tile = g_map.getTile(pos)
+        if tile then
+            local layers = reviveLayers(t, entry.tier)
+            for layer in pairs(REVIVE_LAYERS) do
+                local state = layers[layer]
+                if state and state.opacity > 0.005 then
+                    placeLayer(entry, tile, layer, state)
+                elseif entry.effects[layer] then
+                    entry.effects[layer]:setOpacity(0)
+                end
             end
-        end
-
-        if p >= 1 then
-            -- the monster stands up: one ring opens out and the glow fades
-            if not entry.flash then
-                entry.flash = newCircle(entry, 'ReviveRing')
-                entry.flashBorn = now
-            end
-            local t = (now - entry.flashBorn) / FLASH_LIFE
-            if t >= 1 and #entry.rings == 0 then
-                dropRevive(key)
-                return
-            end
-            t = math.min(1, t)
-            local ease = 1 - (1 - t) * (1 - t) * (1 - t)
-            setCircle(entry.flash, tile * (0.6 + 2.8 * ease), 0.9 * (1 - t))
-            setCircle(entry.glow, tile * (1.4 + 0.8 * ease), 0.45 * (1 - t))
         end
         entry.event = scheduleEvent(frame, 30)
     end
@@ -1236,7 +1296,7 @@ local function onGameEnd()
 end
 
 function init()
-    g_ui.importStyle('revive')
+    registerReviveTextures()
     window = g_ui.displayUI('raritybonus')
     window:hide()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
@@ -1276,4 +1336,8 @@ function terminate()
         roulette = nil
     end
     spin = nil
+    for key in pairs(revivals) do
+        dropRevive(key)
+    end
+    unregisterReviveTextures()
 end

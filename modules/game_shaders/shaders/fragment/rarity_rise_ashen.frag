@@ -1,9 +1,17 @@
-// Rarity revive - Ashen, rising: the ash catches. The cracks flare wide and
-// the whole body flickers between hot ember and grey ash.
+// Rarity revive - Ashen, rising: the joints light up together and softly; the
+// heat gathers, rises and settles. No flicker.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
 
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+// the kit's three stops: shadow, material, light
+vec3 ramp(float l, vec3 shadow, vec3 mid, vec3 light)
+{
+    return mix(mix(shadow, mid, smoothstep(0.0, 0.55, l)), light, smoothstep(0.55, 1.0, l));
+}
+// the red of eyes and mouth stays, so the monster keeps its face
+float face(vec3 c) { return smoothstep(0.22, 0.45, c.r - max(c.g, c.b)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p)
 {
@@ -13,20 +21,20 @@ float noise(vec2 p)
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
-float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
-
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
-    vec2 fc = gl_FragCoord.xy;
-    float lum = luma(col.rgb);
-    vec3 ash = mix(col.rgb, vec3(0.45, 0.45, 0.47) * (0.5 + lum), 0.75);
-    float n = noise(fc * 0.045 + vec2(0.0, -u_Time * 1.5));
-    float crack = 1.0 - smoothstep(0.0, 0.16, abs(n - 0.5));
-    float flicker = 0.5 + 0.5 * sin(u_Time * 22.0 + n * 10.0);
-    vec3 ember = mix(vec3(1.0, 0.35, 0.05), vec3(1.0, 0.85, 0.45), flicker);
-    vec3 result = mix(ash, ember, max(crack, 0.25 * flicker) * step(0.01, col.a));
-    float rim = step(0.01, col.a) * (1.0 - smoothstep(0.0, 0.7, col.a));
-    result += vec3(1.0, 0.5, 0.1) * rim;
+    vec3 c = col.rgb;
+    float l = luma(c);
+    vec3 shadow = vec3(0.161, 0.133, 0.141);
+    vec3 mid = vec3(0.788, 0.443, 0.208);
+    vec3 light = vec3(0.953, 0.741, 0.451);
+    vec3 result = mix(shadow, vec3(0.36, 0.33, 0.33), smoothstep(0.05, 0.8, l));
+    float n = noise(gl_FragCoord.xy * 0.08);
+    float crack = smoothstep(0.56, 0.64, n) * (1.0 - smoothstep(0.66, 0.76, n));
+    float heat = 0.7 + 0.3 * sin(u_Time * 2.4);
+    vec3 ember = mix(mid, light, 0.35 * heat);
+    result = mix(result, ember, crack * heat * smoothstep(0.08, 0.3, l));
+    result = mix(result, c, face(c) * 0.6);
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }
