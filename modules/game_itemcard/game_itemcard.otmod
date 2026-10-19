@@ -1,0 +1,9 @@
+Module
+  name: game_itemcard
+  description: Item card - looked at or hovered items drawn as a card in the site's colours
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ itemcard ]
+  @onLoad: init()
+  @onUnload: terminate()

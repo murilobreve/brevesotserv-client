@@ -1,0 +1,257 @@
+// Item card: an item drawn the way the website draws it (itemcard.lua fills
+// it). Obsidian glass with the gold rim, the grade's colour along the top,
+// the site's crystal divider under the name, the stats as a ledger and each
+// rarity bonus with a bar for how good its roll is.
+
+ItemCard < UIWidget
+  width: 252
+  image-source: /images/mythos/notice
+  image-border: 4
+  padding: 3 10 9 10
+  phantom: true
+  focusable: false
+  layout:
+    type: verticalBox
+    fit-children: true
+
+// the grade's colour along the top edge, as the site rings a rarity slot
+ItemCardAccent < UIWidget
+  height: 2
+  margin-left: -7
+  margin-right: -7
+  phantom: true
+  focusable: false
+
+ItemCardHeader < UIWidget
+  height: 40
+  margin-top: 6
+  phantom: true
+  focusable: false
+
+  Item
+    id: slot
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    virtual: true
+    phantom: true
+    focusable: false
+
+  Label
+    id: name
+    anchors.left: slot.right
+    anchors.right: parent.right
+    anchors.top: slot.top
+    margin-left: 9
+    margin-top: 1
+    height: 18
+    ttf-font: cinzel-bold
+    ttf-font-size: 14
+    color: #f3ead9
+    phantom: true
+
+  UIWidget
+    id: sub
+    anchors.left: name.left
+    anchors.right: parent.right
+    anchors.top: name.bottom
+    margin-top: 2
+    height: 13
+    phantom: true
+    focusable: false
+    layout:
+      type: horizontalBox
+      spacing: 3
+
+ItemCardGrade < Label
+  font: Verdana Bold-10px
+  text-auto-resize: true
+  margin-right: 3
+  phantom: true
+
+ItemCardGem < UIWidget
+  size: 7 7
+  fixed-size: true
+  margin-left: 2
+  image-source: /images/ui/item_rarity_gem
+  phantom: true
+  focusable: false
+
+ItemCardTag < Label
+  font: verdana-11px-antialised
+  color: #c9c0cf
+  text-auto-resize: true
+  phantom: true
+
+ItemCardSubText < Label
+  font: verdana-11px-antialised
+  color: #a39cbc
+  text-auto-resize: true
+  phantom: true
+
+// the website's divider: a gold rod with the violet crystal in the middle
+ItemCardDivider < UIWidget
+  height: 18
+  margin-top: 4
+  margin-bottom: 2
+  phantom: true
+  focusable: false
+
+  UIWidget
+    image-source: /game_itemcard/images/divider
+    size: 180 28
+    anchors.centerIn: parent
+    phantom: true
+    focusable: false
+
+// a thin rule with a heading, between the sections below the stats
+ItemCardSection < UIWidget
+  height: 15
+  margin-top: 7
+  phantom: true
+  focusable: false
+
+  Label
+    id: title
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    font: Verdana Bold-10px
+    color: #dfb564
+    text-auto-resize: true
+    phantom: true
+
+  UIWidget
+    id: rule
+    anchors.left: title.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    height: 1
+    background-color: #655036
+    phantom: true
+
+ItemCardStat < UIWidget
+  height: 15
+  phantom: true
+  focusable: false
+
+  Label
+    id: label
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    font: verdana-11px-antialised
+    color: #a39cbc
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: value
+    anchors.left: label.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-antialised
+    color: #f3ead9
+    text-align: right
+    phantom: true
+
+// a stat whose value is too long for one line: the value wraps under it
+ItemCardStatLong < UIWidget
+  height: 15
+  phantom: true
+  focusable: false
+  layout:
+    type: verticalBox
+    fit-children: true
+
+  Label
+    id: label
+    font: verdana-11px-antialised
+    color: #a39cbc
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: value
+    margin-left: 10
+    font: verdana-11px-antialised
+    color: #f3ead9
+    text-wrap: true
+    text-auto-resize: true
+    phantom: true
+
+// one rarity bonus: the line in its quality colour and how good the roll is
+ItemCardBonus < UIWidget
+  height: 16
+  phantom: true
+  focusable: false
+
+  UIWidget
+    id: gem
+    size: 7 7
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    image-source: /images/ui/item_rarity_gem
+    phantom: true
+
+  Label
+    id: text
+    anchors.left: gem.right
+    anchors.right: track.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    margin-right: 6
+    font: verdana-11px-antialised
+    color: #f3ead9
+    phantom: true
+
+  Label
+    id: percent
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 30
+    font: verdana-11px-antialised
+    color: #a39cbc
+    text-align: right
+    phantom: true
+
+  UIWidget
+    id: track
+    anchors.right: percent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 5
+    size: 52 5
+    background-color: #0b0914
+    border-width: 1
+    border-color: #2f2656
+    phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin: 1
+      width: 0
+      phantom: true
+
+// PERFECT: the site's pearl-gold ribbon
+ItemCardPerfect < Label
+  font: Verdana Bold-10px
+  color: #0a0812
+  background-color: #ffe7a6
+  text-align: center
+  text-auto-resize: true
+  padding: 1 5 1 5
+  phantom: true
+
+ItemCardLine < Label
+  font: verdana-11px-antialised
+  color: #c9c0cf
+  text-wrap: true
+  text-auto-resize: true
+  phantom: true
+
+// "Found by NAME · DATE" under everything else
+ItemCardFinder < ItemCardLine
+  margin-top: 7
+  color: #a39cbc

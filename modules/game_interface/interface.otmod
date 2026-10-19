@@ -55,6 +55,7 @@ Module
     - game_raritymarket
     - game_raritybonus
     - game_raresell
+    - game_itemcard
     - game_wiki
     - game_huntboard
     - game_tplabels

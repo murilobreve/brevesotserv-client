@@ -1,6 +1,6 @@
 ScreenMessagesWindow < MythosWindow
   !text: tr('Interface')
-  size: 300 268
+  size: 300 326
   @onEscape: modules.game_textmessage.hidePositionWindow()
 
   Label
@@ -69,6 +69,25 @@ ScreenMessagesWindow < MythosWindow
 
   MythosComboBox
     id: mapZoom
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+    mouse-scroll: false
+
+  // how a look or the mouse over an item shows it (game_itemcard)
+  Label
+    id: itemCardsSection
+    !text: tr('Item cards')
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    margin-top: 14
+    font: verdana-11px-rounded
+    color: #f3dcae
+    text-auto-resize: true
+
+  MythosComboBox
+    id: itemCards
     anchors.top: prev.bottom
     anchors.left: parent.left
     anchors.right: parent.right

@@ -988,6 +988,10 @@ locale = {
     ["No bonus: the bonuses above get stronger!"] = "Sem bônus: os bônus acima ficam mais fortes!",
     ["No bonus: the next bonuses will be stronger."] = "Sem bônus: os próximos bônus vão ser mais fortes.",
     ["no bonus"] = "sem bônus",
+    ["Item cards"] = "Cards de item",
+    ["On a look and on hover"] = "Ao dar look e ao passar o mouse",
+    ["Only on a look"] = "Só ao dar look",
+    ["Off (green text)"] = "Desligado (texto verde)",
   }
 }
 
