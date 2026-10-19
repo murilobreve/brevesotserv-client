@@ -33,15 +33,15 @@ void main()
     result = mix(result, ember, crack * breath * step(0.01, col.a));
     float alpha = col.a;
 
-    // sparks rising: tiny bright dots climbing through the tile
+    // sparks rising: tiny bright dots climbing through the body (never on
+    // the empty pixels around it, they hold leftovers of other sprites)
     vec2 p = vec2(fc.x * 0.07, fc.y * 0.07 - u_Time * 1.8);
     vec2 cell = floor(p);
     float h = hash(cell);
     vec2 inCell = fract(p) - vec2(0.5);
     float spark = step(0.86, h) * (1.0 - smoothstep(0.08, 0.30, length(inCell)));
     spark *= 0.5 + 0.5 * sin(u_Time * 8.0 + h * 40.0);
-    result = mix(result, vec3(1.0, 0.65, 0.20), spark);
-    alpha = max(alpha, spark);
+    result = mix(result, vec3(1.0, 0.65, 0.20), spark * step(0.01, col.a));
 
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
 }

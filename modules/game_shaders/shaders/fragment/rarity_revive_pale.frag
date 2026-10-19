@@ -1,6 +1,9 @@
 // Rarity revive - Pale, waking: the corpse turns into a ghost of itself. It
 // goes cold and pale, fades in and out like a spirit that cannot hold its
-// shape, and white mist climbs out of it into the air around the body.
+// shape, and white mist climbs through it. Everything stays on the body's
+// own pixels: the empty pixels around a sprite hold whatever the client's
+// texture cache left there, and painting them showed as a rectangle of
+// garbage over the floor.
 uniform float u_Time;
 uniform sampler2D u_Tex0;
 varying vec2 v_TexCoord;
@@ -28,12 +31,11 @@ void main()
     float fade = 0.55 + 0.35 * (0.5 + 0.5 * sin(u_Time * 2.2)) + 0.10 * noise(fc * 0.05 + u_Time);
     vec4 result = vec4(body, col.a * fade);
 
-    // mist rising from the body, also over the empty pixels around it
+    // mist rising through the body
     float mist = noise(vec2(fc.x * 0.045, fc.y * 0.030 - u_Time * 1.6));
     mist *= noise(vec2(fc.x * 0.09 + 3.0, fc.y * 0.06 - u_Time * 2.4));
     float wisp = smoothstep(0.30, 0.62, mist);
     result.rgb = mix(result.rgb, vec3(0.95, 0.97, 1.0), wisp * 0.6 * result.a);
-    result.a = max(result.a, wisp * 0.45);
 
     gl_FragColor = vec4(clamp(result.rgb, 0.0, 1.0), clamp(result.a, 0.0, 1.0));
 }

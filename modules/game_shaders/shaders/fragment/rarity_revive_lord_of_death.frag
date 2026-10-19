@@ -36,11 +36,11 @@ void main()
     result = mix(result, vec3(0.95, 0.06, 0.05), vein * (0.35 + 0.65 * beat) * step(0.01, col.a));
     float alpha = col.a;
 
-    // dark smoke pouring up, over the empty pixels too
+    // dark smoke pouring up through the body (never on the empty pixels
+    // around it, they hold leftovers of other sprites)
     float smoke = noise(vec2(fc.x * 0.04, fc.y * 0.03 - u_Time * 1.2)) * noise(vec2(fc.x * 0.08 + 7.0, fc.y * 0.05 - u_Time * 1.8));
     float s = smoothstep(0.25, 0.55, smoke);
-    result = mix(result, vec3(0.08, 0.0, 0.02), s * (1.0 - col.a));
-    alpha = max(alpha, s * 0.55);
+    result = mix(result, vec3(0.08, 0.0, 0.02), s * 0.55);
 
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
 }
