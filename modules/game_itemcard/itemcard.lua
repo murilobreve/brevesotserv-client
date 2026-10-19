@@ -79,6 +79,31 @@ local PT = {
     ["+%d%% stronger in its finder's hands"] = '+%d%% mais forte nas mãos de quem achou',
 }
 
+-- the fonts draw one glyph per byte (Latin-1); this file and the server's
+-- JSON are UTF-8, so every text is turned into Latin-1 once
+local function latin1(text)
+    return (tostring(text):gsub('[\194\195][\128-\191]', function(pair)
+        local a, b = pair:byte(1, 2)
+        return string.char((a - 194) * 64 + b)
+    end))
+end
+
+local function convertStrings(value)
+    for key, v in pairs(value) do
+        if type(v) == 'string' then
+            value[key] = latin1(v)
+        elseif type(v) == 'table' then
+            convertStrings(v)
+        end
+    end
+    return value
+end
+
+convertStrings(PT)
+
+-- between the parts of a line: "Knights · Level 55"
+local SEPARATOR = latin1('  ·  ')
+
 local function isPortuguese()
     local locales = modules.client_locales
     local locale = locales and locales.getCurrentLocale and locales.getCurrentLocale()
@@ -270,7 +295,7 @@ local function wieldText(wield)
     if wield.premium then
         parts[#parts + 1] = t('Premium')
     end
-    return table.concat(parts, '  ·  '), short
+    return table.concat(parts, SEPARATOR), short
 end
 
 local function fill(widget, data)
@@ -323,7 +348,7 @@ local function fill(widget, data)
     if finder then
         local text = t('Found by') .. ' ' .. (finder.name or '?')
         if finder.date then
-            text = text .. '  ·  ' .. finder.date
+            text = text .. SEPARATOR .. finder.date
         end
         g_ui.createWidget('ItemCardFinder', widget):setText(text)
         if finder.bonus and finder.bonus > 0 then
@@ -575,6 +600,7 @@ local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' or data.action ~= 'card' or type(data.card) ~= 'table' then
         return
     end
+    convertStrings(data.card)
     if data.mode == 'look' then
         showLook(data.card)
     elseif data.mode == 'hover' and data.key then
