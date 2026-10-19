@@ -9,6 +9,7 @@ locale = {
 
   translation = {
     ["Patch notes"] = "Novidades",
+    ["New patch! You can close this window once you are in the game."] = "Patch novo! Você pode fechar esta janela depois de entrar no jogo.",
     ["A new patch is out. Click to see what changed."] = "Saiu um patch novo. Clique para ver o que mudou.",
     ["What changed in each patch."] = "O que mudou em cada patch.",
     ["Every patch is also on the site, under Patch notes."] = "Todos os patches também ficam no site, em Novidades.",

@@ -1,0 +1,18 @@
+// countdown over a rare monster's corpse while it rises (raritybonus.lua)
+ReviveBox < UIWidget
+  background-color: #0c0814a8
+  border-width: 1
+  border-color: #ffffff30
+  phantom: true
+  focusable: false
+
+ReviveName < UILabel
+  font: Verdana Bold-11px
+  text-align: center
+  phantom: true
+
+ReviveCount < UILabel
+  ttf-font: cinzel-bold
+  ttf-font-size: 30
+  text-align: center
+  phantom: true

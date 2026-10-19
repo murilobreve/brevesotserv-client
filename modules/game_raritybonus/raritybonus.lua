@@ -371,9 +371,129 @@ local function showDrop(data)
     g_map.addStaticText(text, { x = data.x, y = data.y, z = data.z })
 end
 
+-- A rare monster rising from its corpse: its tier and name over the tile,
+-- with a big countdown in the tier's colour that blinks in the last seconds
+-- and ends in "RENASCEU!". The server beats the tier's effect on the corpse
+-- meanwhile (scripts/rarity/revive.lua).
+local REVIVE_COLORS = {
+    pale = '#dce8f5',
+    ashen = '#ffb070',
+    obsidian = '#b39bff',
+    deathlord = '#ff5a5a',
+}
+local revivals = {}
+
+local function mapTileWidth()
+    local panel = modules.game_interface and modules.game_interface.getMapPanel()
+    local dim = panel and panel:getVisibleDimension()
+    if not dim or dim.width <= 0 then
+        return 32
+    end
+    return math.min(panel:getWidth() / dim.width, panel:getHeight() / dim.height)
+end
+
+local function placeRevive(entry)
+    local box = entry.box
+    -- the count (TTF) is not measured: its text size reads wrong
+    local width = math.max(entry.name:getTextSize().width + 16, 200)
+    entry.count:setSize({ width = width, height = 36 })
+    entry.name:setSize({ width = width, height = 14 })
+    entry.name:setMarginTop(34)
+    box:setSize({ width = width, height = 52 })
+    -- the big number on top, the name under it, both high enough to clear
+    -- the text that floats over a player standing next to the corpse
+    box:setMarginLeft(math.floor((mapTileWidth() - width) / 2))
+    box:setMarginTop(-96)
+end
+
+local function attachRevive(entry)
+    if entry.box:getParent() then
+        return true
+    end
+    local tile = g_map.getTile(entry.pos)
+    if not tile then
+        return false
+    end
+    tile:attachWidget(entry.box)
+    return true
+end
+
+local function dropRevive(key)
+    local entry = revivals[key]
+    revivals[key] = nil
+    if entry then
+        removeEvent(entry.event)
+        if not entry.box:isDestroyed() then
+            entry.box:destroy()
+        end
+    end
+end
+
+local function showRevive(data)
+    if not data.x or not tonumber(data.ms) then
+        return
+    end
+    local pos = { x = data.x, y = data.y, z = data.z }
+    local key = pos.x .. ':' .. pos.y .. ':' .. pos.z
+    dropRevive(key)
+    local color = REVIVE_COLORS[data.tier] or '#ffffff'
+    local box = g_ui.createWidget('ReviveBox')
+    local entry = {
+        pos = pos,
+        box = box,
+        name = g_ui.createWidget('ReviveName', box),
+        count = g_ui.createWidget('ReviveCount', box),
+        ends = g_clock.millis() + tonumber(data.ms),
+    }
+    entry.name:setColor(color)
+    entry.count:setColor(color)
+    entry.name:addAnchor(AnchorTop, 'parent', AnchorTop)
+    entry.name:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+    entry.count:addAnchor(AnchorTop, 'parent', AnchorTop)
+    entry.count:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+    entry.name:setText(((data.label or '') .. ' ' .. (data.monster or '')):upper())
+    revivals[key] = entry
+
+    local function tick()
+        if box:isDestroyed() then
+            revivals[key] = nil
+            return
+        end
+        local left = entry.ends - g_clock.millis()
+        if left <= 0 then
+            entry.count:setText(tr('RENASCEU!'))
+            entry.count:setColor('#ff3b30')
+            entry.count:setOpacity(1)
+            placeRevive(entry)
+            attachRevive(entry)
+            entry.event = scheduleEvent(function()
+                if revivals[key] == entry then
+                    g_effects.fadeOut(box, 400)
+                    entry.event = scheduleEvent(function() dropRevive(key) end, 450)
+                end
+            end, 1400)
+            return
+        end
+        entry.count:setText(tostring(math.ceil(left / 1000)))
+        -- the last seconds blink, faster and faster
+        local blink = left <= 2500 and (math.floor(left / (left <= 1200 and 120 or 250)) % 2 == 0)
+        entry.count:setOpacity(blink and 0.35 or 1)
+        placeRevive(entry)
+        -- not attached when the tile is out of view or the map re-read it:
+        -- tried again on the next beat
+        attachRevive(entry)
+        entry.event = scheduleEvent(tick, 100)
+    end
+    tick()
+end
+
 local function onOpcode(protocol, opcode, data)
     if type(data) == 'table' and data.action == 'drop' then
         showDrop(data)
+        return
+    end
+    if type(data) == 'table' and data.action == 'revive' then
+        showRevive(data)
         return
     end
     if type(data) == 'table' and data.action == 'incense' then
@@ -1077,6 +1197,9 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    for key in pairs(revivals) do
+        dropRevive(key)
+    end
     hide()
     if roulette then
         roulette:hide()
@@ -1085,6 +1208,7 @@ local function onGameEnd()
 end
 
 function init()
+    g_ui.importStyle('revive')
     window = g_ui.displayUI('raritybonus')
     window:hide()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
