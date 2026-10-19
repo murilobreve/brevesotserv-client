@@ -207,6 +207,30 @@ local registerShader = function(opts, method)
     end
 end
 
+-- Rarity items: one source, a variant per grade and element, named
+-- "Rarity - <Grade> - <Element>" (the server's Rarity.itemShaderName). The
+-- five "Rarity - <Grade>" shaders above stay for items not yet renamed.
+local RARITY_ITEM_SOURCE = 'shaders/fragment/rarity_item.frag'
+local RARITY_GRADES = { 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic' }
+local RARITY_ELEMENTS = { 'None', 'Igneus', 'Terrenus', 'Fulmineus', 'Glacialis', 'Sacer', 'Mortifer', 'Corporalis' }
+
+local function registerRarityItemShaders()
+    local path = resolvepath(RARITY_ITEM_SOURCE)
+    if not path or not g_resources.fileExists(path) then
+        g_logger.error('Rarity item shaders: ' .. tostring(path) .. ' not found')
+        return
+    end
+    local source = g_resources.readFileContents(path)
+    for grade, gradeName in ipairs(RARITY_GRADES) do
+        for element, elementName in ipairs(RARITY_ELEMENTS) do
+            local name = 'Rarity - ' .. gradeName .. ' - ' .. elementName
+            local code = '#define GRADE ' .. grade .. '\n#define ELEMENT ' .. (element - 1) .. '\n' .. source
+            g_shaders.createFragmentShaderFromCode(name, code, false)
+            g_shaders.setupOutfitShader(name)
+        end
+    end
+end
+
 ShaderController = Controller:new()
 
 function ShaderController:onInit()
@@ -217,6 +241,7 @@ function ShaderController:onInit()
     for _, opts in pairs(OUTFIT_SHADERS) do
         registerShader(opts, 'setupOutfitShader')
     end
+    registerRarityItemShaders()
 
     for _, opts in pairs(MOUNT_SHADERS) do
         registerShader(opts, 'setupMountShader')

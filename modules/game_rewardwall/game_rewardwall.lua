@@ -81,7 +81,10 @@ local BOX_CONFIGS = {
     },
     [CONST_WINDOWS_BOX.CONFIRMATION_IRA] = {
         title = "Confirmation of using Instant Reward Access",
-        content = "Remember! You can always collect your daily reward for free by visiting a reward shrine!\n\nYou Currently own 3x Instant Reward Access. Do you really want to use one to claim your daily reward now?",
+        -- the count is the player's own, read when the box opens
+        content = function()
+            return string.format("Remember! You can always collect your daily reward for free at the reward shrine of any temple.\n\nYou own %dx Instant Reward Access. Do you really want to use one to claim your daily reward now?", instantRewardAccess())
+        end,
         okCallback = function()
             -- Canary expects 0 = shrine / 1 = panel (inverse of the OpenRewardWall byte
             -- stored in bonusShrine, where 1 = shrine / 0 = panel)
@@ -99,13 +102,35 @@ local BOX_CONFIGS = {
     },
     [CONST_WINDOWS_BOX.NO_IRA] = {
         title = "Warning: No Sufficient Instant Reward Access",
-        content = "Remember! you can always collect your daily reward for free by visiting a reward shrine!\nyou do not have an Instant Reward Access.\nVisit the store to buy more!"
+        content = "You do not have an Instant Reward Access.\n\nCollect your daily reward for free at the reward shrine of any temple."
     }
 }
 
 -- /*=============================================
 -- =            Local function                  =
 -- =============================================*/
+-- Instant Reward Access the player owns (resource 0x14, named DAILYREWARD_STREAK in gamelib)
+function instantRewardAccess()
+    local player = g_game.getLocalPlayer()
+    return player and player:getResourceBalance(ResourceTypes.DAILYREWARD_STREAK) or 0
+end
+
+-- Claims the chosen reward: free at a shrine; from the button it costs one
+-- Instant Reward Access, asked first, or says there is none
+local function confirmClaim()
+    if bonusShrine == OPEN_WINDOWS.SHRINE then
+        -- Canary expects 0 = shrine on the collect packet
+        g_game.requestGetRewardDaily(0, actualUsed)
+        windowsPickWindow = destroyWindows(windowsPickWindow)
+        show()
+        return
+    end
+    if instantRewardAccess() < 1 then
+        managerMessageBoxWindow(CONST_WINDOWS_BOX.NO_IRA)
+        return
+    end
+    managerMessageBoxWindow(CONST_WINDOWS_BOX.CONFIRMATION_IRA)
+end
 local function destroyWindows(windows)
     if type(windows) == "table" then
         for _, window in pairs(windows) do
@@ -244,11 +269,9 @@ end
 local function checkRewards(data)
     local premium = g_game.getLocalPlayer():isPremium()
     local rewardType = premium and data.premiumRewards or data.freeRewards
-    local altType = premium and data.freeRewards or data.premiumRewards
 
     for index = 1, #rewardType do
         local reward = rewardType[index]
-        local altReward = altType[index]
 
         local hasSelectableItems = reward.selectableItems and next(reward.selectableItems) ~= nil
         local rewardButton = rewardWallController.ui.dailyRewardsPanel:getChildById("reward" .. index):getChildById(
@@ -259,17 +282,18 @@ local function checkRewards(data)
             iconWidget:setIcon("game_rewardwall/images/icon-reward-pickitems")
             rewardButton.bundleType = bundleType.ITEMS
             rewardButton.rewardItem = reward.selectableItems
-            rewardButton.itemsToSelect = {reward.itemsToSelect or 0, altReward and altReward.itemsToSelect or 0}
+            -- always { premium, free }, whatever the player's own account
+            rewardButton.itemsToSelect = {data.premiumRewards[index].itemsToSelect or 0, data.freeRewards[index] and data.freeRewards[index].itemsToSelect or 0}
         elseif reward.bundleItems[1] and reward.bundleItems[1].bundleType == bundleType.XPBOOST then
             iconWidget:setIcon("game_rewardwall/images/icon-reward-xpboost")
             rewardButton.bundleType = bundleType.XPBOOST
-            rewardButton.itemsToSelect = {reward.bundleItems[1].itemId or 0,
-                                          altReward and altReward.bundleItems[1].itemId or 0}
+            rewardButton.itemsToSelect = {data.premiumRewards[index].bundleItems[1].itemId or 0,
+                                          data.freeRewards[index] and data.freeRewards[index].bundleItems[1].itemId or 0}
         else
             iconWidget:setIcon("game_rewardwall/images/icon-reward-fixeditems")
             rewardButton.bundleType = bundleType.PREY
-            rewardButton.itemsToSelect = {reward.bundleItems[1].count or 0,
-                                          altReward and altReward.bundleItems[1].count or 0}
+            rewardButton.itemsToSelect = {data.premiumRewards[index].bundleItems[1].count or 0,
+                                          data.freeRewards[index] and data.freeRewards[index].bundleItems[1].count or 0}
         end
     end
 end
@@ -611,7 +635,7 @@ function rewardWallController:onClickDisplayWindowsPickRewardWindow(event)
     elseif event.target.bundleType == bundleType.XPBOOST or event.target.bundleType == bundleType.PREY then
         hide()
         actualUsed = {}
-        managerMessageBoxWindow(CONST_WINDOWS_BOX.CONFIRMATION_IRA)
+        confirmClaim()
     end
 end
 
@@ -700,13 +724,18 @@ function rewardWallController:onhoverRewardType(event)
     local rewardTexts = {}
 
     if rewardType == bundleType.ITEMS then
+        -- what the day's list really holds (the server sends it)
+        local names = {}
+        for i, item in ipairs(event.target.rewardItem or {}) do
+            if i > 3 then
+                break
+            end
+            names[#names + 1] = item.name
+        end
+        local holds = #names > 0 and ("\nThe list holds " .. table.concat(names, ",\n") .. (#(event.target.rewardItem or {}) > 3 and "\nand more." or ".")) or ""
         rewardTexts = {
-            free = string.format(
-                "Reward for Free Accounts:\nPick %d items from the list. Among\nother items it contains: health\npotion, a fire bomb rune, a\nthundestorm rune.",
-                freeAmount),
-            premium = string.format(
-                "Reward for Premium Accounts:\nPick %d items from the list. Among\nother items it contains: health\npotion, a fire bomb rune, a\nthundestorm rune.",
-                premiumAmount)
+            free = string.format("Reward for Free Accounts:\nPick %d item%s from the list.%s", freeAmount, freeAmount == 1 and "" or "s", holds),
+            premium = string.format("Reward for Premium Accounts:\nPick %d item%s from the list.%s", premiumAmount, premiumAmount == 1 and "" or "s", holds)
         }
     elseif rewardType == bundleType.PREY then
         rewardTexts = {
@@ -731,7 +760,7 @@ end
 function rewardWallController:onhoverStatusReward(event)
     local statusReward = {
         [STATUS.COLLECTED] = "You have already collected this daily reward.\nThe daily rewards follow a specific cycle where each day you claim it, you get another reward. The cycle repeats after 7 claimed rewards. You will be able to claim this daily reward again as soon as you have reached this postion in the next cycle.",
-        [STATUS.ACTIVE] = "The daily reward can be claimed now.\nIf you claim this reward now, it will cost you one Instant Reward Access.\nGet your daily reward for free by visiting a reward shrine.\nYou did not claim your daily reward in time.\nToo bad, you do not have enough Daily Reward Jokers.",
+        [STATUS.ACTIVE] = "The daily reward can be claimed now.\nIt is free at the reward shrine of any temple. From anywhere else it costs one Instant Reward Access.",
         [STATUS.LOCKED] = "This daily reward is still locked.\nFirst collect the previous daily rewards of this cycle."
     }
     if not event.value then
@@ -750,18 +779,7 @@ function onClickBtnOk()
     if table.empty(actualUsed) then
         return
     end
-    if bonusShrine == OPEN_WINDOWS.SHRINE then
-        -- Collecting at a reward shrine is free: no Instant Reward Access confirmation.
-        -- Canary expects 0 = shrine on the collect packet.
-        g_game.requestGetRewardDaily(0, actualUsed)
-        if windowsPickWindow then
-            windowsPickWindow:destroy()
-            windowsPickWindow = nil
-        end
-        show()
-        return
-    end
-    managerMessageBoxWindow(CONST_WINDOWS_BOX.CONFIRMATION_IRA)
+    confirmClaim()
 end
 
 function destroyPickReward(bool)
@@ -972,7 +990,8 @@ function managerMessageBoxWindow(id)
         callback = okCallback
     }}
 
-    generalBox = displayGeneralBox3(config.title, config.content, standardButtons)
+    local content = type(config.content) == "function" and config.content() or config.content
+    generalBox = displayGeneralBox3(config.title, content, standardButtons)
 
     rewardWallController.ui:hide()
 
