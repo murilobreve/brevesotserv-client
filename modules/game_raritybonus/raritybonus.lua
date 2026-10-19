@@ -352,7 +352,30 @@ function lightIncense()
     end)
 end
 
+-- a find floats over the corpse's tile for a few seconds, in the grade's
+-- colour: the grade, the item, and whether it went into the backpack
+-- (server: scripts/rarity/loot.lua, RarityConfig.floatOverCorpse)
+local function showDrop(data)
+    local rarity = ItemsDatabase.itemRarity and ItemsDatabase.itemRarity[data.grade]
+    if not rarity or not data.x then
+        return
+    end
+    local lines = { rarity.label, data.name or '' }
+    if data.picked then
+        table.insert(lines, tr('(na mochila)'))
+    end
+    local text = StaticText.create()
+    text:addMessage('', MessageModes.MonsterSay, table.concat(lines, '\n'))
+    text:setColor(rarity.color)
+    text:setFont('Verdana Bold-11px')
+    g_map.addStaticText(text, { x = data.x, y = data.y, z = data.z })
+end
+
 local function onOpcode(protocol, opcode, data)
+    if type(data) == 'table' and data.action == 'drop' then
+        showDrop(data)
+        return
+    end
     if type(data) == 'table' and data.action == 'incense' then
         incense = data
         incense.receivedAt = os.time()
