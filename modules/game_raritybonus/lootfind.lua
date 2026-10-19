@@ -23,6 +23,8 @@ local NUMERALS = { 'I', 'II', 'III', 'IV', 'V' }
 -- the beam's texture: 224 of its 256 px are the visible height, and its foot
 -- sits 240 px down
 local BEAM_SCALE = 256 / 224
+-- the kit's sizes, drawn LOOT_SCALE times bigger on the game's screen
+local LOOT_SCALE = 1.45
 local CARD_SHOWS = 5.35
 local BANNER_SHOWS = 5.7
 
@@ -115,7 +117,7 @@ local function placeLootLayer(entry, tile, layer, size, opacity, x, y, fx, fy)
         end
         entry.effects[layer] = effect
     end
-    local side = math.max(1, math.floor(size * 32 + 0.5))
+    local side = math.max(1, math.floor(size * LOOT_SCALE * 32 + 0.5))
     effect:setSize({ width = side, height = side })
     effect:setOffset(math.floor(side * fx - x + 0.5), math.floor(side * fy - y + 0.5))
     effect:setOpacity(clamp01(opacity))

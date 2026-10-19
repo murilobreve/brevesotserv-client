@@ -111,8 +111,9 @@ AttachedEffectManager.register(20, 'Lord of Death Aura', '/images/game/effects/p
 -- (RarityConfig.tiers attachedEffect). It shows up as the monster settles out
 -- of its rise: 0.35 s after it stands up it fades in over 0.55 s. The Lord of
 -- Death's broken five-point seal lies under it; the other auras float around
--- it. The kit's sizes are for a one-tile creature: a bigger one (a 2x2
--- dragon) gets it twice as big, around the middle of its sprite.
+-- it. The sizes (the kit's, drawn 1.3 times bigger) are for a one-tile
+-- creature: a bigger one (a 2x2 dragon) gets it twice as big, around the
+-- middle of its sprite.
 local function rareMonsterAura(id, name, folder, tiles, opacity, onTop)
     AttachedEffectManager.register(id, name, '/game_raritybonus/images/revive/' .. folder .. '/revive_' .. folder .. '_aura', ThingExternalTexture, {
         smooth = true,
@@ -139,10 +140,10 @@ local function rareMonsterAura(id, name, folder, tiles, opacity, onTop)
     })
 end
 
-rareMonsterAura(21, 'Pale Aura', 'pale', 0.95, 0.30, true)
-rareMonsterAura(22, 'Ashen Aura', 'ashen', 1.05, 0.38, true)
-rareMonsterAura(23, 'Obsidian Aura', 'obsidian', 1.15, 0.46, true)
-rareMonsterAura(24, 'Lord of Death Seal', 'lord-of-death', 1.40, 0.56, false)
+rareMonsterAura(21, 'Pale Aura', 'pale', 1.25, 0.30, true)
+rareMonsterAura(22, 'Ashen Aura', 'ashen', 1.35, 0.38, true)
+rareMonsterAura(23, 'Obsidian Aura', 'obsidian', 1.50, 0.46, true)
+rareMonsterAura(24, 'Lord of Death Seal', 'lord-of-death', 1.80, 0.56, false)
 
 AttachedEffectManager.register(8, 'Ki', '/images/game/effects/ki', ThingExternalTexture, {
     size = { 140, 110 },

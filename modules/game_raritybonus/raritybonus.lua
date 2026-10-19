@@ -366,6 +366,9 @@ local REVIVE_EFFECT_BASE = 3000
 local DESIGN_REVIVE = 7       -- the curves are drawn for a 7 s wait...
 local DESIGN_SETTLE = 0.9     -- ...and 0.9 s of arrival
 -- sizes (side of the texture, in tiles), peak opacities, how far the air lifts
+-- (the kit's values; the game draws the whole composition REVIVE_SCALE times
+-- bigger around the corpse)
+local REVIVE_SCALE = 1.6
 local REVIVE_MOTION = {
     pale = { tier = 1, g = 1.9, a = 2.15, r = 2.45, go = .42, ao = .58, ro = .42, lift = .20 },
     ashen = { tier = 2, g = 2.2, a = 2.45, r = 2.7, go = .56, ao = .67, ro = .60, lift = .16 },
@@ -498,10 +501,10 @@ local function placeLayer(entry, tile, layer, state)
         end
         entry.effects[layer] = effect
     end
-    local side = math.max(1, math.floor(state.size * 32 + 0.5))
+    local side = math.max(1, math.floor(state.size * REVIVE_SCALE * 32 + 0.5))
     local half = math.floor(side / 2) - 16
     effect:setSize({ width = side, height = side })
-    effect:setOffset(half + entry.shift, half + entry.shift + math.floor(state.lift * 32 + 0.5))
+    effect:setOffset(half + entry.shift, half + entry.shift + math.floor(state.lift * REVIVE_SCALE * 32 + 0.5))
     effect:setOpacity(state.opacity)
     -- the tile is rebuilt when it leaves the screen and comes back
     if not tile:getAttachedEffectById(effect:getId()) then
