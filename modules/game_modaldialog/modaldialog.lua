@@ -8,7 +8,13 @@ local MAXIMUM_CHOICES = 10
 local BASE_HEIGHT = 40
 local MAX_CHOICE_TEXT = 28
 
+local antibotEvent = nil
+
 local function destroyWindow()
+    if antibotEvent then
+        removeEvent(antibotEvent)
+        antibotEvent = nil
+    end
     local ui = controllerModal.ui
     if ui then
         controllerModal:unloadHtml()
@@ -118,6 +124,43 @@ local function applyFinalHeight(ui, messageLabel, additionalHeight)
     controllerModal:findWidget('#choiceList'):setWidth(ui:getWidth() * 0.9) -- html not work "Width:100%"
 end
 
+-- The anti-bot window does not take the keyboard, so it has to be seen: a
+-- red frame that blinks, the word to pick in big gold letters, the seconds
+-- left counting down in red, and a warning in the middle of the screen.
+local function styleAntibot(ui, messageLabel, message)
+    local answer = (message:match("Escolha: (%S+)") or "?"):upper()
+    local left = tonumber(message:match("(%d+) segundos")) or 0
+    local noXp = message:find("Sem XP", 1, true) ~= nil
+    messageLabel:html(string.format(
+        '<div style="color: #ffffff; text-align: center; height: 16px;">Escolha a palavra / Choose:</div>' ..
+        '<div style="color: #ffd23a; text-align: center; height: 24px;">%s</div>' ..
+        '<div id="antibotLeft" style="color: #ff8a5c; text-align: center; height: 16px;">%d segundos / seconds</div>%s',
+        answer, left, noXp and '<div style="color: #ff8a5c; text-align: center; height: 16px;">Sem XP ate responder</div>' or ''))
+    local word = messageLabel:getChildren()[2]
+    if word then
+        word:setFont('sans-bold-16px')
+    end
+    local leftLabel = messageLabel:getChildren()[3]
+    ui:setBorderWidth(3)
+    ui:setBorderColor('#ff2a2a')
+    local tick = 0
+    antibotEvent = cycleEvent(function()
+        if not ui or ui:isDestroyed() then
+            return
+        end
+        tick = tick + 1
+        ui:setBorderColor(tick % 2 == 0 and '#ff2a2a' or '#ffd23a')
+        if tick % 2 == 0 and left > 0 and leftLabel then
+            left = left - 1
+            leftLabel:setText(string.format("%d segundos / seconds", left))
+            leftLabel:setColor(left <= 10 and '#ff3030' or '#ff8a5c')
+        end
+    end, 500)
+    if modules.game_textmessage then
+        modules.game_textmessage.displayBroadcastMessage("ANTI-BOT: escolha " .. answer .. " na janela do canto")
+    end
+end
+
 function onModalDialog(id, title, message, buttons, enterButton, escapeButton, choices, priority)
     destroyWindow()
 
@@ -150,7 +193,11 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
     local confirmKeysEnabledAt = g_clock.millis() + 180
     local firstChoiceWidget = nil
     ui:setTitle(title)
-    messageLabel:html(message)
+    if passive then
+        styleAntibot(ui, messageLabel, message)
+    else
+        messageLabel:html(message)
+    end
     local labelHeight = nil
     local buttonsWidth = 0
     local choicesCount = #choices
