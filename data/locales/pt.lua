@@ -992,6 +992,18 @@ locale = {
     ["On a look and on hover"] = "Ao dar look e ao passar o mouse",
     ["Only on a look"] = "Só ao dar look",
     ["Off (green text)"] = "Desligado (texto verde)",
+    ["Feedback and bugs"] = "Feedback e bugs",
+    ["Found a bug or have an idea for the server? Tell the staff here. Your character and where you are go with it."] = "Achou um bug ou tem uma ideia para o servidor? Conte para a staff aqui. Seu personagem e onde você está vão junto.",
+    ["What is it?"] = "O que é?",
+    ["Idea"] = "Ideia",
+    ["Write a few words about it first."] = "Escreva algumas palavras sobre isso primeiro.",
+    ["You are not in the game."] = "Você não está no jogo.",
+    ["Sending..."] = "Enviando...",
+    ["The server did not answer. Try again in a moment."] = "O servidor não respondeu. Tente de novo daqui a pouco.",
+    ["Sent to the staff. Thank you!"] = "Enviado para a staff. Obrigado!",
+    ["Wait %d seconds before sending another report."] = "Espere %d segundos para enviar outro relato.",
+    ["You sent many reports today. Thank you! Try again tomorrow."] = "Você já enviou muitos relatos hoje. Obrigado! Tente de novo amanhã.",
+    ["Report a bug or send an idea to the staff"] = "Reporte um bug ou mande uma ideia para a staff",
   }
 }
 

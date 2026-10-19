@@ -1,0 +1,134 @@
+// the Feedback tab on the right edge of the game screen: the face is drawn
+// sideways (rotated), the holder takes the clicks in the same place
+FeedbackTab < UIWidget
+  size: 24 104
+  opacity: 0.78
+  focusable: false
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    opacity: 1
+
+  $on:
+    opacity: 1
+
+  UIWidget
+    id: face
+    size: 104 24
+    anchors.centerIn: parent
+    rotation: -90
+    image-source: /images/mythos/notice
+    image-border: 4
+    font: Verdana Bold-11px
+    color: #f1d399
+    text-align: center
+    text-offset: 0 1
+    phantom: true
+
+  UIWidget
+    id: gem
+    size: 12 12
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.top: parent.top
+    margin-top: -6
+    image-source: /images/mythos/gem_amethyst
+    phantom: true
+
+FeedbackKind < BrevesTab
+  width: 104
+  anchors.top: kindLabel.bottom
+  margin-top: 5
+
+FeedbackWindow < MythosWindow
+  !text: tr('Feedback and bugs')
+  size: 360 336
+  @onEscape: modules.game_feedback.hide()
+
+  Label
+    id: help
+    !text: tr('Found a bug or have an idea for the server? Tell the staff here. Your character and where you are go with it.')
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    font: verdana-11px-antialised
+    color: #c9c0cf
+    text-wrap: true
+    text-auto-resize: true
+
+  Label
+    id: kindLabel
+    !text: tr('What is it?')
+    anchors.top: help.bottom
+    anchors.left: parent.left
+    margin-top: 10
+    font: verdana-11px-rounded
+    color: #f3dcae
+    text-auto-resize: true
+
+  FeedbackKind
+    id: bug
+    !text: tr('Bug')
+    anchors.left: parent.left
+
+  FeedbackKind
+    id: idea
+    !text: tr('Idea')
+    anchors.left: prev.right
+    margin-left: 4
+
+  FeedbackKind
+    id: feedback
+    !text: tr('Feedback')
+    anchors.left: prev.right
+    margin-left: 4
+
+  MythosTextEdit
+    id: message
+    anchors.top: bug.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: counter.top
+    margin-top: 8
+    margin-bottom: 3
+    multiline: true
+    text-wrap: true
+    max-length: 1000
+    text-align: topLeft
+    padding: 5 6 5 6
+
+  Label
+    id: counter
+    anchors.right: parent.right
+    anchors.bottom: status.top
+    margin-bottom: 4
+    font: verdana-11px-antialised
+    color: #6f688a
+    text-auto-resize: true
+
+  Label
+    id: status
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: sendButton.top
+    margin-bottom: 8
+    height: 14
+    font: verdana-11px-antialised
+    color: #a39cbc
+
+  MythosPrimaryButton
+    id: sendButton
+    !text: tr('Send')
+    width: 86
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_feedback.send()
+
+  MythosButton
+    id: cancelButton
+    !text: tr('Cancel')
+    width: 86
+    anchors.right: sendButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: modules.game_feedback.hide()
