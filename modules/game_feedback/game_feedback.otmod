@@ -1,0 +1,9 @@
+Module
+  name: game_feedback
+  description: Feedback - a tab on the right of the game screen to report bugs and send ideas to the staff
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ feedback ]
+  @onLoad: init()
+  @onUnload: terminate()
