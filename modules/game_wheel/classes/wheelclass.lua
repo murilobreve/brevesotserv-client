@@ -698,6 +698,14 @@ function WheelOfDestiny.onDestinyWheel(playerId, canView, changeState, vocationI
     return
   end
 
+  -- Removing points (Reset, emptying a slice) is allowed in any protection
+  -- zone. The server only allows it on a 1-tile-wide strip through a temple's
+  -- centre (PlayerWheel::getOptions) and does not check it when saving.
+  local localPlayer = g_game.getLocalPlayer()
+  if changeState == 2 and localPlayer and localPlayer:hasState(PlayerStates.Pz) then
+    changeState = 1
+  end
+
   if table.empty(WheelOfDestiny.internalPreset) then
     WheelOfDestiny.loadWheelPresets()
   end

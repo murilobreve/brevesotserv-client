@@ -5,7 +5,9 @@
 --             it; the finder also sees the item fly to them when it went
 --             straight into the backpack
 --   dropgone  the item left the corpse (looted, or the corpse rotted away)
---   find      the finder's card, lower right corner of the map
+--   dropmove  someone dragged the corpse to the next tile: the gem goes along
+--   find      the finder's card, lower right corner of the map (the finder's
+--             party gets it too, "found by")
 --   banner    a Mythicus find, at the top of everyone's map
 -- Each grade grows in height, geometry and duration: Communis a quick glint,
 -- Mythicus a find people remember.
@@ -187,7 +189,7 @@ function showLootDrop(data)
             dropLootEffects(data.id)
             return
         end
-        local tile = g_map.getTile(pos)
+        local tile = g_map.getTile(entry.pos)
         if tile then
             local s = entry.shift
             local cx, cy = 16 - s, 16 - s
@@ -230,6 +232,14 @@ end
 -- the item left the corpse: it flies to whoever took it, if they are on
 -- screen, and the finder's card says where it went
 function removeLootDrop(data)
+    if data.taken then
+        local player = g_game.getLocalPlayer()
+        if player and data.taken == player:getId() then
+            updateLootCard(data.id, data.into == 'pouch' and 'pouch' or 'backpack')
+        else
+            updateLootCard(data.id, 'taken', data.takenBy)
+        end
+    end
     local entry = data.id and lootDrops[data.id]
     if not entry then
         return
@@ -246,17 +256,30 @@ function removeLootDrop(data)
     end
     entry.travel = { dx = to.x - entry.pos.x, dy = to.y - entry.pos.y }
     entry.travelAt = g_clock.millis()
-    local player = g_game.getLocalPlayer()
-    if player and taker:getId() == player:getId() then
-        updateLootCard(data.id, 'backpack')
+end
+
+-- the corpse was dragged to the next tile: the gem goes with it
+function moveLootDrop(data)
+    local entry = data.id and lootDrops[data.id]
+    if not entry or not data.x then
+        return
     end
+    local tile = g_map.getTile(entry.pos)
+    if tile then
+        for _, effect in pairs(entry.effects) do
+            tile:detachEffect(effect)
+        end
+    end
+    entry.pos = { x = data.x, y = data.y, z = data.z }
+    entry.key = entry.pos.x .. ':' .. entry.pos.y .. ':' .. entry.pos.z
+    entry.shift = corpseShift(entry.pos)
 end
 
 -- ---------------------------------------------------------------------------
 -- the slot the item went to lights up once
 -- ---------------------------------------------------------------------------
 
-local function destinationSlot(clientId, gradeKey)
+local function destinationSlot(clientId, gradeKey, openOnly)
     local found
     for _, container in pairs(g_game.getContainers()) do
         if container.itemsPanel then
@@ -267,12 +290,13 @@ local function destinationSlot(clientId, gradeKey)
             end
         end
     end
-    -- the backpack is closed: its slot in the inventory
-    return found or rootWidget:recursiveGetChildById('backpack')
+    -- the backpack is closed: its slot in the inventory (the loot pouch has
+    -- none)
+    return found or (not openOnly and rootWidget:recursiveGetChildById('backpack')) or nil
 end
 
-local function pulseSlot(clientId, gradeKey)
-    local target = destinationSlot(clientId, gradeKey)
+local function pulseSlot(clientId, gradeKey, openOnly)
+    local target = destinationSlot(clientId, gradeKey, openOnly)
     local grade = LOOT_GRADES[gradeKey]
     if not target or not grade then
         return
@@ -368,9 +392,26 @@ end
 
 local DESTINATIONS = {
     backpack = 'In your backpack',
+    pouch = 'In your loot pouch',
     corpse = 'In the corpse, ready to loot',
     full = 'No room or capacity: it stayed in the corpse',
 }
+-- the same find on a party member's card
+local PARTY_DESTINATIONS = {
+    backpack = 'Found by %s, in their backpack',
+    corpse = 'Found by %s, in the corpse to loot',
+    full = 'Found by %s, it stayed in the corpse',
+}
+
+local function destinationText(state, finder, taker)
+    if state == 'taken' then
+        return tr('Looted by %s', latin1(taker or '?'))
+    end
+    if finder then
+        return tr(PARTY_DESTINATIONS[state] or PARTY_DESTINATIONS.corpse, latin1(finder))
+    end
+    return tr(DESTINATIONS[state] or DESTINATIONS.corpse)
+end
 
 local function fillCard(widget, data, grade)
     widget:setImageSource('/game_raritybonus/images/loot/skin_' .. grade.folder)
@@ -378,7 +419,7 @@ local function fillCard(widget, data, grade)
     widget.grade:setColor(grade.color)
     widget.name:setText(latin1(titleCase(data.name)))
     widget.dot:setBackgroundColor(grade.color)
-    widget.destination:setText(tr(DESTINATIONS[data.state] or DESTINATIONS.corpse))
+    widget.destination:setText(destinationText(data.state, data.finder))
 
     local item = Item.create(tonumber(data.clientId) or 0, 1)
     if item then
@@ -424,18 +465,22 @@ function showLootCard(data)
     local widget = g_ui.createWidget('LootFindCard', rootWidget)
     fillCard(widget, data, grade)
     widget:setOpacity(0)
-    local card = { widget = widget, rank = grade.rank, starts = g_clock.millis(), dropId = data.dropId, clientId = tonumber(data.clientId), grade = data.grade }
+    local card = { widget = widget, rank = grade.rank, starts = g_clock.millis(), dropId = data.dropId, clientId = tonumber(data.clientId), grade = data.grade, own = not data.finder }
     table.insert(cards, card)
-    -- two at most: the lowest grade goes first, so a stream of Communis never
-    -- pushes a Mythicus away
+    -- two at most: the lowest grade goes (the older of two alike, the new
+    -- card itself when it is the lowest), so a stream of Communis never
+    -- pushes a better find away
     if #cards > 2 then
-        local lowest = 1
-        for i = 2, #cards - 1 do
-            if cards[i].rank < cards[lowest].rank then
+        local lowest = #cards
+        for i = #cards - 1, 1, -1 do
+            if cards[i].rank <= cards[lowest].rank then
                 lowest = i
             end
         end
         dropCard(cards[lowest])
+        if widget:isDestroyed() then
+            return
+        end
     end
     layoutCards()
 
@@ -453,22 +498,24 @@ function showLootCard(data)
     end
     step()
 
-    if data.state == 'backpack' then
+    if data.state == 'backpack' and card.own then
         scheduleEvent(function()
             pulseSlot(tonumber(data.clientId), data.grade)
         end, 1250)
     end
 end
 
--- the item of a card on screen went into the backpack after all (auto loot,
--- or the finder looted it)
-function updateLootCard(dropId, state)
+-- the item of a card on screen left the corpse: into this player's backpack
+-- or loot pouch (auto loot, or they looted it), or someone else took it
+function updateLootCard(dropId, state, taker)
     for _, card in ipairs(cards) do
         if card.dropId == dropId and not card.widget:isDestroyed() then
-            card.widget.destination:setText(tr(DESTINATIONS[state] or DESTINATIONS.corpse))
-            scheduleEvent(function()
-                pulseSlot(card.clientId, card.grade)
-            end, 700)
+            card.widget.destination:setText(destinationText(state, nil, taker))
+            if state == 'backpack' or state == 'pouch' then
+                scheduleEvent(function()
+                    pulseSlot(card.clientId, card.grade, state == 'pouch')
+                end, 700)
+            end
         end
     end
 end

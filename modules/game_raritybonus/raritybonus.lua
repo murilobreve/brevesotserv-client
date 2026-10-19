@@ -573,6 +573,10 @@ local function onOpcode(protocol, opcode, data)
         removeLootDrop(data)
         return
     end
+    if type(data) == 'table' and data.action == 'dropmove' then
+        moveLootDrop(data)
+        return
+    end
     if type(data) == 'table' and data.action == 'find' then
         showLootCard(data)
         return
