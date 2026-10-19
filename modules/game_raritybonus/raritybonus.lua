@@ -371,16 +371,20 @@ local function showDrop(data)
     g_map.addStaticText(text, { x = data.x, y = data.y, z = data.z })
 end
 
--- A rare monster rising from its corpse: its tier and name over the tile,
--- with a big countdown in the tier's colour that blinks in the last seconds
--- and ends in "RENASCEU!". The server beats the tier's effect on the corpse
--- meanwhile (scripts/rarity/revive.lua).
+-- A rare monster rising from its corpse, told without words: thin rings of
+-- light in the tier's colour open wide around the body and close in on it,
+-- as if the soul were being pulled back, faster and faster as the moment
+-- nears, over a soft glow that breathes with the corpse's heartbeat. When the
+-- monster stands up a single ring opens out from it and fades. The server
+-- sends it (scripts/rarity/revive.lua).
 local REVIVE_COLORS = {
     pale = '#dce8f5',
-    ashen = '#ffb070',
+    ashen = '#f2a46a',
     obsidian = '#b39bff',
-    deathlord = '#ff5a5a',
+    deathlord = '#ff6a5e',
 }
+local RING_LIFE = 900       -- ms a ring takes to close in
+local FLASH_LIFE = 650      -- ms of the last ring opening out
 local revivals = {}
 
 local function mapTileWidth()
@@ -390,20 +394,6 @@ local function mapTileWidth()
         return 32
     end
     return math.min(panel:getWidth() / dim.width, panel:getHeight() / dim.height)
-end
-
-local function placeRevive(entry)
-    local box = entry.box
-    -- the count (TTF) is not measured: its text size reads wrong
-    local width = math.max(entry.name:getTextSize().width + 16, 200)
-    entry.count:setSize({ width = width, height = 36 })
-    entry.name:setSize({ width = width, height = 14 })
-    entry.name:setMarginTop(34)
-    box:setSize({ width = width, height = 52 })
-    -- the big number on top, the name under it, both high enough to clear
-    -- the text that floats over a player standing next to the corpse
-    box:setMarginLeft(math.floor((mapTileWidth() - width) / 2))
-    box:setMarginTop(-96)
 end
 
 local function attachRevive(entry)
@@ -429,6 +419,20 @@ local function dropRevive(key)
     end
 end
 
+-- a centred square child of the box, `size` pixels wide
+local function setCircle(widget, size, opacity)
+    size = math.max(1, math.floor(size))
+    widget:setSize({ width = size, height = size })
+    widget:setOpacity(math.max(0, math.min(1, opacity)))
+end
+
+local function newCircle(entry, style)
+    local widget = g_ui.createWidget(style, entry.box)
+    widget:setImageColor(entry.color)
+    widget:setOpacity(0)
+    return widget
+end
+
 local function showRevive(data)
     if not data.x or not tonumber(data.ms) then
         return
@@ -436,55 +440,79 @@ local function showRevive(data)
     local pos = { x = data.x, y = data.y, z = data.z }
     local key = pos.x .. ':' .. pos.y .. ':' .. pos.z
     dropRevive(key)
-    local color = REVIVE_COLORS[data.tier] or '#ffffff'
     local box = g_ui.createWidget('ReviveBox')
     local entry = {
         pos = pos,
         box = box,
-        name = g_ui.createWidget('ReviveName', box),
-        count = g_ui.createWidget('ReviveCount', box),
-        ends = g_clock.millis() + tonumber(data.ms),
+        color = REVIVE_COLORS[data.tier] or '#ffffff',
+        total = tonumber(data.ms),
+        starts = g_clock.millis(),
+        rings = {},
+        nextRing = 0,
     }
-    entry.name:setColor(color)
-    entry.count:setColor(color)
-    entry.name:addAnchor(AnchorTop, 'parent', AnchorTop)
-    entry.name:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
-    entry.count:addAnchor(AnchorTop, 'parent', AnchorTop)
-    entry.count:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
-    entry.name:setText(((data.label or '') .. ' ' .. (data.monster or '')):upper())
+    entry.glow = newCircle(entry, 'ReviveGlow')
     revivals[key] = entry
 
-    local function tick()
+    local function frame()
         if box:isDestroyed() then
             revivals[key] = nil
             return
         end
-        local left = entry.ends - g_clock.millis()
-        if left <= 0 then
-            entry.count:setText(tr('RENASCEU!'))
-            entry.count:setColor('#ff3b30')
-            entry.count:setOpacity(1)
-            placeRevive(entry)
-            attachRevive(entry)
-            entry.event = scheduleEvent(function()
-                if revivals[key] == entry then
-                    g_effects.fadeOut(box, 400)
-                    entry.event = scheduleEvent(function() dropRevive(key) end, 450)
-                end
-            end, 1400)
-            return
-        end
-        entry.count:setText(tostring(math.ceil(left / 1000)))
-        -- the last seconds blink, faster and faster
-        local blink = left <= 2500 and (math.floor(left / (left <= 1200 and 120 or 250)) % 2 == 0)
-        entry.count:setOpacity(blink and 0.35 or 1)
-        placeRevive(entry)
-        -- not attached when the tile is out of view or the map re-read it:
-        -- tried again on the next beat
+        local now = g_clock.millis()
+        local elapsed = now - entry.starts
+        local p = math.min(1, elapsed / entry.total)
+        local tile = mapTileWidth()
+        local span = math.floor(tile * 3.4)
+        box:setSize({ width = span, height = span })
+        box:setMarginLeft(math.floor((tile - span) / 2))
+        box:setMarginTop(math.floor((tile - span) / 2))
         attachRevive(entry)
-        entry.event = scheduleEvent(tick, 100)
+
+        if p < 1 then
+            -- a new ring every 1.1 s at first, every 0.32 s at the end
+            if elapsed >= entry.nextRing then
+                table.insert(entry.rings, { widget = newCircle(entry, 'ReviveRing'), born = now })
+                entry.nextRing = elapsed + 1100 - 780 * p
+            end
+            -- the glow breathes: one breath every 1.2 s, three a second at the end
+            local rate = 0.8 + 2.2 * p * p
+            local breath = 0.5 + 0.5 * math.cos(elapsed / 1000 * rate * 2 * math.pi)
+            local fadeIn = math.min(1, elapsed / 800)
+            setCircle(entry.glow, tile * (1.3 + 0.3 * breath), fadeIn * (0.22 + 0.30 * p + 0.15 * breath))
+        end
+
+        for i = #entry.rings, 1, -1 do
+            local ring = entry.rings[i]
+            local t = (now - ring.born) / RING_LIFE
+            if t >= 1 then
+                ring.widget:destroy()
+                table.remove(entry.rings, i)
+            else
+                -- closes in fast and slows down as it reaches the body
+                local ease = 1 - (1 - t) * (1 - t)
+                setCircle(ring.widget, tile * (3.2 - 2.6 * ease), 0.95 * math.sin(math.pi * t))
+            end
+        end
+
+        if p >= 1 then
+            -- the monster stands up: one ring opens out and the glow fades
+            if not entry.flash then
+                entry.flash = newCircle(entry, 'ReviveRing')
+                entry.flashBorn = now
+            end
+            local t = (now - entry.flashBorn) / FLASH_LIFE
+            if t >= 1 and #entry.rings == 0 then
+                dropRevive(key)
+                return
+            end
+            t = math.min(1, t)
+            local ease = 1 - (1 - t) * (1 - t) * (1 - t)
+            setCircle(entry.flash, tile * (0.6 + 2.8 * ease), 0.9 * (1 - t))
+            setCircle(entry.glow, tile * (1.4 + 0.8 * ease), 0.45 * (1 - t))
+        end
+        entry.event = scheduleEvent(frame, 30)
     end
-    tick()
+    frame()
 end
 
 local function onOpcode(protocol, opcode, data)
