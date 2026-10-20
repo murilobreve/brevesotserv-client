@@ -28,6 +28,12 @@
 #include "framework/core/filestream.h"
 #include "framework/core/resourcemanager.h"
 #include "framework/graphics/image.h"
+#include "framework/core/eventdispatcher.h"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten/heap.h>
+#include <malloc.h>
+#endif
 
  // warnings related to protobuf
     // https://android.googlesource.com/platform/external/protobuf/+/brillo-m9-dev/vsprojects/readme.txt
@@ -40,6 +46,57 @@ void SpriteAppearances::init()
 {
     // in tibia 12.81 there is currently 3482 sheets
     m_sheets.reserve(4000);
+
+#ifdef __EMSCRIPTEN__
+    // the browser has a fixed 1 GB: all the sheets decoded would take about
+    // 2.9 GB, so walking through enough places ran it out and the game
+    // stopped. 400 sheets are about 230 MB, far more than a screen needs.
+    setMaxLoadedSheets(400);
+
+    // once a minute, in the log (and so in crash reports): how much memory
+    // is in use. Past 80% the cache gives half of its sheets back.
+    g_dispatcher.cycleEvent([this] {
+        const auto info = mallinfo();
+        const size_t heap = emscripten_get_heap_size();
+        const size_t used = info.uordblks;
+        if (used > heap / 10 * 8)
+            releaseSheets(m_maxLoadedSheets / 2);
+        static int checks = 0;
+        if (++checks % 6 == 0)
+            g_logger.info("[memory] {} MB of {} MB in use, {} sprite sheets decoded", used >> 20, heap >> 20, m_loadedSheets.load());
+    }, 10000);
+#endif
+}
+
+std::shared_ptr<uint8_t[]> SpriteAppearances::getSheetData(const SpriteSheetPtr& sheet) const
+{
+    std::scoped_lock lock(m_sheetDataMutex);
+    return sheet->data;
+}
+
+void SpriteAppearances::releaseSheets(const size_t keep) const
+{
+    std::scoped_lock lock(m_sheetDataMutex);
+    if (m_loadedSheets <= keep)
+        return;
+
+    std::vector<SpriteSheet*> loaded;
+    loaded.reserve(m_loadedSheets);
+    for (const auto& sheet : m_sheets) {
+        if (sheet->data)
+            loaded.emplace_back(sheet.get());
+    }
+    if (loaded.size() <= keep)
+        return;
+
+    // the oldest first; a sprite being copied right now keeps its own
+    // reference to the pixels (getSheetData), so freeing here is safe
+    std::ranges::sort(loaded, {}, [](const SpriteSheet* sheet) { return sheet->lastUse.load(); });
+    for (size_t i = 0, n = loaded.size() - keep; i < n; ++i) {
+        loaded[i]->data.reset();
+        loaded[i]->m_loadingState.store(SpriteLoadState::NONE, std::memory_order_release);
+    }
+    m_loadedSheets = keep;
 }
 
 void SpriteAppearances::terminate()
@@ -113,7 +170,7 @@ bool SpriteAppearances::loadSpriteSheet(const SpriteSheetPtr& sheet) const
     if (sheet->m_loadingState.load(std::memory_order_acquire) == SpriteLoadState::LOADING)
         return false;
 
-    if (sheet->data)
+    if (getSheetData(sheet))
         return true;
 
     if (sheet->m_loadingState.exchange(SpriteLoadState::LOADING, std::memory_order_acq_rel) == SpriteLoadState::LOADING)
@@ -223,10 +280,20 @@ bool SpriteAppearances::loadSpriteSheet(const SpriteSheetPtr& sheet) const
             std::memcpy(bottom, tempLine, SPRITE_SHEET_WIDTH_BYTES);
         }
 
-        sheet->data = std::make_unique<uint8_t[]>(BYTES_IN_SPRITE_SHEET);
-        std::memcpy(sheet->data.get(), bufferStart, BYTES_IN_SPRITE_SHEET);
+        std::shared_ptr<uint8_t[]> data(new uint8_t[BYTES_IN_SPRITE_SHEET]);
+        std::memcpy(data.get(), bufferStart, BYTES_IN_SPRITE_SHEET);
 
+        sheet->lastUse = stdext::millis();
+        {
+            std::scoped_lock lock(m_sheetDataMutex);
+            sheet->data = std::move(data);
+            ++m_loadedSheets;
+        }
         sheet->m_loadingState.store(SpriteLoadState::LOADED, std::memory_order_release);
+
+        // a tenth below the limit, so a full cache does not sort on every load
+        if (m_maxLoadedSheets > 0 && m_loadedSheets > m_maxLoadedSheets)
+            releaseSheets(m_maxLoadedSheets - m_maxLoadedSheets / 10);
         return true;
     } catch (const std::exception& e) {
         sheet->m_loadingState.store(SpriteLoadState::NONE, std::memory_order_release);
@@ -239,6 +306,7 @@ void SpriteAppearances::unload()
 {
     m_spritesCount = 0;
     m_sheets.clear();
+    m_loadedSheets = 0;
 }
 
 SpriteSheetPtr SpriteAppearances::getSheetBySpriteId(const int id, bool& isLoading, const bool load /* = true */)
@@ -273,6 +341,14 @@ ImagePtr SpriteAppearances::getSpriteImage(const int id, bool& isLoading)
             return nullptr;
         }
 
+        sheet->lastUse = stdext::millis();
+        const auto data = getSheetData(sheet);
+        if (!data) {
+            // freed by a full cache in the meantime: loaded again next time
+            isLoading = true;
+            return nullptr;
+        }
+
         const Size& size = sheet->getSpriteSize();
 
         const auto& image = std::make_shared<Image>(size);
@@ -292,7 +368,7 @@ ImagePtr SpriteAppearances::getSpriteImage(const int id, bool& isLoading)
         const int spriteWidthBytes = size.width() * 4;
 
         for (int height = size.height() * spriteRow, offset = 0; height < size.height() + (spriteRow * size.height()); height++, offset++) {
-            std::memcpy(&pixelData[offset * spriteWidthBytes], &sheet->data[(height * SPRITE_SHEET_WIDTH_BYTES) + (spriteColumn * spriteWidthBytes)], spriteWidthBytes);
+            std::memcpy(&pixelData[offset * spriteWidthBytes], &data[(height * SPRITE_SHEET_WIDTH_BYTES) + (spriteColumn * spriteWidthBytes)], spriteWidthBytes);
         }
 
         if (!image->hasTransparentPixel()) {
@@ -324,13 +400,15 @@ void SpriteAppearances::saveSpriteToFile(const int id, const std::string& file)
 void SpriteAppearances::saveSheetToFileBySprite(const int id, const std::string& file)
 {
     if (const auto& sheet = getSheetBySpriteId(id)) {
-        Image image({ SpriteSheet::SIZE }, 4, sheet->data.get());
-        image.savePNG(file);
+        saveSheetToFile(sheet, file);
     }
 }
 
 void SpriteAppearances::saveSheetToFile(const SpriteSheetPtr& sheet, const std::string& file)
 {
-    Image image({ SpriteSheet::SIZE }, 4, sheet->data.get());
+    const auto data = getSheetData(sheet);
+    if (!data)
+        return;
+    Image image({ SpriteSheet::SIZE }, 4, data.get());
     image.savePNG(file);
 }

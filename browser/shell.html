@@ -78,6 +78,45 @@
         line-height: 1;
         cursor: pointer;
       }
+      #crash {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        box-sizing: border-box;
+        width: min(560px, calc(100vw - 32px));
+        padding: 14px 16px;
+        border-radius: 6px;
+        background: rgba(20, 12, 16, 0.95);
+        border: 1px solid #b0453c;
+        color: #f3ead9;
+        font: 14px/1.45 Verdana, Geneva, "DejaVu Sans", sans-serif;
+      }
+      #crash[hidden] {
+        display: none;
+      }
+      #crash p {
+        margin: 0 0 10px;
+      }
+      #crash small {
+        display: block;
+        margin-top: 8px;
+        color: #a39cbc;
+      }
+      #crash button {
+        margin-right: 8px;
+        padding: 6px 14px;
+        border: 1px solid #655036;
+        border-radius: 4px;
+        background: #2a2133;
+        color: #f3ead9;
+        font: inherit;
+        cursor: pointer;
+      }
+      #crash button:hover {
+        border-color: #dfb564;
+      }
       /* the first screen, in the site's Mythos look: the market at dusk,
          the crest, a gold progress bar and the gold button */
       #splash {
@@ -224,6 +263,12 @@
         <p class="foot">A primeira vez baixa cerca de 270 MB; depois abre na hora.<br /><a href="/">Voltar ao site</a></p>
       </main>
     </div>
+    <div id="crash" role="alert" hidden>
+      <p>O jogo parou com um erro. Recarregue a p&aacute;gina (F5) para voltar a jogar.</p>
+      <button type="button" onclick="copyCrashReport(this)">Copiar relat&oacute;rio</button>
+      <button type="button" onclick="window.mythosLeaving = true; location.reload()">Recarregar</button>
+      <small id="crash-sent"></small>
+    </div>
     <div class="notice" id="slow" hidden>
       Seu navegador est&aacute; desenhando o jogo sem a placa de v&iacute;deo, por isso ele fica lento.
       No Chrome ou Edge: Configura&ccedil;&otilde;es &rarr; Sistema &rarr; ligue
@@ -241,6 +286,75 @@
       // the game runs in threads: without them (an old browser, or the page
       // opened without https) it would stop on a blank screen
       var unsupported = !self.crossOriginIsolated || typeof SharedArrayBuffer === "undefined";
+      // the last lines of the game's log, for the error report
+      var logTail = [];
+      function keepLog(line) {
+        // without the terminal colors the game's log carries
+        logTail.push(new Date().toISOString().slice(11, 19) + " " + String(line).replace(/\x1b\[[0-9;]*m/g, ""));
+        if (logTail.length > 300) logTail.splice(0, logTail.length - 300);
+      }
+      var crashReport = "";
+      function buildCrashReport(error) {
+        return [
+          "Mythos, jogo no navegador",
+          "quando: " + new Date().toISOString(),
+          "versao: " + (window.mythosBuild || "?"),
+          "navegador: " + navigator.userAgent,
+          "video: " + (window.mythosRenderer || "?"),
+          "erro: " + error,
+          "",
+          "--- ultimas linhas do jogo ---",
+        ]
+          .concat(logTail)
+          .join("\n");
+      }
+      // sent once to the site (the same place the desktop client's reports
+      // go) and shown with a button to copy it
+      function showCrash(error) {
+        crashReport = buildCrashReport(error);
+        document.getElementById("crash").hidden = false;
+        document.getElementById("slow").hidden = true;
+        if (showCrash.sent) return;
+        showCrash.sent = true;
+        var sent = document.getElementById("crash-sent");
+        fetch("/plugins/brevesot/crash.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "browser",
+            version: window.mythosBuild || "",
+            build: "",
+            os: navigator.platform || "",
+            gpu: window.mythosRenderer || "",
+            report: crashReport,
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (res) {
+            if (res && res.ok) sent.textContent = "O relat\u00f3rio foi enviado para a equipe.";
+          })
+          .catch(function () {});
+      }
+      function copyCrashReport(button) {
+        navigator.clipboard.writeText(crashReport).then(
+          function () {
+            button.textContent = "Copiado!";
+          },
+          function () {
+            button.textContent = "N\u00e3o consegui copiar";
+          }
+        );
+      }
+      fetch("versao.txt", { cache: "no-cache" })
+        .then(function (res) {
+          return res.ok ? res.text() : "";
+        })
+        .then(function (text) {
+          window.mythosBuild = text.trim().slice(0, 12);
+        })
+        .catch(function () {});
       function reportRuntimeError(prefix, error) {
         const payload = [prefix, error]
           .flat()
@@ -264,19 +378,16 @@
         if (payload === reportRuntimeError.last) return;
         reportRuntimeError.last = payload;
         console.error(payload);
-        // stderr is only a message; the others stop the game
-        if (prefix === "stderr") return;
+        keepLog(payload);
+        // stderr is only a message, and a promise nobody waited on rarely
+        // stops anything: kept for a later report. The others stop the game.
+        if (prefix === "stderr" || prefix === "unhandledrejection") return;
         window.mythosStopped = true;
-        const message = "O jogo parou com um erro. Recarregue a p&aacute;gina (F5) para voltar a jogar.";
-        const title = document.getElementById("title-text");
-        if (title && !unsupported) {
-          title.innerHTML = message;
-        }
-        // still on the first screen: say it there
-        if (!unsupported) {
-          showStatus(message);
-          document.getElementById("splash").classList.remove("ready");
-        }
+        if (unsupported) return;
+        showCrash(payload);
+        // still on the first screen: say it there too
+        showStatus("O jogo parou com um erro. Recarregue a p&aacute;gina (F5) para voltar a jogar.");
+        document.getElementById("splash").classList.remove("ready");
       }
       function showStatus(html, percent) {
         document.getElementById("status").innerHTML = html;
@@ -290,6 +401,7 @@
           if (!gl) return false;
           var info = gl.getExtension("WEBGL_debug_renderer_info");
           var renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+          window.mythosRenderer = renderer;
           var lose = gl.getExtension("WEBGL_lose_context");
           if (lose) lose.loseContext();
           if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return true;
@@ -316,7 +428,8 @@
           localStorage.setItem("mythos-slow-notice", "closed");
         } catch (e) {}
       }
-      if (!unsupported && !slowNoticeClosed() && softwareRendering()) {
+      // looked at always: the renderer also goes into error reports
+      if (!unsupported && softwareRendering() && !slowNoticeClosed()) {
         document.getElementById("slow").hidden = false;
       }
       // Enter on the first screen plays, as the button does
@@ -409,6 +522,7 @@
           return function (text) {
             text = Array.prototype.slice.call(arguments).join(" ");
             console.log(text);
+            keepLog(text);
           };
         })(),
         printErr: function () {

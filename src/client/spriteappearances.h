@@ -97,7 +97,10 @@ public:
 
     SpriteLayout spriteLayout = SpriteLayout::SIZE_32_32;
     std::atomic<SpriteLoadState> m_loadingState = SpriteLoadState::NONE;
-    std::unique_ptr<uint8_t[]> data;
+    // the decoded pixels; read them through SpriteAppearances::getSheetData,
+    // since a full cache can free them (setMaxLoadedSheets)
+    std::shared_ptr<uint8_t[]> data;
+    std::atomic<ticks_t> lastUse{ 0 };
     std::string file;
 };
 
@@ -127,6 +130,16 @@ public:
 
     void addSpriteSheet(const SpriteSheetPtr& sheet) { m_sheets.emplace_back(sheet); }
 
+    std::shared_ptr<uint8_t[]> getSheetData(const SpriteSheetPtr& sheet) const;
+
+    // how many decoded sheets stay in memory (0: all of them). Each takes
+    // 576 KB and the client has thousands: the browser, with its fixed
+    // memory, keeps only the most recently used ones.
+    void setMaxLoadedSheets(const size_t max) { m_maxLoadedSheets = max; }
+    size_t getLoadedSheets() const { return m_loadedSheets; }
+    // frees the least recently used sheets until only `keep` are left
+    void releaseSheets(size_t keep) const;
+
     ImagePtr getSpriteImage(int id) {
         bool isLoading = false;
         return getSpriteImage(id, isLoading);
@@ -137,6 +150,9 @@ public:
 private:
     uint32_t m_spritesCount{ 0 };
     std::vector<SpriteSheetPtr> m_sheets;
+    size_t m_maxLoadedSheets{ 0 };
+    mutable std::atomic<size_t> m_loadedSheets{ 0 };
+    mutable std::mutex m_sheetDataMutex;
     std::string m_path;
 };
 
