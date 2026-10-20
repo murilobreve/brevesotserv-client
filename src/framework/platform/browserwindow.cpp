@@ -36,6 +36,7 @@ stdext::map<char, Fw::Key> m_keyMapStr;
 EmscriptenWebGLContextAttributes attr;
 
 BrowserWindow::BrowserWindow() {
+    m_vsync = true;
     m_minimumSize = Size(600, 480);
     m_size = Size(1280, 720);
     m_running = false;
@@ -176,6 +177,8 @@ void BrowserWindow::internalInitGL() {
     emscripten_webgl_init_context_attributes(&attr);
     attr.majorVersion = 2;
     attr.renderViaOffscreenBackBuffer = attr.explicitSwapControl = attr.alpha = attr.depth = attr.stencil = attr.antialias = attr.preserveDrawingBuffer = attr.failIfMajorPerformanceCaveat = 0;
+    // laptops with two GPUs: the dedicated one
+    attr.powerPreference = EM_WEBGL_POWER_PREFERENCE_HIGH_PERFORMANCE;
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context("#canvas", &attr);
     emscripten_webgl_make_context_current(ctx);
 
@@ -494,7 +497,10 @@ void BrowserWindow::swapBuffers() {
     // emscripten_webgl_commit_frame(); // removed to improve performance (reduce CPU overhead)
 }
 
-void BrowserWindow::setVerticalSync(bool enable) {
+void BrowserWindow::setVerticalSync(bool /*enable*/) {
+    // the browser always draws in step with the screen (requestAnimationFrame);
+    // reporting it keeps the map thread paced as with vsync on the desktop
+    m_vsync = true;
 }
 
 std::string BrowserWindow::getClipboardText() {
@@ -574,7 +580,19 @@ void BrowserWindow::setTitle(const std::string_view title) {}
 
 void BrowserWindow::setMinimumSize(const Size& minimumSize) {}
 
-void BrowserWindow::setFullscreen(bool fullscreen) {}
+void BrowserWindow::setFullscreen(bool fullscreen) {
+    m_fullscreen = fullscreen;
+    // the browser only allows it right after a click or key press, which is
+    // when the option or Ctrl+Shift+F asks for it
+    MAIN_THREAD_ASYNC_EM_ASM({
+        if ($0) {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen)
+                document.documentElement.requestFullscreen().catch(function() {});
+        } else if (document.fullscreenElement) {
+            document.exitFullscreen().catch(function() {});
+        }
+    }, fullscreen);
+}
 
 void BrowserWindow::setIcon(const std::string& iconFile) {}
 

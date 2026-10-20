@@ -135,7 +135,7 @@ void GraphicalApplication::terminate()
 void GraphicalApplication::mainLoop() {
     if (m_stopping) {
         emscripten_cancel_main_loop();
-        MAIN_THREAD_EM_ASM({ window.location.reload(); });
+        MAIN_THREAD_EM_ASM({ window.mythosLeaving = true; window.location.reload(); });
         return;
     }
     mainPoll();

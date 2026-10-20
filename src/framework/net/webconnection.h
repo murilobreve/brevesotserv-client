@@ -72,22 +72,24 @@ protected:
     void onRecv(const uint16_t recvSize);
     void onTimeout();
 
-    static void runOnConnectCallback(std::function<void()> callback);
-    static void runOnErrorCallback(ErrorCallback callback);
+    void onSocketOpen(EMSCRIPTEN_WEBSOCKET_T socket);
+    void onSocketError(EMSCRIPTEN_WEBSOCKET_T socket);
+    void onSocketClose(EMSCRIPTEN_WEBSOCKET_T socket, bool clean);
+    void releaseSocket();
 
     std::function<void()> m_connectCallback;
     ErrorCallback m_errorCallback;
     RecvCallback m_recvCallback;
 
     EMSCRIPTEN_WEBSOCKET_T m_websocket = 0;
-    bool m_gameWorld;
-    pthread_t m_pthread;
+    bool m_gameWorld{ false };
 
     static std::list<std::shared_ptr<asio::streambuf>> m_outputStreams;
     std::shared_ptr<asio::streambuf> m_outputStream;
     bool m_connected{ false };
     bool m_connecting{ false };
     stdext::timer m_activityTimer;
+    stdext::timer m_readTimer;
 
     asio::streambuf m_inputStream;
 };

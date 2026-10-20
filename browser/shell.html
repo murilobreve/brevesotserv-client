@@ -49,6 +49,35 @@
         -ms-user-select: none; /* IE 10 and IE 11 */
         user-select: none; /* Standard syntax */
       }
+      .notice {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        max-width: min(640px, calc(100vw - 32px));
+        box-sizing: border-box;
+        padding: 10px 40px 10px 14px;
+        border-radius: 6px;
+        background: rgba(20, 16, 32, 0.92);
+        border: 1px solid #b08a3c;
+        color: #f2e6c9;
+        font: 14px/1.45 Helvetica, Arial, sans-serif;
+      }
+      .notice[hidden] {
+        display: none;
+      }
+      .notice button {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        border: 0;
+        background: none;
+        color: inherit;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+      }
       #start {
         position: absolute;
         left: 50%;
@@ -68,6 +97,12 @@
       virtualkeyboardpolicy="manual"
     ></div>
     <button id="start" onclick="startGame()">Jogar</button>
+    <div class="notice" id="slow" hidden>
+      Seu navegador est&aacute; desenhando o jogo sem a placa de v&iacute;deo, por isso ele fica lento.
+      No Chrome ou Edge: Configura&ccedil;&otilde;es &rarr; Sistema &rarr; ligue
+      &ldquo;Usar acelera&ccedil;&atilde;o de gr&aacute;ficos quando dispon&iacute;vel&rdquo; e reinicie o navegador.
+      <button type="button" aria-label="Fechar" onclick="closeSlowNotice()">&times;</button>
+    </div>
     <canvas
       class="backbuffer"
       id="canvas"
@@ -98,14 +133,64 @@
             }
           })
           .join(": ");
+        // once the game stopped, every later call repeats the same error
+        if (payload === reportRuntimeError.last) return;
+        reportRuntimeError.last = payload;
         console.error(payload);
+        // stderr is only a message; the others stop the game
+        if (prefix === "stderr") return;
+        window.mythosStopped = true;
         const title = document.getElementById("title-text");
         if (title && !unsupported) {
-          title.innerHTML = "O jogo parou com um erro (detalhes no console do navegador, F12)";
+          title.innerHTML = "O jogo parou com um erro. Recarregue a p&aacute;gina (F5) para voltar a jogar.";
         }
+      }
+      // a browser drawing without the graphics card (hardware acceleration
+      // off, or a blocked driver) runs the game at a few frames per second
+      function softwareRendering() {
+        try {
+          var gl = document.createElement("canvas").getContext("webgl2");
+          if (!gl) return false;
+          var info = gl.getExtension("WEBGL_debug_renderer_info");
+          var renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+          var lose = gl.getExtension("WEBGL_lose_context");
+          if (lose) lose.loseContext();
+          if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return true;
+          var strict = document.createElement("canvas").getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+          if (!strict) return true;
+          lose = strict.getExtension("WEBGL_lose_context");
+          if (lose) lose.loseContext();
+          return false;
+        } catch (e) {
+          return false;
+        }
+      }
+      // closed once, it stays closed in this browser
+      function slowNoticeClosed() {
+        try {
+          return localStorage.getItem("mythos-slow-notice") === "closed";
+        } catch (e) {
+          return false;
+        }
+      }
+      function closeSlowNotice() {
+        document.getElementById("slow").hidden = true;
+        try {
+          localStorage.setItem("mythos-slow-notice", "closed");
+        } catch (e) {}
+      }
+      if (!unsupported && !slowNoticeClosed() && softwareRendering()) {
+        document.getElementById("slow").hidden = false;
       }
       function startGame() {
         document.getElementById("start").style.display = "none";
+        // closing the tab by accident (Ctrl+W, the back button) asks first;
+        // leaving the game from its own menu does not
+        window.addEventListener("beforeunload", function (ev) {
+          if (window.mythosLeaving || window.mythosStopped) return;
+          ev.preventDefault();
+          ev.returnValue = "";
+        });
         callMain();
         document.addEventListener("touchstart", function (ev) {
           ev.preventDefault();
@@ -120,10 +205,13 @@
           ev.stopPropagation();
         });
         document.addEventListener("keyup", function (ev) {
+          if (window.mythosStopped) return;
           ev.preventDefault();
           ev.stopPropagation();
         });
         document.addEventListener("keydown", function (ev) {
+          // the game stopped: the keys are the browser's again (F5 reloads)
+          if (window.mythosStopped) return;
           if (
             !ev.ctrlKey &&
             ev.key !== "Enter" &&
