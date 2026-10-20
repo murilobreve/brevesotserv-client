@@ -340,3 +340,7 @@ CMakeUserPresets.json
 # client package (empacotar-cliente.bat)
 /dist/
 diagnostico-vps.txt
+
+# the browser build needs its vcpkg patches and the prebuilt Lua
+!/browser/overlay-ports/**/*.patch
+!/browser/include/lua51/liblua.a
