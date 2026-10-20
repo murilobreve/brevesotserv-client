@@ -449,7 +449,13 @@ local function tryLogin(charInfo, tries)
 
     CharacterList.hide()
 
-    g_game.loginWorld(G.account, G.password, charInfo.worldName, charInfo.worldHost, charInfo.worldPort,
+    -- the browser client cannot open the game port itself: it goes through
+    -- the site's WebSocket bridge (init.lua, Services.browserGameHost)
+    local worldHost, worldPort = charInfo.worldHost, charInfo.worldPort
+    if Services.browserGameHost then
+        worldHost, worldPort = Services.browserGameHost, Services.browserGamePort
+    end
+    g_game.loginWorld(G.account, G.password, charInfo.worldName, worldHost, worldPort,
                       charInfo.characterName, G.authenticatorToken, G.sessionKey)
 
     loadBox = displayCancelBox(tr('Please wait'), tr('Connecting to game server...'))

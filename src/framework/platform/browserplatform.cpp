@@ -95,6 +95,8 @@ ticks_t Platform::getFileModificationTime(std::string file)
 
 bool Platform::openUrl(std::string url, bool now)
 {
+    // the site's pages (create an account, donations) in a new tab
+    MAIN_THREAD_EM_ASM({ window.open(UTF8ToString($0), '_blank', 'noopener'); }, url.c_str());
     return true;
 }
 

@@ -979,8 +979,8 @@ elseif(WASM)
           # ("ArrayBuffer value must not be resizable"). Use a fixed heap.
           -sALLOW_MEMORY_GROWTH=0
           -sINITIAL_MEMORY=1073741824
-          --preload-file=../otclientrc.lua@otclientrc.lua
           --preload-file=../init.lua@init.lua
+          --preload-file=../config.ini@config.ini
           --preload-file=../data@data
           --preload-file=../mods@mods
           --preload-file=../modules@modules
@@ -990,6 +990,11 @@ elseif(WASM)
 
   if(WASM_USE_WASM_EXCEPTIONS)
     list(APPEND WASM_LINK_OPTIONS "-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=['emscripten_longjmp']")
+  endif()
+
+  # otclientrc.lua is optional (this client has none)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/otclientrc.lua")
+    list(APPEND WASM_LINK_OPTIONS "--preload-file=../otclientrc.lua@otclientrc.lua")
   endif()
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")

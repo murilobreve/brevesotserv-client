@@ -53,6 +53,9 @@ public:
     double getTotalSystemMemory();
     double getMemoryUsage();
     std::string getOSName();
+    // the page the browser client runs in ("https://mythosot.com.br"), empty
+    // anywhere else
+    std::string getBrowserOrigin();
     Device getDevice() { return m_device; }
     void setDevice(const Device device) { m_device = device; }
     bool isDesktop() { return m_device.type == Desktop; }

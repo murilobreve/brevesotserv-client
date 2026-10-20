@@ -24,6 +24,17 @@
 
 Platform g_platform;
 
+std::string Platform::getBrowserOrigin()
+{
+#ifdef __EMSCRIPTEN__
+    // the client runs in a worker, whose location has the page's origin too
+    const char* origin = emscripten_run_script_string("self.location.origin");
+    return origin ? origin : "";
+#else
+    return {};
+#endif
+}
+
 std::unordered_map<DeviceType, std::string> Platform::m_deviceShortNames = {
     {Desktop, "desktop"},
     {Mobile,  "mobile"},

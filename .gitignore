@@ -27,6 +27,7 @@ vcpkg_installed/
 vc17/
 vc18/
 /build-emscripten-web/
+/build-emscripten/
 /bin/
 /data/sounds/*/
 /data/things/*/

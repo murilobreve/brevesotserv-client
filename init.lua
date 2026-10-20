@@ -41,6 +41,20 @@ local function readServerIni()
 end
 readServerIni()
 
+-- the browser client logs in on the site that serves it (same origin, so
+-- login.php needs no CORS headers)
+local BROWSER_ORIGIN = g_platform.getBrowserOrigin and g_platform.getBrowserOrigin() or ''
+if BROWSER_ORIGIN ~= '' then
+    local scheme, host, port = BROWSER_ORIGIN:match('^(%a+)://([^:/]+):?(%d*)')
+    if scheme then
+        SERVER_SCHEME = scheme:lower()
+        SERVER_IP = host
+        SERVER_PORT = tonumber(port) or (SERVER_SCHEME == 'https' and 443 or 80)
+        PORT_FROM_INI = true
+        SITE_URL = BROWSER_ORIGIN
+    end
+end
+
 -- the shipped servidor.ini says "porta_login = 80": with https:// that would
 -- try TLS on the HTTP port and every login would fail
 if SERVER_SCHEME == 'https' and (not PORT_FROM_INI or SERVER_PORT == 80) then
@@ -59,6 +73,11 @@ local SERVER_HOST = ('%s://%s/login.php'):format(SERVER_SCHEME, SERVER_IP)
 
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
+    -- the browser client reaches the game through a WebSocket bridge on the
+    -- site (websockify: wss://<site>:7180 -> the game port 7172; the server
+    -- itself takes 7173 and 7174 for the older protocols)
+    browserGameHost = BROWSER_ORIGIN ~= '' and SERVER_IP or nil, --./client_entergame
+    browserGamePort = 7180, --./client_entergame
     website = SITE_URL, --./client_entergame "Create a free account"
     -- Mythos has no shop: the store "Get" button and the market "Get coins"
     -- button open the site's donation page (R$ 1 = 10 Mythos Coins)
