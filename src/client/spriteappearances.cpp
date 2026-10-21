@@ -33,6 +33,14 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/heap.h>
 #include <malloc.h>
+#include "map.h"
+#include "framework/graphics/drawpoolmanager.h"
+#include "framework/luaengine/luainterface.h"
+
+// the memory line goes to the log at least once every this many checks (10 s each)
+#ifndef MEMORY_LOG_EVERY
+#define MEMORY_LOG_EVERY 6
+#endif
 #endif
 
  // warnings related to protobuf
@@ -61,9 +69,17 @@ void SpriteAppearances::init()
         const size_t used = info.uordblks;
         if (used > heap / 10 * 8)
             releaseSheets(m_maxLoadedSheets / 2);
+        // once a minute, or at once when it jumped by 64 MB since the last line
         static int checks = 0;
-        if (++checks % 6 == 0)
-            g_logger.info("[memory] {} MB of {} MB in use, {} sprite sheets decoded", used >> 20, heap >> 20, m_loadedSheets.load());
+        static size_t lastLogged = 0;
+        if (++checks % MEMORY_LOG_EVERY != 0 && used < lastLogged + (64 << 20))
+            return;
+        lastLogged = used;
+        // what else lives in that memory: tiles, creatures, the atlases and
+        // the scripts, so a report shows which one grew
+        g_logger.info("[memory] {} MB of {} MB in use, {} sprite sheets decoded, {} tiles, {} creatures | {}",
+                      used >> 20, heap >> 20, m_loadedSheets.load(), g_map.getTiles().size(), g_map.getCreatures().size(), g_drawPool.getAtlasStats());
+        g_lua.runBuffer("g_logger.info(string.format('[memory] scripts %.0f MB', collectgarbage('count') / 1024))", "memory");
     }, 10000);
 #endif
 }

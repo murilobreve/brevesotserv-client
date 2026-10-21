@@ -977,8 +977,11 @@ elseif(WASM)
           # Growable WASM memory becomes a resizable SharedArrayBuffer, which
           # Chrome 149+ refuses to accept as a source for WebGL uploads
           # ("ArrayBuffer value must not be resizable"). Use a fixed heap.
+          # 2000 MB (just under 2 GB, where pointers stay positive): with 1 GB
+          # a teleport into a busy area could ask for more than was left in
+          # one piece and the game stopped with "Aborted(OOM)".
           -sALLOW_MEMORY_GROWTH=0
-          -sINITIAL_MEMORY=1073741824
+          -sINITIAL_MEMORY=2097152000
           --preload-file=../init.lua@init.lua
           --preload-file=../config.ini@config.ini
           --preload-file=../data@data
