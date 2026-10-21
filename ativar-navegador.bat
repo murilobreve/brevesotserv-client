@@ -1,10 +1,10 @@
 @echo off
-rem Mythos - liga o jogo no navegador: https://mythosot.com.br/jogar
+rem Mythos - liga o jogo no navegador: https://mythosot.com.br/play
 rem Entra na VPS por SSH, atualiza o servidor (como o atualizar-servidor.bat,
 rem que reinicia o jogo) e roda o tools/deploy/ativar-navegador.sh:
 rem   - baixa a versao do cliente para navegador (release "navegador" do
 rem     GitHub, feita sozinha pelo GitHub Actions a cada mudanca no cliente)
-rem   - coloca a pagina /jogar no site (precisa do site em https)
+rem   - coloca a pagina /play no site (precisa do site em https)
 rem   - liga a ponte do navegador para o jogo (porta 7180) e libera no firewall
 rem Basta rodar uma vez: depois o atualizar-servidor.bat mantem tudo em dia.
 rem Rodar de novo nao estraga nada.
@@ -26,7 +26,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Pronto. Abra https://mythosot.com.br/jogar no Chrome, Edge ou Firefox.
+echo Pronto. Abra https://mythosot.com.br/play no Chrome, Edge ou Firefox.
 
 :fim
 echo.

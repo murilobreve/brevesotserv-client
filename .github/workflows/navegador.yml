@@ -2,7 +2,7 @@
 # the "navegador" release: index.html, otclient.js, otclient.wasm,
 # otclient.data and versao.txt (the commit it was built from). The VPS takes
 # it from there (tools/deploy/ativar-navegador.sh in the server repository,
-# also run by every server update) and serves it at https://<site>/jogar.
+# also run by every server update) and serves it at https://<site>/play.
 name: Navegador
 
 on:
