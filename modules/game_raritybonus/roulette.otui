@@ -215,7 +215,7 @@ MythosWindow
     anchors.right: closeButton.left
     anchors.bottom: parent.bottom
     margin-right: 6
-    size: 210 22
+    size: 250 22
     @onClick: modules.game_raritybonus.spinAgain()
 
   MythosButton

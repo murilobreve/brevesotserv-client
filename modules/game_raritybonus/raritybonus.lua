@@ -108,9 +108,13 @@ local function setRerollState(row)
     -- one grade up: gold and Rarity XP, with a chance
     local up = entry.upgrade
     row.upgradeItemButton:setVisible(up ~= nil)
+    row.upgradeCost:setVisible(up ~= nil)
     if up then
         row.upgradeItemButton:setText(tr('%s %d%%', up.label, up.chance))
         row.upgradeItemButton:setEnabled(gold >= up.gold and rarityXp >= up.xp)
+        -- the price under the button, so it is seen before clicking
+        row.upgradeCost:setText(tr('%s gold + %s XP', formatGold(up.gold), formatCost(up.xp)))
+        row.upgradeCost:setColor((gold >= up.gold and rarityXp >= up.xp) and '#c9b88a' or '#c46a5a')
         row.upgradeItemButton:setTooltip(tr('Raise to %s: %s gold and %d Rarity XP, %d%% chance. On success the item rolls again at %s; on a failure it stays as it is and the price is spent.', up.label, formatGold(up.gold), up.xp, up.chance, up.label))
         -- off: say what is missing
         if rarityXp < up.xp then
@@ -201,7 +205,8 @@ function fillItems(items)
         end
         local cost = entry.rerollCost or 0
         local lockKey = locks[entry.slotId]
-        row.rerollItemButton:setText(lockKey and tr('Reroll %s +%s', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s', formatCost(cost)))
+        -- the price says what it is paid in: Rarity XP, and gold for a kept bonus
+        row.rerollItemButton:setText(lockKey and tr('%s XP + %s gold', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s XP', formatCost(cost)))
         row.rerollItemButton:setIcon(lockKey and '/game_raritybonus/images/lock_on' or '/game_raritybonus/images/reroll')
         row.entry = entry
         setRerollState(row)
@@ -235,7 +240,8 @@ function fillItems(items)
         end
         local linesHeight = count * 18
         row.bonuses:setHeight(linesHeight)
-        row:setHeight(math.max(48, 3 + 15 + 16 + 3 + linesHeight + 6))
+        -- the upgrade's price line under the two buttons needs a little more
+        row:setHeight(math.max(entry.upgrade and 60 or 48, 3 + 15 + 16 + 3 + linesHeight + 6))
     end
 end
 
@@ -754,7 +760,7 @@ local function setAgainButton()
     roulette.againButton:setVisible(not spin.result.upgrade)
     local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
     local lockGold = spin.result.lock and (tonumber(spin.result.nextGold) or 0) or 0
-    roulette.againButton:setText(lockGold > 0 and tr('Spin again (%d + %s)', cost, formatGold(lockGold)) or tr('Spin again (%d)', cost))
+    roulette.againButton:setText(lockGold > 0 and tr('Spin again (%d XP + %s gold)', cost, formatGold(lockGold)) or tr('Spin again (%d XP)', cost))
     roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost and gold >= lockGold)
     -- the balance only once the reel stops: it is updated with the result
     roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')

@@ -550,6 +550,19 @@ function togglePanel()
     end
 end
 
+-- the game writes its messages (loot, "You see", warnings) at the bottom of
+-- the map (game_textmessage's statusLabel): they go up by the bar's height
+-- so the bar never covers them
+local STATUS_MARGIN = 7 -- statusLabel's own margin-bottom (textmessage.otui)
+local function keepMessagesClear()
+    local root = modules.game_interface and modules.game_interface.getRootPanel()
+    local label = root and root:recursiveGetChildById('statusLabel')
+    if label then
+        local covered = (panel and panel:isVisible()) and panel:getHeight() or 0
+        label:setMarginBottom(STATUS_MARGIN + covered)
+    end
+end
+
 -- the bar lies over the bottom of the map, just above the spell bars; the map
 -- keeps its size and shows through the bar's background
 local function placeBar()
@@ -569,12 +582,17 @@ local function placeBar()
         widget:hide()
         sectors[sector.id] = widget
     end
-    -- names or icons follow the width of the map
+    -- names or icons follow the width of the map; the messages follow its
+    -- height (open or folded)
     panel.onGeometryChange = function(widget, oldRect, newRect)
         if oldRect.width ~= newRect.width then
             resize()
         end
+        if oldRect.height ~= newRect.height then
+            keepMessagesClear()
+        end
     end
+    panel.onVisibilityChange = keepMessagesClear
     return true
 end
 
@@ -585,6 +603,7 @@ local function onGameStart()
     -- open on every login, whatever it was when the player left
     setCollapsed(false)
     resize()
+    keepMessagesClear()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
         -- written now: a client that crashes never saves its settings on exit

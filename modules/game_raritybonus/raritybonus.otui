@@ -38,6 +38,20 @@ BonusItemRow < BrevesRow
     width: 136
     icon: /game_raritybonus/images/improve
 
+  // the upgrade's price, under its button
+  Label
+    id: upgradeCost
+    anchors.top: upgradeItemButton.bottom
+    anchors.left: upgradeItemButton.left
+    anchors.right: upgradeItemButton.right
+    margin-top: 1
+    height: 12
+    text-align: center
+    font: verdana-11px-monochrome
+    color: #c9b88a
+    phantom: true
+    visible: false
+
   Label
     id: name
     anchors.top: parent.top
