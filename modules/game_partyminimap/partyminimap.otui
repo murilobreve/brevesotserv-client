@@ -1,0 +1,9 @@
+// one party member on the minimap: a dot coloured by health with a white
+// ring, so it stands out on the map's greens and reds
+PartyMinimapMark < UIWidget
+  size: 9 9
+  border-width: 2
+  border-color: #ffffff
+  background-color: #5fdc6a
+  focusable: false
+  clipping: true

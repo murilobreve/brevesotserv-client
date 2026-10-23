@@ -1,0 +1,9 @@
+Module
+  name: game_partyminimap
+  description: Party on the minimap - a mark for each party member, wherever they are
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ partyminimap ]
+  @onLoad: init()
+  @onUnload: terminate()
