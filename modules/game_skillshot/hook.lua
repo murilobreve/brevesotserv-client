@@ -75,20 +75,6 @@ local function castOf(data)
     return cast
 end
 
-local function direction(dx, dy)
-    local ax, ay = math.abs(dx), math.abs(dy)
-    local ns = dy < 0 and 'n' or 's'
-    local ew = dx < 0 and 'w' or 'e'
-    if ax > ay * 2 then
-        return ew
-    elseif ay > ax * 2 then
-        return ns
-    end
-    return ns .. ew
-end
-
-local LINK_OF = { e = 'h', w = 'h', n = 'v', s = 'v', ne = 'ne', sw = 'ne', nw = 'nw', se = 'nw' }
-
 -- when the hook gets where it is going
 local function onArrival(cast, callback)
     local wait = cast.arrive - g_clock.millis()
@@ -128,10 +114,10 @@ function handlers.fly(data)
     -- the whole chain lies along the cast, one way (a line that is not
     -- straight or diagonal steps both ways)
     local origin = data.o or from
-    local dir = direction(to.x - origin.x, to.y - origin.y)
+    local dir = artDirection(to.x - origin.x, to.y - origin.y)
     -- a link on the tile the hook leaves (none on the knight's own)
     if from.x ~= origin.x or from.y ~= origin.y then
-        local link = art.place('elo_' .. LINK_OF[dir], from)
+        local link = art.place('elo_' .. ART_LINE_OF[dir], from)
         if link then
             table.insert(cast.links, link)
         end

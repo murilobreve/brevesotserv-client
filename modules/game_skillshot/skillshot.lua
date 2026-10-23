@@ -5,10 +5,10 @@
 -- nothing is sent and the spell goes the way the character faces.
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
--- moments to draw (hook.lua, meteor.lua) instead of the Tibia effects.
+-- moments to draw (hook.lua, meteor.lua, palm.lua) instead of the Tibia effects.
 
 local OPCODE = 131
-local ART = { 'hook', 'meteor' }
+local ART = { 'hook', 'meteor', 'palm' }
 
 local words = {}
 local originalTalk, originalTalkChannel
@@ -45,6 +45,8 @@ local function onOpcode(protocol, opcode, data)
         onHookArt(data)
     elseif data.fx == 'meteor' then
         onMeteorArt(data)
+    elseif data.fx == 'palm' then
+        onPalmArt(data)
     elseif type(data.words) == 'table' then
         words = {}
         for _, spell in ipairs(data.words) do
@@ -57,12 +59,26 @@ end
 function clearArt()
     clearHookArt()
     clearMeteorArt()
+    clearPalmArt()
+end
+
+local warmUpEvent
+
+local function warmUp()
+    removeEvent(warmUpEvent)
+    warmUpEvent = scheduleEvent(function()
+        local player = g_game.getLocalPlayer()
+        if player then
+            warmUpArt(player:getPosition())
+        end
+    end, 2000)
 end
 
 function init()
     registerHookArt()
     registerMeteorArt()
-    connect(g_game, { onGameEnd = clearArt })
+    registerPalmArt()
+    connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     -- every spell goes through one of these two: the action bar and hotkeys
     -- call talk, the chat calls talkChannel with the say mode
@@ -81,9 +97,11 @@ function init()
 end
 
 function terminate()
-    disconnect(g_game, { onGameEnd = clearArt })
+    disconnect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
+    removeEvent(warmUpEvent)
     unregisterHookArt()
     unregisterMeteorArt()
+    unregisterPalmArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then
         g_game.talk = originalTalk
