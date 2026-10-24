@@ -247,6 +247,7 @@ SpellInfo = {
         ['Palma Sonica'] = { id = 300, name = 'Palma Sonica', words = 'exori sonic pug', type = 'Instant', level = 80, mana = 110, soul = 0, maglevel = 0, icon = '', clientId = 189, group = { [1] = 1000 }, needTarget = false, parameter = false, range = 6, exhaustion = 1000, premium = false, vocations = {9, 10}, special = false, source = 0, },
         ['Flecha do Crepusculo'] = { id = 301, name = 'Flecha do Crepusculo', words = 'exori gran san vis', type = 'Instant', level = 90, mana = 140, soul = 0, maglevel = 0, icon = '', clientId = 58, group = { [1] = 2000 }, needTarget = false, parameter = false, range = 12, exhaustion = 14000, premium = false, vocations = {3, 7}, special = false, source = 0, },
         ['Raizes Errantes'] = { id = 302, name = 'Raizes Errantes', words = 'exori tera vis', type = 'Instant', level = 80, mana = 160, soul = 0, maglevel = 0, icon = '', clientId = 35, group = { [1] = 1000 }, needTarget = false, parameter = false, range = 8, exhaustion = 14000, premium = false, vocations = {2, 6}, special = false, source = 0, },
+        ['Chuva de Juizo'] = { id = 303, name = 'Chuva de Juizo', words = 'exevo gran san vis', type = 'Instant', level = 110, mana = 400, soul = 0, maglevel = 0, icon = '', clientId = 39, group = { [1] = 2000 }, needTarget = false, parameter = false, range = 7, exhaustion = 20000, premium = false, vocations = {3, 7}, special = false, source = 0, },
     }
 }
 
