@@ -4,6 +4,6 @@ Module
   author: Mythos
   website: https://mythosot.com.br
   sandboxed: true
-  scripts: [ art, hook, meteor, palm, arrow, judgement, wall, orb, skillshot ]
+  scripts: [ art, hook, meteor, palm, arrow, judgement, wall, orb, seed, shard, crack, step, skillshot ]
   @onLoad: init()
   @onUnload: terminate()

@@ -6,10 +6,11 @@
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
--- judgement.lua, wall.lua, orb.lua) instead of the Tibia effects.
+-- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua)
+-- instead of the Tibia effects.
 
 local OPCODE = 131
-local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb' }
+local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step' }
 
 local words = {}
 local originalTalk, originalTalkChannel
@@ -56,6 +57,14 @@ local function onOpcode(protocol, opcode, data)
         onWallArt(data)
     elseif data.fx == 'orb' then
         onOrbArt(data)
+    elseif data.fx == 'seed' then
+        onSeedArt(data)
+    elseif data.fx == 'shard' then
+        onShardArt(data)
+    elseif data.fx == 'crack' then
+        onCrackArt(data)
+    elseif data.fx == 'step' then
+        onStepArt(data)
     elseif type(data.words) == 'table' then
         words = {}
         for _, spell in ipairs(data.words) do
@@ -73,6 +82,10 @@ function clearArt()
     clearJudgementArt()
     clearWallArt()
     clearOrbArt()
+    clearSeedArt()
+    clearShardArt()
+    clearCrackArt()
+    clearStepArt()
 end
 
 local warmUpEvent
@@ -95,6 +108,10 @@ function init()
     registerJudgementArt()
     registerWallArt()
     registerOrbArt()
+    registerSeedArt()
+    registerShardArt()
+    registerCrackArt()
+    registerStepArt()
     connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     -- every spell goes through one of these two: the action bar and hotkeys
@@ -123,6 +140,10 @@ function terminate()
     unregisterJudgementArt()
     unregisterWallArt()
     unregisterOrbArt()
+    unregisterSeedArt()
+    unregisterShardArt()
+    unregisterCrackArt()
+    unregisterStepArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then
         g_game.talk = originalTalk
