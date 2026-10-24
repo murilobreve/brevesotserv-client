@@ -6,13 +6,39 @@ local window, toolbarButton, countEvent
 local cfg
 local CONFIG_VERSION = 3
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
-local PAGES = { 'healing', 'potions', 'friends', 'support' }
+local PAGES = { 'healing', 'potions', 'friends', 'support', 'loot' }
 local PAGE_ICONS = {
     healing = '/images/icons/icon-healing',
     potions = '/images/icons/icon_health',
     friends = '/images/icons/icon_players',
     support = '/images/icons/icon_magic',
+    loot = '/game_brevespanel/images/loot',
 }
+
+-- the auto loot lives in game_quickloot (the server loots on each kill what
+-- its list says); the bot's Loot page shows that list's rule and opens it
+local function quickLoot()
+    return modules.game_quickloot and modules.game_quickloot.QuickLoot
+end
+
+local function fillLoot()
+    local page = window.content.lootPage
+    local loot = quickLoot()
+    local text
+    if not loot or not loot.priceRule then
+        text = tr('The auto loot is not available on this client.')
+    elseif loot.priceRule().enabled then
+        text = tr('Auto loot is on: on every kill it takes the coins and every item Gersao buys for %d gold or more, plus the items you ticked.', loot.priceRule().min)
+    else
+        text = tr('Auto loot is on: on every kill it takes the items on your list.')
+    end
+    page.state:setText(text)
+    page.open.onClick = function()
+        if loot and loot.toggle then
+            loot.toggle()
+        end
+    end
+end
 
 -- ---------------------------------------------------------------------------
 -- settings
@@ -33,6 +59,20 @@ local NOT_DEFAULT = {
     ['exura gran sio'] = true,
     ['utani tempo hur'] = true,
 }
+
+-- the cheapest way to spend mana: utana vid, else light, else any
+local TRAIN_DEFAULTS = { 'utana vid', 'utevo lux', 'utevo gran lux' }
+
+local function bestTrainSpell(list)
+    for _, words in ipairs(TRAIN_DEFAULTS) do
+        for _, spell in ipairs(list) do
+            if spell.words == words then
+                return spell.id
+            end
+        end
+    end
+    return list[1] and list[1].id or 0
+end
 
 local function defaults(player)
     local vocation, level = HealData.vocation(player), player:getLevel()
@@ -78,6 +118,8 @@ local function defaults(player)
         haste = { on = false, spell = bestSpell(HealData.hasteSpells(vocation)) },
         cures = false,
         antiIdle = false,
+        -- `below` is the mana it trains from (the slider is shared)
+        train = { on = false, spell = bestTrainSpell(HealData.trainSpells(vocation)), below = 90 },
     }
     -- the bot starts on with the best heal and potions
     config.running = true
@@ -145,6 +187,7 @@ local function sanitize(config, vocation)
     end
     check(config.support.shield, 'spell', HealData.shieldSpells(vocation))
     check(config.support.haste, 'spell', HealData.hasteSpells(vocation))
+    check(config.support.train, 'spell', HealData.trainSpells(vocation))
 end
 
 local function load()
@@ -358,6 +401,19 @@ local function addSupportRule(panel, rule, spells, note)
     widget.note:setText(note)
 end
 
+local function addTrainRule(panel, rule, spells)
+    local widget = g_ui.createWidget('TrainRule', panel)
+    widget.choice:setWidth(120)
+    bindCheck(widget.enabled, rule, 'on')
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    bindSlider(widget, rule)
+end
+
 local function addCureRule(panel, vocation)
     local widget = g_ui.createWidget('CureRule', panel)
     local words = {}
@@ -413,9 +469,12 @@ local function fill()
     addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation),
         tr('Haste: cast again when it runs out or when you get paralyzed.'))
     addCureRule(page, vocation)
+    addTrainRule(page, cfg.support.train, HealData.trainSpells(vocation))
     local idle = g_ui.createWidget('CureRule', page)
     bindCheck(idle.enabled, cfg.support, 'antiIdle')
     idle.note:setText(tr('Anti idle: turns your character every 5 minutes so the server does not log you out.'))
+
+    fillLoot()
 end
 
 local function refreshCounts()

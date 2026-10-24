@@ -1017,6 +1017,12 @@ locale = {
     ["A Mythicus find"] = "Um achado Mythicus",
     ["%s found %s"] = "%s encontrou %s",
     ["A find for the history of the server."] = "Uma descoberta para a história do servidor.",
+    ["Train ML: mana from"] = "Treinar ML com mana",
+    ["The auto loot is not available on this client."] = "O auto loot não está disponível neste cliente.",
+    ["Auto loot is on: on every kill it takes the coins and every item Gersao buys for %d gold or more, plus the items you ticked."] = "Auto loot ligado: a cada monstro morto ele pega as moedas e todo item que o Gersao compra por %d gold ou mais, além dos itens que você marcou.",
+    ["Auto loot is on: on every kill it takes the items on your list."] = "Auto loot ligado: a cada monstro morto ele pega os itens da sua lista.",
+    ["The server loots for you: you do not need to open the corpses. Choose here what it takes."] = "O servidor pega o loot pra você: não precisa abrir os corpos. Escolha aqui o que ele pega.",
+    ["Choose what to loot"] = "Escolher o que pegar",
     ["Report a bug or send an idea to the staff"] = "Reporte um bug ou mande uma ideia para a staff",
   }
 }

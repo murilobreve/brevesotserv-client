@@ -144,6 +144,41 @@ SupportRule < HealBotRule
     text-wrap: true
     text-auto-resize: true
 
+// train magic level: the spell and the mana it is cast from
+TrainRule < HealBotRule
+  Label
+    id: label
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('Train ML: mana from')
+    text-auto-resize: true
+
+  HealBotSlider
+    id: below
+    anchors.left: label.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 60
+    minimum: 10
+
+  HealBotPercent
+    id: belowEdit
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    color: #e6e0f2
+    text: %
+
 CureRule < BrevesPanelBox
   height: 42
 
@@ -194,6 +229,9 @@ MythosWindow
     HealBotCategory
       id: support
       !text: tr('Support')
+    HealBotCategory
+      id: loot
+      !text: tr('Loot')
 
   BrevesPanelBox
     id: content
@@ -223,6 +261,18 @@ MythosWindow
       id: supportPage
       HealBotHint
         !text: tr('Magic shield and haste are not cast in protection zones.')
+
+    HealBotPage
+      id: lootPage
+      HealBotHint
+        !text: tr('The server loots for you: you do not need to open the corpses. Choose here what it takes.')
+      BrevesNote
+        id: state
+        color: #cbc0e0
+      MythosPrimaryButton
+        id: open
+        size: 200 22
+        !text: tr('Choose what to loot')
 
   MythosSeparator
     id: separator

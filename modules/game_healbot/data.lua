@@ -133,6 +133,16 @@ function HealData.shieldSpells(vocation)
     end)
 end
 
+-- spells that only spend mana on the caster (utana vid, utevo lux, the
+-- heals): what the bot casts to train magic level. Runes are left out:
+-- they need a blank rune in the hand
+function HealData.trainSpells(vocation)
+    return vocationSpells(vocation, function(spell)
+        return Spells.getPrimaryGroup(spell) ~= 1 and not spell.parameter and (spell.mana or 0) > 0
+            and spell.type ~= 'Conjure' and not spell.words:find('^ad')
+    end)
+end
+
 local curesCache = {}
 
 function HealData.curesFor(vocation)
