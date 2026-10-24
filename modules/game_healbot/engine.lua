@@ -157,8 +157,17 @@ local function pickSpell(player, cfg, hp, mp, t)
         end
     end
 
+    local train = support.train
+    local trainSpell = train.on and HealData.spell(train.spell)
+    local function training()
+        if trainSpell and mp >= train.below and spellReady(player, trainSpell, t) then
+            return cast(trainSpell, t)
+        end
+    end
+
+    -- training (utana vid in the temple) goes on in a protection zone too
     if hasState(player, PlayerStates.Pz) then
-        return
+        return training()
     end
 
     local haste = support.haste.on and HealData.spell(support.haste.spell)
@@ -172,6 +181,9 @@ local function pickSpell(player, cfg, hp, mp, t)
         and spellReady(player, shield, t) then
         return cast(shield, t)
     end
+
+    -- last: only mana nobody else needs goes to training
+    return training()
 end
 
 local function pickPotion(player, cfg, hp, mp, t)
