@@ -58,16 +58,31 @@ function newArtSet(base, path, label)
         end
     end
 
-    -- nil when the tile is off the known map
+    -- nil when the tile is off the known map. A picture that spills right
+    -- or down out of its sqm goes on a sqm further down and right (and is
+    -- moved back up and left by as much): the map draws its sqm from the
+    -- top left, and the ones after would paint over the spill.
     function set.place(name, position, duration)
         local entry = set.entries[name]
-        local tile = entry and g_map.getTile(position)
+        if not entry then
+            return nil
+        end
+        local spill = math.max(entry.width - entry.offsetX, entry.height - entry.offsetY) - 32
+        local shift = spill > 0 and math.ceil(spill / 32) or 0
+        local tile = shift > 0 and g_map.getTile({ x = position.x + shift, y = position.y + shift, z = position.z })
+        if not tile then
+            shift = 0
+            tile = g_map.getTile(position)
+        end
         if not tile then
             return nil
         end
         local effect = g_attachedEffects.getById(entry.id)
         if not effect then
             return nil
+        end
+        if shift > 0 then
+            effect:setOffset(entry.offsetX + shift * 32, entry.offsetY + shift * 32)
         end
         if duration then
             effect:setDuration(duration)
