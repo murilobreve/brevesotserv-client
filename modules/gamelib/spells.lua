@@ -250,6 +250,8 @@ SpellInfo = {
         ['Chuva de Juizo'] = { id = 303, name = 'Chuva de Juizo', words = 'exevo gran san vis', type = 'Instant', level = 110, mana = 400, soul = 0, maglevel = 0, icon = '', clientId = 191, group = { [1] = 2000 }, needTarget = false, parameter = false, range = 7, exhaustion = 20000, premium = false, vocations = {3, 7}, special = false, source = 0, },
         ['Muralha Glacial'] = { id = 304, name = 'Muralha Glacial', words = 'exevo frigo grav', type = 'Instant', level = 100, mana = 300, soul = 0, maglevel = 0, icon = '', clientId = 192, group = { [3] = 2000 }, needTarget = false, parameter = false, range = 6, exhaustion = 24000, premium = false, vocations = {2, 6}, special = false, source = 0, },
         ['Esfera do Vazio'] = { id = 305, name = 'Esfera do Vazio', words = 'exevo vis mort', type = 'Instant', level = 90, mana = 600, soul = 0, maglevel = 0, icon = '', clientId = 53, group = { [1] = 500 }, needTarget = false, parameter = false, range = 8, exhaustion = 16000, premium = false, vocations = {1, 5}, special = false, source = 0, },
+        ['Salto do Tita'] = { id = 306, name = 'Salto do Tita', words = 'exani gran ico', type = 'Instant', level = 90, mana = 200, soul = 0, maglevel = 0, icon = '', clientId = 24, group = { [1] = 1000 }, needTarget = false, parameter = false, range = 5, exhaustion = 18000, premium = false, vocations = {4, 8}, special = false, source = 0, },
+        ['Corte Sismico'] = { id = 307, name = 'Corte Sismico', words = 'exori tera ico', type = 'Instant', level = 100, mana = 250, soul = 0, maglevel = 0, icon = '', clientId = 21, group = { [1] = 500 }, needTarget = false, parameter = false, range = 7, exhaustion = 14000, premium = false, vocations = {4, 8}, special = false, source = 0, },
     }
 }
 
