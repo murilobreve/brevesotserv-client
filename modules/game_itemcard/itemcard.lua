@@ -70,6 +70,7 @@ local PT = {
     ['Requires'] = 'Requer',
     ['Imbuements'] = 'Imbuements',
     ['Weight'] = 'Peso',
+    ['Charges'] = 'Cargas',
     ['Level'] = 'Nível',
     ['Magic Level'] = 'Nível mágico',
     ['Premium'] = 'Premium',
@@ -327,13 +328,19 @@ local function fill(widget, data)
         details[#details + 1] = { t('Imbuements'), table.concat(data.imbuements, ', ') }
     end
     local lines = data.lines or {}
-    if #details > 0 or data.note or #lines > 0 or data.weight then
+    -- the charges as a detail, like the weight; the note only said them
+    local note = data.note
+    if tonumber(data.charges) then
+        details[#details + 1] = { t('Charges'), tostring(data.charges) }
+        note = nil
+    end
+    if #details > 0 or note or #lines > 0 or data.weight then
         addSection(widget, t('Details'))
         for _, detail in ipairs(details) do
             addStat(widget, detail[1], detail[2], detail[3])
         end
-        if data.note then
-            addLine(widget, data.note, INK)
+        if note then
+            addLine(widget, note, INK)
         end
         for _, line in ipairs(lines) do
             addLine(widget, line)
