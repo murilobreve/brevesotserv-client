@@ -6,11 +6,11 @@
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
--- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua)
--- instead of the Tibia effects.
+-- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua,
+-- leap.lua, beam.lua, spear.lua, kick.lua) instead of the Tibia effects.
 
 local OPCODE = 131
-local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step' }
+local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick' }
 
 local words = {}
 local originalTalk, originalTalkChannel
@@ -65,6 +65,14 @@ local function onOpcode(protocol, opcode, data)
         onCrackArt(data)
     elseif data.fx == 'step' then
         onStepArt(data)
+    elseif data.fx == 'leap' then
+        onLeapArt(data)
+    elseif data.fx == 'beam' then
+        onBeamArt(data)
+    elseif data.fx == 'spear' then
+        onSpearArt(data)
+    elseif data.fx == 'kick' then
+        onKickArt(data)
     elseif type(data.words) == 'table' then
         words = {}
         for _, spell in ipairs(data.words) do
@@ -86,6 +94,9 @@ function clearArt()
     clearShardArt()
     clearCrackArt()
     clearStepArt()
+    clearLeapArt()
+    clearBeamArt()
+    clearSpearArt()
 end
 
 local warmUpEvent
@@ -112,6 +123,10 @@ function init()
     registerShardArt()
     registerCrackArt()
     registerStepArt()
+    registerLeapArt()
+    registerBeamArt()
+    registerSpearArt()
+    registerKickArt()
     connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     -- every spell goes through one of these two: the action bar and hotkeys
@@ -144,6 +159,10 @@ function terminate()
     unregisterShardArt()
     unregisterCrackArt()
     unregisterStepArt()
+    unregisterLeapArt()
+    unregisterBeamArt()
+    unregisterSpearArt()
+    unregisterKickArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then
         g_game.talk = originalTalk
