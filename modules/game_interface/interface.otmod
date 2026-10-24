@@ -63,6 +63,7 @@ Module
     - game_huntboard
     - game_tplabels
     - game_healbot
+    - game_ascensao
     - game_hunttasks
     - game_mythosvip
     - game_tutorial
