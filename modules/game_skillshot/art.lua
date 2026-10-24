@@ -1,7 +1,8 @@
 -- The designer's art for the skillshots, drawn as effects attached to map
 -- tiles. Each spell (hook.lua, meteor.lua) makes a set of its images:
 --   set.add(name, size, offsetX, offsetY, duration, ground)
---     size      the 1x side in pixels (the files are 2x, sharp on a zoomed map)
+--     size      the 1x side in pixels, or { width, height } (the files are
+--               2x, sharp on a zoomed map)
 --     offset    puts the designer's anchor on the tile (pixels from the
 --               tile's top-left corner up and left)
 --     duration  of the animation, played once (nil: stays until taken off)
@@ -20,7 +21,8 @@ function newArtSet(base, path, label)
         set.count = set.count + 1
         set.entries[name] = {
             id = base + set.count,
-            size = size,
+            width = type(size) == 'table' and size[1] or size,
+            height = type(size) == 'table' and size[2] or size,
             offsetX = offsetX,
             offsetY = offsetY,
             duration = duration,
@@ -36,7 +38,7 @@ function newArtSet(base, path, label)
             g_textures.preload(path .. name, true)
             local effect = g_attachedEffects.registerByImage(entry.id, label .. ' ' .. name, path .. name, true)
             if effect then
-                effect:setSize({ width = entry.size, height = entry.size })
+                effect:setSize({ width = entry.width, height = entry.height })
                 if entry.offsetX ~= 0 or entry.offsetY ~= 0 then
                     effect:setOffset(entry.offsetX, entry.offsetY)
                 end

@@ -5,10 +5,11 @@
 -- nothing is sent and the spell goes the way the character faces.
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
--- moments to draw (hook.lua, meteor.lua, palm.lua) instead of the Tibia effects.
+-- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
+-- judgement.lua) instead of the Tibia effects.
 
 local OPCODE = 131
-local ART = { 'hook', 'meteor', 'palm' }
+local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement' }
 
 local words = {}
 local originalTalk, originalTalkChannel
@@ -47,6 +48,10 @@ local function onOpcode(protocol, opcode, data)
         onMeteorArt(data)
     elseif data.fx == 'palm' then
         onPalmArt(data)
+    elseif data.fx == 'arrow' then
+        onArrowArt(data)
+    elseif data.fx == 'judgement' then
+        onJudgementArt(data)
     elseif type(data.words) == 'table' then
         words = {}
         for _, spell in ipairs(data.words) do
@@ -60,6 +65,8 @@ function clearArt()
     clearHookArt()
     clearMeteorArt()
     clearPalmArt()
+    clearArrowArt()
+    clearJudgementArt()
 end
 
 local warmUpEvent
@@ -78,6 +85,8 @@ function init()
     registerHookArt()
     registerMeteorArt()
     registerPalmArt()
+    registerArrowArt()
+    registerJudgementArt()
     connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     -- every spell goes through one of these two: the action bar and hotkeys
@@ -102,6 +111,8 @@ function terminate()
     unregisterHookArt()
     unregisterMeteorArt()
     unregisterPalmArt()
+    unregisterArrowArt()
+    unregisterJudgementArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then
         g_game.talk = originalTalk
