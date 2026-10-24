@@ -52,10 +52,48 @@ local function updateButton()
     end
 end
 
+-- ---------------------------------------------------------------- art
+
+-- the designer's art (images/, from "Ascensao - artes v1"): the files are
+-- 2x, drawn at half size. A vocation whose art has not come yet keeps the
+-- numbers and no emblem or relic icon.
+local IMAGES = '/game_ascensao/images/'
+local ART_VOCATIONS = { druid = true, monk = true, paladin = true, sorcerer = true }
+
+-- the skillshot each path teaches, by its words (images/magias)
+local SKILL_ICONS = {
+    ['exori tera ico'] = 'corte', ['exani gran ico'] = 'salto', ['exori grip'] = 'gancho',
+    ['exori gran san vis'] = 'flecha', ['exevo gran san vis'] = 'juizo', ['exori con vis'] = 'lanca',
+    ['exevo gran vis'] = 'raio', ['exevo meteor'] = 'meteoro', ['exevo vis mort'] = 'esfera',
+    ['exori frigo vis'] = 'estilhaco', ['exevo frigo grav'] = 'muralha', ['exori tera vis'] = 'raizes',
+    ['exori sonic pug'] = 'palma', ['exori dra pug'] = 'chute', ['exani tera pug'] = 'passo',
+}
+
+local function vocationArt()
+    local slug = state and state.vocation and state.vocation:lower() or ''
+    return ART_VOCATIONS[slug] and slug or nil
+end
+
+-- what is not bought yet goes grey: the art has no grey version of its own
+local function setLocked(widget, locked)
+    widget:setImageColor(locked and '#6a6478' or '#ffffff')
+    widget:setOpacity(locked and 0.75 or 1)
+end
+
 -- ---------------------------------------------------------------- drawing
 
-local function fillCircle(widget, index, circle, owned, cost, soon)
+local function fillCircle(widget, index, circle, owned, cost, soon, pathId)
     local look = index <= owned and COLORS.owned or index == owned + 1 and COLORS.next or COLORS.locked
+    local slug = vocationArt()
+    widget.art:setVisible(slug ~= nil)
+    widget.number:setVisible(slug == nil)
+    if slug then
+        widget.art.icon:setImageSource(string.format('%s%s/circulo_%s_%s_%d', IMAGES, slug, slug, pathId, index))
+        setLocked(widget.art.icon, index > owned)
+        local frame = index <= owned and 'comprado' or index == owned + 1 and 'proximo' or 'bloqueado'
+        widget.art.frame:setImageSource(IMAGES .. 'moldura_' .. frame)
+        widget.name:setMarginLeft(8)
+    end
     widget.number:setText(tostring(index))
     widget.number:setColor(look.number)
     widget.number:setBackgroundColor(look.numberBg)
@@ -75,15 +113,30 @@ local function drawPath(path)
     local widget = g_ui.createWidget('AscensaoPath', window.paths)
     widget:setText(path.name .. '  -  ' .. path.kind)
     local owned = path.owned or 0
-    widget.skillshot:setText(string.format('Ensina %s (%s)', path.skillshot, path.words))
-    if owned > 0 then
-        widget.power:setText(string.format('Aprendida. For\231a: %d%%', path.power))
+    widget.skillshot:setText(path.skillshot)
+    widget.words:setText(path.words)
+    -- the seal: the skillshot's icon, a segment lit per circle, all of it
+    -- with the relic
+    local skill = SKILL_ICONS[path.words]
+    if skill then
+        widget.seal.icon:setImageSource(IMAGES .. 'magias/' .. skill)
+        setLocked(widget.seal.icon, owned == 0)
+    end
+    widget.seal.ring:setImageSource(IMAGES .. (state.relic ~= '' and owned >= #path.circles and 'selo_reliquia' or ('selo_' .. owned)))
+    local slug = vocationArt()
+    if slug then
+        widget.emblem:setImageSource(string.format('%s%s/emblema_%s_%s', IMAGES, slug, slug, path.id))
     else
-        widget.power:setText('O 1\186 c\237rculo ensina a magia.')
+        widget.emblem:hide()
+    end
+    if owned > 0 then
+        widget.power:setText(string.format('For\231a %d%%', path.power))
+    else
+        widget.power:setText('Aprende no 1\186 c\237rculo')
     end
     for index, circle in ipairs(path.circles) do
         local row = g_ui.createWidget('AscensaoCircle', widget.circles)
-        fillCircle(row, index, circle, owned, state.circleCost[index] or 0, circle.soon)
+        fillCircle(row, index, circle, owned, state.circleCost[index] or 0, circle.soon, path.id)
     end
     local button = widget.buy
     if owned >= #path.circles then
@@ -102,6 +155,14 @@ end
 local function drawRelic(relic)
     local widget = g_ui.createWidget('AscensaoRelic', window.relicBox.relics)
     widget.name:setText(relic.name)
+    local slug = vocationArt()
+    if slug then
+        widget.icon:setImageSource(string.format('%s%s/reliquia_%s_%s', IMAGES, slug, slug, relic.id))
+        setLocked(widget.icon, state.relic ~= relic.id)
+    else
+        widget.icon:hide()
+        widget.name:setMarginLeft(0)
+    end
     local desc = relic.desc
     if relic.soon then
         desc = desc .. ' ' .. '(efeito em breve)'

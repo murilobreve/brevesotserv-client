@@ -2,7 +2,8 @@
 // circles and the skillshot it teaches; the relics under them. Built from
 // the Breves window parts (50-breves.otui).
 
-// one circle of a path: its number, name, effect and cost
+// one circle of a path: its icon in the frame of its state (or its number,
+// for a vocation whose art has not come yet), name, effect and cost
 AscensaoCircle < UIWidget
   height: 66
   border-width: 1
@@ -10,6 +11,25 @@ AscensaoCircle < UIWidget
   background-color: #0000002a
   padding: 4 6 4 6
   phantom: true
+
+  UIWidget
+    id: art
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 2
+    size: 40 40
+    phantom: true
+
+    UIWidget
+      id: icon
+      anchors.centerIn: parent
+      size: 32 32
+      phantom: true
+
+    UIWidget
+      id: frame
+      anchors.fill: parent
+      phantom: true
 
   Label
     id: number
@@ -27,7 +47,7 @@ AscensaoCircle < UIWidget
   Label
     id: name
     anchors.top: parent.top
-    anchors.left: number.right
+    anchors.left: art.right
     anchors.right: cost.left
     margin-left: 6
     height: 16
@@ -57,32 +77,70 @@ AscensaoCircle < UIWidget
     color: #9d93b0
     phantom: true
 
-// one path: the skillshot it teaches, its circles and the buy button
+// one path: the skillshot it teaches in its seal (a segment lit per
+// circle), the path's emblem, its circles and the buy button
 AscensaoPath < BrevesSection
   width: 282
   padding: 26 8 8 8
 
+  UIWidget
+    id: seal
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 72 72
+    phantom: true
+
+    UIWidget
+      id: icon
+      anchors.centerIn: parent
+      size: 46 46
+      phantom: true
+
+    UIWidget
+      id: ring
+      anchors.fill: parent
+      phantom: true
+
+  UIWidget
+    id: emblem
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin-top: 12
+    size: 48 48
+    phantom: true
+
   Label
     id: skillshot
     anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.right: parent.right
+    anchors.left: seal.right
+    anchors.right: emblem.left
+    margin-top: 12
+    margin-left: 6
     height: 16
     font: verdana-11px-rounded
     color: #f3dcae
 
   Label
-    id: power
+    id: words
     anchors.top: skillshot.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
+    anchors.left: skillshot.left
+    anchors.right: emblem.left
+    height: 15
+    font: verdana-11px-monochrome
+    color: #cbc0e0
+
+  Label
+    id: power
+    anchors.top: words.bottom
+    anchors.left: skillshot.left
+    anchors.right: emblem.left
     height: 16
     font: verdana-11px-monochrome
     color: #9789b3
 
   UIWidget
     id: circles
-    anchors.top: power.bottom
+    anchors.top: seal.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: buy.top
@@ -108,11 +166,18 @@ AscensaoRelic < UIWidget
   background-color: #0000002a
   padding: 5 8 5 8
 
+  UIWidget
+    id: icon
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 48 48
+
   Label
     id: name
     anchors.top: parent.top
-    anchors.left: parent.left
+    anchors.left: icon.right
     anchors.right: parent.right
+    margin-left: 6
     height: 16
     font: verdana-11px-rounded
     color: #cbc0e0
@@ -120,7 +185,7 @@ AscensaoRelic < UIWidget
   Label
     id: desc
     anchors.top: name.bottom
-    anchors.left: parent.left
+    anchors.left: name.left
     anchors.right: parent.right
     anchors.bottom: action.top
     margin-bottom: 3
@@ -137,7 +202,7 @@ AscensaoRelic < UIWidget
 
 MythosWindow
   id: ascensaoWindow
-  size: 900 700
+  size: 900 740
   @onEscape: modules.game_ascensao.hide()
 
   Label
@@ -181,7 +246,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 8
-    height: 450
+    height: 490
     layout:
       type: horizontalBox
       spacing: 9
