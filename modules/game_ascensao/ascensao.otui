@@ -138,6 +138,16 @@ AscensaoPath < BrevesSection
     font: verdana-11px-monochrome
     color: #9789b3
 
+  // over the seal and the spell's name: the mouse on it shows the preview
+  UIWidget
+    id: previewArea
+    anchors.top: seal.top
+    anchors.left: seal.left
+    anchors.right: emblem.left
+    anchors.bottom: seal.bottom
+    change-cursor-image: true
+    cursor: pointer
+
   UIWidget
     id: circles
     anchors.top: seal.bottom
@@ -199,6 +209,34 @@ AscensaoRelic < UIWidget
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     height: 20
+
+// the spell in action (the designer's preview), floating under the seal
+AscensaoPreview < UIWidget
+  size: 304 190
+  image-source: /images/mythos/panel
+  image-border: 4
+  padding: 8
+  phantom: true
+  focusable: false
+
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 14
+    font: verdana-11px-rounded
+    color: #f3dcae
+    phantom: true
+
+  UIWidget
+    id: movie
+    anchors.top: title.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 4
+    size: 288 162
+    image-fixed-ratio: true
+    phantom: true
 
 MythosWindow
   id: ascensaoWindow

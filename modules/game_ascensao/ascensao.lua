@@ -69,6 +69,35 @@ local SKILL_ICONS = {
     ['exori sonic pug'] = 'palma', ['exori dra pug'] = 'chute', ['exani tera pug'] = 'passo',
 }
 
+-- the spell in action under the mouse: the designer's preview (images/previas)
+local preview
+
+local function hidePreview()
+    if preview then
+        preview:destroy()
+        preview = nil
+    end
+end
+
+local function showPreview(anchor, skill, label)
+    hidePreview()
+    local path = IMAGES .. 'previas/' .. skill
+    if not g_resources.fileExists(path .. '.png') then
+        return
+    end
+    preview = g_ui.createWidget('AscensaoPreview', rootWidget)
+    preview.title:setText(label)
+    preview.movie:setImageSource(path)
+    local pos = anchor:getPosition()
+    local x = math.min(pos.x, rootWidget:getWidth() - preview:getWidth() - 4)
+    local y = pos.y + anchor:getHeight() + 4
+    if y + preview:getHeight() > rootWidget:getHeight() then
+        y = pos.y - preview:getHeight() - 4
+    end
+    preview:setPosition({ x = x, y = y })
+    preview:raise()
+end
+
 local function vocationArt()
     local slug = state and state.vocation and state.vocation:lower() or ''
     return ART_VOCATIONS[slug] and slug or nil
@@ -121,6 +150,13 @@ local function drawPath(path)
     if skill then
         widget.seal.icon:setImageSource(IMAGES .. 'magias/' .. skill)
         setLocked(widget.seal.icon, owned == 0)
+        widget.previewArea.onHoverChange = function(self, hovered)
+            if hovered then
+                showPreview(self, skill, path.skillshot .. '  -  ' .. path.words)
+            else
+                hidePreview()
+            end
+        end
     end
     widget.seal.ring:setImageSource(IMAGES .. (state.relic ~= '' and owned >= #path.circles and 'selo_reliquia' or ('selo_' .. owned)))
     local slug = vocationArt()
@@ -196,6 +232,7 @@ local function refresh()
     if not window or not state then
         return
     end
+    hidePreview()
     window.paths:destroyChildren()
     window.relicBox.relics:destroyChildren()
     if not state.supported then
@@ -236,6 +273,7 @@ end
 
 function hide()
     closeConfirm()
+    hidePreview()
     if window then
         window:hide()
     end
