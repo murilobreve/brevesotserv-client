@@ -257,6 +257,8 @@ SpellInfo = {
         ['Estilhaco de Gelo'] = { id = 310, name = 'Estilhaco de Gelo', words = 'exori frigo vis', type = 'Instant', level = 50, mana = 220, soul = 0, maglevel = 0, icon = '', clientId = 195, group = { [1] = 500 }, needTarget = false, parameter = false, range = 8, exhaustion = 12000, premium = false, vocations = {2, 6}, special = false, source = 0, },
         ['Chute do Dragao'] = { id = 311, name = 'Chute do Dragao', words = 'exori dra pug', type = 'Instant', level = 50, mana = 90, soul = 0, maglevel = 0, icon = '', clientId = 201, group = { [1] = 1000 }, needTarget = false, parameter = false, range = 1, exhaustion = 8000, premium = false, vocations = {9, 10}, special = false, source = 0, },
         ['Passo Fantasma'] = { id = 312, name = 'Passo Fantasma', words = 'exani tera pug', type = 'Instant', level = 50, mana = 60, soul = 0, maglevel = 0, icon = '', clientId = 197, group = { [1] = 800 }, needTarget = false, parameter = false, range = 4, exhaustion = 800, premium = false, vocations = {9, 10}, special = false, source = 0, },
+        -- Ascensão, 3rd circle of the Arcanist path (data-otservbr-global/scripts/ascensao)
+        ['Translocacao'] = { id = 313, name = 'Translocacao', words = 'exani vis', type = 'Instant', level = 50, mana = 100, soul = 0, maglevel = 0, icon = '', clientId = 124, group = { [3] = 1000 }, needTarget = false, parameter = false, range = 3, exhaustion = 8000, premium = true, vocations = {1, 5}, special = false, source = 0, },
     }
 }
 
