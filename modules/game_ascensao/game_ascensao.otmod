@@ -1,0 +1,8 @@
+Module
+  name: game_ascensao
+  description: Ascensao - the talent tree that teaches the aimed spells
+  author: Mythos
+  sandboxed: true
+  scripts: [ ascensao ]
+  @onLoad: init()
+  @onUnload: terminate()

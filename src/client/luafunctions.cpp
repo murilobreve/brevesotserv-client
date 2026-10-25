@@ -679,6 +679,7 @@ void Client::registerLuaFunctions()
     g_lua.registerClassMemberFunction(stdext::demangle_class<Creature>(), "getNameShader",
         luabinder::bind_fun([](const std::shared_ptr<Creature>& obj) { return obj->getNameShader(); }));
     g_lua.bindClassMemberFunction<Creature>("setDrawOutfitColor", &Creature::setDrawOutfitColor);
+    g_lua.bindClassMemberFunction<Creature>("setDrawable", &Creature::setDrawable);
     g_lua.bindClassMemberFunction<Creature>("setDisableWalkAnimation", &Creature::setDisableWalkAnimation);
     g_lua.bindClassMemberFunction<Creature>("isDisabledWalkAnimation", &Creature::isDisabledWalkAnimation);
     g_lua.bindClassMemberFunction<Creature>("isTimedSquareVisible", &Creature::isTimedSquareVisible);

@@ -1,0 +1,315 @@
+// Ascensão: the talent tree. Three paths side by side, each with its five
+// circles and the skillshot it teaches; the relics under them. Built from
+// the Breves window parts (50-breves.otui).
+
+// one circle of a path: its icon in the frame of its state (or its number,
+// for a vocation whose art has not come yet), name, effect and cost
+AscensaoCircle < UIWidget
+  height: 66
+  border-width: 1
+  border-color: #3a3346
+  background-color: #0000002a
+  padding: 4 6 4 6
+  phantom: true
+
+  UIWidget
+    id: art
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 2
+    size: 40 40
+    phantom: true
+
+    UIWidget
+      id: icon
+      anchors.centerIn: parent
+      size: 32 32
+      phantom: true
+
+    UIWidget
+      id: frame
+      anchors.fill: parent
+      phantom: true
+
+  Label
+    id: number
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 18 18
+    text-align: center
+    font: verdana-11px-rounded
+    color: #8a7d5c
+    border-width: 1
+    border-color: #514553
+    background-color: #00000060
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: art.right
+    anchors.right: cost.left
+    margin-left: 6
+    height: 16
+    font: verdana-11px-rounded
+    color: #cbc0e0
+    phantom: true
+
+  Label
+    id: cost
+    anchors.top: parent.top
+    anchors.right: parent.right
+    width: 50
+    height: 16
+    text-align: right
+    font: verdana-11px-monochrome
+    color: #9789b3
+    phantom: true
+
+  Label
+    id: desc
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    text-wrap: true
+    font: verdana-11px-monochrome
+    color: #9d93b0
+    phantom: true
+
+// one path: the skillshot it teaches in its seal (a segment lit per
+// circle), the path's emblem, its circles and the buy button
+AscensaoPath < BrevesSection
+  width: 282
+  padding: 26 8 8 8
+
+  UIWidget
+    id: seal
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 72 72
+    phantom: true
+
+    UIWidget
+      id: icon
+      anchors.centerIn: parent
+      size: 46 46
+      phantom: true
+
+    UIWidget
+      id: ring
+      anchors.fill: parent
+      phantom: true
+
+  UIWidget
+    id: emblem
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin-top: 12
+    size: 48 48
+    phantom: true
+
+  Label
+    id: skillshot
+    anchors.top: parent.top
+    anchors.left: seal.right
+    anchors.right: emblem.left
+    margin-top: 12
+    margin-left: 6
+    height: 16
+    font: verdana-11px-rounded
+    color: #f3dcae
+
+  Label
+    id: words
+    anchors.top: skillshot.bottom
+    anchors.left: skillshot.left
+    anchors.right: emblem.left
+    height: 15
+    font: verdana-11px-monochrome
+    color: #cbc0e0
+
+  Label
+    id: power
+    anchors.top: words.bottom
+    anchors.left: skillshot.left
+    anchors.right: emblem.left
+    height: 16
+    font: verdana-11px-monochrome
+    color: #9789b3
+
+  // over the seal and the spell's name: the mouse on it shows the preview
+  UIWidget
+    id: previewArea
+    anchors.top: seal.top
+    anchors.left: seal.left
+    anchors.right: emblem.left
+    anchors.bottom: seal.bottom
+    change-cursor-image: true
+    cursor: pointer
+
+  UIWidget
+    id: circles
+    anchors.top: seal.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: buy.top
+    margin-top: 4
+    margin-bottom: 6
+    layout:
+      type: verticalBox
+      spacing: 4
+
+  MythosPrimaryButton
+    id: buy
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 24
+
+// one relic: its name, effect and the button to awaken it
+AscensaoRelic < UIWidget
+  width: 282
+  height: 82
+  border-width: 1
+  border-color: #3a3346
+  background-color: #0000002a
+  padding: 5 8 5 8
+
+  UIWidget
+    id: icon
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 48 48
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: icon.right
+    anchors.right: parent.right
+    margin-left: 6
+    height: 16
+    font: verdana-11px-rounded
+    color: #cbc0e0
+
+  Label
+    id: desc
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: parent.right
+    anchors.bottom: action.top
+    margin-bottom: 3
+    text-wrap: true
+    font: verdana-11px-monochrome
+    color: #9d93b0
+
+  MythosButton
+    id: action
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 20
+
+// the spell in action (the designer's preview), floating under the seal
+AscensaoPreview < UIWidget
+  size: 304 190
+  image-source: /images/mythos/panel
+  image-border: 4
+  padding: 8
+  phantom: true
+  focusable: false
+
+  Label
+    id: title
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 14
+    font: verdana-11px-rounded
+    color: #f3dcae
+    phantom: true
+
+  UIWidget
+    id: movie
+    anchors.top: title.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 4
+    size: 288 162
+    image-fixed-ratio: true
+    phantom: true
+
+MythosWindow
+  id: ascensaoWindow
+  size: 900 740
+  @onEscape: modules.game_ascensao.hide()
+
+  Label
+    id: titleLabel
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: resetButton.left
+    height: 18
+    font: verdana-11px-rounded
+    color: #f3dcae
+
+  Label
+    id: points
+    anchors.top: titleLabel.bottom
+    anchors.left: parent.left
+    anchors.right: resetButton.left
+    height: 16
+    font: verdana-11px-antialised
+    color: #d1ccd9
+
+  MythosButton
+    id: resetButton
+    anchors.top: parent.top
+    anchors.right: closeButton.left
+    margin-right: 6
+    size: 110 22
+    text: Reset
+    @onClick: modules.game_ascensao.askReset()
+
+  MythosButton
+    id: closeButton
+    anchors.top: parent.top
+    anchors.right: parent.right
+    size: 70 22
+    text: Fechar
+    @onClick: modules.game_ascensao.hide()
+
+  UIWidget
+    id: paths
+    anchors.top: points.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 490
+    layout:
+      type: horizontalBox
+      spacing: 9
+
+  BrevesSection
+    id: relicBox
+    anchors.top: paths.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: message.top
+    margin-top: 8
+    margin-bottom: 4
+
+    UIWidget
+      id: relics
+      anchors.fill: parent
+      layout:
+        type: horizontalBox
+        spacing: 9
+
+  Label
+    id: message
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 16
+    font: verdana-11px-antialised
+    color: #b4afc3

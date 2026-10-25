@@ -66,6 +66,9 @@ public:
 
     bool isCommon() { return !isGround() && !isGroundBorder() && !isOnTop() && !isCreature() && !isOnBottom(); }
     void canDraw(const bool canDraw) { m_canDraw = canDraw; }
+    // off while a skillshot carries the creature out of view (Salto do Tita)
+    void setDrawable(const bool drawable) { m_canDraw = drawable; }
+    bool isDrawable() const { return m_canDraw; }
 
     Animator* getAnimator() const;
     Animator* getIdleAnimator() const;
