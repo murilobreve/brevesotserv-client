@@ -40,6 +40,9 @@ local FEATURES = {
       news = 'Interface settings, such as where the look, loot and warning messages show on the game screen.' },
     { id = 'wiki', group = 'tools', label = 'Wiki', icon = 'wiki',
       news = 'Rare monsters, rarity items and every bonus explained, with the real numbers from the server.' },
+    -- only when the game runs in a browser
+    { id = 'fullscreen', group = 'tools', label = 'Fullscreen', short = 'Tela', icon = 'fullscreen', browserOnly = true,
+      news = 'Plays in full screen (also F11 or Ctrl+Shift+F). In full screen the browser leaves the game keys alone: Ctrl+N, Ctrl+W, Esc and the others reach the game.' },
 }
 
 -- the four sections, top to bottom; the VIP row sits above them on its own
@@ -508,15 +511,17 @@ function showNews()
     end
     newsWindow = g_ui.createWidget('BrevesNewsWindow', rootWidget)
     for _, feature in ipairs(FEATURES) do
-        local row = g_ui.createWidget('BrevesNewsRow', newsWindow.rows)
-        row.icon:setImageSource(iconPath(feature.icon))
-        row.name:setText(tr(feature.label))
-        row.text:setText(tr(feature.news))
-        row.open.onClick = function()
-            hideNews()
-            open(feature.id)
+        if not feature.browserOnly or g_platform.isBrowser() then
+            local row = g_ui.createWidget('BrevesNewsRow', newsWindow.rows)
+            row.icon:setImageSource(iconPath(feature.icon))
+            row.name:setText(tr(feature.label))
+            row.text:setText(tr(feature.news))
+            row.open.onClick = function()
+                hideNews()
+                open(feature.id)
+            end
+            row.open:setEnabled(callbacks[feature.id] ~= nil)
         end
-        row.open:setEnabled(callbacks[feature.id] ~= nil)
     end
     newsWindow:raise()
     newsWindow:focus()
@@ -598,10 +603,18 @@ local function placeBar()
     return true
 end
 
+-- the browser's full screen: the game keys stop being the browser's
+local function toggleFullscreen()
+    g_window.setFullscreen(not g_window.isFullscreen())
+end
+
 local function onGameStart()
     -- another character: its rows measure afresh
     widest = {}
     placeBar()
+    if g_platform.isBrowser() then
+        addFeature('fullscreen', toggleFullscreen)
+    end
     -- open on every login, whatever it was when the player left
     setCollapsed(false)
     resize()
