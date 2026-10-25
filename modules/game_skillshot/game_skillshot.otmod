@@ -1,0 +1,9 @@
+Module
+  name: game_skillshot
+  description: Skillshots - spells aimed at the tile under the mouse
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ art, hook, meteor, palm, arrow, judgement, wall, orb, seed, shard, crack, step, leap, beam, spear, kick, skillshot ]
+  @onLoad: init()
+  @onUnload: terminate()

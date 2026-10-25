@@ -58,10 +58,12 @@ Module
     - game_itemcard
     - game_feedback
     - game_partyminimap
+    - game_skillshot
     - game_wiki
     - game_huntboard
     - game_tplabels
     - game_healbot
+    - game_ascensao
     - game_hunttasks
     - game_mythosvip
     - game_tutorial
