@@ -8,9 +8,14 @@
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
 -- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua,
 -- leap.lua, beam.lua, spear.lua, kick.lua) instead of the Tibia effects.
+-- The same way it draws the boss spells of the risen monsters (rare.lua,
+-- fx "rare_<tier>", scripts/rarity/spells.lua).
 
 local OPCODE = 131
 local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick' }
+for _, fx in ipairs(rareArtNames()) do
+    table.insert(ART, fx)
+end
 
 local words = {}
 local originalTalk, originalTalkChannel
@@ -73,6 +78,8 @@ local function onOpcode(protocol, opcode, data)
         onSpearArt(data)
     elseif data.fx == 'kick' then
         onKickArt(data)
+    elseif isRareArt(data.fx) then
+        onRareArt(data)
     elseif type(data.words) == 'table' then
         words = {}
         for _, spell in ipairs(data.words) do
@@ -97,6 +104,7 @@ function clearArt()
     clearLeapArt()
     clearBeamArt()
     clearSpearArt()
+    clearRareArt()
 end
 
 local warmUpEvent
@@ -127,6 +135,7 @@ function init()
     registerBeamArt()
     registerSpearArt()
     registerKickArt()
+    registerRareArt()
     connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     -- every spell goes through one of these two: the action bar and hotkeys
@@ -163,6 +172,7 @@ function terminate()
     unregisterBeamArt()
     unregisterSpearArt()
     unregisterKickArt()
+    unregisterRareArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then
         g_game.talk = originalTalk
