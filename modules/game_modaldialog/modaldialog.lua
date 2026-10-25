@@ -34,9 +34,11 @@ function controllerModal:onGameEnd()
     destroyWindow()
 end
 
-local function createButtonHandler(id, buttonId, choiceList)
+-- a passive window (the anti-bot check) only sends the choice the player
+-- clicked: its list starts with no line picked
+local function createButtonHandler(id, buttonId, choiceList, passive)
     return function()
-        local focusedChoice = choiceList and choiceList:getFocusedChild()
+        local focusedChoice = not passive and choiceList and choiceList:getFocusedChild()
         local choice = (choiceList and choiceList.selectedChoice) or (focusedChoice and focusedChoice.choiceId) or 0xFF
         g_game.answerModalDialog(id, buttonId, choice)
         destroyWindow()
@@ -182,14 +184,18 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
     -- top-right corner of the game screen and is answered with the mouse.
     local passive = title == 'Anti-bot'
     ui:hide()
-    if not passive then
+    if passive then
+        -- a new window takes the focus: give it back, so Enter and Esc keep
+        -- going to the chat and the game instead of answering it
+        ui:setFocusable(false)
+    else
         ui:grabKeyboard()
     end
     local messageLabel = controllerModal:findWidget('#messageLabel')
     local choiceList = controllerModal:findWidget('#choiceList')
     local buttonsPanel = controllerModal:findWidget('#buttonsPanel')
-    local enterFunc = createButtonHandler(id, enterButton, choiceList)
-    local escapeFunc = createButtonHandler(id, escapeButton, choiceList)
+    local enterFunc = createButtonHandler(id, enterButton, choiceList, passive)
+    local escapeFunc = createButtonHandler(id, escapeButton, choiceList, passive)
     local confirmKeysEnabledAt = g_clock.millis() + 180
     local firstChoiceWidget = nil
     ui:setTitle(title)
@@ -228,6 +234,10 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
                 end
             end
         end
+        if passive then
+            -- the list focuses its last line by itself, which looks picked
+            choiceList:focusChild(nil)
+        end
     else
         choiceList:setVisible(false)
     end
@@ -238,12 +248,12 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
         local button = controllerModal:createWidgetFromHTML(buttonHtml, buttonsPanel)
 
         if button then
-            button.onClick = createButtonHandler(id, buttonId, choiceList)
+            button.onClick = createButtonHandler(id, buttonId, choiceList, passive)
             buttonsWidth = buttonsWidth + button:getWidth() + button:getMarginLeft() + button:getMarginRight()
         end
     end
     ui.onKeyDown = function(_, keyCode, keyboardModifiers)
-        if keyboardModifiers ~= KeyboardNoModifier then
+        if passive or keyboardModifiers ~= KeyboardNoModifier then
             return false
         end
 
