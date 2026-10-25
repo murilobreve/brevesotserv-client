@@ -391,6 +391,15 @@ function ActionBarController:onGameStart()
     hotkeyItemList = {}
     spellGroupPressed = {}
     spellGroupCooldownCache = {}
+    -- Mythos: the vocation's own hotkey set; the vocation can come a moment
+    -- after the game starts
+    if not useVocationHotkeySet() then
+        ActionBarController:scheduleEvent(function()
+            if useVocationHotkeySet() then
+                selectHotkeySet(ApiJson.getCurrentHotkeySetName())
+            end
+        end, 1000, "vocation_hotkey_set")
+    end
     for i = 1, #actionBars do
         setupActionBar(i)
     end
