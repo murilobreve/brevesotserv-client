@@ -24,6 +24,7 @@ locale = {
     ["The XP and loot rate of every monster changes every 2 hours. See the hottest hunts before you go."] = "A XP e o loot de cada monstro mudam a cada 2 horas. Veja as hunts mais quentes antes de sair.",
     ["Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins."] = "Quem mais mata monstros e quem mais faz XP na hora, no dia e no mês. Os primeiros ganham Mythos Coins.",
     ["Rare monsters, rarity items and every bonus explained, with the real numbers from the server."] = "Monstros raros, itens raros e todos os bônus explicados, com os números reais do servidor.",
+    ["Plays in full screen (also F11 or Ctrl+Shift+F). In full screen the browser leaves the game keys alone: Ctrl+N, Ctrl+W, Esc and the others reach the game."] = "Joga em tela cheia (também com F11 ou Ctrl+Shift+F). Em tela cheia o navegador deixa as teclas para o jogo: Ctrl+N, Ctrl+W, Esc e as outras chegam ao jogo.",
     ["Buy and sell the rarity items that drop from monsters, paid with the gold in your bank."] = "Compre e venda os itens de raridade que caem dos monstros, pagando com o gold do banco.",
     ["Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules."] = "Cura com magias e potions sozinho, cura os amigos e mantém os buffs. Você escolhe as regras.",
     ["XP and loot rate of every monster"] = "XP e loot de cada monstro",

@@ -260,7 +260,7 @@
         <div class="bar"><i id="progress"></i></div>
         <div id="status">Carregando...</div>
         <button id="start" type="button" onclick="startGame()">Jogar</button>
-        <p class="foot">A primeira vez baixa cerca de 270 MB; depois abre na hora.<br /><a href="/">Voltar ao site</a></p>
+        <p class="foot">A primeira vez baixa cerca de 270 MB; depois abre na hora.<br />F11 ou o bot&atilde;o Tela cheia, na barra do jogo: tela cheia, com os atalhos livres para o jogo.<br /><a href="/">Voltar ao site</a></p>
       </main>
     </div>
     <div id="crash" role="alert" hidden>
@@ -440,6 +440,25 @@
           startGame();
         }
       });
+      // full screen, from F11 or the game's own button (Tela cheia, on the
+      // Mythos bar): there Chrome and Edge leave the game its keys, Ctrl+N,
+      // Ctrl+W, Ctrl+T, Esc... (holding Esc leaves full screen)
+      function toggleFullscreen() {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(function () {});
+        } else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        }
+      }
+      document.addEventListener("fullscreenchange", function () {
+        var keyboard = navigator.keyboard;
+        if (!keyboard || !keyboard.lock) return;
+        if (document.fullscreenElement) {
+          keyboard.lock().catch(function () {});
+        } else {
+          keyboard.unlock();
+        }
+      });
       function startGame() {
         var splash = document.getElementById("splash");
         if (splash.classList.contains("leaving")) return;
@@ -476,6 +495,12 @@
         document.addEventListener("keydown", function (ev) {
           // the game stopped: the keys are the browser's again (F5 reloads)
           if (window.mythosStopped) return;
+          if (ev.key === "F11") {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (!ev.repeat) toggleFullscreen();
+            return;
+          }
           if (
             !ev.ctrlKey &&
             ev.key !== "Enter" &&

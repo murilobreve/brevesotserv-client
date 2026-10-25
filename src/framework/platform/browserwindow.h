@@ -68,6 +68,8 @@ public:
     void handleMouseMotionCallback(const EmscriptenMouseEvent* event);
     void handleKeyboardCallback(int eventType, const EmscriptenKeyboardEvent* event);
     void handleFocusCallback(int eventType, const EmscriptenFocusEvent* event);
+    // the page enters or leaves full screen by itself too (F11, Esc)
+    void handleFullscreenChange(bool fullscreen) { m_fullscreen = fullscreen; }
     void handleTouchCallback(int eventType, const EmscriptenTouchEvent* event);
     void updateTouchPosition(const EmscriptenTouchEvent* event);
     void processLongTouch(const EmscriptenTouchEvent* event);
