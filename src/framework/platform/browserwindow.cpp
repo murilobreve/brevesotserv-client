@@ -156,6 +156,7 @@ void BrowserWindow::terminate() {
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, nullptr);
     emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, nullptr);
     emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, nullptr);
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, EM_TRUE, nullptr);
     emscripten_set_touchend_callback("#canvas", this, EM_TRUE, nullptr);
     emscripten_set_touchstart_callback("#canvas", this, EM_TRUE, nullptr);
     emscripten_set_touchmove_callback("#canvas", this, EM_TRUE, nullptr);
@@ -233,6 +234,10 @@ void BrowserWindow::poll() {
         emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, ([](int eventType, const EmscriptenFocusEvent* event, void* userData) -> EM_BOOL {
             static_cast<BrowserWindow*>(userData)->handleFocusCallback(eventType, event);
             return EM_TRUE;
+        }));
+        emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, EM_TRUE, ([](int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData) -> EM_BOOL {
+            static_cast<BrowserWindow*>(userData)->handleFullscreenChange(event->isFullscreen);
+            return EM_FALSE;
         }));
         emscripten_set_touchend_callback("#canvas", this, EM_TRUE, ([](int eventType, const EmscriptenTouchEvent* event, void* userData) -> EM_BOOL {
             static_cast<BrowserWindow*>(userData)->handleTouchCallback(eventType, event);
