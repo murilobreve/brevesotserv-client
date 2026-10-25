@@ -134,6 +134,12 @@ local function getCurrentPrice(itemPtr)
 	if not itemPtr then
 		return 0
 	end
+
+	-- Mythos: what the NPCs on this server's map charge for it
+	local serverPrice = serverSupplyPrice(itemPtr:getId())
+	if serverPrice then
+		return serverPrice
+	end
 	
 	-- Try to get price from Cyclopedia module if available (respects user preference)
 	if Cyclopedia and Cyclopedia.Items and Cyclopedia.Items.getCurrentItemValue then
