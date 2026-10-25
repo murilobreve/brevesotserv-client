@@ -451,6 +451,42 @@ local function addPendingMultiButton(button)
     end
 end
 
+-- What a spell button must show: the longest of the spell's own wait and the
+-- waits of its groups, from what the server sent. The server sends a shorter
+-- wait when something cuts one short (the Ascensão gives a cooldown back, a
+-- UE takes seconds off the next one), so a button can go down as well as up.
+local function spellWaitLeft(spellData)
+    local now = g_clock.millis()
+    local left = 0
+    local own = spellCooldownCache[spellData.id]
+    if own then
+        left = math.max(left, own.startTime + own.exhaustion - now)
+    end
+    for groupId in pairs(spellData.group or {}) do
+        local wait = spellGroupCooldownCache[groupId]
+        if wait then
+            left = math.max(left, wait.startTime + wait.exhaustion - now)
+        end
+    end
+    return left
+end
+
+local function showSpellWait(button, spellData)
+    local left = spellWaitLeft(spellData)
+    if button.cache.removeCooldownEvent then
+        removeEvent(button.cache.removeCooldownEvent)
+        button.cache.removeCooldownEvent = nil
+    end
+    if left <= 0 then
+        removeCooldown(button)
+        return
+    end
+    updateCooldown(button, left)
+    button.cache.removeCooldownEvent = scheduleEvent(function()
+        removeCooldown(button)
+    end, left)
+end
+
 function onSpellCooldown(spellId, delay)
     local showProgress = modules.client_options.getOption("graphicalCooldown")
     local showTime = modules.client_options.getOption("cooldownSecond")
@@ -474,7 +510,7 @@ function onSpellCooldown(spellId, delay)
                         if spellData and spellData.id == spellId then
                             addPendingMultiButton(button)
                             if scheduleMultiActionCooldownEvent then
-                                local effectiveDelay = math.max(delay, spellData.exhaustion or 0)
+                                local effectiveDelay = delay -- the server's wait, with every reduction already in it
                                 scheduleMultiActionCooldownEvent(button, "spell_" .. spellId, effectiveDelay)
                             end
                             break
@@ -484,7 +520,7 @@ function onSpellCooldown(spellId, delay)
                         if runeSpellData and runeSpellData.id == spellId then
                             addPendingMultiButton(button)
                             if scheduleMultiActionCooldownEvent then
-                                local effectiveDelay = math.max(delay, runeSpellData.exhaustion or 0)
+                                local effectiveDelay = delay -- the server's wait, with every reduction already in it
                                 scheduleMultiActionCooldownEvent(button, "rune_" .. spellId, effectiveDelay)
                             end
                             break
@@ -502,18 +538,20 @@ function onSpellCooldown(spellId, delay)
                     shouldUpdate = false
                 elseif not cache.isRuneSpell and cache.spellID ~= spellId then
                     shouldUpdate = false
-                elseif cache.cooldownEvent ~= nil and button.cooldown:getTimeElapsed() > delay then
-                    shouldUpdate = false
                 end
                 if shouldUpdate then
-                    updateCooldown(button, delay)
-                    if cache.removeCooldownEvent then
-                        removeEvent(button.cache.removeCooldownEvent)
-                        button.cache.removeCooldownEvent = nil
+                    if not cache.isRuneSpell and cache.spellData then
+                        showSpellWait(button, cache.spellData)
+                    else
+                        updateCooldown(button, delay)
+                        if cache.removeCooldownEvent then
+                            removeEvent(button.cache.removeCooldownEvent)
+                            button.cache.removeCooldownEvent = nil
+                        end
+                        button.cache.removeCooldownEvent = scheduleEvent(function()
+                            removeCooldown(button)
+                        end, delay)
                     end
-                    button.cache.removeCooldownEvent = scheduleEvent(function()
-                        removeCooldown(button)
-                    end, delay)
                 end
             end
         end
@@ -567,31 +605,9 @@ function onSpellGroupCooldown(groupId, delay)
             end
 
             if cache and (not cache.isRuneSpell and cache.spellData) then
-                if Spells.getCooldownByGroup(cache.spellData, groupId) then
-                    local resttime = button.cooldown:getDuration() - button.cooldown:getTimeElapsed()
-                    if resttime < delay then
-                        updateCooldown(button, delay)
-                        if button.cache.removeCooldownEvent then
-                            removeEvent(button.cache.removeCooldownEvent)
-                            button.cache.removeCooldownEvent = nil
-                        end
-                        button.cache.removeCooldownEvent = scheduleEvent(function()
-                            removeCooldown(button)
-                        end, delay)
-                    end
-                end
-                if Spells.getCooldownBySecondaryGroup(cache.spellData, groupId) then
-                    local resttime = button.cooldown:getDuration() - button.cooldown:getTimeElapsed()
-                    if resttime < delay then
-                        updateCooldown(button, delay)
-                        if button.cache.removeCooldownEvent then
-                            removeEvent(button.cache.removeCooldownEvent)
-                            button.cache.removeCooldownEvent = nil
-                        end
-                        button.cache.removeCooldownEvent = scheduleEvent(function()
-                            removeCooldown(button)
-                        end, delay)
-                    end
+                if Spells.getCooldownByGroup(cache.spellData, groupId) or
+                    Spells.getCooldownBySecondaryGroup(cache.spellData, groupId) then
+                    showSpellWait(button, cache.spellData)
                 end
             end
         end
