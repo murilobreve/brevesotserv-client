@@ -12,6 +12,15 @@ vec3 ramp(float l, vec3 shadow, vec3 mid, vec3 light)
 }
 // the red of eyes and mouth stays, so the monster keeps its face
 float face(vec3 c) { return smoothstep(0.22, 0.45, c.r - max(c.g, c.b)); }
+// the heart waking in the corpse: a double beat (lub-dub) a little faster
+// than one a second
+float heartbeat(float t)
+{
+    float f = fract(t * 1.25);
+    float lub = (f - 0.08) / 0.08;
+    float dub = (f - 0.32) / 0.09;
+    return min(1.0, exp(-lub * lub) + 0.6 * exp(-dub * dub));
+}
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
@@ -25,6 +34,9 @@ void main()
     float joint = 1.0 - smoothstep(0.0, 0.12, min(f, 1.0 - f));
     vec3 result = ramp(floor(t * 5.0) / 5.0, shadow, mid * 0.6, light * 0.7);
     result = mix(result, mid, joint * 0.6 * (0.75 + 0.25 * sin(u_Time * 1.5)));
+    // each beat the light runs through the joints and the facets catch it
+    float beat = heartbeat(u_Time);
+    result = mix(result, light, beat * (0.7 * joint + 0.25) * smoothstep(0.1, 0.6, l));
     result = mix(result, c, face(c) * 0.6);
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }
