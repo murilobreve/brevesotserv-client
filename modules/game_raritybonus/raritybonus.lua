@@ -372,15 +372,23 @@ local REVIVE_EFFECT_BASE = 3000
 local DESIGN_REVIVE = 7       -- the curves are drawn for a 7 s wait...
 local DESIGN_SETTLE = 0.9     -- ...and 0.9 s of arrival
 -- sizes (side of the texture, in tiles), peak opacities, how far the air lifts
--- (the kit's values; the game draws the whole composition REVIVE_SCALE times
--- bigger around the corpse)
-local REVIVE_SCALE = 1.6
+-- (the kit's sizes; the game draws the whole composition REVIVE_SCALE times
+-- bigger around the corpse, and stronger than the kit so it reads from across
+-- the screen). `light`: the colour (8-bit, as the map's lights) the rising
+-- body glows with, which shows in the dark of a cave.
+local REVIVE_SCALE = 2.4
 local REVIVE_MOTION = {
-    pale = { tier = 1, g = 1.9, a = 2.15, r = 2.45, go = .42, ao = .58, ro = .42, lift = .20 },
-    ashen = { tier = 2, g = 2.2, a = 2.45, r = 2.7, go = .56, ao = .67, ro = .60, lift = .16 },
-    obsidian = { tier = 3, g = 2.45, a = 2.8, r = 3.05, go = .62, ao = .77, ro = .68, lift = .20 },
-    deathlord = { tier = 4, g = 2.85, a = 3.15, r = 3.35, go = .72, ao = .85, ro = .66, lift = .16 },
+    pale = { tier = 1, g = 1.9, a = 2.15, r = 2.45, go = .64, ao = .82, ro = .74, lift = .20, light = 179 },
+    ashen = { tier = 2, g = 2.2, a = 2.45, r = 2.7, go = .76, ao = .88, ro = .86, lift = .16, light = 199 },
+    obsidian = { tier = 3, g = 2.45, a = 2.8, r = 3.05, go = .80, ao = .94, ro = .92, lift = .20, light = 125 },
+    deathlord = { tier = 4, g = 2.85, a = 3.15, r = 3.35, go = .88, ao = .97, ro = .90, lift = .16, light = 152 },
 }
+local REVIVE_LIGHT = 7 -- the glow's strength at its brightest (map lights go up to about 10)
+-- the corpse's heart: a double beat (lub-dub) that quickens from BEAT_FROM
+-- to BEAT_TO beats a second as the monster gets ready to stand up; on each
+-- beat the floor flares and swells and the air brightens
+local BEAT_FROM, BEAT_TO = 0.8, 2.0
+local BEAT_FLOOR, BEAT_SWELL, BEAT_AIR = 0.55, 0.10, 0.30
 local revivals = {}
 
 local function clamp01(x)
@@ -423,8 +431,17 @@ local function unregisterReviveTextures()
     end
 end
 
+-- 0..1: how much of a heartbeat is in the corpse at design time t
+local function heartbeat(t)
+    local beats = BEAT_FROM * t + (BEAT_TO - BEAT_FROM) * t * t / (2 * DESIGN_REVIVE)
+    local f = beats - math.floor(beats)
+    local lub, dub = (f - .08) / .09, (f - .34) / .10
+    return math.min(1, math.exp(-lub * lub) + .6 * math.exp(-dub * dub))
+end
+
 -- The designer's curves: which layers show at design time t (seconds, 0 = the
--- death, 7 = the monster stands up), how big, how opaque, how far up.
+-- death, 7 = the monster stands up), how big, how opaque, how far up, and
+-- the glow of the air.
 local function reviveLayers(t, tierKey)
     local c = REVIVE_MOTION[tierKey]
     local out = {}
@@ -436,7 +453,8 @@ local function reviveLayers(t, tierKey)
         local entry = smooth(t / .85)
         local tension = smooth((t - 5.5) / 1.5)
         local breath = math.sin(2 * math.pi * (.35 * t + .4 * t * t / 14))
-        add('chao', c.g * (.66 + .34 * smooth(p)), c.go * entry * (.60 + .40 * p) * (1 + .035 * breath))
+        local beat = heartbeat(t) * entry
+        add('chao', c.g * (.66 + .34 * smooth(p)) * (1 + BEAT_SWELL * beat), c.go * entry * (.60 + .40 * p) * (1 + .035 * breath) * (1 + BEAT_FLOOR * beat))
         local gather = smooth((t - .55) / 5.2)
         local scale = .72 + .28 * gather
         local lift = c.lift * (.3 + .7 * gather)
@@ -453,7 +471,8 @@ local function reviveLayers(t, tierKey)
             scale = scale * (1 - .06 * tension)
             lift = lift + .06 * tension
         end
-        add('ar', c.a * scale, c.ao * entry * gather * (.68 + .32 * tension), lift)
+        add('ar', c.a * scale, c.ao * entry * gather * (.68 + .32 * tension) * (1 + BEAT_AIR * beat), lift)
+        out.ar.light = REVIVE_LIGHT * (.25 + .45 * p + .3 * beat) * entry
     else
         local q = clamp01((t - DESIGN_REVIVE) / DESIGN_SETTLE)
         local exit = 1 - smooth(q)
@@ -462,6 +481,7 @@ local function reviveLayers(t, tierKey)
         add('chao', c.g * (eclipse and (1 - .58 * smooth(q)) or (1 + .08 * q)), c.go * exit)
         add('ar', c.a * (1 - .1 * q), c.ao * exit, c.lift + .08 * q)
         add('eclosao', c.r * (eclipse and (1 - .7 * smooth(q)) or (.74 + .26 * smooth(q))), c.ro * math.sin(math.pi * q), eclipse and 0 or .18 * q)
+        out.ar.light = REVIVE_LIGHT * (1 + .3 * math.sin(math.pi * q)) * exit
     end
     return out
 end
@@ -512,6 +532,9 @@ local function placeLayer(entry, tile, layer, state)
     effect:setSize({ width = side, height = side })
     effect:setOffset(half + entry.shift, half + entry.shift + math.floor(state.lift * REVIVE_SCALE * 32 + 0.5))
     effect:setOpacity(state.opacity)
+    if state.light then
+        effect:setLight({ intensity = math.max(0, math.floor(state.light + 0.5)), color = REVIVE_MOTION[entry.tier].light })
+    end
     -- the tile is rebuilt when it leaves the screen and comes back
     if not tile:getAttachedEffectById(effect:getId()) then
         tile:attachEffect(effect)
