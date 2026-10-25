@@ -636,9 +636,17 @@ function HuntingAnalyser:addLootedItems(item, name)
 		
 		HuntingAnalyser.loot = HuntingAnalyser.loot + (price * count)
 		HuntingAnalyser.lootedItems[itemId] = {itemId = itemId, name = name, count = count, price = price}
+		data = HuntingAnalyser.lootedItems[itemId]
 	else
 		data.count = data.count + count
 		HuntingAnalyser.loot = HuntingAnalyser.loot + (data.price * count)
+	end
+
+	-- a rarity item is worth what Gersao's rare window pays, on top of the
+	-- item's normal value already counted above
+	local rarePrice = serverRarePrice(item)
+	if rarePrice and rarePrice > data.price then
+		HuntingAnalyser.loot = HuntingAnalyser.loot + (rarePrice - data.price) * count
 	end
 
 	if not HuntingAnalyser.lootedItemsName[name] then
@@ -652,6 +660,12 @@ end
 local function getCurrentPrice(itemPtr)
 	if not itemPtr then
 		return 0
+	end
+
+	-- Mythos: what the NPCs on this server's map charge for it
+	local serverPrice = serverSupplyPrice(itemPtr:getId())
+	if serverPrice then
+		return serverPrice
 	end
 	
 	-- Try to get price from Cyclopedia module if available (respects user preference)

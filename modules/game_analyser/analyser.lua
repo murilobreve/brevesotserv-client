@@ -429,6 +429,30 @@ end
 function onUpdateExperience(rawExp, exp)
 end
 
+-- Mythos: the server's prices (game_quickloot asks for them at login). The
+-- normal loot value comes through Cyclopedia.Items.getNpcValue; these two
+-- cover what that can't: rarity items and supplies.
+
+-- What Gersao's rare window pays for one rarity `item` ((his normal price +
+-- flat) x the grade's multiplier), nil for a normal item or one he doesn't buy
+function serverRarePrice(item)
+  local quickLoot = modules.game_quickloot and modules.game_quickloot.QuickLoot
+  local rule = quickLoot and quickLoot.rareSell
+  local normal = rule and quickLoot.prices and quickLoot.prices[item:getId()]
+  local grade = normal and ItemsDatabase and ItemsDatabase.getItemRarityGrade(item)
+  if not grade then
+    return nil
+  end
+  local multiplier = (rule.multiplier or {})[grade] or 1
+  return math.floor((normal + (rule.flat or 0)) * multiplier)
+end
+
+-- The cheapest an NPC on the map sells `itemId` for, nil when unknown
+function serverSupplyPrice(itemId)
+  local quickLoot = modules.game_quickloot and modules.game_quickloot.QuickLoot
+  return quickLoot and quickLoot.supplyPrices and quickLoot.supplyPrices[itemId] or nil
+end
+
 function onLootStats(item, name)
   HuntingAnalyser:addLootedItems(item, name)
   LootAnalyser:addLootedItems(item, name)

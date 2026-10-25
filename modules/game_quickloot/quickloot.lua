@@ -76,6 +76,8 @@ function quickLootController:onGameStart()
     QuickLoot.load()
     QuickLoot.searchText = ''
     QuickLoot.prices = nil
+    QuickLoot.supplyPrices = nil
+    QuickLoot.rareSell = nil
     QuickLoot.requestPrices()
     QuickLoot.refreshPriceRule()
 
@@ -445,6 +447,17 @@ function QuickLoot.Define()
             end
         end
         QuickLoot.prices = prices
+        -- the analysers price supplies at what the NPCs on the map charge and
+        -- rarity loot by Gersao's rare window rule
+        local supplyPrices = {}
+        for _, entry in ipairs(type(data.supplies) == 'table' and data.supplies or {}) do
+            local id, price = tonumber(entry[1]), tonumber(entry[2])
+            if id and price then
+                supplyPrices[id] = price
+            end
+        end
+        QuickLoot.supplyPrices = supplyPrices
+        QuickLoot.rareSell = type(data.rare) == 'table' and data.rare or nil
         QuickLoot.alwaysTake = {}
         for _, id in ipairs(type(data.always) == 'table' and data.always or {}) do
             if tonumber(id) then
