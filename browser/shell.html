@@ -7,7 +7,9 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
     />
     <title>Mythos</title>
-    <link rel="icon" href="data:," />
+    <!-- the tab: the Mythos shield with a play mark (SVG; the PNG for browsers without SVG icons) -->
+    <link rel="icon" type="image/png" sizes="64x64" href="data:image/png;base64,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" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='#f6d27a'/%3E%3Cstop offset='1' stop-color='#b8862e'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='#241a3d'/%3E%3Cstop offset='1' stop-color='#0f0a1c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 2.5 59 8.5v22c0 15.5-11.2 25.6-27 31.5C16.2 56.1 5 46 5 30.5v-22z' fill='url(#g)'/%3E%3Cpath d='M32 7.5 54.5 12.5v18c0 12.6-9 21-22.5 26.3C18.5 51.5 9.5 43.1 9.5 30.5v-18z' fill='#6a3fd6'/%3E%3Cpath d='M32 10.5 51.5 15v15.5c0 11-7.7 18.4-19.5 23.2C20.2 48.9 12.5 41.5 12.5 30.5V15z' fill='url(#f)'/%3E%3Cpath d='M26 20.6v19.8c0 1.5 1.6 2.4 2.9 1.6l15.6-9.9c1.2-.8 1.2-2.5 0-3.2L28.9 19c-1.3-.8-2.9.1-2.9 1.6z' fill='#f3ead9'/%3E%3C/svg%3E" />
     <style>
       body {
         margin: 0;
@@ -269,6 +271,11 @@
       <button type="button" onclick="window.mythosLeaving = true; location.reload()">Recarregar</button>
       <small id="crash-sent"></small>
     </div>
+    <div class="notice" id="keys" hidden>
+      Neste navegador o Ctrl+W, o Ctrl+N e o Ctrl+T continuam com o navegador, mesmo em tela cheia
+      (o Ctrl+W fecha a aba). No Chrome ou no Edge, em tela cheia, eles v&atilde;o para o jogo.
+      <button type="button" aria-label="Fechar" onclick="closeKeysNotice()">&times;</button>
+    </div>
     <div class="notice" id="slow" hidden>
       Seu navegador est&aacute; desenhando o jogo sem a placa de v&iacute;deo, por isso ele fica lento.
       No Chrome ou Edge: Configura&ccedil;&otilde;es &rarr; Sistema &rarr; ligue
@@ -450,15 +457,64 @@
           document.documentElement.requestFullscreen().catch(function () {});
         }
       }
+      // The browser's own full screen (its F11 before the game took the keys,
+      // or its menu) looks the same but leaves Ctrl+W, Ctrl+N and Ctrl+T with
+      // the browser: only the page's full screen hands them to the game. The
+      // first click or key in it moves to the page's own, with no change on
+      // the screen.
+      function inBrowserFullscreen() {
+        return !document.fullscreenElement && window.innerWidth >= screen.width && window.innerHeight >= screen.height;
+      }
+      function claimFullscreen() {
+        if (inBrowserFullscreen() && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        }
+      }
+      // where the browser cannot give those keys to the page (Firefox,
+      // Safari), say so once, in full screen
+      function keysNoticeClosed() {
+        try {
+          return localStorage.getItem("mythos-keys-notice") === "closed";
+        } catch (e) {
+          return false;
+        }
+      }
+      function closeKeysNotice() {
+        document.getElementById("keys").hidden = true;
+        try {
+          localStorage.setItem("mythos-keys-notice", "closed");
+        } catch (e) {}
+      }
       document.addEventListener("fullscreenchange", function () {
         var keyboard = navigator.keyboard;
-        if (!keyboard || !keyboard.lock) return;
+        if (!keyboard || !keyboard.lock) {
+          if (document.fullscreenElement && !keysNoticeClosed()) {
+            var keys = document.getElementById("keys");
+            var slow = document.getElementById("slow");
+            keys.hidden = false;
+            // below the other notice when both are up
+            keys.style.top = slow.hidden ? "" : slow.getBoundingClientRect().bottom + 8 + "px";
+          }
+          return;
+        }
         if (document.fullscreenElement) {
           keyboard.lock().catch(function () {});
         } else {
           keyboard.unlock();
         }
       });
+      // F11 is the page's from the first screen on: pressed there, the
+      // browser's own full screen would keep Ctrl+W
+      document.addEventListener(
+        "keydown",
+        function (ev) {
+          if (ev.key !== "F11" || window.mythosStopped) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (!ev.repeat) toggleFullscreen();
+        },
+        true
+      );
       function startGame() {
         var splash = document.getElementById("splash");
         if (splash.classList.contains("leaving")) return;
@@ -466,6 +522,8 @@
         setTimeout(function () {
           splash.hidden = true;
         }, 400);
+        claimFullscreen();
+        canvas.addEventListener("mousedown", claimFullscreen, true);
         canvas.focus();
         // closing the tab by accident (Ctrl+W, the back button) asks first;
         // leaving the game from its own menu does not
@@ -495,12 +553,8 @@
         document.addEventListener("keydown", function (ev) {
           // the game stopped: the keys are the browser's again (F5 reloads)
           if (window.mythosStopped) return;
-          if (ev.key === "F11") {
-            ev.preventDefault();
-            ev.stopPropagation();
-            if (!ev.repeat) toggleFullscreen();
-            return;
-          }
+          // (Esc cannot ask for full screen)
+          if (ev.key !== "Escape") claimFullscreen();
           if (
             !ev.ctrlKey &&
             ev.key !== "Enter" &&
