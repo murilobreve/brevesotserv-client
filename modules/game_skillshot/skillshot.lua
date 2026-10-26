@@ -1,8 +1,12 @@
 -- Skillshots: some spells are aimed with the mouse, like in a MOBA. Right
 -- before one of them is said (action bar, hotkey or chat) this module tells
 -- the server which tile is under the mouse (opcode OPCODE); the server
--- (scripts/skillshot) sends the spell toward it. With the mouse off the map
--- nothing is sent and the spell goes the way the character faces.
+-- (scripts/skillshot) sends the spell toward it. The mouse on a creature's
+-- body aims at the sqm the creature stands on (a big one is drawn over the
+-- sqm above and to the left of its own); on the character, at its own sqm
+-- (the spells that land on the ground fall on it). With the mouse off the
+-- map, or over a window on it, the spell goes at the creature being
+-- attacked, else the way the character faces.
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
@@ -24,6 +28,77 @@ local function normalize(text)
     return tostring(text or ''):lower():gsub('^%s+', ''):gsub('%s+$', ''):gsub('^"', '')
 end
 
+-- How many sqm a creature is drawn over, up and to the left of its own: 2
+-- for the big ones (a dragon covers the sqm above and to the left of the one
+-- it stands on), else 1.
+local function spanOf(creature)
+    local outfit = creature.getOutfit and creature:getOutfit()
+    local thingType = outfit and outfit.type and outfit.type > 0 and g_things.getThingType(outfit.type, ThingCategoryCreature)
+    if not thingType then
+        return 1
+    end
+    return math.max(thingType:getWidth(), thingType:getHeight())
+end
+
+-- The creature drawn under the mouse on `pos`: the one standing (or walking
+-- out of) that sqm, else a big one to the right or below whose body is drawn
+-- over it. The one being attacked wins.
+local function creatureUnder(pos)
+    local tile = g_map.getTile(pos)
+    local creature = tile and tile:getTopCreature(true)
+    if creature then
+        return creature
+    end
+    local attacking = g_game.getAttackingCreature()
+    local found
+    for _, side in ipairs({ { 1, 0 }, { 0, 1 }, { 1, 1 } }) do
+        local near = g_map.getTile({ x = pos.x + side[1], y = pos.y + side[2], z = pos.z })
+        local other = near and near:getTopCreature(false)
+        if other and spanOf(other) > 1 then
+            if attacking and other:getId() == attacking:getId() then
+                return other
+            end
+            found = found or other
+        end
+    end
+    return found
+end
+
+-- a window (a container, the trade, a dialog) over the map under the mouse
+local function overWindow(mouse)
+    local widget = g_ui.getRootWidget():recursiveGetChildByPos(mouse, false)
+    while widget do
+        if widget:getClassName() == 'UIWindow' then
+            return true
+        end
+        widget = widget:getParent()
+    end
+    return false
+end
+
+-- Where the spell goes: the sqm under the mouse on the map (the creature's
+-- own sqm when the mouse is on its body, the player's when it is on him);
+-- with the mouse off the map (a click on the action bar, a window over the
+-- map), the creature being attacked. nil: the server sends it the way the
+-- character faces.
+function aimPosition(mapPanel)
+    local mouse = g_window.getMousePosition()
+    if mapPanel:containsPoint(mouse) and not overWindow(mouse) then
+        local pos = mapPanel:getPosition(mouse)
+        if pos and pos.x ~= 0 then
+            local creature = creatureUnder(pos)
+            return creature and creature:getPosition() or pos
+        end
+    end
+    local target = g_game.getAttackingCreature()
+    local player = g_game.getLocalPlayer()
+    local pos = target and target:getPosition()
+    if pos and player and pos.z == player:getPosition().z then
+        return pos
+    end
+    return nil
+end
+
 local function sendAim(text)
     if not words[normalize(text)] then
         return
@@ -33,12 +108,8 @@ local function sendAim(text)
     if not mapPanel or not protocol then
         return
     end
-    local mouse = g_window.getMousePosition()
-    if not mapPanel:containsPoint(mouse) then
-        return
-    end
-    local pos = mapPanel:getPosition(mouse)
-    if not pos or pos.x == 0 then
+    local pos = aimPosition(mapPanel)
+    if not pos then
         return
     end
     protocol:sendExtendedJSONOpcode(OPCODE, { x = pos.x, y = pos.y, z = pos.z })
