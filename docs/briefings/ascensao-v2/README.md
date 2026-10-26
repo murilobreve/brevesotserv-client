@@ -29,3 +29,17 @@ quadros pelo tempo, partículas) e treme o mapa (`UIMap:shake`). Uma
 entrega nova da mesma magia é só trocar os arquivos da pasta. A Flecha
 ganhou a puxada do arco (0,4 s) e o voo de 30 ms por sqm em
 `scripts/skillshot/paladin.lua` do servidor.
+
+## Etapa 2 no jogo
+
+As outras dez magias e a Translocação estão em
+`modules/game_skillshot/images/<magia>/`, também com o `curvas.csv` e o
+`particulas.csv` como vieram. O que a Etapa 2 pediu além da Etapa 1 está em
+`layers.lua`: o projétil que o servidor move sqm a sqm (`set.flight`: a
+cabeça, os ecos e o rastro seguem os passos), o rastro e o feixe esticados
+(curva `estica`), a carga que cresce até cheia e fica cheia até soltar
+(`set.held`) e a cor da luz do mapa tirada do `cor_luz` do designer
+(`layerLight`). A Translocação ganhou o fx `transloc` (servidor:
+`scripts/ascensao/06_sorcerer.lua`). As prévias estáticas da janela
+(`modules/game_ascensao/images/previas/`) são as do designer, com o nome da
+magia.
