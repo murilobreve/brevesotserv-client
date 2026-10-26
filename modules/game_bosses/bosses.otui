@@ -1,0 +1,267 @@
+// a boss of the list: portrait, name, quest and level, and the player's wait
+BossRow < BrevesRow
+  height: 42
+  padding: 2
+
+  UICreature
+    id: creature
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    size: 36 36
+    creature-size: 36
+    phantom: true
+
+  Label
+    id: status
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    width: 96
+    text-align: right
+    font: verdana-11px-antialised
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: creature.right
+    anchors.right: status.left
+    margin-top: 6
+    margin-left: 8
+    height: 14
+    color: #e9e6f0
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 3
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9789b3
+    phantom: true
+
+BossRowEven < BossRow
+  background-color: #ffffff07
+
+// one line of the card: what on the left, how much on the right
+BossStat < UIWidget
+  height: 20
+  phantom: true
+
+  Label
+    id: key
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #9789b3
+    phantom: true
+
+  Label
+    id: value
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #e6e0f2
+    phantom: true
+
+BossTab < BrevesTab
+  size: 96 24
+  anchors.top: parent.top
+
+MythosWindow
+  id: bossesWindow
+  size: 740 540
+  @onEscape: modules.game_bosses.hide()
+
+  BossTab
+    id: allTab
+    anchors.left: parent.left
+    !text: tr('Todos')
+    @onClick: modules.game_bosses.setFilter('all')
+
+  BossTab
+    id: readyTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Prontos')
+    @onClick: modules.game_bosses.setFilter('ready')
+
+  BossTab
+    id: levelTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Meu nivel')
+    @onClick: modules.game_bosses.setFilter('level')
+
+  MythosTextEdit
+    id: search
+    anchors.right: parent.right
+    anchors.verticalCenter: allTab.verticalCenter
+    width: 210
+    placeholder: Buscar boss ou quest
+    @onTextChange: modules.game_bosses.refreshList()
+
+  MythosSeparator
+    id: topSep
+    anchors.top: allTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  Label
+    id: summary
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+    height: 16
+    font: verdana-11px-antialised
+    color: #cbc0e0
+
+  BrevesList
+    id: list
+    anchors.top: summary.bottom
+    anchors.left: parent.left
+    anchors.bottom: message.top
+    margin-top: 4
+    margin-bottom: 6
+    width: 392
+    focusable: false
+    vertical-scrollbar: scroll
+
+  MythosScrollBar
+    id: scroll
+    anchors.top: list.top
+    anchors.bottom: list.bottom
+    anchors.left: list.right
+    step: 42
+    pixel-scroll: true
+
+  BrevesSection
+    id: card
+    anchors.top: list.top
+    anchors.left: scroll.right
+    anchors.right: parent.right
+    anchors.bottom: list.bottom
+    margin-left: 10
+    padding: 30 12 12 12
+
+    BrevesCell
+      id: portrait
+      anchors.top: parent.top
+      anchors.horizontalCenter: parent.horizontalCenter
+      size: 104 104
+      phantom: true
+
+    UICreature
+      id: creature
+      anchors.centerIn: portrait
+      size: 100 100
+      creature-size: 100
+      phantom: true
+
+    Label
+      id: name
+      anchors.top: portrait.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 8
+      height: 18
+      text-align: center
+      font: Verdana Bold-11px
+      color: #f3f0fa
+
+    Label
+      id: quest
+      anchors.top: name.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      height: 14
+      text-align: center
+      font: verdana-11px-antialised
+      color: #b296f5
+
+    MythosSeparator
+      id: cardSep
+      anchors.top: quest.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 8
+
+    BossStat
+      id: level
+      anchors.top: cardSep.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+
+    BossStat
+      id: health
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    BossStat
+      id: experience
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    BossStat
+      id: wait
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    BossStat
+      id: players
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    BossStat
+      id: cooldown
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    BrevesNote
+      id: note
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 10
+      text-auto-resize: false
+      height: 52
+
+    MythosPrimaryButton
+      id: go
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 28
+      !text: tr('Ir para a sala do boss')
+      @onClick: modules.game_bosses.goSelected()
+
+  Label
+    id: message
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 8
+    height: 16
+    font: verdana-11px-antialised
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    !text: tr('Fechar')
+    @onClick: modules.game_bosses.hide()

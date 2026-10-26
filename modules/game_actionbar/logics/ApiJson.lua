@@ -1119,6 +1119,138 @@ function ApiJson.removeHotkeySet(name)
     return true
 end
 
+-- Mythos: per-vocation hotkey sets (logics/VocationTemplates.lua)
+local VOCATION_SET_NAMES = { Sorcerer = true, Druid = true, Paladin = true, Knight = true, Monk = true }
+
+local function sameSetting(a, b)
+    if type(a) ~= 'table' or type(b) ~= 'table' then
+        return a == b
+    end
+    for key, value in pairs(a) do
+        if b[key] ~= value then
+            return false
+        end
+    end
+    for key in pairs(b) do
+        if a[key] == nil then
+            return false
+        end
+    end
+    return true
+end
+
+-- still the bar the client ships (or an empty one): nothing of the player's
+local function isStockHotkeySet(set)
+    local mappings = set and set.actionBarOptions and set.actionBarOptions.mappings or {}
+    if #mappings == 0 then
+        return true
+    end
+    local stock = getDefaultProfileFromFile('Knight')
+    local stockMappings = stock and stock.actionBarOptions and stock.actionBarOptions.mappings or {}
+    if #mappings ~= #stockMappings then
+        return false
+    end
+    for _, wanted in ipairs(stockMappings) do
+        local found = false
+        for _, entry in ipairs(mappings) do
+            if tonumber(entry.actionBar) == wanted.actionBar and tonumber(entry.actionButton) == wanted.actionButton and
+                sameSetting(entry.actionsetting, wanted.actionsetting) then
+                found = true
+                break
+            end
+        end
+        if not found then
+            return false
+        end
+    end
+    return true
+end
+
+-- bar 1, buttons 1..n from the template, on F1..Fn (chat on and off); the
+-- set's other hotkeys stay
+local function fillFromTemplate(set, template)
+    local count = #template
+    local mappings = {}
+    for index, entry in ipairs(template) do
+        local setting
+        if type(entry[1]) == 'number' then
+            setting = { useObject = entry[1], useType = entry[2] or 'UseOnTarget' }
+        else
+            setting = { chatText = entry[1], sendAutomatically = true }
+        end
+        mappings[#mappings + 1] = { actionBar = 1, actionButton = index, actionsetting = setting }
+    end
+    set.actionBarOptions = set.actionBarOptions or {}
+    set.actionBarOptions.mappings = mappings
+
+    for _, mode in ipairs({ 'chatOff', 'chatOn' }) do
+        local kept = {}
+        for _, data in ipairs(set[mode] or {}) do
+            local action = data.actionsetting and data.actionsetting.action or ''
+            local button = tonumber(action:match('^TriggerActionButton_1%.(%d+)$'))
+            local fKey = tonumber((data.keysequence or ''):match('^F(%d+)$'))
+            if not (button and button <= count) and not (fKey and fKey <= count) then
+                kept[#kept + 1] = data
+            end
+        end
+        for index = 1, count do
+            kept[#kept + 1] = {
+                actionsetting = { action = 'TriggerActionButton_1.' .. index },
+                keysequence = 'F' .. index
+            }
+        end
+        set[mode] = kept
+    end
+end
+
+--- Moves the player onto the hotkey set `setName`, filled from `template`
+--- while it is still stock. A set named after the character, or any set that
+--- isn't one of the vocation sets, is the player's choice and is kept.
+function ApiJson.useVocationHotkeySet(setName, template, characterName)
+    ApiJson.bootstrap()
+    local options = ensureState()
+    local array = options.array
+    if not array or not template then
+        return false
+    end
+
+    local hotkeyOptions = array.hotkeyOptions or {}
+    array.hotkeyOptions = hotkeyOptions
+    hotkeyOptions.hotkeySets = hotkeyOptions.hotkeySets or options.hotkeySets or {}
+    local sets = hotkeyOptions.hotkeySets
+
+    if characterName and sets[characterName] then
+        return false
+    end
+    local current = options.currentHotkeySetName or hotkeyOptions.currentHotkeySetName
+    if current and sets[current] and not VOCATION_SET_NAMES[current] then
+        return false
+    end
+
+    if not sets[setName] and not ApiJson.createHotkeySet(setName) then
+        return false
+    end
+    sets = hotkeyOptions.hotkeySets
+
+    -- once: everyone played on the "Knight" set before; a bar built there
+    -- goes with the first character that logs in
+    if not g_settings.getBoolean('breves_vocation_sets') then
+        g_settings.set('breves_vocation_sets', true)
+        local previous = current and sets[current]
+        if previous and current ~= setName and not isStockHotkeySet(previous) and isStockHotkeySet(sets[setName]) then
+            sets[setName] = table.recursivecopy(previous)
+        end
+    end
+
+    if isStockHotkeySet(sets[setName]) then
+        fillFromTemplate(sets[setName], template)
+    end
+
+    -- also refreshes the cached mappings of the set in use
+    ApiJson.setCurrentHotkeySetName(setName)
+    return true
+end
+
 function ApiJson.toggleLockGroup(optionKey, rangeStart, rangeEnd)
     local newState = not ApiJson.getClientOption(optionKey)
     ApiJson.setClientOption(optionKey, newState)
@@ -1130,6 +1262,13 @@ function ApiJson.toggleLockGroup(optionKey, rangeStart, rangeEnd)
     end
 
     return newState
+end
+
+function ApiJson.getCurrentHotkeySetName()
+    ApiJson.bootstrap()
+    local options = ensureState()
+    local hotkeyOptions = options.array and options.array.hotkeyOptions or {}
+    return options.currentHotkeySetName or hotkeyOptions.currentHotkeySetName
 end
 
 function ApiJson.hasCurrentHotkeySet()

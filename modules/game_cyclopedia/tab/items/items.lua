@@ -167,7 +167,22 @@ function Cyclopedia.Items.getNpcValue(itemOrThingType, useBuyPrice)
 	if useBuyPrice == nil then
 		useBuyPrice = true  -- Default to buyPrice for backward compatibility
 	end
-	
+
+	-- Mythos: the server's own prices (opcode 124, game_quickloot) over the
+	-- appearances' real-Tibia ones: what Gersao pays, who buys everything any
+	-- NPC buys, and the cheapest an NPC on the map sells for
+	local quickLoot = modules.game_quickloot and modules.game_quickloot.QuickLoot
+	if quickLoot and quickLoot.prices and itemOrThingType and itemOrThingType.getId then
+		local id = itemOrThingType:getId()
+		if useBuyPrice then
+			return quickLoot.prices[id] or 0
+		end
+		local supplyPrice = quickLoot.supplyPrices and quickLoot.supplyPrices[id]
+		if supplyPrice then
+			return supplyPrice
+		end
+	end
+
 	if itemOrThingType and itemOrThingType.getNpcSaleData then
 		local success, npcSaleData = pcall(function() return itemOrThingType:getNpcSaleData() end)
 		if success and npcSaleData and #npcSaleData > 0 then

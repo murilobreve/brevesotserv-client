@@ -1,5 +1,7 @@
 -- Hunt Board: per-monster experience/loot rates that re-roll every few hours,
--- the hourly/daily/monthly hunting leaderboard and the online coin reward.
+-- with a TP to each monster's hunt (the Hunts TP list: one place for the hunt
+-- teleport rooms of every town), the hourly/daily/monthly hunting leaderboard
+-- and the online coin reward.
 -- Talks to the server scripts in data-otservbr-global/scripts/huntboard
 -- through extended opcode HUNT_OPCODE with JSON payloads.
 
@@ -10,6 +12,7 @@ local PAGE_SIZE = 40
 local SEND_INTERVAL = 350
 
 local FILTERS = {
+    { key = 'tp', label = 'Hunts with TP' },
     { key = 'all', label = 'All monsters' },
     { key = 'xp', label = 'Boosted XP (1.5x+)' },
     { key = 'loot', label = 'Boosted loot (1.5x+)' },
@@ -55,6 +58,9 @@ local ratesEvent
 local sendQueue = {}
 local sendEvent
 local lastSendAt = 0
+local tpReadyAt = 0 -- os.time() when the next hunt teleport is allowed
+local tpButtons = {} -- the TP buttons of the page on screen
+local tpMessageEvent
 
 -- ---------------------------------------------------------------- helpers
 
@@ -222,7 +228,9 @@ local function matchesFilter(monster, filter, search, hideBosses)
     if search ~= '' and not monster.lname:find(search, 1, true) then
         return false
     end
-    if filter == 'xp' then
+    if filter == 'tp' then
+        return monster.tp > 0
+    elseif filter == 'xp' then
         return monster.xp >= 15
     elseif filter == 'loot' then
         return monster.loot >= 15
@@ -278,6 +286,79 @@ local SORTERS = {
     end,
 }
 
+-- the buttons show the wait between two hunt teleports (30 s), and how
+-- many hunts a monster with more than one has
+local function updateTpButtons()
+    local left = math.max(0, tpReadyAt - os.time())
+    for _, button in ipairs(tpButtons) do
+        if left > 0 then
+            button:setText(left .. 's')
+        elseif button.hunts > 1 then
+            button:setText(string.format('%s (%d)', tr('TP'), button.hunts))
+        else
+            button:setText(tr('TP'))
+        end
+        button:setEnabled(left == 0)
+    end
+end
+
+-- the fonts draw one glyph per byte (Latin-1); the server's texts are UTF-8
+local function latin1(text)
+    return (tostring(text):gsub('[\194\195][\128-\191]', function(pair)
+        local a, b = pair:byte(1, 2)
+        return string.char((a - 194) * 64 + b)
+    end))
+end
+
+-- a refusal of the server, for a few seconds where the page count goes
+local function showTpMessage(text)
+    if not window then
+        return
+    end
+    local label = window.ratesPanel.pageLabel
+    if tpMessageEvent then
+        removeEvent(tpMessageEvent)
+    end
+    label:setText(text)
+    label:setColor('#ff7a6b')
+    tpMessageEvent = scheduleEvent(function()
+        tpMessageEvent = nil
+        if window then
+            label:setText(label.pageText or '')
+            label:setColor('#cbc0e0')
+        end
+    end, 6000)
+end
+
+local function teleportTo(name, option)
+    if tpReadyAt > os.time() then
+        return
+    end
+    send({ action = 'teleport', name = name, option = option })
+end
+
+-- a hunt of the menu: "2. Near Ventera  -  floor -4  -  346 spawns"
+local function huntText(index, hunt)
+    local z = tonumber(hunt[2]) or 7
+    local floor = z == 7 and tr('ground floor') or tr('floor %+d', 7 - z)
+    return string.format('%d. %s', index, tr('Near %s  -  %s  -  %d spawns', latin1(hunt[1] or '?'), floor, tonumber(hunt[3]) or 0))
+end
+
+-- a monster with more than one hunt: the player picks where to go
+local function chooseHunt(monster)
+    if tpReadyAt > os.time() then
+        return
+    end
+    local menu = g_ui.createWidget('MythosComboBoxPopupMenu')
+    menu:setGameMenu(true)
+    for i, hunt in ipairs(monster.tpHunts) do
+        menu:addOption(huntText(i, hunt), function()
+            teleportTo(monster.name, i)
+        end)
+    end
+    menu:display()
+end
+
 local function renderPage()
     if not window then
         return
@@ -285,6 +366,7 @@ local function renderPage()
     local panel = window.ratesPanel
     local list = panel.rateList
     list:destroyChildren()
+    tpButtons = {}
 
     local pages = math.max(1, math.ceil(#filtered / PAGE_SIZE))
     page = math.max(1, math.min(page, pages))
@@ -320,11 +402,32 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
         end
         row:setTooltip(tooltip)
+        row.tp:setVisible(monster.tp > 0)
+        if monster.tp > 0 then
+            row.tp.hunts = monster.tpHunts and #monster.tpHunts or 1
+            if row.tp.hunts > 1 then
+                row.tp:setTooltip(tr('%d hunts of %s: click to pick one (a TP every 30 seconds)', row.tp.hunts, monster.name))
+                row.tp.onClick = function()
+                    chooseHunt(monster)
+                end
+            else
+                row.tp:setTooltip(tr('Teleport to the %s hunt (every 30 seconds)', monster.name))
+                row.tp.onClick = function()
+                    teleportTo(monster.name)
+                end
+            end
+            tpButtons[#tpButtons + 1] = row.tp
+        end
     end
+    updateTpButtons()
 
     panel.rateEmpty:setVisible(#filtered == 0)
     panel.rateEmpty:setText(#rates.monsters == 0 and tr('Loading monster rates...') or tr('No monster matches your filters.'))
-    panel.pageLabel:setText(tr('Page %d of %d  (%d of %d monsters)', page, pages, #filtered, #rates.monsters))
+    -- a TP refusal on show keeps the label until it goes
+    panel.pageLabel.pageText = tr('Page %d of %d  (%d of %d monsters)', page, pages, #filtered, #rates.monsters)
+    if not tpMessageEvent then
+        panel.pageLabel:setText(panel.pageLabel.pageText)
+    end
     panel.prevPage:setEnabled(page > 1)
     panel.nextPage:setEnabled(page < pages)
     panel.rateScroll:setValue(0)
@@ -499,6 +602,7 @@ local function tick()
             window.ratesPanel.countdown:setText(tr('New rates in %s', formatDuration(left)))
         end
     end
+    updateTpButtons()
     local board = boards[currentPeriod]
     if board and board.endsAt then
         local left = board.endsAt - now
@@ -586,6 +690,44 @@ end
 
 local handlers = {}
 
+-- ---------------------------------------------------------------- NEW RATES
+
+-- the roll of rates the player has seen: opened the list, or closed the
+-- NEW RATES callout over the Teleports row of the Mythos bar
+local SEEN_KEY = 'huntboard_rates_seen'
+
+local function markRatesSeen()
+    if rates.slot >= 0 and g_settings.getNumber(SEEN_KEY) ~= rates.slot then
+        g_settings.set(SEEN_KEY, rates.slot)
+        g_settings.save()
+    end
+end
+
+-- once for every roll of the rates, until the player closes it or opens the list
+local function pointNewRates()
+    local panel = modules.game_brevespanel
+    if not panel or not panel.point or rates.slot < 0 or #rates.monsters == 0 then
+        return
+    end
+    if window and window:isVisible() and currentTab == 'rates' then
+        markRatesSeen()
+        panel.hidePoint('rates')
+        return
+    end
+    if g_settings.getNumber(SEEN_KEY) == rates.slot then
+        return
+    end
+    local best
+    for _, monster in ipairs(rates.monsters) do
+        if monster.tp > 0 and (not best or monster.xp + monster.loot > best.xp + best.loot) then
+            best = monster
+        end
+    end
+    panel.point('rates', tr('NEW RATES'), tr('Teleports to the hunts here'),
+        best and tr('Best now: %s  -  XP x%.1f  -  Loot x%.1f', best.name, best.xp / 10, best.loot / 10),
+        markRatesSeen)
+end
+
 function handlers.rates(data)
     timeOffset = (data.now or os.time()) - os.time()
     rates.slot = data.slot or -1
@@ -609,6 +751,11 @@ function handlers.rates(data)
         monster.exp = tonumber(monster.exp) or 0
         monster.hp = tonumber(monster.hp) or 0
         monster.spawns = tonumber(monster.spawns) or 0
+        -- how many hunts the TP goes to; with two or more, { town, floor, spawns } of each
+        monster.tp = tonumber(monster.tp) or 0
+        if type(monster.tpHunts) ~= 'table' or #monster.tpHunts < 2 then
+            monster.tpHunts = nil
+        end
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
@@ -634,6 +781,7 @@ function handlers.rates(data)
         renderHot()
         applyFilters()
     end
+    pointNewRates()
 end
 
 function handlers.board(data)
@@ -650,15 +798,8 @@ end
 
 function handlers.ratesChanged(data)
     rates.nextAt = data.nextAt or rates.nextAt
-    local parts = {}
-    for _, entry in ipairs(data.top or {}) do
-        parts[#parts + 1] = string.format('%s (XP x%.1f / Loot x%.1f)', entry.name, entry.x / 10, entry.l / 10)
-    end
-    showToast(tr('Monster rates have changed!'), tr('Hottest: %s', table.concat(parts, ', ')), function(icon)
-        icon:setImageSource('/images/game/prey/prey_bigxp')
-        icon:setImageClip('0 0 44 44')
-    end, 15)
-    -- the labels on the monsters need the new rates too
+    -- the labels on the monsters need the new rates too; the NEW RATES
+    -- callout comes with them
     send({ action = 'rates' })
 end
 
@@ -682,6 +823,24 @@ end
 
 -- the server sends it under this name (old clients crashed on the toast)
 handlers.coinsToast = handlers.coins
+
+-- answer to a TP (and, on opening, the wait left)
+function handlers.teleport(data)
+    tpReadyAt = os.time() + (tonumber(data.wait) or 0)
+    updateTpButtons()
+    if not data.text then
+        return
+    end
+    local text = latin1(data.text)
+    if data.ok then
+        hide()
+        if modules.game_textmessage and modules.game_textmessage.displayGameMessage then
+            modules.game_textmessage.displayGameMessage(text)
+        end
+    else
+        showTpMessage(text)
+    end
+end
 
 local function onHuntOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
@@ -713,7 +872,7 @@ end
 -- with the Mythos panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
-    rates = { title = 'Hunt Rates', intro = 'XP and loot rate of every monster' },
+    rates = { title = 'Hunts TP', intro = 'Every hunt, with its XP and loot rate and a TP' },
     board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
 }
 
@@ -757,6 +916,12 @@ function selectTab(tab)
     if tab == 'board' then
         renderBoard()
         send({ action = 'board', period = currentPeriod })
+    elseif window:isVisible() then
+        -- the new rates are in front of the player: no NEW RATES callout
+        markRatesSeen()
+        if modules.game_brevespanel and modules.game_brevespanel.hidePoint then
+            modules.game_brevespanel.hidePoint('rates')
+        end
     end
 end
 

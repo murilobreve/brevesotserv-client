@@ -1,0 +1,9 @@
+Module
+  name: game_bosses
+  description: Bosses - the bosses fought from a lever, and the way to their lever rooms
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ bosses ]
+  @onLoad: init()
+  @onUnload: terminate()

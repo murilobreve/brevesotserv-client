@@ -213,6 +213,13 @@ local function setup()
         g_settings.set('smartLeftClick', false)
     end
 
+    -- Lights start off (lighter on the GPU, above all in the browser): once,
+    -- also on installs that saved the old default; a player can turn them on
+    if not g_settings.getBoolean('breves_lights_off') then
+        g_settings.set('breves_lights_off', true)
+        g_settings.set('enableLights', false)
+    end
+
     -- load options
     for k, obj in pairs(options) do
         local v = obj.value

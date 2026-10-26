@@ -203,7 +203,7 @@ function LootAnalyser:checkBalance()
 		local loot = 0
 		for itemId, itemInfo in pairs(LootAnalyser.lootedItems) do
 			local count = itemInfo.count
-			local price = count * itemInfo.basePrice
+			local price = count * itemInfo.basePrice + (itemInfo.rareExtra or 0)
 
 			loot = loot + price
 		end
@@ -256,7 +256,7 @@ function LootAnalyser:updateWindow(updateScroll, ignoreVisible)
 				widget:setItemId(itemId)
 			end
 			widget:setItemCount(info.count)
-			widget:setTooltip(string.format("%s (Count: %s, Value: %dgp, Sum: %dgp)", string.capitalize(info.name), formatLargeNumber(info.count), info.basePrice, info.basePrice * info.count))
+			widget:setTooltip(string.format("%s (Count: %s, Value: %dgp, Sum: %dgp)", string.capitalize(info.name), formatLargeNumber(info.count), info.basePrice, info.basePrice * info.count + (info.rareExtra or 0)))
 			numOfItems = numOfItems + 1
 			if numOfItems == 4 then
 				numOfItems = 0
@@ -456,8 +456,14 @@ function LootAnalyser:addLootedItems(item, name)
 	itemInfo.basePrice = price
 	itemInfo.count = itemInfo.count + count
 
+	-- a rarity item is worth what Gersao's rare window pays, kept apart so a
+	-- new base price (Cyclopedia) doesn't drop it
+	local rarePrice = serverRarePrice(item)
+	local rareExtra = (rarePrice and rarePrice > price) and (rarePrice - price) * count or 0
+	itemInfo.rareExtra = (itemInfo.rareExtra or 0) + rareExtra
+
 	-- update balance
-	LootAnalyser.goldValue = LootAnalyser.goldValue + (itemInfo.basePrice * count)
+	LootAnalyser.goldValue = LootAnalyser.goldValue + (itemInfo.basePrice * count) + rareExtra
 	LootAnalyser.updateBalance = true
 
 	LootAnalyser:checkBalance()
