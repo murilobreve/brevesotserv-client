@@ -1,7 +1,10 @@
 -- Bosses: the bosses fought from a lever, each in its lever room (copied from
 -- the official map). The list shows the quest, the level and the player's
--- wait for every boss; the button takes the player to the lever room, from a
--- protection zone (temple, depot). Opened from the Mythos bar.
+-- wait for every boss, and whether a team is fighting it; the button takes
+-- the player to the lever room (from a protection zone or out of combat)
+-- whatever those say: the lever is what refuses, and the card says why it
+-- would (the player's wait or level, a fight on, a party member's wait).
+-- Opened from the Mythos bar.
 -- Talks to data-otservbr-global/scripts/custom/boss_portal.lua through
 -- extended opcode BOSS_OPCODE with JSON payloads.
 
@@ -17,6 +20,8 @@ local filter = 'all'
 local rows = {} -- boss name -> row of the list
 local tickEvent
 local messageEvent
+local ticks = 0
+local REFRESH_SECONDS = 15 -- the open window asks for the arenas again
 
 -- ---------------------------------------------------------------- helpers
 
@@ -99,6 +104,19 @@ local function canFight(boss)
     return boss.level == 0 or (state and state.level or 0) >= boss.level
 end
 
+-- players in the arena now
+local function busy(boss)
+    return tonumber(boss.busy) or 0
+end
+
+-- seconds until the arena's time runs out, or nil
+local function busyLeft(boss)
+    if not boss.busyLeft then
+        return nil
+    end
+    return math.max(0, boss.busyLeft - (os.time() - receivedAt))
+end
+
 local function statusOf(boss)
     if not canFight(boss) then
         return tr('Nível %d', boss.level), '#ff7a6b'
@@ -107,7 +125,44 @@ local function statusOf(boss)
     if left > 0 then
         return formatWait(left), '#e0c060'
     end
+    if busy(boss) > 0 then
+        return tr('Em luta'), '#ffa64d'
+    end
     return tr('Pronto'), '#7fd35a'
+end
+
+local function isReady(boss)
+    return canFight(boss) and waitLeft(boss) == 0 and busy(boss) == 0
+end
+
+-- what would stop the lever now, one line each
+local function warningsOf(boss)
+    local lines = {}
+    if busy(boss) > 0 then
+        local left = busyLeft(boss)
+        lines[#lines + 1] = left and tr('Um time está lutando agora: a alavanca libera quando a sala esvaziar (em até %s).', formatWait(left))
+            or tr('Um time está lutando agora: a alavanca libera quando a sala esvaziar.')
+    end
+    local wait = waitLeft(boss)
+    if wait > 0 then
+        lines[#lines + 1] = tr('Você já fez esse boss: a alavanca libera para você em %s.', formatWait(wait))
+    end
+    if not canFight(boss) then
+        lines[#lines + 1] = tr('A alavanca pede nível %d de todo o time.', boss.level)
+    end
+    local parts = {}
+    for _, member in ipairs(boss.team or {}) do
+        local memberWait = math.max(0, (tonumber(member[2]) or 0) - (os.time() - receivedAt))
+        if memberWait > 0 then
+            parts[#parts + 1] = tr('%s espera %s', member[1], formatWait(memberWait))
+        elseif member[3] == 1 then
+            parts[#parts + 1] = tr('%s não tem o nível', member[1])
+        end
+    end
+    if #parts > 0 then
+        lines[#lines + 1] = tr('Da sua party: %s.', table.concat(parts, ', '))
+    end
+    return lines
 end
 
 local function findBoss(name)
@@ -119,7 +174,7 @@ local function findBoss(name)
 end
 
 local function shown(boss)
-    if filter == 'ready' and (waitLeft(boss) > 0 or not canFight(boss)) then
+    if filter == 'ready' and not isReady(boss) then
         return false
     end
     if filter == 'level' and not canFight(boss) then
@@ -160,6 +215,34 @@ local function setStat(stat, key, value, color)
     stat.value:setColor(color or '#e6e0f2')
 end
 
+-- the lines of the card that change by the second: the player's wait, the
+-- arena, and what would stop the lever
+local function renderWaits(boss)
+    local card = window.card
+    local left = waitLeft(boss)
+    if not canFight(boss) then
+        setStat(card.cooldown, tr('Sua espera'), tr('Nível %d', boss.level), '#ff7a6b')
+    elseif left > 0 then
+        setStat(card.cooldown, tr('Sua espera'), formatWait(left), '#e0c060')
+    else
+        setStat(card.cooldown, tr('Sua espera'), tr('Pronto'), '#7fd35a')
+    end
+    if busy(boss) > 0 then
+        local arenaLeft = busyLeft(boss)
+        setStat(card.room, tr('Sala'), arenaLeft and tr('Em luta, até %s', formatWait(arenaLeft)) or tr('Em luta'), '#ffa64d')
+    else
+        setStat(card.room, tr('Sala'), tr('Livre'), '#7fd35a')
+    end
+    local warnings = warningsOf(boss)
+    if #warnings > 0 then
+        card.note:setText(table.concat(warnings, '\n'))
+        card.note:setColor('#ffb36b')
+    else
+        card.note:setText(tr('De uma área protegida, ou fora de combate, você vai à sala da alavanca. Puxe com o time nos pisos marcados; quando o boss morre, abre um portal de volta.'))
+        card.note:setColor('#b4afc3')
+    end
+end
+
 local function renderCard()
     local card = window.card
     local boss = findBoss(selectedName)
@@ -177,10 +260,7 @@ local function renderCard()
     setStat(card.experience, tr('Experiência'), formatNumber(boss.experience))
     setStat(card.wait, tr('Espera entre lutas'), formatWait(boss.wait or 0))
     setStat(card.players, tr('Jogadores'), boss.players > 1 and tr('%d ou mais', boss.players) or tr('1 a 5'))
-    local status, color = statusOf(boss)
-    setStat(card.cooldown, tr('Sua espera'), status, color)
-    card.note:setText(tr('Do templo ou do depot você vai à sala da alavanca. Puxe com o time nos pisos marcados; quando o boss morre, abre um portal de volta.'))
-    card.go:setEnabled(canFight(boss))
+    renderWaits(boss)
 end
 
 local function selectBoss(name)
@@ -196,7 +276,7 @@ local function updateStatuses()
     local ready = 0
     for _, boss in ipairs(state.bosses) do
         local status, color = statusOf(boss)
-        if canFight(boss) and waitLeft(boss) == 0 then
+        if isReady(boss) then
             ready = ready + 1
         end
         local row = rows[boss.name]
@@ -207,8 +287,7 @@ local function updateStatuses()
     end
     local boss = findBoss(selectedName)
     if boss and window then
-        local status, color = statusOf(boss)
-        setStat(window.card.cooldown, tr('Sua espera'), status, color)
+        renderWaits(boss)
     end
     if window then
         window.summary:setText(tr('%d bosses, %d prontos para você. Cada um na sala da alavanca do mapa oficial.', #state.bosses, ready))
@@ -274,12 +353,7 @@ function setFilter(which)
 end
 
 function goSelected()
-    local boss = findBoss(selectedName)
-    if not boss then
-        return
-    end
-    if not canFight(boss) then
-        showMessage(tr('%s pede nível %d.', boss.name, boss.level), false)
+    if not findBoss(selectedName) then
         return
     end
     send({ action = 'go', name = selectedName })
@@ -329,6 +403,11 @@ end
 
 local function tick()
     updateStatuses()
+    -- the arenas fill and empty: the open window asks again now and then
+    ticks = ticks + 1
+    if ticks % REFRESH_SECONDS == 0 and window and window:isVisible() then
+        send({ action = 'open' })
+    end
 end
 
 function show()

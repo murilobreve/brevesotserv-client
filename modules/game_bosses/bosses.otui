@@ -76,7 +76,7 @@ BossTab < BrevesTab
 
 MythosWindow
   id: bossesWindow
-  size: 740 540
+  size: 740 580
   @onEscape: modules.game_bosses.hide()
 
   BossTab
@@ -232,6 +232,14 @@ MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
 
+    // a team in the arena now, or free
+    BossStat
+      id: room
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
+    // how it goes, or what would stop the lever (bosses.lua: renderWaits)
     BrevesNote
       id: note
       anchors.top: prev.bottom
@@ -239,7 +247,7 @@ MythosWindow
       anchors.right: parent.right
       margin-top: 10
       text-auto-resize: false
-      height: 52
+      height: 70
 
     MythosPrimaryButton
       id: go
