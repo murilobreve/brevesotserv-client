@@ -1,7 +1,7 @@
 -- Bosses: the bosses fought from a lever, each in its lever room (copied from
 -- the official map). The list shows the quest, the level and the player's
 -- wait for every boss; the button takes the player to the lever room, from a
--- protection zone or out of a fight. Opened from the Mythos bar.
+-- protection zone (temple, depot). Opened from the Mythos bar.
 -- Talks to data-otservbr-global/scripts/custom/boss_portal.lua through
 -- extended opcode BOSS_OPCODE with JSON payloads.
 
@@ -179,7 +179,7 @@ local function renderCard()
     setStat(card.players, tr('Jogadores'), boss.players > 1 and tr('%d ou mais', boss.players) or tr('1 a 5'))
     local status, color = statusOf(boss)
     setStat(card.cooldown, tr('Sua espera'), status, color)
-    card.note:setText(tr('Você vai para a sala da alavanca. Fique com o time nos pisos marcados e puxe a alavanca. O portal ao lado volta para o templo.'))
+    card.note:setText(tr('Do templo ou do depot você vai à sala da alavanca. Puxe com o time nos pisos marcados; quando o boss morre, abre um portal de volta.'))
     card.go:setEnabled(canFight(boss))
 end
 
