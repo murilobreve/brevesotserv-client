@@ -6,7 +6,8 @@
 -- sqm above and to the left of its own); on the character, at its own sqm
 -- (the spells that land on the ground fall on it). With the mouse off the
 -- map, or over a window on it, the spell goes at the creature being
--- attacked, else the way the character faces.
+-- attacked (said so, t = 1: the Salto do Tita does not leap onto it, it
+-- goes the way the character faces), else the way the character faces.
 -- The server says at login which words are skillshots; the client answers
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
@@ -79,22 +80,22 @@ end
 -- Where the spell goes: the sqm under the mouse on the map (the creature's
 -- own sqm when the mouse is on its body, the player's when it is on him);
 -- with the mouse off the map (a click on the action bar, a window over the
--- map), the creature being attacked. nil: the server sends it the way the
--- character faces.
+-- map), the creature being attacked, and true after it. nil: the server
+-- sends it the way the character faces.
 function aimPosition(mapPanel)
     local mouse = g_window.getMousePosition()
     if mapPanel:containsPoint(mouse) and not overWindow(mouse) then
         local pos = mapPanel:getPosition(mouse)
         if pos and pos.x ~= 0 then
             local creature = creatureUnder(pos)
-            return creature and creature:getPosition() or pos
+            return creature and creature:getPosition() or pos, false
         end
     end
     local target = g_game.getAttackingCreature()
     local player = g_game.getLocalPlayer()
     local pos = target and target:getPosition()
     if pos and player and pos.z == player:getPosition().z then
-        return pos
+        return pos, true
     end
     return nil
 end
@@ -108,11 +109,11 @@ local function sendAim(text)
     if not mapPanel or not protocol then
         return
     end
-    local pos = aimPosition(mapPanel)
+    local pos, fromTarget = aimPosition(mapPanel)
     if not pos then
         return
     end
-    protocol:sendExtendedJSONOpcode(OPCODE, { x = pos.x, y = pos.y, z = pos.z })
+    protocol:sendExtendedJSONOpcode(OPCODE, { x = pos.x, y = pos.y, z = pos.z, t = fromTarget and 1 or nil })
 end
 
 local function onOpcode(protocol, opcode, data)

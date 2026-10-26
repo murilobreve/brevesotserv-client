@@ -5,6 +5,7 @@
 --          stands: each piece rises, stands shimmering, cracks in its last
 --          second and breaks
 --   chill  the frost on the feet of what stands next to it
+--   down   a boss came next to it: the pieces break now, before their time
 
 local RISE_MS = 250
 local CRACK_MS = 1000
@@ -21,6 +22,7 @@ art.add('frio', 32, 0, 0, 400)
 
 local pending = {} -- scheduled events, cancelled when the game ends
 local standing = {} -- pieces on the map, taken off when the game ends
+local pieces = {} -- "x:y:z" -> the piece there: { events, placed }
 
 local function later(delay, callback)
     local event
@@ -29,6 +31,11 @@ local function later(delay, callback)
         callback()
     end, math.max(0, delay))
     pending[event] = true
+    return event
+end
+
+local function keyOf(position)
+    return position.x .. ':' .. position.y .. ':' .. position.z
 end
 
 function registerWallArt()
@@ -44,6 +51,7 @@ function clearWallArt()
         detachArt(placed)
     end
     standing = {}
+    pieces = {}
 end
 
 function unregisterWallArt()
@@ -52,22 +60,33 @@ function unregisterWallArt()
 end
 
 local function piece(position, way, ms)
+    local key = keyOf(position)
+    local entry = { events = {} }
+    pieces[key] = entry
+    local function at(delay, callback)
+        table.insert(entry.events, later(delay, callback))
+    end
     art.burst('subida_' .. way, position)
     local standMs = math.max(0, ms - RISE_MS - CRACK_MS)
-    later(RISE_MS - 10, function()
+    at(RISE_MS - 10, function()
         local placed = art.place('pe_' .. way, position, standMs)
         if placed then
             standing[placed] = true
-            later(standMs, function()
+            entry.placed = placed
+            at(standMs, function()
                 standing[placed] = nil
+                entry.placed = nil
             end)
         end
     end)
-    later(RISE_MS + standMs, function()
+    at(RISE_MS + standMs, function()
         art.burst('rachando_' .. way, position)
     end)
-    later(ms, function()
+    at(ms, function()
         art.burst('quebra', position)
+        if pieces[key] == entry then
+            pieces[key] = nil
+        end
     end)
 end
 
@@ -78,6 +97,25 @@ function handlers.up(data)
     local ms = tonumber(data.ms) or 4000
     for _, position in ipairs(data.p or {}) do
         piece(position, way, ms)
+    end
+end
+
+function handlers.down(data)
+    for _, position in ipairs(data.p or {}) do
+        local key = keyOf(position)
+        local entry = pieces[key]
+        if entry then
+            pieces[key] = nil
+            for _, event in ipairs(entry.events) do
+                removeEvent(event)
+                pending[event] = nil
+            end
+            if entry.placed then
+                standing[entry.placed] = nil
+                detachArt(entry.placed)
+            end
+            art.burst('quebra', position)
+        end
     end
 end
 
