@@ -1,94 +1,98 @@
--- Meteoro: the designer's art (images/meteoro, from "Meteoro - artes v1").
--- The server sends two moments of a cast (scripts/skillshot, fx "meteor"):
---   mark    the 3x3 square fills its ring and the centre glows for `ms`
---           (1.5 s); 0.4 s before the end the rock falls from the upper left
---   impact  the blast, then the ground burns, fainter each second (3 s,
---           while the server burns whoever stands there)
--- The falling rock is a still frame per tile it crosses (a moving effect
--- can't use an animated texture).
+-- Meteoro: the designer's art v2 (images/meteoro, "Ascensao - artes v2",
+-- layers.lua). The server sends two moments of a cast (scripts/skillshot,
+-- fx "meteor"):
+--   mark    the 3x3 mark (p) for `ms` (1.5 s): the ring closes like a
+--           clock, runes turn, the rock's shadow grows; in the last 0.4 s
+--           the rock falls from the upper left with its tail of fire
+--   impact  the flash, the ring of fire, the ball of fire and smoke, rocks
+--           and sparks, the map lit and shaken; the crater cools for 3 s
+--           (while the server burns whoever stands there)
+-- The preview's mark is 1.5 s; the rock falls from (-4, 5) to the centre.
 
+local PREVIEW_MARK_MS = 1500
 local FALL_MS = 400
-local FALL_TILES = 4 -- it comes from this many tiles up and to the left
-local BURN_STAGES = { 'brasas_fortes', 'brasas_medias', 'brasas_fracas' }
-local BURN_STAGE_MS = 1000
+local LIGHT = 199 -- fire
 
--- anchors: the centre for the marks and the embers, the front of the rock,
--- the ground under the blast
-local art = newArtSet(3300, '/game_skillshot/images/meteoro/', 'Meteoro')
-art.add('marca', 96, 32, 32, 1500, true)
-art.add('centro', 32, 0, 0, 1500, true)
-for frame = 1, 8 do
-    art.add('queda_' .. frame, 128, 88, 92)
+local art = newLayerSet(3300, '/game_skillshot/images/meteoro/', 'Meteoro')
+art.add('marca_relogio', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true, frames = 'clock' })
+art.add('marca_runas', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+art.add('sombra', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+art.add('meteoro', { size = { 128, 128 }, anchor = { 64, 64 } })
+art.add('meteoro_cauda', { size = { 256, 64 }, anchor = { 128, 32 }, additive = true })
+art.add('impacto_nucleo', { size = { 256, 256 }, anchor = { 128, 128 }, additive = true })
+art.add('impacto_anel', { size = { 320, 320 }, anchor = { 160, 160 }, ground = true })
+art.add('impacto_fogo', { size = { 256, 256 }, anchor = { 128, 128 }, frames = 'once', ms = 750 })
+art.add('cratera', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+art.add('poeira', { size = { 256, 256 }, anchor = { 128, 128 } })
+for index = 1, 3 do
+    art.add('rocha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 } })
 end
-art.add('impacto', 160, 64, 88, 400)
-for _, stage in ipairs(BURN_STAGES) do
-    art.add(stage, 96, 32, 32, BURN_STAGE_MS, true)
-end
-
-local pending = {} -- scheduled events, cancelled when the game ends
-
-local function later(delay, callback)
-    local event
-    event = scheduleEvent(function()
-        pending[event] = nil
-        callback()
-    end, math.max(0, delay))
-    pending[event] = true
+for index = 1, 2 do
+    art.add('fagulha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 }, additive = true })
 end
 
 function registerMeteorArt()
     art.register()
 end
 
+-- everything it draws is timed by its curves: nothing to cancel
 function clearMeteorArt()
-    for event in pairs(pending) do
-        removeEvent(event)
-    end
-    pending = {}
 end
 
 function unregisterMeteorArt()
-    clearMeteorArt()
     art.unregister()
 end
 
-local function at(center, dx, dy)
-    return { x = center.x + dx, y = center.y + dy, z = center.z }
-end
-
-local function fall(center)
-    local stepMs = math.floor(FALL_MS / FALL_TILES)
-    for step = 0, FALL_TILES - 1 do
-        later(step * stepMs, function()
-            local from = at(center, step - FALL_TILES, step - FALL_TILES)
-            -- the duration takes it off when it gets to the next tile
-            local placed = art.place('queda_' .. (step * 2 + 1), from, stepMs)
-            if placed then
-                placed.effect:move(from, at(from, 1, 1))
-            end
-        end)
+-- the tail: where the preview has it when the rock lands (behind it),
+-- moved with the rock and as the rock (speeding up); its own fade in
+local function tailKeys()
+    local rock = art.keys('queda', 'meteoro') or {}
+    local tail = art.keys('queda', 'meteoro_cauda') or {}
+    if #rock < 2 or #tail < 2 then
+        return tail
     end
+    local landed, last = rock[#rock], tail[#tail]
+    local behindX, behindY = last.x - landed.x, last.y - landed.y
+    local keys = {}
+    for index, key in ipairs(tail) do
+        -- the rock's place at this time, on its own curve
+        local first = rock[1]
+        local x = math.max(0, math.min(1, (key.t - first.t) / (landed.t - first.t)))
+        local along = x * x * x -- "entrada"
+        keys[index] = {
+            t = key.t, scale = key.scale, opacity = key.opacity, rot = key.rot, ease = index == 1 and 0 or landed.ease,
+            x = first.x + (landed.x - first.x) * along + behindX, y = first.y + (landed.y - first.y) * along + behindY
+        }
+    end
+    return keys
 end
 
 local handlers = {}
 
 function handlers.mark(data)
-    local center, ms = data.p, tonumber(data.ms) or 1500
-    art.burst('marca', center)
-    art.burst('centro', center)
-    later(ms - FALL_MS, function()
-        fall(center)
-    end)
+    local center, ms = data.p, tonumber(data.ms) or PREVIEW_MARK_MS
+    local timing = { moment = 'marca', scaleTime = ms / PREVIEW_MARK_MS, duration = ms }
+    art.play('marca_runas', center, timing)
+    art.play('sombra', center, timing)
+    timing.frames = ms
+    art.play('marca_relogio', center, timing)
+    -- the fall, in the mark's last 0.4 s; the tail behind the rock all the
+    -- way down (in the preview's points it goes straight while the rock
+    -- speeds up, and runs ahead of it)
+    local fall = { moment = 'queda', shift = ms - FALL_MS, duration = ms }
+    art.play('meteoro_cauda', center, { keys = tailKeys(), shift = fall.shift, duration = ms })
+    art.play('meteoro', center, fall)
 end
 
 function handlers.impact(data)
     local center = data.p
-    art.burst('impacto', center)
-    for index, stage in ipairs(BURN_STAGES) do
-        later((index - 1) * BURN_STAGE_MS, function()
-            art.burst(stage, center)
-        end)
+    art.play('impacto_nucleo', center, { moment = 'impacto', light = { keys = art.lightKeys('impacto'), color = LIGHT } })
+    for _, name in ipairs({ 'impacto_anel', 'impacto_fogo', 'poeira' }) do
+        art.play(name, center, { moment = 'impacto' })
     end
+    art.play('cratera', center, { moment = 'chão' })
+    art.particles('impacto', center)
+    art.tremor('impacto', center)
 end
 
 function onMeteorArt(data)

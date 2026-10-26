@@ -38,6 +38,7 @@ public:
     void draw(DrawPoolType drawPane);
 
     void movePixels(int x, int y);
+    void shake(uint8_t strength, uint16_t durationMs);
     void followCreature(const CreaturePtr& creature);
     void setCameraPosition(const Position& pos);
     void lockVisibleFloor(int floor);

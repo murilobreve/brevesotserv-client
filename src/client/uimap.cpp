@@ -58,7 +58,7 @@ void UIMap::draw(const DrawPoolType drawPane) {
             m_mapView->drawFloor();
         }, [this] {
             m_mapView->registerEvents();
-        }, m_mapView->m_posInfo.rect, m_mapView->m_posInfo.srcRect,
+        }, m_mapView->m_posInfo.rect, m_mapView->m_posInfo.srcRect.translated(m_mapView->getShakeOffset()),
            m_mapView->getCameraPosition().z == g_gameConfig.getMapSeaFloor() ? Color(0xFFA54C27U) : Color::black);
 
         g_drawPool.preDraw(DrawPoolType::CREATURE_INFORMATION, [] {});
@@ -66,7 +66,7 @@ void UIMap::draw(const DrawPoolType drawPane) {
         g_drawPool.preDraw(drawPane, [this] {
             m_mapView->m_lightView->clear();
             m_mapView->drawLights();
-            m_mapView->m_lightView->draw(m_mapView->m_posInfo.rect, m_mapView->m_posInfo.srcRect);
+            m_mapView->m_lightView->draw(m_mapView->m_posInfo.rect, m_mapView->m_posInfo.srcRect.translated(m_mapView->getShakeOffset()));
         });
     } else if (drawPane == DrawPoolType::CREATURE_INFORMATION) {
         // FIXME: disabled multithreading of creature information drawing (instead draw it at the same time as MAP)
@@ -99,6 +99,8 @@ void UIMap::updateMapRect() {
 }
 
 // ----------------- moved from header: bodies that access m_mapView -----------------
+
+void UIMap::shake(const uint8_t strength, const uint16_t durationMs) { m_mapView->shake(strength, durationMs); }
 
 void UIMap::movePixels(int x, int y) { m_mapView->move(x, y); }
 

@@ -1,0 +1,33 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+salto;saida_poeira;0;0.3;0;-3;0.3;0;;saida
+salto;saida_poeira;45;0.65;0.9;-3;0.3;0;;saida
+salto;saida_poeira;280;1;0.9;-3;0.3;0;;saida
+salto;saida_poeira;600;1.05;0;-3;0.3;0;;saida
+salto;saida_anel;0;0.2;0;-3;0;0;;saida
+salto;saida_anel;50;0.45;0.8;-3;0;0;;saida
+salto;saida_anel;400;0.9;0;-3;0;0;;saida
+salto;sombra;0;0.2;0;1;0;0;;saida
+salto;sombra;200;0.4;0.3;1;0;0;;saida
+salto;sombra;900;1;0.65;1;0;0;;saida
+salto;alvo_relogio;0;1;0.9;1;0;0;;saida
+salto;alvo_relogio;900;1;0.9;1;0;0;;saida
+queda;queda_nucleo;0;0.2;0;1;0.3;0;;saida
+queda;queda_nucleo;20;0.75;1;1;0.3;0;;saida
+queda;queda_nucleo;60;1;1;1;0.3;0;;saida
+queda;queda_nucleo;200;1.1;0;1;0.3;0;;saida
+queda;onda;20;0.25;0.9;1;0;0;;saida
+queda;onda;150;0.85;0.9;1;0;0;;saida
+queda;onda;550;1;0;1;0;0;;saida
+queda;poeira_anel;70;0.45;0;1;0;0;;saida
+queda;poeira_anel;130;0.65;0.9;1;0;0;;saida
+queda;poeira_anel;430;1;0.8;1;0;0;;saida
+queda;poeira_anel;970;1.1;0;1;0;0;;saida
+queda;rachaduras;550;1;0;1;0;0;;saida
+queda;rachaduras;630;1;0.85;1;0;0;;saida
+queda;rachaduras;1750;1;0.65;1;0;0;;saida
+queda;rachaduras;2850;1;0;1;0;0;;saida
+queda;(luz do mapa);0;;;;;;0;saida
+queda;(luz do mapa);35;;;;;;7;saida
+queda;(luz do mapa);500;;;;;;1;saida
+queda;(luz do mapa);900;;;;;;0;saida
+queda;(tremor);0;;;;;;;leve 120 ms

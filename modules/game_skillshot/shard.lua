@@ -3,8 +3,9 @@
 -- "shard"):
 --   fly     the orb moves one sqm through what it meets (still frames)
 --   graze   the frost on whom it passes through
---   burst   said again: it shatters (3x3) and the stunned get the stars
---           over their heads for `ms`
+--   burst   said again: it shatters (3x3) and the stunned (ids) get the
+--           stars over their heads, each for its own time (mss; `ms` with
+--           no mss)
 --   fade    not said again: it comes apart at the end of its way
 
 local SHARD_FORGET_MS = 2000
@@ -82,10 +83,11 @@ function handlers.burst(data)
     forget(data.c)
     art.burst('estilhaco', data.p)
     local ms = tonumber(data.ms) or 1500
-    for _, id in ipairs(data.ids or {}) do
+    local each = type(data.mss) == 'table' and data.mss or {}
+    for index, id in ipairs(data.ids or {}) do
         local creature = g_map.getCreatureById(tonumber(id) or 0)
         if creature then
-            art.attach('atordoado', creature, ms)
+            art.attach('atordoado', creature, tonumber(each[index]) or ms)
         end
     end
 end

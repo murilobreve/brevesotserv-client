@@ -1,0 +1,50 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+puxar;arco_1;0;0.85;0;-6;0;0;;saida
+puxar;arco_1;35;0.9;0.85;-6;0;0;;saida
+puxar;arco_1;130;1;0.95;-6;0;0;;saida
+puxar;arco_1;210;1;0;-6;0;0;;saida
+puxar;arco_2;100;0.95;0;-6;0;0;;saida
+puxar;arco_2;190;1;1;-6;0;0;;saida
+puxar;arco_2;250;1;1;-6;0;0;;saida
+puxar;arco_2;340;1;0;-6;0;0;;saida
+puxar;arco_3;230;1;0;-6;0;0;;saida
+puxar;arco_3;320;1;1;-6;0;0;;saida
+puxar;arco_3;400;1;1;-6;0;0;;saida
+puxar;ponta_energia;0;0.1;0;-5.45;0;0;;saida
+puxar;ponta_energia;160;0.4;0.45;-5.45;0;0;;saida
+puxar;ponta_energia;400;0.85;1;-5.45;0;0;;saida
+soltar;soltar_flash;0;0.3;0;-5.7;0;0;;saida
+soltar;soltar_flash;15;0.85;1;-5.7;0;0;;saida
+soltar;soltar_flash;50;1;1;-5.7;0;0;;saida
+soltar;soltar_flash;120;1.1;0;-5.7;0;0;;saida
+soltar;soltar_anel;0;0.25;0.8;-6;0;0;;saida
+soltar;soltar_anel;100;0.8;0.75;-6;0;0;;saida
+soltar;soltar_anel;280;1.1;0;-6;0;0;;saida
+voo;flecha;0;0.8;1;-6;0;0;;linear
+voo;flecha;360;0.8;1;6;0;0;;linear
+voo;rastro;5;0.3;0;-6;0;0;;linear
+voo;rastro;65;0.9;0.9;-5;0;0;;saida
+voo;rastro;360;0.9;0.9;4.8;0;0;;linear
+voo;rastro;505;1.1;0;5;0;0;;entrada
+acerto;acerto_nucleo;0;0.2;0;6;0;0;;saida
+acerto;acerto_nucleo;20;0.9;1;6;0;0;;saida
+acerto;acerto_nucleo;60;1;1;6;0;0;;saida
+acerto;acerto_nucleo;220;1.1;0;6;0;0;;saida
+acerto longe;acerto_raio;0;0.2;0;6;0;0;;saida
+acerto longe;acerto_raio;50;0.85;1;6;0;0;;saida
+acerto longe;acerto_raio;110;1;1;6;0;0;;saida
+acerto longe;acerto_raio;650;1;0;6;0;0;;saida
+acerto;acerto_anel;20;0.15;0.9;6;0;0;;saida
+acerto;acerto_anel;140;0.8;0.9;6;0;0;;saida
+acerto;acerto_anel;640;1;0;6;0;0;;saida
+preso;preso_halo;0;1;0;6;0;0;;saida
+preso;preso_halo;140;1;0.8;6;0;0;;saida
+preso;preso_halo;1000;1;0.75;6;0;0;;saida
+preso;preso_halo;1350;1;0;6;0;0;;saida
+erro;erro_cravada;0;1;0.8;6;0;0;;saida
+erro;erro_cravada;400;1;0.8;6;0;0;;saida
+erro;erro_cravada;900;1;0;6;0;0;;saida
+acerto;(luz do mapa);0;;;;;;0;saida
+acerto;(luz do mapa);35;;;;;;4;saida
+acerto;(luz do mapa);500;;;;;;1;saida
+acerto;(luz do mapa);900;;;;;;0;saida

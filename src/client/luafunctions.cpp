@@ -920,6 +920,13 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<AttachedEffect>("setDirection", &AttachedEffect::setDirection);
     g_lua.bindClassMemberFunction<AttachedEffect>("getDirection", &AttachedEffect::getDirection);
     g_lua.bindClassMemberFunction<AttachedEffect>("move", &AttachedEffect::move);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setCurve", &AttachedEffect::setCurve);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setAnchor", &AttachedEffect::setAnchor);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setAdditive", &AttachedEffect::setAdditive);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setRotation", &AttachedEffect::setRotation);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setFlipped", &AttachedEffect::setFlipped);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setMotion", &AttachedEffect::setMotion);
+    g_lua.bindClassMemberFunction<AttachedEffect>("setFramePlay", &AttachedEffect::setFramePlay);
 
     g_lua.registerClass<Paperdoll>();
     g_lua.bindClassMemberFunction<Paperdoll>("clone", &Paperdoll::clone);
@@ -1178,6 +1185,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<UIMap>("zoomOut", &UIMap::zoomOut);
     g_lua.bindClassMemberFunction<UIMap>("followCreature", &UIMap::followCreature);
     g_lua.bindClassMemberFunction<UIMap>("setCameraPosition", &UIMap::setCameraPosition);
+    g_lua.bindClassMemberFunction<UIMap>("shake", &UIMap::shake);
     g_lua.bindClassMemberFunction<UIMap>("setMaxZoomIn", &UIMap::setMaxZoomIn);
     g_lua.bindClassMemberFunction<UIMap>("setMaxZoomOut", &UIMap::setMaxZoomOut);
     g_lua.bindClassMemberFunction<UIMap>("lockVisibleFloor", &UIMap::lockVisibleFloor);

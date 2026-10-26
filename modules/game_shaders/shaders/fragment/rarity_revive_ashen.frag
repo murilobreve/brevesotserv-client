@@ -21,6 +21,15 @@ float noise(vec2 p)
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+// the heart waking in the corpse: a double beat (lub-dub) a little faster
+// than one a second
+float heartbeat(float t)
+{
+    float f = fract(t * 1.25);
+    float lub = (f - 0.08) / 0.08;
+    float dub = (f - 0.32) / 0.09;
+    return min(1.0, exp(-lub * lub) + 0.6 * exp(-dub * dub));
+}
 void main()
 {
     vec4 col = texture2D(u_Tex0, v_TexCoord);
@@ -34,6 +43,10 @@ void main()
     float crack = smoothstep(0.60, 0.66, n) * (1.0 - smoothstep(0.66, 0.72, n));
     crack *= 0.45 + 0.35 * (0.5 + 0.5 * sin(u_Time * 1.6));
     result = mix(result, mid, crack * smoothstep(0.08, 0.3, l));
+    // each beat the embers flare: the cracks go amber, the coal glows copper
+    float beat = heartbeat(u_Time);
+    result = mix(result, light, beat * crack * 0.8);
+    result = mix(result, mid, beat * 0.3 * smoothstep(0.1, 0.6, l));
     result = mix(result, c, face(c) * 0.5);
     gl_FragColor = vec4(clamp(result, 0.0, 1.0), col.a);
 }
