@@ -1,0 +1,68 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+carga;carga_orbe;0;0.2;0;0;0;0;0;saida
+carga;carga_orbe;180;0.4;0.5;0;0;0;0;saida
+carga;carga_orbe;650;0.6;0.8;0;0;0;0;saida
+carga;carga_orbe;1200;0.85;1;0;0;0;0;saida
+carga;carga_orbe;1800;1.2;1;0;0;0;0;saida
+carga;carga_orbe;1870;1.3;0;0;0;0;0;saida
+carga;carga_runas;0;0.45;0;0;0;0;0;saida
+carga;carga_runas;150;0.6;0.7;0;0;0;0;saida
+carga;carga_runas;650;0.85;0.9;0;0;35;0;saida
+carga;carga_runas;1200;1.05;1;0;0;85;0;saida
+carga;carga_runas;1800;1.25;1;0;0;150;0;saida
+carga;carga_runas;1870;1.25;0;0;0;155;0;saida
+carga;carga_raios;0;0.8;0;0;0;0;0;saida
+carga;carga_raios;70;1;1;0;0;0;0;saida
+carga;carga_raios;250;1.04;0.8;0;0;0.0;0;saida
+carga;carga_raios;500;1;1;0;0;0.0;0;saida
+carga;carga_raios;750;1.04;0.8;0;0;0.0;0;saida
+carga;carga_raios;1000;1;1;0;0;0.0;0;saida
+carga;carga_raios;1250;1.04;0.8;0;0;0.0;0;saida
+carga;carga_raios;1500;1;1;0;0;0.0;0;saida
+carga;carga_raios;1750;1.04;0.8;0;0;0.0;0;saida
+carga;carga_raios;1810;1;1;0;0;0;0;saida
+carga;carga_raios;1870;0.95;0;0;0;0;0;saida
+cheia;cheia_flash;0;0.44799999999999995;0;0;0;0;0;saida
+cheia;cheia_flash;35;0.9799999999999999;1;0;0;0;0;saida
+cheia;cheia_flash;120;1.4;0.9;0;0;5;0;saida
+cheia;cheia_flash;120;1.54;0;0;0.12;10;0;saida
+cheia;(luz do mapa);0;1;0;0;0;0;0;saida
+cheia;(luz do mapa);35;1;1;0;0;0;6;saida
+cheia;(luz do mapa);120;1;0.7;0;0;0;4.199999999999999;saida
+cheia;(luz do mapa);150;1;0;0;0;0;0;saida
+feixe;feixe_corpo;0;0.8;0;4;0;0;0;saida
+feixe;feixe_corpo;70;1;1;4;0;0;0;saida
+feixe;feixe_corpo;250;1;1;4;0;0.0;0;saida
+feixe;feixe_corpo;340;1;1;4;0;0;0;saida
+feixe;feixe_corpo;400;0.95;0;4;0;0;0;saida
+feixe;feixe_turbulencia;0;0.8;0;4;0;0;0;saida
+feixe;feixe_turbulencia;70;1;1;4;0;0;0;saida
+feixe;feixe_turbulencia;250;1;1;4;0;0.0;0;saida
+feixe;feixe_turbulencia;340;1;1;4;0;0;0;saida
+feixe;feixe_turbulencia;400;0.95;0;4;0;0;0;saida
+feixe;feixe_origem;0;0.41600000000000004;0;0;0;0;0;saida
+feixe;feixe_origem;35;0.9099999999999999;1;0;0;0;0;saida
+feixe;feixe_origem;120;1.3;0.9;0;0;5;0;saida
+feixe;feixe_origem;400;1.4300000000000002;0;0;0.12;10;0;saida
+feixe;feixe_ponta;0;0.384;0;8;0;0;0;saida
+feixe;feixe_ponta;35;0.84;1;8;0;0;0;saida
+feixe;feixe_ponta;120;1.2;0.9;8;0;5;0;saida
+feixe;feixe_ponta;400;1.32;0;8;0.12;10;0;saida
+acerto;acerto_nucleo;0;0.44799999999999995;0;0;0;0;0;saida
+acerto;acerto_nucleo;35;0.9799999999999999;1;0;0;0;0;saida
+acerto;acerto_nucleo;120;1.4;0.9;0;0;5;0;saida
+acerto;acerto_nucleo;220;1.54;0;0;0.12;10;0;saida
+acerto;acerto_anel;0;0.48;0;0;0;0;0;saida
+acerto;acerto_anel;35;1.0499999999999998;1;0;0;0;0;saida
+acerto;acerto_anel;120;1.5;0.9;0;0;5;0;saida
+acerto;acerto_anel;950;1.6500000000000001;0;0;0.12;10;0;saida
+acerto;(luz do mapa);0;1;0;0;0;0;0;saida
+acerto;(luz do mapa);35;1;1;0;0;0;8;saida
+acerto;(luz do mapa);120;1;0.7;0;0;0;5.6;saida
+acerto;(luz do mapa);1000;1;0;0;0;0;0;saida
+cancelamento;carga_orbe;0;0.65;0.8;0;0;0;0;saida
+cancelamento;carga_orbe;300;0.15;0;0;0;0;0;saida
+cancelamento;carga_runas;0;0.85;0.8;0;0;60;0;saida
+cancelamento;carga_runas;450;0.6;0;0;0;90;0;saida
+cancelamento;carga_raios;0;0.8;0.7;0;0;0;0;saida
+cancelamento;carga_raios;250;0.5;0;0;0;0;0;saida

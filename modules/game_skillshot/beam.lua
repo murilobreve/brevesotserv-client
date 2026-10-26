@@ -1,28 +1,36 @@
--- Raio Arcano: the designer's art (images/raio, from "Raio Arcano - artes
--- v1"). The server sends (scripts/skillshot/sorcerer.lua, fx "beam"):
---   charge  the sorcerer starts gathering: the charge grows in three levels
---           (at 0, `ms` / 2 and `ms`) and flashes once when it is full
---   fire    the whole beam at once on its sqm (`t`): the start on the first,
---           the middle on the others and the tip on the last, the way it
---           goes; the hit on the sqm in `h`
---   stop    the charge goes with no beam
+-- Raio Arcano: the designer's art v2 (images/raio, "Ascensao - artes v2",
+-- layers.lua). The server sends (scripts/skillshot/sorcerer.lua, fx
+-- "beam"):
+--   charge  the sorcerer (id) starts gathering: the orb grows, the runes
+--           turn and lightning crackles; full in `ms`, with a flash, and
+--           held full until he lets go (or the server does)
+--   fire    the whole beam at once from `f` to its last sqm in `t`: the
+--           flash in his hand, the body stretched to the end, the tip; a
+--           blue burst and sparks on each sqm in `h`
+-- The preview charges in 1.8 s at (-4, 0) and fires 8 sqm to (4, 0).
 
-local LEVEL_COUNT = 3
+local PREVIEW_FULL_MS = 1800
+local HOLD_MS = 3500 -- sorcerer.lua's longest hold, and a little more
+local PREVIEW_LENGTH = 8 -- sqm, the preview's beam
+local NATIVE_LENGTH = 4 -- sqm, the body's image
+local LIGHT = layerLight('#4F7BFF')
 
--- anchors: the centre of the sqm (the charge on the sorcerer)
-local art = newArtSet(4400, '/game_skillshot/images/raio/', 'Raio')
-for level = 1, LEVEL_COUNT do
-    art.add('carga_' .. level, 64, 16, 16)
+local art = newLayerSet(4400, '/game_skillshot/images/raio/', 'Raio')
+art.add('carga_orbe', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('carga_runas', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+art.add('carga_raios', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true, frames = 'loop', ms = 640 })
+art.add('cheia_flash', { size = { 192, 192 }, anchor = { 96, 96 }, additive = true })
+art.add('feixe_corpo', { size = { 256, 64 }, anchor = { 128, 32 }, additive = true })
+art.add('feixe_turbulencia', { size = { 256, 64 }, anchor = { 128, 32 }, additive = true, frames = 'loop', ms = 400 })
+art.add('feixe_origem', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('feixe_ponta', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('acerto_nucleo', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('acerto_anel', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+for index = 1, 3 do
+    art.add('centelha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 }, additive = true })
 end
-art.add('cheia', 64, 16, 16, 200)
-for _, piece in ipairs({ 'inicio', 'meio', 'ponta' }) do
-    for _, dir in ipairs({ 'e', 'w', 'n', 's', 'ne', 'nw', 'se', 'sw' }) do
-        art.add(piece .. '_' .. dir, 32, 0, 0, 300)
-    end
-end
-art.add('acerto', 64, 16, 16, 300)
 
-local charges = {} -- creature id -> { placed, events }
+local charges = {} -- creature id -> { placed, ... }
 
 function registerBeamArt()
     art.register()
@@ -34,10 +42,9 @@ local function stop(id)
         return
     end
     charges[id] = nil
-    for _, event in ipairs(charge.events) do
-        removeEvent(event)
+    for _, placed in ipairs(charge) do
+        detachArt(placed)
     end
-    detachArt(charge.placed)
 end
 
 function clearBeamArt()
@@ -51,40 +58,46 @@ function unregisterBeamArt()
     art.unregister()
 end
 
+-- the beam's points for `length` sqm: the preview's 8 made `length`, the
+-- body stretched to it
+local function beamKeys(name, length, stretch)
+    local keys = {}
+    for index, key in ipairs(art.keys('feixe', name) or {}) do
+        local copy = {}
+        for field, value in pairs(key) do
+            copy[field] = value
+        end
+        copy.x = key.x * length / PREVIEW_LENGTH
+        if stretch then
+            copy.stretch = length / NATIVE_LENGTH
+        end
+        keys[index] = copy
+    end
+    return keys
+end
+
 local handlers = {}
 
 function handlers.charge(data)
     local id = tonumber(data.id)
-    if not id then
+    local sorcerer = id and g_map.getCreatureById(id)
+    if not sorcerer then
         return
     end
     stop(id)
-    local charge = { events = {} }
+    local ms = tonumber(data.ms) or 1500
+    local charge = {}
     charges[id] = charge
-    local full = tonumber(data.ms) or 1500
-    local function show(level)
-        local sorcerer = g_map.getCreatureById(id)
-        if charges[id] ~= charge or not sorcerer then
-            return
-        end
-        detachArt(charge.placed)
-        charge.placed = art.attach('carga_' .. level, sorcerer)
-        if level == LEVEL_COUNT then
-            art.attach('cheia', sorcerer, 190)
+    for _, name in ipairs({ 'carga_runas', 'carga_orbe', 'carga_raios' }) do
+        local keys = art.held('carga', name, PREVIEW_FULL_MS, ms, HOLD_MS)
+        local placed = art.play(name, sorcerer, { keys = keys, duration = keys[#keys] and keys[#keys].t or ms })
+        if placed then
+            table.insert(charge, placed)
         end
     end
-    show(1)
-    for level = 2, LEVEL_COUNT do
-        table.insert(charge.events, scheduleEvent(function()
-            show(level)
-        end, math.floor(full * (level - 1) / (LEVEL_COUNT - 1))))
-    end
-end
-
-function handlers.stop(data)
-    if tonumber(data.id) then
-        stop(tonumber(data.id))
-    end
+    -- full: a flash, and the map lit for a moment
+    -- (gone with the charge if it is let go or lost before)
+    table.insert(charge, art.play('cheia_flash', sorcerer, { moment = 'cheia', shift = ms, light = { keys = art.lightKeys('cheia'), color = LIGHT } }))
 end
 
 function handlers.fire(data)
@@ -96,13 +109,20 @@ function handlers.fire(data)
     if not data.f or not last then
         return
     end
-    local dir = artDirection(last.x - data.f.x, last.y - data.f.y)
-    for index, position in ipairs(tiles) do
-        local piece = index == #tiles and 'ponta' or index == 1 and 'inicio' or 'meio'
-        art.burst(piece .. '_' .. dir, position)
-    end
-    for _, position in ipairs(type(data.h) == 'table' and data.h or {}) do
-        art.burst('acerto', position)
+    local angle = layerAngle(data.f, last)
+    local length = math.max(1, math.sqrt((last.x - data.f.x) ^ 2 + (last.y - data.f.y) ^ 2))
+    art.play('feixe_corpo', data.f, { keys = beamKeys('feixe_corpo', length, true), angle = angle, face = angle })
+    art.play('feixe_turbulencia', data.f, { keys = beamKeys('feixe_turbulencia', length, true), angle = angle, face = angle })
+    art.play('feixe_origem', data.f, { moment = 'feixe', angle = angle })
+    art.play('feixe_ponta', data.f, { keys = beamKeys('feixe_ponta', length), angle = angle, face = angle })
+    for index, position in ipairs(type(data.h) == 'table' and data.h or {}) do
+        local hit = { moment = 'acerto' }
+        if index == 1 then
+            hit.light = { keys = art.lightKeys('acerto'), color = LIGHT }
+        end
+        art.play('acerto_nucleo', position, hit)
+        art.play('acerto_anel', position, { moment = 'acerto' })
+        art.particles('acerto', position, { count = #data.h > 2 and 0.5 or 1 })
     end
 end
 

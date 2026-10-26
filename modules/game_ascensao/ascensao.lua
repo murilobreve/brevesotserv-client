@@ -69,7 +69,8 @@ local SKILL_ICONS = {
     ['exori sonic pug'] = 'palma', ['exori dra pug'] = 'chute', ['exani tera pug'] = 'passo',
 }
 
--- the spell in action under the mouse: the designer's preview (images/previas)
+-- the spell under the mouse: the designer's preview (images/previas, the
+-- stills of "Ascensao - artes v2")
 local preview
 
 local function hidePreview()

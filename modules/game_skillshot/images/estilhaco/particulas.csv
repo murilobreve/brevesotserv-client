@@ -1,0 +1,6 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+voo;cristal_1;7;100;900;0.4;90;0.25;0.5;0.45;1;1
+voo;cristal_2;7;250;850;0.5;90;0.25;0.5;0.45;1;1
+estilhaço;lasca_1;5;20;1000;1.9;360;1.4;2;0.55;1;0
+estilhaço;lasca_2;5;20;1000;1.9;360;1.4;2;0.55;1;0
+estilhaço;lasca_3;5;20;1000;1.9;360;1.4;2;0.55;1;0

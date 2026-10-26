@@ -1,0 +1,7 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+carga;carga_fagulha_1;3;150;650;0.6;90;1.7;0;0.5;1;1
+carga;carga_fagulha_2;3;650;650;0.7;90;2;0;0.55;1;1
+carga;carga_fagulha_3;3;1050;500;0.8;90;2.4;0;0.6;1;1
+corte;rocha_1;1;10;470;1.5;360;1.2;3;0.65;1;0
+corte;rocha_2;1;50;480;1.7;360;1.2;3;0.65;1;0
+corte;rocha_3;1;90;440;1.8;360;1.2;3;0.65;1;0
