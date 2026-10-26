@@ -65,6 +65,7 @@ Module
     - game_healbot
     - game_ascensao
     - game_hunttasks
+    - game_bosses
     - game_mythosvip
     - game_tutorial
     - game_forge
