@@ -162,11 +162,19 @@ RateRow < BrevesRow
     image-source: /images/game/prey/prey_loot
     phantom: true
 
-  Label
-    id: perKill
+  // to the monster's hunt (Hunts TP); hidden for a monster with no teleport
+  MythosButton
+    id: tp
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 4
+    margin-right: 6
+    size: 50 24
+
+  Label
+    id: perKill
+    anchors.right: tp.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
     width: 96
     text-align: right
     color: #cbc0e0
@@ -297,7 +305,7 @@ MythosWindow
   HuntTab
     id: ratesTab
     anchors.left: parent.left
-    !text: tr('Monster Rates')
+    !text: tr('Hunts TP')
     @onClick: modules.game_huntboard.selectTab('rates')
 
   HuntTab
@@ -453,7 +461,15 @@ MythosWindow
         id: legend
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        margin-right: 8
+        margin-right: 22
+        text-auto-resize: true
+        color: #9789b3
+        !text: tr('TP')
+
+      Label
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 70
         text-auto-resize: true
         color: #9789b3
         !text: tr('XP / kill')
@@ -461,7 +477,7 @@ MythosWindow
       Label
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        margin-right: 150
+        margin-right: 212
         text-auto-resize: true
         color: #9789b3
         !text: tr('XP and loot rate')
