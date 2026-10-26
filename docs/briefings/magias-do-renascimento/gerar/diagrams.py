@@ -206,6 +206,31 @@ def render_panel(img, panel, ox, oy, tier):
         elif kind == "x":
             draw.line([(cx - 9, cy - 9), (cx + 9, cy + 9)], fill=(255, 255, 255, 200), width=3)
             draw.line([(cx - 9, cy + 9), (cx + 9, cy - 9)], fill=(255, 255, 255, 200), width=3)
+        elif kind == "block":
+            r = tile_rect(ox, oy, *t)
+            draw.rectangle((r[0] + 2, r[1] + 2, r[2] - 2, r[3] - 2), fill=(92, 86, 80), outline=(30, 28, 26), width=2)
+            if label:
+                draw.text((cx, cy), label, fill=(240, 236, 228), font=font(12, "b"), anchor="mm")
+        elif kind == "wall":
+            r = tile_rect(ox, oy, *t)
+            draw.rectangle(r, fill=(120, 74, 52))
+            for yy in range(r[1] + 8, r[3], 10):
+                draw.line([(r[0], yy), (r[2], yy)], fill=(84, 50, 36), width=2)
+        elif kind == "stop":
+            r = tile_rect(ox, oy, *t)
+            draw.rectangle((r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1), fill=(150, 200, 214, 200), outline=(230, 250, 255), width=2)
+            if label:
+                draw.text((cx, cy), label, fill=(20, 40, 50), font=font(11, "b"), anchor="mm")
+        elif kind == "coffee":
+            draw.ellipse((cx - 13, cy - 13, cx + 13, cy + 13), fill=(47, 93, 42), outline=(20, 40, 18), width=2)
+            for ddx, ddy in ((-5, -3), (4, 2), (-1, 6)):
+                draw.ellipse((cx + ddx - 3, cy + ddy - 3, cx + ddx + 3, cy + ddy + 3), fill=(179, 38, 30))
+        elif kind == "saucer":
+            draw.ellipse((cx - 17, cy - 8, cx + 17, cy + 8), fill=(143, 163, 181), outline=(30, 43, 58), width=2)
+            draw.ellipse((cx - 7, cy - 13, cx + 7, cy - 2), fill=(191, 246, 255), outline=(30, 43, 58), width=1)
+        elif kind == "cloud":
+            for ddx, ddy, rr in ((-8, 2, 10), (6, 0, 11), (0, -7, 9)):
+                draw.ellipse((cx + ddx - rr, cy + ddy - rr, cx + ddx + rr, cy + ddy + rr), fill=(184, 194, 74, 150))
         elif kind == "num":
             draw.text((cx, cy), label, fill=(255, 255, 255), font=font(15, "b"), anchor="mm", stroke_width=3, stroke_fill=(0, 0, 0))
     fn = font(13, "sb")
