@@ -834,6 +834,23 @@ void MapView::move(const int32_t x, const int32_t y)
     onCameraMove(m_moveOffset);
 }
 
+Point MapView::getShakeOffset()
+{
+    if (m_shakeMs == 0)
+        return {};
+
+    const auto elapsed = m_shakeTimer.ticksElapsed();
+    if (elapsed >= m_shakeMs) {
+        // the last trembling frame goes too
+        m_shakeMs = 0;
+        m_pool->repaint();
+        return {};
+    }
+
+    const float strength = m_shakeStrength * m_pool->getScaleFactor() * (1.f - static_cast<float>(elapsed) / m_shakeMs);
+    return { static_cast<int>(std::round(strength * std::sin(elapsed * 0.11f))), static_cast<int>(std::round(strength * std::cos(elapsed * 0.137f + 1.f))) };
+}
+
 Rect MapView::calcFramebufferSource(const Size& destSize)
 {
     Point drawOffset = ((m_drawDimension - m_visibleDimension - Size(1)).toPoint() / 2) * m_tileSize;

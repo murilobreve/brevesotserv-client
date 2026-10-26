@@ -36,7 +36,8 @@ enum class CompositionMode
     ADD,
     REPLACE,
     DESTINATION_BLENDING,
-    LIGHT
+    LIGHT,
+    ADDITIVE // the source's color, as much as its alpha, added to what is under it (glows)
 };
 
 enum class DrawMode

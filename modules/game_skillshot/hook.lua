@@ -3,7 +3,8 @@
 -- (scripts/skillshot, fx "hook") and this draws it on the map tiles:
 --   fly   the hook moves one tile and leaves a link of chain behind
 --   hit   the impact where the hook arrives, then the chain pulls back
---   pull  dust and the chain ring where the creature lands (rooted 600 ms)
+--   pull  dust and the chain ring where the creature lands (rooted ms; a
+--         boss, or a player held again lately, is not: ms 0, no ring)
 --   miss  the hook falls short and the chain pulls back
 -- The hook in flight is a still frame per step: a moving effect can't use an
 -- animated texture (both share the effect's timer), so the four spin frames
@@ -154,7 +155,9 @@ function handlers.pull(data)
     local cast = castOf(data)
     onArrival(cast, function()
         art.burst('arrasto', data.t)
-        art.burst('preso', data.t)
+        if (tonumber(data.ms) or 1) > 0 then
+            art.burst('preso', data.t)
+        end
     end)
 end
 

@@ -65,6 +65,11 @@ public:
     Position getCameraPosition();
     void setCameraPosition(const Position& pos);
 
+    // the view trembles `strength` pixels (1x), less and less, for `durationMs`
+    // (a heavy blow); only the picture moves, not the tiles under the mouse
+    void shake(const uint8_t strength, const uint16_t durationMs) { m_shakeStrength = strength; m_shakeMs = durationMs; m_shakeTimer.restart(); }
+    Point getShakeOffset();
+
     void setMinimumAmbientLight(const float intensity) { m_minimumAmbientLight = intensity; updateLight(); }
     float getMinimumAmbientLight() const { return m_minimumAmbientLight; }
 
@@ -245,6 +250,10 @@ private:
 
     Point m_virtualCenterOffset;
     Point m_moveOffset;
+
+    uint8_t m_shakeStrength{ 0 };
+    uint16_t m_shakeMs{ 0 };
+    Timer m_shakeTimer;
 
     Position m_customCameraPosition;
     Position m_lastCameraPosition;

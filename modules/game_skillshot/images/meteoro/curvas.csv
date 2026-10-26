@@ -1,0 +1,37 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+marca;marca_relogio;0;1;0.9;0;0;0;;saida
+marca;marca_relogio;1500;1;0.9;0;0;0;;saida
+marca;marca_runas;0;0.8;0;0;0;0;;saida
+marca;marca_runas;180;0.8;0.8;0;0;8;;saida
+marca;marca_runas;1500;0.8;0.9;0;0;45;;saida
+marca;sombra;600;0.2;0;0;0;0;;saida
+marca;sombra;1200;0.65;0.35;0;0;0;;saida
+marca;sombra;1500;1;0.7;0;0;0;;saida
+queda;meteoro_cauda;0;0.65;0;-4.6;5.3;-51;;linear
+queda;meteoro_cauda;40;0.75;0.9;-4.2;4.8;-51;;linear
+queda;meteoro_cauda;400;0.75;0.9;-0.7;0.9;-51;;linear
+queda;meteoro;0;0.6;0.9;-4;5;-51;;linear
+queda;meteoro;400;1;1;0;0;-51;;entrada
+impacto;impacto_nucleo;0;0.2;0;0;0.3;0;;saida
+impacto;impacto_nucleo;20;0.7;1;0;0.3;0;;saida
+impacto;impacto_nucleo;60;1;1;0;0.3;0;;saida
+impacto;impacto_nucleo;150;1.1;0;0;0.3;0;;saida
+impacto;impacto_anel;20;0.25;0.9;0;0;0;;saida
+impacto;impacto_anel;150;0.62;0.95;0;0;0;;saida
+impacto;impacto_anel;650;0.78;0;0;0;0;;saida
+impacto;impacto_fogo;150;0.75;0;0;0.55;0;;saida
+impacto;impacto_fogo;195;0.8;1;0;0.55;0;;saida
+impacto;impacto_fogo;580;1;0.9;0;0.55;0;;saida
+impacto;impacto_fogo;900;1;0;0;0.55;0;;saida
+chão;cratera;0;1;0;0;0;0;;saida
+chão;cratera;160;1;1;0;0;0;;saida
+chão;cratera;1300;1;0.75;0;0;0;;saida
+chão;cratera;2900;1;0;0;0;0;;saida
+impacto;poeira;900;0.9;0;0;0.8;0;;saida
+impacto;poeira;1060;1;0.55;0;0.8;0;;saida
+impacto;poeira;2200;1.15;0;0;0.8;0;;saida
+impacto;(luz do mapa);0;;;;;;0;saida
+impacto;(luz do mapa);35;;;;;;7;saida
+impacto;(luz do mapa);500;;;;;;1;saida
+impacto;(luz do mapa);900;;;;;;0;saida
+impacto;(tremor);0;;;;;;;leve 120 ms
