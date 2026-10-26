@@ -1,5 +1,7 @@
 -- Hunt Board: per-monster experience/loot rates that re-roll every few hours,
--- the hourly/daily/monthly hunting leaderboard and the online coin reward.
+-- with a TP to each monster's hunt (the Hunts TP list: one place for the hunt
+-- teleport rooms of every town), the hourly/daily/monthly hunting leaderboard
+-- and the online coin reward.
 -- Talks to the server scripts in data-otservbr-global/scripts/huntboard
 -- through extended opcode HUNT_OPCODE with JSON payloads.
 
@@ -10,6 +12,7 @@ local PAGE_SIZE = 40
 local SEND_INTERVAL = 350
 
 local FILTERS = {
+    { key = 'tp', label = 'Hunts with TP' },
     { key = 'all', label = 'All monsters' },
     { key = 'xp', label = 'Boosted XP (1.5x+)' },
     { key = 'loot', label = 'Boosted loot (1.5x+)' },
@@ -55,6 +58,9 @@ local ratesEvent
 local sendQueue = {}
 local sendEvent
 local lastSendAt = 0
+local tpReadyAt = 0 -- os.time() when the next hunt teleport is allowed
+local tpButtons = {} -- the TP buttons of the page on screen
+local tpMessageEvent
 
 -- ---------------------------------------------------------------- helpers
 
@@ -222,7 +228,9 @@ local function matchesFilter(monster, filter, search, hideBosses)
     if search ~= '' and not monster.lname:find(search, 1, true) then
         return false
     end
-    if filter == 'xp' then
+    if filter == 'tp' then
+        return monster.tp == 1
+    elseif filter == 'xp' then
         return monster.xp >= 15
     elseif filter == 'loot' then
         return monster.loot >= 15
@@ -278,6 +286,50 @@ local SORTERS = {
     end,
 }
 
+-- the buttons show the wait between two hunt teleports (30 s)
+local function updateTpButtons()
+    local left = math.max(0, tpReadyAt - os.time())
+    for _, button in ipairs(tpButtons) do
+        button:setText(left > 0 and (left .. 's') or tr('TP'))
+        button:setEnabled(left == 0)
+    end
+end
+
+-- the fonts draw one glyph per byte (Latin-1); the server's texts are UTF-8
+local function latin1(text)
+    return (tostring(text):gsub('[\194\195][\128-\191]', function(pair)
+        local a, b = pair:byte(1, 2)
+        return string.char((a - 194) * 64 + b)
+    end))
+end
+
+-- a refusal of the server, for a few seconds where the page count goes
+local function showTpMessage(text)
+    if not window then
+        return
+    end
+    local label = window.ratesPanel.pageLabel
+    if tpMessageEvent then
+        removeEvent(tpMessageEvent)
+    end
+    label:setText(text)
+    label:setColor('#ff7a6b')
+    tpMessageEvent = scheduleEvent(function()
+        tpMessageEvent = nil
+        if window then
+            label:setText(label.pageText or '')
+            label:setColor('#cbc0e0')
+        end
+    end, 6000)
+end
+
+local function teleportTo(name)
+    if tpReadyAt > os.time() then
+        return
+    end
+    send({ action = 'teleport', name = name })
+end
+
 local function renderPage()
     if not window then
         return
@@ -285,6 +337,7 @@ local function renderPage()
     local panel = window.ratesPanel
     local list = panel.rateList
     list:destroyChildren()
+    tpButtons = {}
 
     local pages = math.max(1, math.ceil(#filtered / PAGE_SIZE))
     page = math.max(1, math.min(page, pages))
@@ -320,11 +373,24 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
         end
         row:setTooltip(tooltip)
+        row.tp:setVisible(monster.tp == 1)
+        if monster.tp == 1 then
+            row.tp:setTooltip(tr('Teleport to the %s hunt (every 30 seconds)', monster.name))
+            row.tp.onClick = function()
+                teleportTo(monster.name)
+            end
+            tpButtons[#tpButtons + 1] = row.tp
+        end
     end
+    updateTpButtons()
 
     panel.rateEmpty:setVisible(#filtered == 0)
     panel.rateEmpty:setText(#rates.monsters == 0 and tr('Loading monster rates...') or tr('No monster matches your filters.'))
-    panel.pageLabel:setText(tr('Page %d of %d  (%d of %d monsters)', page, pages, #filtered, #rates.monsters))
+    -- a TP refusal on show keeps the label until it goes
+    panel.pageLabel.pageText = tr('Page %d of %d  (%d of %d monsters)', page, pages, #filtered, #rates.monsters)
+    if not tpMessageEvent then
+        panel.pageLabel:setText(panel.pageLabel.pageText)
+    end
     panel.prevPage:setEnabled(page > 1)
     panel.nextPage:setEnabled(page < pages)
     panel.rateScroll:setValue(0)
@@ -499,6 +565,7 @@ local function tick()
             window.ratesPanel.countdown:setText(tr('New rates in %s', formatDuration(left)))
         end
     end
+    updateTpButtons()
     local board = boards[currentPeriod]
     if board and board.endsAt then
         local left = board.endsAt - now
@@ -682,6 +749,24 @@ end
 
 -- the server sends it under this name (old clients crashed on the toast)
 handlers.coinsToast = handlers.coins
+
+-- answer to a TP (and, on opening, the wait left)
+function handlers.teleport(data)
+    tpReadyAt = os.time() + (tonumber(data.wait) or 0)
+    updateTpButtons()
+    if not data.text then
+        return
+    end
+    local text = latin1(data.text)
+    if data.ok then
+        hide()
+        if modules.game_textmessage and modules.game_textmessage.displayGameMessage then
+            modules.game_textmessage.displayGameMessage(text)
+        end
+    else
+        showTpMessage(text)
+    end
+end
 
 local function onHuntOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
