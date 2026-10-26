@@ -690,6 +690,44 @@ end
 
 local handlers = {}
 
+-- ---------------------------------------------------------------- NEW RATES
+
+-- the roll of rates the player has seen: opened the list, or closed the
+-- NEW RATES callout over the Teleports row of the Mythos bar
+local SEEN_KEY = 'huntboard_rates_seen'
+
+local function markRatesSeen()
+    if rates.slot >= 0 and g_settings.getNumber(SEEN_KEY) ~= rates.slot then
+        g_settings.set(SEEN_KEY, rates.slot)
+        g_settings.save()
+    end
+end
+
+-- once for every roll of the rates, until the player closes it or opens the list
+local function pointNewRates()
+    local panel = modules.game_brevespanel
+    if not panel or not panel.point or rates.slot < 0 or #rates.monsters == 0 then
+        return
+    end
+    if window and window:isVisible() and currentTab == 'rates' then
+        markRatesSeen()
+        panel.hidePoint('rates')
+        return
+    end
+    if g_settings.getNumber(SEEN_KEY) == rates.slot then
+        return
+    end
+    local best
+    for _, monster in ipairs(rates.monsters) do
+        if monster.tp > 0 and (not best or monster.xp + monster.loot > best.xp + best.loot) then
+            best = monster
+        end
+    end
+    panel.point('rates', tr('NEW RATES'), tr('Teleports to the hunts here'),
+        best and tr('Best now: %s  -  XP x%.1f  -  Loot x%.1f', best.name, best.xp / 10, best.loot / 10),
+        markRatesSeen)
+end
+
 function handlers.rates(data)
     timeOffset = (data.now or os.time()) - os.time()
     rates.slot = data.slot or -1
@@ -743,6 +781,7 @@ function handlers.rates(data)
         renderHot()
         applyFilters()
     end
+    pointNewRates()
 end
 
 function handlers.board(data)
@@ -759,15 +798,8 @@ end
 
 function handlers.ratesChanged(data)
     rates.nextAt = data.nextAt or rates.nextAt
-    local parts = {}
-    for _, entry in ipairs(data.top or {}) do
-        parts[#parts + 1] = string.format('%s (XP x%.1f / Loot x%.1f)', entry.name, entry.x / 10, entry.l / 10)
-    end
-    showToast(tr('Monster rates have changed!'), tr('Hottest: %s', table.concat(parts, ', ')), function(icon)
-        icon:setImageSource('/images/game/prey/prey_bigxp')
-        icon:setImageClip('0 0 44 44')
-    end, 15)
-    -- the labels on the monsters need the new rates too
+    -- the labels on the monsters need the new rates too; the NEW RATES
+    -- callout comes with them
     send({ action = 'rates' })
 end
 
@@ -884,6 +916,12 @@ function selectTab(tab)
     if tab == 'board' then
         renderBoard()
         send({ action = 'board', period = currentPeriod })
+    elseif window:isVisible() then
+        -- the new rates are in front of the player: no NEW RATES callout
+        markRatesSeen()
+        if modules.game_brevespanel and modules.game_brevespanel.hidePoint then
+            modules.game_brevespanel.hidePoint('rates')
+        end
     end
 end
 

@@ -7,6 +7,7 @@
 --
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
+-- point() puts a callout over a row (NEW RATES over Teleports).
 
 local NEWS_VERSION = 11
 
@@ -20,7 +21,7 @@ local FEATURES = {
       news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
-    { id = 'rates', group = 'hunt', label = 'Hunts TP', short = 'TP', icon = 'rates',
+    { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'rates',
       news = 'Every hunt in one list: the XP and loot rate of each monster, which change every 2 hours, and a TP to its hunt every 30 seconds.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
@@ -81,6 +82,7 @@ local TOGGLE_WIDTH = 28 -- a switch's badge, as wide for ON as for OFF
 local widest = {}
 
 local styleButton
+local placeCallout, closeCallout -- the callout over a row (point)
 
 local function featureOf(id)
     for index, feature in ipairs(FEATURES) do
@@ -194,6 +196,7 @@ local function resize()
             break
         end
     end
+    placeCallout()
 end
 
 styleButton = function(id)
@@ -236,6 +239,8 @@ local function sortRows(parent)
 end
 
 function open(id)
+    -- the row's callout has been read
+    closeCallout(id)
     if callbacks[id] then
         callbacks[id]()
     end
@@ -545,6 +550,7 @@ local function setCollapsed(fold)
     panel.collapsedLabel:setVisible(fold)
     panel.collapseButton:setOn(fold)
     panel.collapseButton:setTooltip(fold and tr('Show the Mythos bar') or tr('Hide the Mythos bar'))
+    placeCallout()
 end
 
 function toggleCollapsed()
@@ -556,6 +562,96 @@ function togglePanel()
     if panel then
         panel:show()
         setCollapsed(false)
+    end
+end
+
+-- ---------------------------------------------------------------- callouts
+
+-- a callout over a row of the bar, e.g. NEW RATES over Teleports: it stays
+-- until the player closes it (x) or opens the row (a click on it or on the
+-- row), and follows the row as the bar changes; folded, the bar hides it
+local callout, calloutId, calloutClose, calloutButton
+local CALLOUT_TIP = 8 -- the tip's room under the box (brevespanel.otui)
+
+placeCallout = function()
+    if not callout then
+        return
+    end
+    local button = buttons[calloutId]
+    local feature = featureOf(calloutId)
+    local sector = feature and sectors[feature.group]
+    if collapsed or not button or not sector or not panel:isVisible() then
+        callout:hide()
+        return
+    end
+    callout:show()
+    callout:raise()
+    local root = callout:getParent()
+    local center = button:getX() + math.floor(button:getWidth() / 2)
+    local x = center - math.floor(callout:getWidth() / 2)
+    x = math.max(root:getX() + 4, math.min(x, root:getX() + root:getWidth() - callout:getWidth() - 4))
+    -- the tip touches the top of the row's section
+    callout:setPosition({ x = x, y = sector:getY() - callout:getHeight() + 2 })
+    callout.tip:setMarginLeft(center - x - math.floor(callout.tip:getWidth() / 2))
+end
+
+-- closes the callout of row `id` (any row when nil) and runs its onClose
+closeCallout = function(id)
+    if not callout or (id and id ~= calloutId) then
+        return
+    end
+    local onClose = calloutClose
+    if calloutButton then
+        disconnect(calloutButton, { onGeometryChange = placeCallout })
+    end
+    callout:destroy()
+    callout, calloutId, calloutClose, calloutButton = nil, nil, nil, nil
+    if onClose then
+        onClose()
+    end
+end
+
+-- gone without having been read (logout): onClose does not run
+local function dropCallout()
+    calloutClose = nil
+    closeCallout()
+end
+
+-- the callout over row `id`: a title, a text and an optional detail line;
+-- onClose runs once it is closed or the row is opened
+function point(id, title, text, detail, onClose)
+    local button = buttons[id]
+    if not panel or not button then
+        return
+    end
+    dropCallout()
+    callout = g_ui.createWidget('BrevesCallout', panel:getParent())
+    calloutId, calloutClose, calloutButton = id, onClose, button
+    callout.title:setText(title)
+    callout.text:setText(text)
+    callout.detail:setText(detail or '')
+    callout.detail:setVisible(detail ~= nil)
+    local height = 8 + callout.title:getHeight() + callout.divider:getHeight() + callout.text:getHeight() + 10
+    if detail then
+        height = height + 3 + callout.detail:getHeight()
+    end
+    callout:setHeight(height + CALLOUT_TIP)
+    callout.onClick = function()
+        open(id)
+    end
+    callout.closeButton.onClick = function()
+        closeCallout(id)
+        return true
+    end
+    connect(button, { onGeometryChange = placeCallout })
+    placeCallout()
+    -- once the bar has laid itself out
+    scheduleEvent(placeCallout, 50)
+end
+
+function hidePoint(id)
+    if not id or id == calloutId then
+        dropCallout()
     end
 end
 
@@ -637,6 +733,7 @@ end
 local function onGameEnd()
     hideNews()
     hideNotice()
+    dropCallout()
 end
 
 function init()
@@ -652,6 +749,7 @@ function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     hideNews()
     hideNotice()
+    dropCallout()
     if panel then
         panel:destroy()
         panel = nil
