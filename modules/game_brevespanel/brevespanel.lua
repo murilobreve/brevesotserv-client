@@ -8,7 +8,7 @@
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
 
-local NEWS_VERSION = 9
+local NEWS_VERSION = 10
 
 -- rows are shown in this order, whatever order the modules load in
 local FEATURES = {
@@ -26,6 +26,8 @@ local FEATURES = {
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
     { id = 'loot', group = 'hunt', label = 'Auto Loot', short = 'Loot', icon = 'loot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
+    { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses',
+      news = 'The bosses of the official quests, each in its own lever room: pick one, go there with your team and pull the lever. The list shows your wait for each.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
