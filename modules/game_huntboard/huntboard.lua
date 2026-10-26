@@ -724,7 +724,7 @@ local function pointNewRates()
         end
     end
     panel.point('rates', tr('NEW RATES'), tr('Teleports to the hunts here'),
-        best and tr('Best now: %s  -  XP x%.1f  -  Loot x%.1f', best.name, best.xp / 10, best.loot / 10),
+        best and tr('Best now: %s\nXP x%.1f  -  Loot x%.1f', best.name, best.xp / 10, best.loot / 10),
         markRatesSeen)
 end
 
