@@ -70,6 +70,10 @@ public:
     void handleFocusCallback(int eventType, const EmscriptenFocusEvent* event);
     // the page enters or leaves full screen by itself too (F11, Esc)
     void handleFullscreenChange(bool fullscreen) { m_fullscreen = fullscreen; }
+    // a hidden tab is a minimized window: the game keeps talking to the
+    // server but stops drawing, or the busy page gets frozen by the browser
+    // (Chrome's energy saver) and the server logs the player out (no ping)
+    void handleVisibilityChange(bool hidden) { m_visible = !hidden; }
     void handleTouchCallback(int eventType, const EmscriptenTouchEvent* event);
     void updateTouchPosition(const EmscriptenTouchEvent* event);
     void processLongTouch(const EmscriptenTouchEvent* event);

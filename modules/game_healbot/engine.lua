@@ -210,7 +210,7 @@ local function antiIdle(player, t)
 end
 
 local function tick()
-    if not running or not g_game.isOnline() then
+    if not g_game.isOnline() then
         return
     end
     local cfg = getConfig()
@@ -219,14 +219,18 @@ local function tick()
         return
     end
     local t = now()
+    -- ticked, it keeps the character online with the bot itself off too
+    if cfg.support.antiIdle then
+        antiIdle(player, t)
+    end
+    if not running then
+        return
+    end
     local hp = percent(player:getHealth(), player:getMaxHealth())
     local mp = percent(player:getMana(), player:getMaxMana())
     -- spells and potions are separate exhausts in Tibia, so both can go off
     pickSpell(player, cfg, hp, mp, t)
     pickPotion(player, cfg, hp, mp, t)
-    if cfg.support.antiIdle then
-        antiIdle(player, t)
-    end
 end
 
 function HealEngine.potionCount(id)
