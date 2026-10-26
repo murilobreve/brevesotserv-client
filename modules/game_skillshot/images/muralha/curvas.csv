@@ -1,0 +1,54 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+subir/parado;pilar_ns;0;0.08;0;0;0;0;;saida
+subir/parado;pilar_ns;40;0.25;0.9;0;0;0;;saida
+subir/parado;pilar_ns;250;1;1;0;0;0;;saida
+subir/parado;pilar_ns;2790;1;1;0;0;0;;saida
+subir/parado;pilar_ns;2800;1;0;0;0;0;;saida
+rachando;rachaduras_ns;0;1;0;0;0;0;;saida
+rachando;rachaduras_ns;350;1;0.45;0;0;0;;saida
+rachando;rachaduras_ns;1000;1;0.95;0;0;0;;saida
+subir/parado;pilar_eo;0;0.08;0;0;0;0;;saida
+subir/parado;pilar_eo;40;0.25;0.9;0;0;0;;saida
+subir/parado;pilar_eo;250;1;1;0;0;0;;saida
+subir/parado;pilar_eo;2790;1;1;0;0;0;;saida
+subir/parado;pilar_eo;2800;1;0;0;0;0;;saida
+rachando;rachaduras_eo;0;1;0;0;0;0;;saida
+rachando;rachaduras_eo;350;1;0.45;0;0;0;;saida
+rachando;rachaduras_eo;1000;1;0.95;0;0;0;;saida
+subir/parado;pilar_ne;0;0.08;0;0;0;0;;saida
+subir/parado;pilar_ne;40;0.25;0.9;0;0;0;;saida
+subir/parado;pilar_ne;250;1;1;0;0;0;;saida
+subir/parado;pilar_ne;2790;1;1;0;0;0;;saida
+subir/parado;pilar_ne;2800;1;0;0;0;0;;saida
+rachando;rachaduras_ne;0;1;0;0;0;0;;saida
+rachando;rachaduras_ne;350;1;0.45;0;0;0;;saida
+rachando;rachaduras_ne;1000;1;0.95;0;0;0;;saida
+subir/parado;pilar_nw;0;0.08;0;0;0;0;;saida
+subir/parado;pilar_nw;40;0.25;0.9;0;0;0;;saida
+subir/parado;pilar_nw;250;1;1;0;0;0;;saida
+subir/parado;pilar_nw;2790;1;1;0;0;0;;saida
+subir/parado;pilar_nw;2800;1;0;0;0;0;;saida
+rachando;rachaduras_nw;0;1;0;0;0;0;;saida
+rachando;rachaduras_nw;350;1;0.45;0;0;0;;saida
+rachando;rachaduras_nw;1000;1;0.95;0;0;0;;saida
+parado;pilar_brilho;0;0.9;0.1;0;0;0;;saida
+parado;pilar_brilho;450;1;0.55;0;0;0;;saida
+parado;pilar_brilho;900;0.95;0.25;0;0;0;;saida
+parado;pilar_brilho;1350;1;0.55;0;0;0;;saida
+parado;pilar_brilho;1800;0.95;0.2;0;0;0;;saida
+parado;pilar_brilho;2550;1;0.65;0;0;0;;saida
+frio;frio;0;0.7;0;0;0;0;;saida
+frio;frio;150;1;0.8;0;0;0;;saida
+frio;frio;2350;1;0.75;0;0;0;;saida
+frio;frio;2550;1;0;0;0;0;;saida
+quebra;quebra;0;0.7;0;0;0;0;;saida
+quebra;quebra;35;0.85;1;0;0;0;;saida
+quebra;quebra;200;1;1;0;0;0;;saida
+quebra;quebra;600;1.05;0;0;0;0;;saida
+quebra;nevoa;250;0.5;0;0;0;0;;saida
+quebra;nevoa;400;1;0.6;0;0;0;;saida
+quebra;nevoa;1400;1.3;0;0;0;0;;saida
+quebra;(luz do mapa);0;;;;;;0;saida
+quebra;(luz do mapa);35;;;;;;4;saida
+quebra;(luz do mapa);500;;;;;;1;saida
+quebra;(luz do mapa);900;;;;;;0;saida

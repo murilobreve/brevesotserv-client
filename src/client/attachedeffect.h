@@ -106,8 +106,63 @@ public:
 
     ThingType* getThingType() const;
 
+    // Layers (the skillshots' art v2): an image that the curves scale, fade,
+    // move and turn, read in draw() so it stays smooth at any frame rate
+    // with no Lua per frame. Curve keys are (t ms since attached, value,
+    // ease) triples; before a layer's first key it is not drawn, after its
+    // last the values hold.
+    enum CurveChannel : uint8_t
+    {
+        CURVE_SCALE,    // 1 = the size set
+        CURVE_STRETCH,  // more scale along x (a trail stretched along its way)
+        CURVE_OPACITY,  // 0 to 1, times the opacity set
+        CURVE_X,        // pixels (1x) right of the anchor's place
+        CURVE_Y,        // pixels (1x) down
+        CURVE_ROTATION, // degrees clockwise, added to setRotation's
+        CURVE_LIGHT,    // the light's intensity (setLight gives the color)
+        CURVE_COUNT
+    };
+    enum CurveEase : uint8_t
+    {
+        EASE_LINEAR,
+        EASE_IN,         // speeds up into the key
+        EASE_OUT,        // slows down into it
+        EASE_IN_OUT,
+        EASE_OUT_STRONG, // shoots off and brakes hard
+        EASE_OVERSHOOT   // goes past the key and comes back
+    };
+    enum FramePlay : uint8_t
+    {
+        FRAMES_OWN,   // the image's own frame times
+        FRAMES_ONCE,  // all its frames once in the time given, the last held
+        FRAMES_LOOP,  // all its frames in the time given, again and again
+        FRAMES_CLOCK  // a warning clock: the last frame only when the time is up
+    };
+
+    void setCurve(uint8_t channel, const std::vector<float>& keys);
+    void setAnchor(const Point& anchor) { m_anchor = anchor; m_layered = true; }
+    void setAdditive(const bool additive) { m_additive = additive; m_layered = true; }
+    void setRotation(const float degrees) { m_rotation = degrees; m_layered = true; }
+    // drawn upside down: turned by 180 degrees more, a layer facing right
+    // faces left the right way up (a dragon kicked west)
+    void setFlipped(const bool flipped) { m_flipped = flipped; m_layered = true; }
+    // a particle: pixels (1x) per second right and down, pixels per second
+    // squared down, degrees per second, from when the layer comes in
+    void setMotion(const float vx, const float vy, const float gravity, const float spin) {
+        m_motion = { .vx = vx, .vy = vy, .gravity = gravity, .spin = spin, .active = true };
+        m_layered = true;
+    }
+    void setFramePlay(const uint8_t mode, const uint16_t durationMs) {
+        m_framePlay = std::min<uint8_t>(mode, FRAMES_CLOCK);
+        m_framePlayMs = durationMs;
+        m_layered = true;
+    }
+
 private:
     int getCurrentAnimationPhase();
+    void drawLayer(const Point& dest, LightView* lightView, bool drawThing);
+    float curveValue(uint8_t channel, float t, float fallback) const;
+    TexturePtr layerTexture(float t);
 
     struct DirControl
     {
@@ -162,6 +217,33 @@ private:
     std::vector<AttachedEffectPtr> m_effects;
 
     Point m_toPoint;
+
+    struct CurveKey
+    {
+        float t;
+        float value;
+        uint8_t ease;
+    };
+    struct Motion
+    {
+        float vx{ 0 };
+        float vy{ 0 };
+        float gravity{ 0 };
+        float spin{ 0 };
+        bool active{ false };
+    };
+
+    bool m_layered{ false };
+    bool m_additive{ false };
+    bool m_flipped{ false };
+    uint8_t m_framePlay{ FRAMES_OWN };
+    uint16_t m_framePlayMs{ 0 };
+    float m_rotation{ 0 };
+    float m_layerFrom{ 0 };
+    Point m_anchor;
+    Motion m_motion;
+    Timer m_layerTimer;
+    std::array<std::vector<CurveKey>, CURVE_COUNT> m_curves;
 
     friend class Thing;
     friend class Creature;

@@ -1,0 +1,3 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+impacto;rocha_1..3;10;0;500-850;2.5-5;360;3-6;14;0.5-1;sim;não
+impacto;fagulha_1..2;14;0;260-550;4-7;360;2-4;11;0.4-0.8;sim;sim

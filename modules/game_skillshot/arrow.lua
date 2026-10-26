@@ -1,37 +1,44 @@
--- Flecha do Crepusculo: the designer's art (images/flecha, from "Flecha do
--- Crepusculo - artes v1"). The server sends each moment of a shot
--- (scripts/skillshot/paladin.lua, fx "arrow") and this draws it:
---   fly   the arrow moves one sqm, brighter the farther it has gone
---         (sqm 1-4, 5-8, 9-12); a still frame per step, like the hook
---   hit   the small hit (1-7 sqm) or the beam of light (8-12 sqm), and the
---         loop of light on the creature's feet while it is held
---   miss  the arrow falls at the end of its way
+-- Flecha do Crepusculo: the designer's art v2 (images/flecha, "Ascensao -
+-- artes v2", layers.lua). The server sends each moment of a shot
+-- (scripts/skillshot/paladin.lua, fx "arrow"):
+--   draw   the paladin (f) draws a bow of light turned to the aim (t): the
+--          string goes back in `ms` (0.4 s) and light gathers on the tip
+--   loose  he lets go (f, toward t): a flash and a ring of air at the bow,
+--          and the arrow of light flies up to `n` sqm at `ms` a sqm with
+--          its streak behind
+--   hit    near (1-7 sqm) or far (8-12, a column of light too): a burst,
+--          a golden ring, feathers falling, the map lit; the halo on the
+--          feet of whom it holds, for `ms`
+--   miss   the arrow stuck in the ground, fading
+-- The preview shoots from (-6, 0) to (6, 0) at 30 ms a sqm.
 
 local ARROW_FORGET_MS = 1500 -- a shot with no news for this long is cleared
-local HELD_IN_MS = 100
-local HELD_OUT_MS = 100
+local PREVIEW_DRAW_MS = 400
+local PREVIEW_STEP_MS = 30
+local STREAK_LAG = 1.2 -- sqm the streak's middle is behind the arrow
+local FROM, TO = { -6, 0 }, { 6, 0 }
+local LIGHT = 205 -- gold
 
-local DIRECTIONS = { 'e', 'w', 'n', 's', 'ne', 'nw', 'se', 'sw' }
-local LEVELS = { 'inicial', 'medio', 'forte' }
-
--- anchors: the centre of the sqm, the ground under the beam and the miss
-local art = newArtSet(3500, '/game_skillshot/images/flecha/', 'Flecha')
-for _, level in ipairs(LEVELS) do
-    for _, dir in ipairs(DIRECTIONS) do
-        for frame = 1, 4 do
-            art.add('voo_' .. level .. '_' .. dir .. '_' .. frame, 32, 0, 0)
-        end
-    end
+local art = newLayerSet(3500, '/game_skillshot/images/flecha/', 'Flecha')
+for index = 1, 3 do
+    art.add('arco_' .. index, { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
 end
-art.add('acerto_perto', 64, 16, 16, 300)
-art.add('acerto_longe', { 96, 128 }, 32, 88, 400)
-art.add('preso_entrada', 64, 16, 8, HELD_IN_MS)
-art.add('preso_loop', 64, 16, 8)
-art.add('preso_saida', 64, 16, 8, HELD_OUT_MS)
-art.add('erro', 64, 16, 28, 350)
+art.add('ponta_energia', { size = { 64, 64 }, anchor = { 32, 32 }, additive = true })
+art.add('soltar_flash', { size = { 192, 192 }, anchor = { 96, 96 }, additive = true })
+art.add('soltar_anel', { size = { 128, 128 }, anchor = { 64, 64 } })
+art.add('flecha', { size = { 64, 64 }, anchor = { 32, 32 }, additive = true })
+art.add('rastro', { size = { 256, 32 }, anchor = { 128, 16 }, additive = true })
+art.add('acerto_nucleo', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('acerto_raio', { size = { 64, 256 }, anchor = { 32, 224 }, additive = true })
+art.add('acerto_anel', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+for index = 1, 3 do
+    art.add('pena_' .. index, { size = { 32, 32 }, anchor = { 16, 16 }, additive = true })
+end
+art.add('preso_halo', { size = { 128, 128 }, anchor = { 64, 64 }, ground = true })
+art.add('erro_cravada', { size = { 64, 64 }, anchor = { 32, 32 } })
 
-local shots = {} -- shot id -> { head, arrive, forget }
-local held = {} -- creature id -> { placed, events }
+local shots = {} -- shot id -> { placed = { ... }, angle, forget }
+local held = {} -- creature id -> placed halo
 
 function registerArrowArt()
     art.register()
@@ -44,27 +51,18 @@ local function forget(id)
     end
     shots[id] = nil
     removeEvent(shot.forget)
-    detachArt(shot.head)
-end
-
-local function release(creatureId)
-    local hold = held[creatureId]
-    if not hold then
-        return
+    for _, placed in ipairs(shot.placed) do
+        detachArt(placed)
     end
-    held[creatureId] = nil
-    for _, event in ipairs(hold.events) do
-        removeEvent(event)
-    end
-    detachArt(hold.placed)
 end
 
 function clearArrowArt()
     for id in pairs(shots) do
         forget(id)
     end
-    for id in pairs(held) do
-        release(id)
+    for id, placed in pairs(held) do
+        detachArt(placed)
+        held[id] = nil
     end
 end
 
@@ -76,7 +74,7 @@ end
 local function shotOf(data)
     local shot = shots[data.c]
     if not shot then
-        shot = { arrive = 0 }
+        shot = { placed = {}, angle = 0 }
         shots[data.c] = shot
     end
     removeEvent(shot.forget)
@@ -86,89 +84,92 @@ local function shotOf(data)
     return shot
 end
 
-local function onArrival(shot, callback)
-    local wait = shot.arrive - g_clock.millis()
-    if wait > 0 then
-        scheduleEvent(callback, wait)
-    else
-        callback()
+local function keep(shot, placed)
+    if placed then
+        table.insert(shot.placed, placed)
     end
 end
 
--- the loop of light on its feet: in, the loop, out, `ms` in all
-local function hold(creatureId, ms)
-    release(creatureId)
-    if not g_map.getCreatureById(creatureId) then
-        return
+-- the arrow gone (hit or miss): the arrow and its streak off, a streak that
+-- fades where it stopped
+local function stop(shot, at)
+    for _, placed in ipairs(shot.placed) do
+        detachArt(placed)
     end
-    local entry = { events = {} }
-    held[creatureId] = entry
-    local phases = {
-        { 'preso_entrada', HELD_IN_MS },
-        { 'preso_loop', math.max(0, ms - HELD_IN_MS - HELD_OUT_MS) },
-        { 'preso_saida', HELD_OUT_MS - 10 }
+    shot.placed = {}
+    local fade = {
+        { t = 0, x = -STREAK_LAG, y = 0, scale = 0.9, opacity = 0.9, rot = 0, ease = 0 },
+        { t = 145, x = -STREAK_LAG + 0.2, y = 0, scale = 1.1, opacity = 0, rot = 0, ease = 1 }
     }
-    local at = 0
-    for index, phase in ipairs(phases) do
-        local name, duration = phase[1], phase[2]
-        local function show()
-            local creature = g_map.getCreatureById(creatureId)
-            if held[creatureId] ~= entry or not creature or duration <= 0 then
-                return
-            end
-            entry.placed = art.attach(name, creature, duration)
-            if index == #phases then
-                held[creatureId] = nil
-            end
-        end
-        if at == 0 then
-            show()
-        else
-            table.insert(entry.events, scheduleEvent(show, at))
-        end
-        at = at + duration
-    end
+    art.play('rastro', at, { keys = fade, angle = shot.angle, turn = true })
 end
 
 local handlers = {}
 
-function handlers.fly(data)
+function handlers.draw(data)
     local shot = shotOf(data)
-    local from, to = data.f, data.t
-    detachArt(shot.head)
-    local origin = data.o or from
-    local dir = artDirection(to.x - origin.x, to.y - origin.y)
-    local step = tonumber(data.i) or 1
-    local level = step <= 4 and 'inicial' or step <= 8 and 'medio' or 'forte'
-    local frame = (step - 1) % 4 + 1
-    local ms = tonumber(data.ms) or 80
-    -- no duration on attach (it would take the arrow off at the end of the
-    -- step): set after, it times the move
-    shot.head = art.place('voo_' .. level .. '_' .. dir .. '_' .. frame, from)
-    if shot.head then
-        shot.head.effect:setDuration(ms)
-        shot.head.effect:move(from, to)
+    shot.angle = layerAngle(data.f, data.t)
+    local ms = tonumber(data.ms) or PREVIEW_DRAW_MS
+    local timing = { moment = 'puxar', home = FROM, angle = shot.angle, turn = true, scaleTime = ms / PREVIEW_DRAW_MS }
+    for _, name in ipairs({ 'arco_1', 'arco_2', 'ponta_energia' }) do
+        keep(shot, art.play(name, data.f, timing))
     end
-    shot.arrive = g_clock.millis() + ms
+    -- fully drawn it stays until he lets go
+    timing.duration = ms + 300
+    keep(shot, art.play('arco_3', data.f, timing))
+end
+
+function handlers.loose(data)
+    local shot = shotOf(data)
+    for _, placed in ipairs(shot.placed) do
+        detachArt(placed)
+    end
+    shot.placed = {}
+    shot.angle = layerAngle(data.f, data.t)
+    local step = tonumber(data.ms) or PREVIEW_STEP_MS
+    local reach = math.max(1, tonumber(data.n) or 12)
+    local release = { moment = 'soltar', home = FROM, angle = shot.angle, turn = true }
+    art.play('soltar_flash', data.f, release)
+    art.play('soltar_anel', data.f, release)
+    -- the preview's 30 ms a sqm; gone where the way ends if nothing comes first
+    local flight = { moment = 'voo', home = FROM, angle = shot.angle, turn = true, scaleTime = step / PREVIEW_STEP_MS, duration = reach * step + 40 }
+    keep(shot, art.play('flecha', data.f, flight))
+    keep(shot, art.play('rastro', data.f, flight))
 end
 
 function handlers.hit(data)
     local shot = shotOf(data)
-    onArrival(shot, function()
-        forget(data.c)
-        art.burst(data.far and 'acerto_longe' or 'acerto_perto', data.p)
-        if tonumber(data.id) and tonumber(data.ms) then
-            hold(tonumber(data.id), tonumber(data.ms))
-        end
-    end)
+    stop(shot, data.p)
+    forget(data.c)
+    local at = { moment = 'acerto', home = TO }
+    art.play('acerto_nucleo', data.p, { moment = 'acerto', home = TO, light = { keys = art.lightKeys('acerto'), color = LIGHT } })
+    art.play('acerto_anel', data.p, at)
+    if data.far then
+        art.play('acerto_raio', data.p, { moment = 'acerto longe', home = TO })
+    end
+    art.particles('acerto', data.p)
+    local id, ms = tonumber(data.id), tonumber(data.ms)
+    local creature = id and ms and g_map.getCreatureById(id)
+    if creature then
+        detachArt(held[id])
+        -- in, held for `ms`, out at its end (the preview's 350 ms, less
+        -- for a short hold)
+        local out = math.min(350, ms / 3)
+        local keys = {
+            { t = 0, scale = 1, opacity = 0, x = 0, y = 0, rot = 0, ease = 2 },
+            { t = 140, scale = 1, opacity = 0.8, x = 0, y = 0, rot = 0, ease = 2 },
+            { t = math.max(150, ms - out), scale = 1, opacity = 0.75, x = 0, y = 0, rot = 0, ease = 2 },
+            { t = math.max(160, ms), scale = 1, opacity = 0, x = 0, y = 0, rot = 0, ease = 2 }
+        }
+        held[id] = art.play('preso_halo', creature, { keys = keys })
+    end
 end
 
 function handlers.miss(data)
     local shot = shotOf(data)
-    onArrival(shot, function()
-        forget(data.c)
-        art.burst('erro', data.p)
-    end)
+    stop(shot, data.p)
+    forget(data.c)
+    art.play('erro_cravada', data.p, { moment = 'erro', home = TO })
 end
 
 function onArrowArt(data)

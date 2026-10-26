@@ -17,3 +17,15 @@ de `../magias-do-renascimento/gerar/`):
 
 O vídeo conceito precisa de numpy e ffmpeg; um fundo de teste sai do gerador
 das Magias do Renascimento (`fundos_de_teste/terra.png`).
+
+## Etapa 1 no jogo
+
+A Etapa 1 (Salto do Titã, Flecha do Crepúsculo, Meteoro, Muralha Glacial e
+Chute do Dragão) está em `modules/game_skillshot/images/<magia>/`, com o
+`curvas.csv` e o `particulas.csv` do designer como vieram. O cliente lê as
+curvas (`modules/game_skillshot/layers.lua`) e o motor as anima no
+`draw()` do `AttachedEffect` (curvas, âncora, giro, espelho, brilho aditivo,
+quadros pelo tempo, partículas) e treme o mapa (`UIMap:shake`). Uma
+entrega nova da mesma magia é só trocar os arquivos da pasta. A Flecha
+ganhou a puxada do arco (0,4 s) e o voo de 30 ms por sqm em
+`scripts/skillshot/paladin.lua` do servidor.

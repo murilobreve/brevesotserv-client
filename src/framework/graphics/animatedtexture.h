@@ -32,6 +32,9 @@ public:
 
     TexturePtr get(uint32_t& frame, Timer& timer);
     TexturePtr getCurrentFrame();
+    // a frame by its index (the last one past the end)
+    TexturePtr getFrame(const size_t index) const { return m_frames[std::min(index, m_frames.size() - 1)]; }
+    size_t getFramesCount() const { return m_frames.size(); }
 
     void create() override;
     void buildHardwareMipmaps() override;

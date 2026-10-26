@@ -13,6 +13,8 @@
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
 -- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua,
 -- leap.lua, beam.lua, spear.lua, kick.lua) instead of the Tibia effects.
+-- Five of them (meteor, arrow, wall, leap, kick) have the art v2: layers
+-- the engine animates by the designer's curves (layers.lua).
 -- The same way it draws the boss spells of the risen monsters (rare.lua,
 -- fx "rare_<tier>", scripts/rarity/spells.lua).
 
@@ -176,6 +178,7 @@ function clearArt()
     clearLeapArt()
     clearBeamArt()
     clearSpearArt()
+    clearKickArt()
     clearRareArt()
 end
 
@@ -187,6 +190,7 @@ local function warmUp()
         local player = g_game.getLocalPlayer()
         if player then
             warmUpArt(player:getPosition())
+            warmUpLayers(player:getPosition())
         end
     end, 2000)
 end

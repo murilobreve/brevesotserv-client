@@ -53,6 +53,7 @@ AttachedEffectPtr AttachedEffect::clone()
 
     obj->m_frame = 0;
     obj->m_animationTimer.restart();
+    obj->m_layerTimer.restart();
     obj->m_bounce.timer.restart();
     obj->m_pulse.timer.restart();
     obj->m_fade.timer.restart();
@@ -79,6 +80,12 @@ int getBounce(const Bounce& bounce) {
 void AttachedEffect::draw(const Point& dest, const bool isOnTop, LightView* lightView, const bool drawThing) {
     if (m_transform)
         return;
+
+    if (m_layered && m_texture) {
+        if (m_offsetDirections[m_direction].onTop == isOnTop)
+            drawLayer(dest, lightView, drawThing);
+        return;
+    }
 
     auto* thingType = getThingType();
     if (m_texture != nullptr || thingType != nullptr) {
@@ -225,6 +232,173 @@ int AttachedEffect::getCurrentAnimationPhase()
 }
 
 void AttachedEffect::setShader(const std::string_view name) { m_shader = g_shaders.getShader(name); }
+
+void AttachedEffect::setCurve(const uint8_t channel, const std::vector<float>& keys)
+{
+    if (channel >= CURVE_COUNT)
+        return;
+
+    auto& curve = m_curves[channel];
+    curve.clear();
+    for (size_t i = 0; i + 2 < keys.size(); i += 3)
+        curve.push_back({ .t = keys[i], .value = keys[i + 1], .ease = static_cast<uint8_t>(std::clamp<float>(keys[i + 2], EASE_LINEAR, EASE_OVERSHOOT)) });
+    std::ranges::stable_sort(curve, {}, &CurveKey::t);
+
+    // the layer comes in with the first key of any of its curves
+    bool any = false;
+    for (const auto& c : m_curves) {
+        if (c.empty())
+            continue;
+        m_layerFrom = any ? std::min(m_layerFrom, c.front().t) : c.front().t;
+        any = true;
+    }
+    m_layered = true;
+}
+
+namespace
+{
+    float easeLayerKey(const uint8_t kind, const float x)
+    {
+        switch (kind) {
+            case AttachedEffect::EASE_IN: return x * x * x;
+            case AttachedEffect::EASE_OUT: return 1.f - std::pow(1.f - x, 3.f);
+            case AttachedEffect::EASE_IN_OUT: return x < 0.5f ? 4.f * x * x * x : 1.f - std::pow(-2.f * x + 2.f, 3.f) / 2.f;
+            case AttachedEffect::EASE_OUT_STRONG: return x >= 1.f ? 1.f : 1.f - std::pow(2.f, -10.f * x);
+            case AttachedEffect::EASE_OVERSHOOT: {
+                constexpr float c1 = 1.70158f;
+                constexpr float c3 = c1 + 1.f;
+                return 1.f + c3 * std::pow(x - 1.f, 3.f) + c1 * std::pow(x - 1.f, 2.f);
+            }
+            default: return x;
+        }
+    }
+}
+
+float AttachedEffect::curveValue(const uint8_t channel, const float t, const float fallback) const
+{
+    const auto& curve = m_curves[channel];
+    if (curve.empty())
+        return fallback;
+    if (t <= curve.front().t)
+        return curve.front().value;
+    if (t >= curve.back().t)
+        return curve.back().value;
+
+    // a handful of keys: a walk is as fast as a search
+    size_t next = 1;
+    while (curve[next].t < t)
+        ++next;
+    const auto& from = curve[next - 1];
+    const auto& to = curve[next];
+    const float span = to.t - from.t;
+    const float x = span > 0.f ? (t - from.t) / span : 1.f;
+    return from.value + (to.value - from.value) * easeLayerKey(to.ease, x);
+}
+
+TexturePtr AttachedEffect::layerTexture(const float t)
+{
+    if (!m_texture->isAnimatedTexture())
+        return m_texture;
+
+    const auto& animated = std::static_pointer_cast<AnimatedTexture>(m_texture);
+    if (m_framePlay == FRAMES_OWN || m_framePlayMs == 0)
+        return animated->get(m_frame, m_animationTimer);
+
+    const auto count = animated->getFramesCount();
+    const float progress = std::max(0.f, t - m_layerFrom) / m_framePlayMs;
+    size_t index;
+    switch (m_framePlay) {
+        case FRAMES_LOOP:
+            index = static_cast<size_t>(progress * count) % count;
+            break;
+        case FRAMES_CLOCK:
+            // frame = floor((count - 1) * t / T): the last one only at T
+            index = static_cast<size_t>((count - 1) * std::min(progress, 1.f));
+            break;
+        default:
+            index = std::min(static_cast<size_t>(progress * count), count - 1);
+            break;
+    }
+    return animated->getFrame(index);
+}
+
+void AttachedEffect::drawLayer(const Point& dest, LightView* lightView, const bool drawThing)
+{
+    const float t = static_cast<float>(m_layerTimer.ticksElapsed());
+    if (t < m_layerFrom)
+        return;
+
+    // a particle sets off when it comes in
+    const float seconds = (t - m_layerFrom) / 1000.f;
+    float x = curveValue(CURVE_X, t, 0.f);
+    float y = curveValue(CURVE_Y, t, 0.f);
+    float angle = m_rotation + curveValue(CURVE_ROTATION, t, 0.f);
+    if (m_motion.active) {
+        x += m_motion.vx * seconds;
+        y += m_motion.vy * seconds + m_motion.gravity * seconds * seconds / 2.f;
+        angle += m_motion.spin * seconds;
+    }
+
+    // the anchor's place: where the image's top left would be (dest less
+    // the offset) plus the anchor, then moved by the curves
+    const float scaleFactor = g_drawPool.getScaleFactor();
+    const auto& topLeft = dest - (m_offsetDirections[m_direction].offset * scaleFactor);
+    const PointF pivot(topLeft.x + (m_anchor.x + x) * scaleFactor, topLeft.y + (m_anchor.y + y) * scaleFactor);
+
+    if (lightView && !drawThing) {
+        const float intensity = curveValue(CURVE_LIGHT, t, m_light.intensity);
+        if (intensity >= 1.f) {
+            Light light = m_light;
+            light.intensity = static_cast<uint8_t>(std::min(intensity + 0.5f, 255.f));
+            lightView->addLightSource(Point(pivot.x, pivot.y), light);
+        }
+        return;
+    }
+    if (!drawThing)
+        return;
+
+    const float opacity = std::clamp(curveValue(CURVE_OPACITY, t, 1.f), 0.f, 1.f) * getOpacity();
+    const float scale = curveValue(CURVE_SCALE, t, 1.f);
+    const float stretch = curveValue(CURVE_STRETCH, t, 1.f);
+    if (opacity <= 0.004f || scale <= 0.f || stretch <= 0.f)
+        return;
+
+    const auto& texture = layerTexture(t);
+    if (!texture)
+        return;
+
+    const auto& size = m_size.isUnset() ? m_texture->getSize() : m_size;
+    const float scaleX = scale * stretch * scaleFactor;
+    const float scaleY = scale * scaleFactor;
+    const float anchorY = m_flipped ? size.height() - m_anchor.y : m_anchor.y;
+    const Rect rect(static_cast<int>(std::round(pivot.x - m_anchor.x * scaleX)), static_cast<int>(std::round(pivot.y - anchorY * scaleY)),
+                    std::max(1, static_cast<int>(std::round(size.width() * scaleX))), std::max(1, static_cast<int>(std::round(size.height() * scaleY))));
+
+    const auto lastDrawOrder = g_drawPool.getDrawOrder();
+    if (g_drawPool.getCurrentType() == DrawPoolType::MAP)
+        g_drawPool.setDrawOrder(getDrawOrder());
+
+    const bool turned = std::abs(angle) > 0.01f;
+    if (turned) {
+        g_drawPool.pushTransformMatrix();
+        g_drawPool.rotate(pivot.x, pivot.y, angle * (Fw::pi / 180.f));
+    }
+    if (m_shader)
+        g_drawPool.setShaderProgram(m_shader, true);
+    if (opacity < 1.f)
+        g_drawPool.setOpacity(opacity, true);
+    if (m_additive)
+        g_drawPool.setCompositionMode(CompositionMode::ADDITIVE, true);
+
+    if (m_flipped)
+        g_drawPool.addUpsideDownTexturedRect(rect, texture, Rect(Point(), texture->getSize()), Color::white);
+    else
+        g_drawPool.addTexturedRect(rect, texture, Rect(Point(), texture->getSize()), Color::white);
+
+    if (turned)
+        g_drawPool.popTransformMatrix();
+    g_drawPool.setDrawOrder(lastDrawOrder);
+}
 
 void AttachedEffect::move(const Position& fromPosition, const Position& toPosition) {
     m_toPoint = Point(toPosition.x - fromPosition.x, toPosition.y - fromPosition.y) * g_gameConfig.getSpriteSize();
