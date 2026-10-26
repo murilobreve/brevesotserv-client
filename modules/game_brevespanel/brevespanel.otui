@@ -378,3 +378,115 @@ BrevesNotice < MythosBox
     width: 60
     height: 20
     focusable: false
+
+// ---------------------------------------------------------------- callout
+
+// the callout's tip: a square turned on its corner, half under the box, so
+// the gold rim runs down to a point over the row
+BrevesCalloutTip < UIWidget
+  size: 12 12
+  background-color: #21202b
+  border-width: 1
+  border-color: #b69a60
+  rotation: 45
+  phantom: true
+  focusable: false
+
+// a callout over a row of the bar (NEW RATES over Teleports), as the website
+// draws its cards: the obsidian glass with the gold rim, the title in Cinzel
+// over the crystal divider. A click on it opens the row; the x closes it.
+// Its height and place come from brevespanel.lua (point)
+BrevesCallout < UIButton
+  width: 236
+  height: 110
+  focusable: false
+  cursor: pointer
+
+  // first, so the box covers its upper half
+  BrevesCalloutTip
+    id: tip
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    margin-bottom: 2
+
+  UIWidget
+    id: box
+    anchors.fill: parent
+    margin-bottom: 8
+    image-source: /images/mythos/notice
+    image-border: 4
+    phantom: true
+
+  // the website's violet line along the top, like the rarity on an item card
+  UIWidget
+    id: accent
+    anchors.top: box.top
+    anchors.left: box.left
+    anchors.right: box.right
+    margin: 3 3 0 3
+    height: 2
+    background-color: #b296f5
+    phantom: true
+
+  Label
+    id: title
+    anchors.top: box.top
+    anchors.left: box.left
+    anchors.right: closeButton.left
+    margin-top: 8
+    margin-left: 12
+    height: 18
+    ttf-font: cinzel-bold
+    ttf-font-size: 14
+    color: #f1d399
+    phantom: true
+
+  UIButton
+    id: closeButton
+    anchors.top: box.top
+    anchors.right: box.right
+    margin-top: 6
+    margin-right: 6
+    size: 16 16
+    text: x
+    font: verdana-11px-rounded
+    color: #c9a96a
+    cursor: pointer
+    !tooltip: tr('Close')
+    $hover:
+      color: #ffe7b0
+      background-color: #f1d39922
+
+  // the site's divider: a gold rod with the violet crystal in the middle
+  UIWidget
+    id: divider
+    anchors.top: title.bottom
+    anchors.horizontalCenter: box.horizontalCenter
+    size: 150 23
+    image-source: /game_brevespanel/images/divider
+    phantom: true
+
+  Label
+    id: text
+    anchors.top: divider.bottom
+    anchors.left: box.left
+    anchors.right: box.right
+    margin-left: 12
+    margin-right: 12
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #e9e6f0
+    phantom: true
+
+  Label
+    id: detail
+    anchors.top: text.bottom
+    anchors.left: text.left
+    anchors.right: text.right
+    margin-top: 3
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #b296f5
+    phantom: true
