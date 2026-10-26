@@ -1,25 +1,40 @@
--- Corte Sismico: the designer's art (images/corte, from "Corte Sismico -
--- artes v1"). The server sends (scripts/skillshot/knight.lua, fx "crack"):
---   charge  the knight starts gathering: the glow grows in three levels
---           (each `ms` / 3) and flashes once when it is full
---   stop    released or lost: the glow goes (lost: it fizzles on the knight)
---   cut     one sqm of the crack, the way it runs, and the hit if it got one
+-- Corte Sismico: the designer's art v2 (images/corte, "Ascensao - artes
+-- v2", layers.lua). The server sends (scripts/skillshot/knight.lua, fx
+-- "crack"):
+--   charge  the knight (id) starts gathering: a ring of ember runes turns
+--           on the ground under him and grows, the glow on him pulses
+--           faster, sparks rise; full in `ms` with a flash, then held
+--   stop    released (the crack follows) or lost (`lost`: he walked): the
+--           charge goes; lost, it dies down where it is
+--   cut     one sqm of the crack (p), the way it runs (o: h, v, ne, nw):
+--           the ground splits with magma, dust and stones thrown; a burst
+--           and a shock wave if it hit someone
+-- The preview charges in 1.4 s and runs the crack from (-3, 0) to (2, 0).
 
-local LEVEL_COUNT = 3
+local PREVIEW_FULL_MS = 1400
+local HOLD_MS = 3500 -- knight.lua's longest hold, and a little more
+local GLOW_TURN = { h = 0, v = 90, ne = -45, nw = 45 } -- the magma's glow along the crack
+local LIGHT = layerLight('#FF7A2A')
 
--- anchors: the knight's feet for the charge, the centre of the sqm
-local art = newArtSet(4100, '/game_skillshot/images/corte/', 'Corte')
-for level = 1, LEVEL_COUNT do
-    art.add('carga_' .. level, 64, 16, 21)
+local art = newLayerSet(4100, '/game_skillshot/images/corte/', 'Corte')
+art.add('carga_runas', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
+art.add('carga_brilho', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+for index = 1, 3 do
+    art.add('carga_fagulha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 }, additive = true })
 end
-art.add('cheia', 64, 16, 21, 200)
-for _, way in ipairs({ 'h', 'v', 'ne', 'nw' }) do
-    art.add('fenda_' .. way, 32, 0, 0, 500)
+art.add('cheia_flash', { size = { 192, 192 }, anchor = { 96, 96 }, additive = true })
+for way in pairs(GLOW_TURN) do
+    art.add('fenda_' .. way, { size = { 64, 64 }, anchor = { 32, 32 }, ground = true, frames = 'once', ms = 640 })
 end
-art.add('acerto', 64, 16, 16, 300)
-art.add('cancelamento', 32, 0, -2, 250)
+art.add('fenda_brilho', { size = { 64, 64 }, anchor = { 32, 32 }, additive = true, ground = true })
+art.add('poeira', { size = { 128, 128 }, anchor = { 64, 64 } })
+for index = 1, 3 do
+    art.add('rocha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 } })
+end
+art.add('acerto_nucleo', { size = { 128, 128 }, anchor = { 64, 64 }, additive = true })
+art.add('acerto_onda', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
 
-local charges = {} -- creature id -> { placed, events }
+local charges = {} -- creature id -> { placed, ... }
 
 function registerCrackArt()
     art.register()
@@ -28,13 +43,13 @@ end
 local function stop(id)
     local charge = charges[id]
     if not charge then
-        return
+        return false
     end
     charges[id] = nil
-    for _, event in ipairs(charge.events) do
-        removeEvent(event)
+    for _, placed in ipairs(charge) do
+        detachArt(placed)
     end
-    detachArt(charge.placed)
+    return true
 end
 
 function clearCrackArt()
@@ -52,50 +67,50 @@ local handlers = {}
 
 function handlers.charge(data)
     local id = tonumber(data.id)
-    if not id then
+    local knight = id and g_map.getCreatureById(id)
+    if not knight then
         return
     end
     stop(id)
-    local charge = { events = {} }
+    local ms = tonumber(data.ms) or 1500
+    local charge = {}
     charges[id] = charge
-    local full = tonumber(data.ms) or 1500
-    local function show(level)
-        local knight = g_map.getCreatureById(id)
-        if charges[id] ~= charge or not knight then
-            return
-        end
-        detachArt(charge.placed)
-        charge.placed = art.attach('carga_' .. level, knight)
-        if level == LEVEL_COUNT then
-            art.attach('cheia', knight, 190)
+    for _, name in ipairs({ 'carga_runas', 'carga_brilho' }) do
+        local keys = art.held('carga', name, PREVIEW_FULL_MS, ms, HOLD_MS)
+        local placed = art.play(name, knight, { keys = keys, duration = keys[#keys] and keys[#keys].t or ms })
+        if placed then
+            table.insert(charge, placed)
         end
     end
-    show(1)
-    for level = 2, LEVEL_COUNT do
-        table.insert(charge.events, scheduleEvent(function()
-            show(level)
-        end, math.floor(full * (level - 1) / (LEVEL_COUNT - 1))))
-    end
+    art.particles('carga', knight:getPosition())
+    -- (gone with the charge if it is let go or lost before)
+    table.insert(charge, art.play('cheia_flash', knight, { moment = 'cheia', shift = ms, light = { keys = art.lightKeys('cheia'), color = LIGHT } }))
 end
 
 function handlers.stop(data)
     local id = tonumber(data.id)
-    if id then
-        stop(id)
+    if not id then
+        return
     end
-    if data.lost and data.p then
-        art.burst('cancelamento', data.p)
+    local knight = g_map.getCreatureById(id)
+    -- lost: the charge dies down where it is (the full flash too, if it
+    -- was still to come)
+    if stop(id) and data.lost and knight then
+        art.play('carga_runas', knight, { moment = 'cancelamento' })
+        art.play('carga_brilho', knight, { moment = 'cancelamento' })
     end
 end
 
 function handlers.cut(data)
-    if not data.p then
-        return
-    end
-    local way = ({ h = 'h', v = 'v', ne = 'ne', nw = 'nw' })[data.o] or 'h'
-    art.burst('fenda_' .. way, data.p)
+    local at, way = data.p, GLOW_TURN[data.o] and data.o or 'h'
+    local cut = { moment = 'corte' }
+    art.play('fenda_' .. way, at, { keys = art.keys('corte', 'fenda_h') })
+    art.play('fenda_brilho', at, { moment = 'corte', face = GLOW_TURN[way] })
+    art.play('poeira', at, cut)
+    art.particles('corte', at)
     if data.hit then
-        art.burst('acerto', data.p)
+        art.play('acerto_nucleo', at, { moment = 'acerto', light = { keys = art.lightKeys('acerto'), color = LIGHT } })
+        art.play('acerto_onda', at, { moment = 'acerto' })
     end
 end
 

@@ -1,0 +1,4 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+golpe;tinta_1;5;20;1000;2.1;360;0.8;2;0.65;1;0
+golpe;tinta_2;5;20;1000;2.1;360;0.8;2;0.65;1;0
+golpe;tinta_3;5;20;1000;2.1;360;0.8;2;0.65;1;0

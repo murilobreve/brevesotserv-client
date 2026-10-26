@@ -1,0 +1,46 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+voo;semente;0;1;0;0.0;0.0;0.0;0;linear
+voo;semente;81;1;1;0.75;0.0;22.5;0;linear
+voo;semente;162;1;1;1.5;0.0;45.0;0;linear
+voo;semente;244;1;1;2.25;0.0;67.5;0;linear
+voo;semente;325;1;1;3.0;0.0;90.0;0;linear
+voo;semente;406;1;1;3.75;0.0;112.5;0;linear
+voo;semente;488;1;1;4.5;0.0;135.0;0;linear
+voo;semente;569;1;1;5.25;0.0;157.5;0;linear
+voo;semente;650;1;0;6.0;0.0;180.0;0;linear
+acerto;acerto_nucleo;0;0.41600000000000004;0;0;0;0;0;saida
+acerto;acerto_nucleo;35;0.9099999999999999;1;0;0;0;0;saida
+acerto;acerto_nucleo;120;1.3;0.9;0;0;5;0;saida
+acerto;acerto_nucleo;230;1.4300000000000002;0;0;0.12;10;0;saida
+acerto;(luz do mapa);0;1;0;0;0;0;0;saida
+acerto;(luz do mapa);35;1;1;0;0;0;6;saida
+acerto;(luz do mapa);120;1;0.7;0;0;0;4.199999999999999;saida
+acerto;(luz do mapa);600;1;0;0;0;0;0;saida
+prende;raizes_crescendo;0;1.1199999999999999;0;0;0;0;0;saida
+prende;raizes_crescendo;70;1.4;1;0;0;0;0;saida
+prende;raizes_crescendo;250;1.4;1;0;0;0.0;0;saida
+prende;raizes_crescendo;500;1.4;1;0;0;0.0;0;saida
+prende;raizes_crescendo;540;1.4;1;0;0;0;0;saida
+prende;raizes_crescendo;600;1.3299999999999998;0;0;0;0;0;saida
+preso;raizes_presas;0;1.1199999999999999;0;0;0;0;0;saida
+preso;raizes_presas;70;1.4;1;0;0;0;0;saida
+preso;raizes_presas;250;1.456;0.8;0;0;0.0;0;saida
+preso;raizes_presas;500;1.4;1;0;0;0.0;0;saida
+preso;raizes_presas;750;1.456;0.8;0;0;0.0;0;saida
+preso;raizes_presas;1000;1.4;1;0;0;0.0;0;saida
+preso;raizes_presas;1250;1.456;0.8;0;0;0.0;0;saida
+preso;raizes_presas;1500;1.4;1;0;0;0.0;0;saida
+preso;raizes_presas;1750;1.456;0.8;0;0;0.0;0;saida
+preso;raizes_presas;1940;1.4;1;0;0;0;0;saida
+preso;raizes_presas;2000;1.3299999999999998;0;0;0;0;0;saida
+solta;raizes_soltando;0;1.1199999999999999;0;0;0;0;0;saida
+solta;raizes_soltando;70;1.4;1;0;0;0;0;saida
+solta;raizes_soltando;250;1.4;1;0;0;0.0;0;saida
+solta;raizes_soltando;420;1.4;1;0;0;0;0;saida
+solta;raizes_soltando;480;1.3299999999999998;0;0;0;0;0;saida
+erro;broto;0;0.96;0;0;0;0;0;saida
+erro;broto;70;1.2;1;0;0;0;0;saida
+erro;broto;250;1.2;1;0;0;0.0;0;saida
+erro;broto;500;1.2;1;0;0;0.0;0;saida
+erro;broto;580;1.2;1;0;0;0;0;saida
+erro;broto;640;1.14;0;0;0;0;0;saida

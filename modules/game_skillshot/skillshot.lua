@@ -12,14 +12,14 @@
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
 -- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua,
--- leap.lua, beam.lua, spear.lua, kick.lua) instead of the Tibia effects.
--- Five of them (meteor, arrow, wall, leap, kick) have the art v2: layers
+-- leap.lua, beam.lua, spear.lua, kick.lua, and the Translocacao's
+-- transloc.lua) instead of the Tibia effects. All have the art v2: layers
 -- the engine animates by the designer's curves (layers.lua).
 -- The same way it draws the boss spells of the risen monsters (rare.lua,
 -- fx "rare_<tier>", scripts/rarity/spells.lua).
 
 local OPCODE = 131
-local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick' }
+local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick', 'transloc' }
 for _, fx in ipairs(rareArtNames()) do
     table.insert(ART, fx)
 end
@@ -152,6 +152,8 @@ local function onOpcode(protocol, opcode, data)
         onSpearArt(data)
     elseif data.fx == 'kick' then
         onKickArt(data)
+    elseif data.fx == 'transloc' then
+        onTranslocArt(data)
     elseif isRareArt(data.fx) then
         onRareArt(data)
     elseif type(data.words) == 'table' then
@@ -179,6 +181,7 @@ function clearArt()
     clearBeamArt()
     clearSpearArt()
     clearKickArt()
+    clearTranslocArt()
     clearRareArt()
 end
 
@@ -211,6 +214,7 @@ function init()
     registerBeamArt()
     registerSpearArt()
     registerKickArt()
+    registerTranslocArt()
     registerRareArt()
     connect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
@@ -248,6 +252,7 @@ function terminate()
     unregisterBeamArt()
     unregisterSpearArt()
     unregisterKickArt()
+    unregisterTranslocArt()
     unregisterRareArt()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     if originalTalk then

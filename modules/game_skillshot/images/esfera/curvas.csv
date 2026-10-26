@@ -1,0 +1,58 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+voo;esfera;0;1;0;0.0;0.0;0.0;0;linear
+voo;esfera;112;1;1;0.75;0.0;0.0;0;linear
+voo;esfera;225;1;1;1.5;0.0;0.0;0;linear
+voo;esfera;338;1;1;2.25;0.0;0.0;0;linear
+voo;esfera;450;1;1;3.0;0.0;0.0;0;linear
+voo;esfera;562;1;1;3.75;0.0;0.0;0;linear
+voo;esfera;675;1;1;4.5;0.0;0.0;0;linear
+voo;esfera;788;1;1;5.25;0.0;0.0;0;linear
+voo;esfera;900;1;0;6.0;0.0;0.0;0;linear
+voo;esfera_anel;0;1;0;0.0;0.0;0.0;0;linear
+voo;esfera_anel;112;1;1;0.75;0.0;22.5;0;linear
+voo;esfera_anel;225;1;1;1.5;0.0;45.0;0;linear
+voo;esfera_anel;338;1;1;2.25;0.0;67.5;0;linear
+voo;esfera_anel;450;1;1;3.0;0.0;90.0;0;linear
+voo;esfera_anel;562;1;1;3.75;0.0;112.5;0;linear
+voo;esfera_anel;675;1;1;4.5;0.0;135.0;0;linear
+voo;esfera_anel;788;1;1;5.25;0.0;157.5;0;linear
+voo;esfera_anel;900;1;0;6.0;0.0;180.0;0;linear
+voo;esfera_brilho;0;1;0;0.0;0.0;0.0;0;linear
+voo;esfera_brilho;112;1;1;0.75;0.0;0.0;0;linear
+voo;esfera_brilho;225;1;1;1.5;0.0;0.0;0;linear
+voo;esfera_brilho;338;1;1;2.25;0.0;0.0;0;linear
+voo;esfera_brilho;450;1;1;3.0;0.0;0.0;0;linear
+voo;esfera_brilho;562;1;1;3.75;0.0;0.0;0;linear
+voo;esfera_brilho;675;1;1;4.5;0.0;0.0;0;linear
+voo;esfera_brilho;788;1;1;5.25;0.0;0.0;0;linear
+voo;esfera_brilho;900;1;0;6.0;0.0;0.0;0;linear
+voo;rastro;0;0.01;0;0;0;0;0;linear
+voo;rastro;35;0.3;1;0.2;0;0;0;linear
+voo;rastro;450.0;0.8;1;1.7999999999999998;0;0;0;linear
+voo;rastro;900;1;0;3.0;0;0;0;linear
+implosão;implosao;0;1.1;0;0;0;0;0;entrada
+implosão;implosao;40;1.1;0.9;0;0;0;0;entrada
+implosão;implosao;220;0.12;1;0;0;0;0;entrada
+implosão;implosao;260;0.03;0;0;0;0;0;entrada
+implosão;(luz do mapa);0;1;0;0;0;0;0;saida
+implosão;(luz do mapa);35;1;1;0;0;0;5;saida
+implosão;(luz do mapa);120;1;0.7;0;0;0;3.5;saida
+implosão;(luz do mapa);300;1;0;0;0;0;0;saida
+explosão;explosao_nucleo;0;0.41600000000000004;0;0;0;0;0;saida
+explosão;explosao_nucleo;35;0.9099999999999999;1;0;0;0;0;saida
+explosão;explosao_nucleo;120;1.3;0.9;0;0;5;0;saida
+explosão;explosao_nucleo;230;1.4300000000000002;0;0;0.12;10;0;saida
+explosão;explosao_onda;0;0.384;0;0;0;0;0;saida
+explosão;explosao_onda;35;0.84;1;0;0;0;0;saida
+explosão;explosao_onda;120;1.2;0.9;0;0;5;0;saida
+explosão;explosao_onda;1100;1.32;0;0;0.12;10;0;saida
+explosão;(luz do mapa);0;1;0;0;0;0;0;saida
+explosão;(luz do mapa);35;1;1;0;0;0;8;saida
+explosão;(luz do mapa);120;1;0.7;0;0;0;5.6;saida
+explosão;(luz do mapa);1200;1;0;0;0;0;0;saida
+fim;desfazendo;0;0.9199999999999999;0;0;0;0;0;saida
+fim;desfazendo;70;1.15;1;0;0;0;0;saida
+fim;desfazendo;250;1.15;1;0;0;0.0;0;saida
+fim;desfazendo;500;1.15;1;0;0;0.0;0;saida
+fim;desfazendo;580;1.15;1;0;0;0;0;saida
+fim;desfazendo;640;1.0924999999999998;0;0;0;0;0;saida
