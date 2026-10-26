@@ -21,6 +21,7 @@ locale = {
     ["Hunt Tasks"] = "Hunt Tasks",
     ["Hunt Rates"] = "Hunt Rates",
     ["Hunts TP"] = "Hunts TP",
+    ["Every hunt, with its XP and loot rate and a TP"] = "Todas as hunts, com XP, loot e TP",
     ["Hunts with TP"] = "Hunts com TP",
     ["Teleport to the %s hunt (every 30 seconds)"] = "Teleporte para a hunt de %s (a cada 30 segundos)",
     ["Every hunt in one list: the XP and loot rate of each monster, which change every 2 hours, and a TP to its hunt every 30 seconds."] = "Todas as hunts numa lista só: a XP e o loot de cada monstro, que mudam a cada 2 horas, e um TP para a hunt a cada 30 segundos.",

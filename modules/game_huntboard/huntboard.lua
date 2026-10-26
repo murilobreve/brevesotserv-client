@@ -798,7 +798,7 @@ end
 -- with the Mythos panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
-    rates = { title = 'Hunt Rates', intro = 'XP and loot rate of every monster' },
+    rates = { title = 'Hunts TP', intro = 'Every hunt, with its XP and loot rate and a TP' },
     board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
 }
 
