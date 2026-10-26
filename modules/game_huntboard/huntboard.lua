@@ -229,7 +229,7 @@ local function matchesFilter(monster, filter, search, hideBosses)
         return false
     end
     if filter == 'tp' then
-        return monster.tp == 1
+        return monster.tp > 0
     elseif filter == 'xp' then
         return monster.xp >= 15
     elseif filter == 'loot' then
@@ -286,11 +286,18 @@ local SORTERS = {
     end,
 }
 
--- the buttons show the wait between two hunt teleports (30 s)
+-- the buttons show the wait between two hunt teleports (30 s), and how
+-- many hunts a monster with more than one has
 local function updateTpButtons()
     local left = math.max(0, tpReadyAt - os.time())
     for _, button in ipairs(tpButtons) do
-        button:setText(left > 0 and (left .. 's') or tr('TP'))
+        if left > 0 then
+            button:setText(left .. 's')
+        elseif button.hunts > 1 then
+            button:setText(string.format('%s (%d)', tr('TP'), button.hunts))
+        else
+            button:setText(tr('TP'))
+        end
         button:setEnabled(left == 0)
     end
 end
@@ -323,11 +330,33 @@ local function showTpMessage(text)
     end, 6000)
 end
 
-local function teleportTo(name)
+local function teleportTo(name, option)
     if tpReadyAt > os.time() then
         return
     end
-    send({ action = 'teleport', name = name })
+    send({ action = 'teleport', name = name, option = option })
+end
+
+-- a hunt of the menu: "2. Near Ventera  -  floor -4  -  346 spawns"
+local function huntText(index, hunt)
+    local z = tonumber(hunt[2]) or 7
+    local floor = z == 7 and tr('ground floor') or tr('floor %+d', 7 - z)
+    return string.format('%d. %s', index, tr('Near %s  -  %s  -  %d spawns', latin1(hunt[1] or '?'), floor, tonumber(hunt[3]) or 0))
+end
+
+-- a monster with more than one hunt: the player picks where to go
+local function chooseHunt(monster)
+    if tpReadyAt > os.time() then
+        return
+    end
+    local menu = g_ui.createWidget('MythosComboBoxPopupMenu')
+    menu:setGameMenu(true)
+    for i, hunt in ipairs(monster.tpHunts) do
+        menu:addOption(huntText(i, hunt), function()
+            teleportTo(monster.name, i)
+        end)
+    end
+    menu:display()
 end
 
 local function renderPage()
@@ -373,11 +402,19 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
         end
         row:setTooltip(tooltip)
-        row.tp:setVisible(monster.tp == 1)
-        if monster.tp == 1 then
-            row.tp:setTooltip(tr('Teleport to the %s hunt (every 30 seconds)', monster.name))
-            row.tp.onClick = function()
-                teleportTo(monster.name)
+        row.tp:setVisible(monster.tp > 0)
+        if monster.tp > 0 then
+            row.tp.hunts = monster.tpHunts and #monster.tpHunts or 1
+            if row.tp.hunts > 1 then
+                row.tp:setTooltip(tr('%d hunts of %s: click to pick one (a TP every 30 seconds)', row.tp.hunts, monster.name))
+                row.tp.onClick = function()
+                    chooseHunt(monster)
+                end
+            else
+                row.tp:setTooltip(tr('Teleport to the %s hunt (every 30 seconds)', monster.name))
+                row.tp.onClick = function()
+                    teleportTo(monster.name)
+                end
             end
             tpButtons[#tpButtons + 1] = row.tp
         end
@@ -676,6 +713,11 @@ function handlers.rates(data)
         monster.exp = tonumber(monster.exp) or 0
         monster.hp = tonumber(monster.hp) or 0
         monster.spawns = tonumber(monster.spawns) or 0
+        -- how many hunts the TP goes to; with two or more, { town, floor, spawns } of each
+        monster.tp = tonumber(monster.tp) or 0
+        if type(monster.tpHunts) ~= 'table' or #monster.tpHunts < 2 then
+            monster.tpHunts = nil
+        end
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
