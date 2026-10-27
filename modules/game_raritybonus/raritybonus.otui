@@ -78,11 +78,27 @@ BonusItemRow < BrevesRow
     id: bonuses
     anchors.top: info.bottom
     anchors.left: name.left
-    anchors.right: parent.right
+    anchors.right: rerollItemButton.left
     margin-top: 3
+    margin-right: 8
     layout:
       type: verticalBox
       spacing: 2
+
+  // how keeping a bonus works, under the bonuses of an item that can
+  Label
+    id: keepHint
+    anchors.top: bonuses.bottom
+    anchors.left: name.left
+    anchors.right: rerollItemButton.left
+    margin-top: 3
+    margin-right: 8
+    height: 40
+    text-wrap: true
+    font: verdana-11px-monochrome
+    color: #8f84a8
+    phantom: true
+    visible: false
 
 // reroll / change button: Store look, an icon and the price
 BonusActionButton < MythosButton
@@ -95,41 +111,48 @@ BonusActionButton < MythosButton
   $disabled:
     opacity: 0.7
 
-// one bonus of an item; the padlock keeps it on the next reroll (gold)
-BonusLine < Panel
-  height: 16
+// "Keep" on a bonus: a padlock and a word, gold once it is kept
+BonusKeepButton < UIButton
+  size: 74 16
+  font: verdana-11px-monochrome
+  color: #b3a7cc
+  text-align: left
+  text-offset: 21 0
+  icon: /game_raritybonus/images/lock_off
+  icon-align: left
+  icon-offset: 5 0
+  background-color: #1a1229
+  border-width: 1
+  border-color: #5a4384
+  cursor: pointer
+  $hover !on:
+    border-color: #e0c060
+    color: #f0cf6a
+  $on:
+    icon: /game_raritybonus/images/lock_on
+    background-color: #e0c06033
+    border-color: #e0c060
+    color: #f0cf6a
 
-  UIButton
-    id: lock
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    size: 12 12
-    image-source: /game_raritybonus/images/lock_off
-    cursor: pointer
-    visible: false
-    $hover !on:
-      opacity: 0.8
-    $on:
-      image-source: /game_raritybonus/images/lock_on
+// one bonus of an item; "Keep" holds it, with its value, on the next reroll
+BonusLine < Panel
+  height: 18
 
   Label
     id: text
-    anchors.left: lock.right
+    anchors.left: parent.left
+    anchors.right: keep.left
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
-    text-auto-resize: true
+    margin-right: 6
     font: verdana-11px-monochrome
     color: #7fd35a
 
-  // shown on the locked bonus, next to it
-  Label
-    id: tag
-    anchors.left: text.right
+  BonusKeepButton
+    id: keep
+    anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
-    text-auto-resize: true
-    font: verdana-11px-monochrome
-    color: #f0cf6a
+    margin-right: 1
     visible: false
 
 BonusItemRowEven < BonusItemRow
