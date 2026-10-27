@@ -76,6 +76,55 @@ RouletteResult < UIWidget
     color: #9789b3
     phantom: true
 
+// raising the grade: the chance, a bar filled to it in the new grade's colour
+UpgradeChance < UIWidget
+  height: 26
+  background-color: #0f0a19f0
+  border-width: 1
+  border-color: #4a3670
+  phantom: true
+
+  Label
+    id: label
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    width: 70
+    font: verdana-11px-monochrome
+    color: #9789b3
+    phantom: true
+
+  UIWidget
+    id: bar
+    anchors.left: label.right
+    anchors.right: percent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 10
+    height: 12
+    background-color: #2a2140
+    border-width: 1
+    border-color: #4a3670
+    phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin: 1
+      width: 0
+      phantom: true
+
+  Label
+    id: percent
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    width: 170
+    text-align: right
+    font: Verdana Bold-11px
+    phantom: true
+
 MythosWindow
   id: rarityRouletteWindow
   !text: tr('Rarity Roulette')
