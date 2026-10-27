@@ -10,6 +10,14 @@ local POTION_FALLBACK = 1000
 -- the server kicks after 15 idle minutes (kickIdlePlayerAfterMinutes), and a
 -- turn resets that timer, the same as a player tapping ctrl+arrow
 local ANTI_IDLE_EVERY = 5 * 60 * 1000
+-- the server says "You are full." when the regeneration time and the food's
+-- would reach 1200 s (data/scripts/actions/items/foods.lua)
+local FULL = 1200
+local FULL_MARGIN = 2 -- s: the time counted down here runs a little behind the server's
+local MEAL_WAIT = 1500 -- ms: the most it waits for the server's answer to a meal
+local MEAL_CHECK = 500 -- ms between looks into the backpacks while not eating
+local FULL_PAUSE = 30 * 1000
+local FULL_MESSAGE = 'You are full.'
 
 local tickEvent
 local running = false
@@ -17,6 +25,9 @@ local getConfig, onAction
 local spellUntil, groupUntil, potionUntil = {}, {}, 0
 local unlearned, lastCast = {}, nil
 local lastTurn = 0
+-- the regeneration time the server sent (s) and when; it counts down here
+local regen, regenAt = 0, 0
+local filling, ateAt, fullUntil, mealCheckAt = false, nil, 0, 0
 local NOT_LEARNED = 'You need to learn this spell first.'
 
 local function now()
@@ -45,6 +56,10 @@ end
 -- the client has no list of learned spells, so stop trying a spell the
 -- server refused instead of repeating the same error every second
 local function onTextMessage(_, text)
+    if text == FULL_MESSAGE and ateAt and now() - ateAt < MEAL_WAIT then
+        filling, ateAt, fullUntil = false, nil, now() + FULL_PAUSE
+        return
+    end
     if text == NOT_LEARNED and lastCast and now() - lastCast.time < 1500 then
         unlearned[lastCast.spell.id] = true
         if onAction then
@@ -52,6 +67,12 @@ local function onTextMessage(_, text)
         end
         lastCast = nil
     end
+end
+
+-- the server sends it again after every meal (the food leaves the backpack)
+local function onRegenerationChange(_, seconds)
+    regen, regenAt = seconds, now()
+    ateAt = nil
 end
 
 local function onMultiUseCooldown(delay)
@@ -87,7 +108,7 @@ local function cast(spell, t, target)
     end
 end
 
-local function potionCount(player, id)
+local function itemCount(player, id)
     -- the server keeps this list for the action bar; open backpacks as fallback
     local count = player:getInventoryCount(id, 0)
     if count == 0 then
@@ -97,7 +118,7 @@ local function potionCount(player, id)
 end
 
 local function potionReady(player, potion, t)
-    return potion and potionUntil <= t and player:getLevel() >= (potion.level or 0) and potionCount(player, potion.id) > 0
+    return potion and potionUntil <= t and player:getLevel() >= (potion.level or 0) and itemCount(player, potion.id) > 0
 end
 
 local function drink(player, potion, t)
@@ -106,6 +127,7 @@ local function drink(player, potion, t)
     if onAction then
         onAction(tr('Used %s', potion.name))
     end
+    return true
 end
 
 local function isPartyMember(creature)
@@ -195,6 +217,44 @@ local function pickPotion(player, cfg, hp, mp, t)
     end
 end
 
+-- the biggest food in the backpacks worth less than `room` seconds
+local function pickFood(player, room)
+    local best
+    for id, food in pairs(HealData.foods) do
+        if food[1] < room and (not best or food[1] > best.seconds) and itemCount(player, id) > 0 then
+            best = { id = id, seconds = food[1], name = food[2] }
+        end
+    end
+    return best
+end
+
+-- eats as soon as its biggest food fits, then whatever still fits until
+-- full: one meal at a time, each after the server answered the last
+local function feed(player, t)
+    if ateAt and t - ateAt < MEAL_WAIT or fullUntil > t or mealCheckAt > t then
+        return
+    end
+    ateAt = nil
+    mealCheckAt = filling and 0 or t + MEAL_CHECK
+    local room = FULL - FULL_MARGIN - math.max(0, regen - (t - regenAt) / 1000)
+    local food = pickFood(player, room)
+    if not food then
+        filling = false
+        return
+    end
+    if not filling then
+        if pickFood(player, FULL).seconds > food.seconds then
+            return
+        end
+        filling = true
+    end
+    g_game.useInventoryItem(food.id)
+    ateAt, mealCheckAt = t, 0
+    if onAction then
+        onAction(tr('Used %s', food.name))
+    end
+end
+
 local function antiIdle(player, t)
     if t - lastTurn < ANTI_IDLE_EVERY or player:isWalking() then
         return
@@ -230,12 +290,16 @@ local function tick()
     local mp = percent(player:getMana(), player:getMaxMana())
     -- spells and potions are separate exhausts in Tibia, so both can go off
     pickSpell(player, cfg, hp, mp, t)
-    pickPotion(player, cfg, hp, mp, t)
+    local drank = pickPotion(player, cfg, hp, mp, t)
+    -- a meal waits for a tick with no potion
+    if cfg.support.food and not drank then
+        feed(player, t)
+    end
 end
 
 function HealEngine.potionCount(id)
     local player = g_game.getLocalPlayer()
-    return player and potionCount(player, id) or 0
+    return player and itemCount(player, id) or 0
 end
 
 function HealEngine.setRunning(value)
@@ -250,6 +314,9 @@ function HealEngine.reset()
     spellUntil, groupUntil, potionUntil = {}, {}, 0
     unlearned, lastCast = {}, nil
     lastTurn = now()
+    local player = g_game.getLocalPlayer()
+    regen, regenAt = player and player:getRegenerationTime() or 0, now()
+    filling, ateAt, fullUntil, mealCheckAt = false, nil, 0, 0
 end
 
 function HealEngine.forget(spellId)
@@ -264,6 +331,7 @@ function HealEngine.init(configGetter, actionCallback)
         onMultiUseCooldown = onMultiUseCooldown,
         onTextMessage = onTextMessage,
     })
+    connect(LocalPlayer, { onRegenerationChange = onRegenerationChange })
     tickEvent = cycleEvent(tick, TICK)
 end
 
@@ -274,6 +342,7 @@ function HealEngine.terminate()
         onMultiUseCooldown = onMultiUseCooldown,
         onTextMessage = onTextMessage,
     })
+    disconnect(LocalPlayer, { onRegenerationChange = onRegenerationChange })
     if tickEvent then
         removeEvent(tickEvent)
         tickEvent = nil
