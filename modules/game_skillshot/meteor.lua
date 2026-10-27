@@ -6,9 +6,14 @@
 --           the rock falls from the upper left with its tail of fire, and
 --           `n` rocks in all, `gap` ms apart (the mark stays for them)
 --   impact  rock `i` lands: the flash, the ring of fire, the ball of fire
---           and smoke, rocks and sparks, the map lit and shaken; the
---           crater cools for 3 s (the server burns whoever stands there)
+--           and smoke rising from where it hit, rocks and sparks, the map
+--           lit and shaken; the crater cools for 3 s (the server burns
+--           whoever stands there)
 -- The preview's mark is 1.5 s; the rock falls from (-4, 5) to the centre.
+-- Left out of the designer's: the dust cloud (poeira, a column of smoke
+-- with rocks and a blue arcane swirl from the old sheet, floating over the
+-- crater) and the third rock (a rune on it); the rocks and sparks that fly
+-- are in embers, not blue.
 
 local PREVIEW_MARK_MS = 1500
 local FALL_MS = 400
@@ -17,6 +22,11 @@ local LIGHT = 199 -- fire
 -- inside the mark, not on one another
 local ROCK_SPOTS = { { 0, 0 }, { -0.4, 0.3 }, { 0.4, -0.25 } }
 local DEBRIS = 0.6 -- a share of the rocks and sparks for each of several
+-- the ball of fire stands on the ground where the rock hit: its foot (the
+-- file's anchor is its middle, the fire grows from its bottom) a little
+-- below the centre of the sqm, as the crater is seen
+local FIRE_FOOT = { 128, 232 }
+local FIRE_FOOT_Y = -0.2 -- sqm, y up
 
 local art = newLayerSet(3300, '/game_skillshot/images/meteoro/', 'Meteoro')
 art.add('marca_relogio', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true, frames = 'clock' })
@@ -26,10 +36,10 @@ art.add('meteoro', { size = { 128, 128 }, anchor = { 64, 64 } })
 art.add('meteoro_cauda', { size = { 256, 64 }, anchor = { 128, 32 }, additive = true })
 art.add('impacto_nucleo', { size = { 256, 256 }, anchor = { 128, 128 }, additive = true })
 art.add('impacto_anel', { size = { 320, 320 }, anchor = { 160, 160 }, ground = true })
-art.add('impacto_fogo', { size = { 256, 256 }, anchor = { 128, 128 }, frames = 'once', ms = 750 })
+art.add('impacto_fogo', { size = { 256, 256 }, anchor = FIRE_FOOT, frames = 'once', ms = 750 })
 art.add('cratera', { size = { 192, 192 }, anchor = { 96, 96 }, ground = true })
-art.add('poeira', { size = { 256, 256 }, anchor = { 128, 128 } })
-for index = 1, 3 do
+-- particulas.csv throws rocha_1..3: only the two drawn are thrown
+for index = 1, 2 do
     art.add('rocha_' .. index, { size = { 32, 32 }, anchor = { 16, 16 } })
 end
 for index = 1, 2 do
@@ -72,6 +82,15 @@ local function tailKeys()
     return keys
 end
 
+-- the ball of fire's points with its foot on the ground
+local function fireKeys()
+    local keys = {}
+    for index, key in ipairs(art.keys('impacto', 'impacto_fogo') or {}) do
+        keys[index] = { t = key.t, scale = key.scale, opacity = key.opacity, rot = key.rot, ease = key.ease, x = key.x, y = FIRE_FOOT_Y }
+    end
+    return keys
+end
+
 local handlers = {}
 
 -- the home that puts a layer `spot` sqm off the centre
@@ -106,9 +125,8 @@ function handlers.impact(data)
     local rock = tonumber(data.i)
     local home = homeOf(rock or 1)
     art.play('impacto_nucleo', center, { moment = 'impacto', home = home, light = { keys = art.lightKeys('impacto'), color = LIGHT } })
-    for _, name in ipairs({ 'impacto_anel', 'impacto_fogo', 'poeira' }) do
-        art.play(name, center, { moment = 'impacto', home = home })
-    end
+    art.play('impacto_anel', center, { moment = 'impacto', home = home })
+    art.play('impacto_fogo', center, { keys = fireKeys(), home = home })
     art.play('cratera', center, { moment = 'chão', home = home })
     art.particles('impacto', center, { count = rock and DEBRIS or 1 })
     art.tremor('impacto', center)
