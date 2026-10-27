@@ -9,11 +9,14 @@
 --           and smoke rising from where it hit, rocks and sparks, the map
 --           lit and shaken; the crater cools for 3 s (the server burns
 --           whoever stands there)
+-- The server drops one rock (scripts/skillshot, METEOR_COUNT).
 -- The preview's mark is 1.5 s; the rock falls from (-4, 5) to the centre.
 -- Left out of the designer's: the dust cloud (poeira, a column of smoke
 -- with rocks and a blue arcane swirl from the old sheet, floating over the
 -- crater) and the third rock (a rune on it); the rocks and sparks that fly
--- are in embers, not blue.
+-- are in embers, not blue, and fewer. Light on the graphics card: the
+-- ball of fire is the designer's 10 frames at the map's own size (128 px,
+-- not the 256 px for a zoomed map), 0.6 MB instead of 2.6.
 
 local PREVIEW_MARK_MS = 1500
 local FALL_MS = 400
@@ -21,7 +24,7 @@ local LIGHT = 199 -- fire
 -- where each rock comes down, sqm from the centre (x right, y up): all
 -- inside the mark, not on one another
 local ROCK_SPOTS = { { 0, 0 }, { -0.4, 0.3 }, { 0.4, -0.25 } }
-local DEBRIS = 0.6 -- a share of the rocks and sparks for each of several
+local DEBRIS = 0.6 -- a share of the designer's rocks and sparks
 -- the ball of fire stands on the ground where the rock hit: its foot (the
 -- file's anchor is its middle, the fire grows from its bottom) a little
 -- below the centre of the sqm, as the crater is seen
@@ -128,7 +131,7 @@ function handlers.impact(data)
     art.play('impacto_anel', center, { moment = 'impacto', home = home })
     art.play('impacto_fogo', center, { keys = fireKeys(), home = home })
     art.play('cratera', center, { moment = 'chão', home = home })
-    art.particles('impacto', center, { count = rock and DEBRIS or 1 })
+    art.particles('impacto', center, { count = DEBRIS })
     art.tremor('impacto', center)
 end
 
