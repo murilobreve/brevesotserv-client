@@ -17,6 +17,14 @@ local PREVIEW_DRAW_MS = 400
 local PREVIEW_STEP_MS = 30
 local STREAK_LAG = 1.2 -- sqm the streak's middle is behind the arrow
 local FROM, TO = { -6, 0 }, { 6, 0 }
+-- bigger than the preview: the bow and the light on its tip, the flash and
+-- the ring of air when he lets go, the arrow and its streak
+local BOW_SIZE = 1.5
+local RELEASE_SIZE = 1.25
+local ARROW_SIZE = 1.6
+-- the bigger streak goes this much farther back, its front on the arrow
+-- as in the preview (half of its 4 sqm at 0.9, the more it grows)
+local STREAK_BACK = 1.8 * (ARROW_SIZE - 1)
 local LIGHT = 205 -- gold
 
 local art = newLayerSet(3500, '/game_skillshot/images/flecha/', 'Flecha')
@@ -90,6 +98,20 @@ local function keep(shot, placed)
     end
 end
 
+-- the points `size` times bigger, and `spread` times farther from the
+-- paladin (what sits on the bow stays on the bigger bow), `back` sqm back
+-- along the way
+local function bigger(keys, size, spread, back)
+    local out = {}
+    for index, key in ipairs(keys or {}) do
+        out[index] = {
+            t = key.t, ease = key.ease, rot = key.rot, y = key.y, opacity = key.opacity, scale = key.scale * size,
+            x = FROM[1] + (key.x - FROM[1]) * (spread or 1) - (back or 0)
+        }
+    end
+    return out
+end
+
 -- the arrow gone (hit or miss): the arrow and its streak off, a streak that
 -- fades where it stopped
 local function stop(shot, at)
@@ -98,8 +120,8 @@ local function stop(shot, at)
     end
     shot.placed = {}
     local fade = {
-        { t = 0, x = -STREAK_LAG, y = 0, scale = 0.9, opacity = 0.9, rot = 0, ease = 0 },
-        { t = 145, x = -STREAK_LAG + 0.2, y = 0, scale = 1.1, opacity = 0, rot = 0, ease = 1 }
+        { t = 0, x = -STREAK_LAG - STREAK_BACK, y = 0, scale = 0.9 * ARROW_SIZE, opacity = 0.9, rot = 0, ease = 0 },
+        { t = 145, x = -STREAK_LAG - STREAK_BACK + 0.2, y = 0, scale = 1.1 * ARROW_SIZE, opacity = 0, rot = 0, ease = 1 }
     }
     art.play('rastro', at, { keys = fade, angle = shot.angle, turn = true })
 end
@@ -110,12 +132,14 @@ function handlers.draw(data)
     local shot = shotOf(data)
     shot.angle = layerAngle(data.f, data.t)
     local ms = tonumber(data.ms) or PREVIEW_DRAW_MS
-    local timing = { moment = 'puxar', home = FROM, angle = shot.angle, turn = true, scaleTime = ms / PREVIEW_DRAW_MS }
+    local timing = { home = FROM, angle = shot.angle, turn = true, scaleTime = ms / PREVIEW_DRAW_MS }
     for _, name in ipairs({ 'arco_1', 'arco_2', 'ponta_energia' }) do
+        timing.keys = bigger(art.keys('puxar', name), BOW_SIZE, BOW_SIZE)
         keep(shot, art.play(name, data.f, timing))
     end
     -- fully drawn it stays until he lets go
     timing.duration = ms + 300
+    timing.keys = bigger(art.keys('puxar', 'arco_3'), BOW_SIZE, BOW_SIZE)
     keep(shot, art.play('arco_3', data.f, timing))
 end
 
@@ -128,12 +152,16 @@ function handlers.loose(data)
     shot.angle = layerAngle(data.f, data.t)
     local step = tonumber(data.ms) or PREVIEW_STEP_MS
     local reach = math.max(1, tonumber(data.n) or 12)
-    local release = { moment = 'soltar', home = FROM, angle = shot.angle, turn = true }
-    art.play('soltar_flash', data.f, release)
-    art.play('soltar_anel', data.f, release)
+    local release = { home = FROM, angle = shot.angle, turn = true }
+    for _, name in ipairs({ 'soltar_flash', 'soltar_anel' }) do
+        release.keys = bigger(art.keys('soltar', name), RELEASE_SIZE, BOW_SIZE)
+        art.play(name, data.f, release)
+    end
     -- the preview's 30 ms a sqm; gone where the way ends if nothing comes first
-    local flight = { moment = 'voo', home = FROM, angle = shot.angle, turn = true, scaleTime = step / PREVIEW_STEP_MS, duration = reach * step + 40 }
+    local flight = { home = FROM, angle = shot.angle, turn = true, scaleTime = step / PREVIEW_STEP_MS, duration = reach * step + 40 }
+    flight.keys = bigger(art.keys('voo', 'flecha'), ARROW_SIZE)
     keep(shot, art.play('flecha', data.f, flight))
+    flight.keys = bigger(art.keys('voo', 'rastro'), ARROW_SIZE, 1, STREAK_BACK)
     keep(shot, art.play('rastro', data.f, flight))
 end
 
@@ -169,7 +197,11 @@ function handlers.miss(data)
     local shot = shotOf(data)
     stop(shot, data.p)
     forget(data.c)
-    art.play('erro_cravada', data.p, { moment = 'erro', home = TO })
+    local stuck = {}
+    for index, key in ipairs(art.keys('erro', 'erro_cravada') or {}) do
+        stuck[index] = { t = key.t, ease = key.ease, rot = key.rot, x = key.x, y = key.y, opacity = key.opacity, scale = key.scale * ARROW_SIZE }
+    end
+    art.play('erro_cravada', data.p, { keys = stuck, home = TO })
 end
 
 function onArrowArt(data)

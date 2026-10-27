@@ -172,10 +172,12 @@ public:
         const float bottom = rect.bottom() + 1;
         const float left = rect.left();
 
+        // addRect's two triangles with top and bottom swapped (it had the
+        // first triangle's third corner on its first: half the picture)
         float arr[] = {
             left, bottom,
             right, bottom,
-            left, bottom,
+            left, top,
             left, top,
             right, bottom,
             right, top
