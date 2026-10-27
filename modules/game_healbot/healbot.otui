@@ -202,7 +202,7 @@ CureRule < BrevesPanelBox
 MythosWindow
   id: healBotWindow
   !text: tr('Heal Bot')
-  size: 640 380
+  size: 640 428
   @onEscape: modules.game_healbot.hide()
 
   UIWidget
