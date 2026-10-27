@@ -1,0 +1,4 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+impacto;pena_1;5;130;2000;0.7;360;-0.2;0.15;0.7;1;1
+impacto;pena_2;5;130;2000;0.7;360;-0.2;0.15;0.7;1;1
+impacto;pena_3;5;130;2000;0.7;360;-0.2;0.15;0.7;1;1

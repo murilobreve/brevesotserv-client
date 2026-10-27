@@ -117,6 +117,8 @@ local function defaults(player)
         shield = { on = false, spell = bestSpell(HealData.shieldSpells(vocation)) },
         haste = { on = false, spell = bestSpell(HealData.hasteSpells(vocation)) },
         cures = false,
+        -- eats the food in the backpacks until full (engine.lua)
+        food = true,
         antiIdle = false,
         -- `below` is the mana it trains from (the slider is shared)
         train = { on = false, spell = bestTrainSpell(HealData.trainSpells(vocation)), below = 90 },
@@ -469,6 +471,9 @@ local function fill()
     addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation),
         tr('Haste: cast again when it runs out or when you get paralyzed.'))
     addCureRule(page, vocation)
+    local food = g_ui.createWidget('CureRule', page)
+    bindCheck(food.enabled, cfg.support, 'food')
+    food.note:setText(tr('Auto food: eats the food in your backpacks until you are full.'))
     addTrainRule(page, cfg.support.train, HealData.trainSpells(vocation))
     local idle = g_ui.createWidget('CureRule', page)
     bindCheck(idle.enabled, cfg.support, 'antiIdle')

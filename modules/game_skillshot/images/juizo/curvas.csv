@@ -1,0 +1,55 @@
+﻿momento;camada;t_ms;escala;opacidade;x_sqm;y_sqm;rotacao_graus;luz;suavizacao
+marca;circulo;0;0.8;0;0;0;0;0;saida
+marca;circulo;70;1;1;0;0;0;0;saida
+marca;circulo;250;1;1;0;0;4.5;0;saida
+marca;circulo;500;1;1;0;0;9.0;0;saida
+marca;circulo;750;1;1;0;0;13.5;0;saida
+marca;circulo;940;1;1;0;0;18;0;saida
+marca;circulo;1000;0.95;0;0;0;18;0;saida
+marca;circulo_relogio;0;0.8;0;0;0;0;0;saida
+marca;circulo_relogio;70;1;1;0;0;0;0;saida
+marca;circulo_relogio;250;1;1;0;0;0.0;0;saida
+marca;circulo_relogio;500;1;1;0;0;0.0;0;saida
+marca;circulo_relogio;750;1;1;0;0;0.0;0;saida
+marca;circulo_relogio;940;1;1;0;0;0;0;saida
+marca;circulo_relogio;1000;0.95;0;0;0;0;0;saida
+marca;centro;0;0.8;0;0;0;0;0;saida
+marca;centro;70;1;1;0;0;0;0;saida
+marca;centro;250;1.04;0.8;0;0;0.0;0;saida
+marca;centro;500;1;1;0;0;0.0;0;saida
+marca;centro;750;1.04;0.8;0;0;0.0;0;saida
+marca;centro;940;1;1;0;0;0;0;saida
+marca;centro;1000;0.95;0;0;0;0;0;saida
+raio;raio;0;0.05;0;0;4.8;0;0;saida
+raio;raio;50;0.35;1;0;3.3;0;0;saida
+raio;raio;200;1;1;0;0;0;0;saida
+raio;raio;380;1.05;0;0;0;0;0;saida
+impacto;impacto_nucleo;0;0.41600000000000004;0;0;0;0;0;saida
+impacto;impacto_nucleo;35;0.9099999999999999;1;0;0;0;0;saida
+impacto;impacto_nucleo;120;1.3;0.9;0;0;5;0;saida
+impacto;impacto_nucleo;230;1.4300000000000002;0;0;0.12;10;0;saida
+impacto;impacto_raios;180;0.44799999999999995;0;0;0;-12;0;saida
+impacto;impacto_raios;215;0.9799999999999999;1;0;0;-12;0;saida
+impacto;impacto_raios;300;1.4;0.9;0;0;-7;0;saida
+impacto;impacto_raios;880;1.54;0;0;0.12;-2;0;saida
+impacto;impacto_anel;0;0.4;0;0;0;0;0;saida
+impacto;impacto_anel;35;0.875;1;0;0;0;0;saida
+impacto;impacto_anel;120;1.25;0.9;0;0;5;0;saida
+impacto;impacto_anel;1100;1.375;0;0;0.12;10;0;saida
+impacto;brilho_chao;0;0.8;0;0;0;0;0;saida
+impacto;brilho_chao;70;1;1;0;0;0;0;saida
+impacto;brilho_chao;250;1.04;0.8;0;0;0.0;0;saida
+impacto;brilho_chao;500;1;1;0;0;0.0;0;saida
+impacto;brilho_chao;750;1.04;0.8;0;0;0.0;0;saida
+impacto;brilho_chao;1000;1;1;0;0;0.0;0;saida
+impacto;brilho_chao;1250;1.04;0.8;0;0;0.0;0;saida
+impacto;brilho_chao;1500;1;1;0;0;0.0;0;saida
+impacto;brilho_chao;1750;1.04;0.8;0;0;0.0;0;saida
+impacto;brilho_chao;2000;1;1;0;0;0.0;0;saida
+impacto;brilho_chao;2250;1.04;0.8;0;0;0.0;0;saida
+impacto;brilho_chao;2440;1;1;0;0;0;0;saida
+impacto;brilho_chao;2500;0.95;0;0;0;0;0;saida
+impacto;(luz do mapa);0;1;0;0;0;0;0;saida
+impacto;(luz do mapa);35;1;1;0;0;0;8;saida
+impacto;(luz do mapa);120;1;0.7;0;0;0;5.6;saida
+impacto;(luz do mapa);1800;1;0;0;0;0;0;saida

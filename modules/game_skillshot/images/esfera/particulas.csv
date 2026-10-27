@@ -1,0 +1,4 @@
+﻿momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+explosão;fragmento_1;5;25;1000;2;360;1;2;0.6;1;0
+explosão;fragmento_2;5;25;1000;2;360;1;2;0.6;1;0
+explosão;fragmento_3;5;25;1000;2;360;1;2;0.6;1;0

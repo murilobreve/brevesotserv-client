@@ -14,7 +14,8 @@
 --   warmUpLayers(position)  every image of every set drawn once, unseen
 --   set.keys(moment, name)  the layer's points in curvas.csv: { t, scale,
 --                        opacity, x, y (sqm, y up), rot (degrees, the
---                        designer's way: counterclockwise), ease }
+--                        designer's way: counterclockwise), ease; stretch
+--                        (more scale along x: a trail or a beam's length) }
 --   set.play(name, target, opts) -> placed   target: a position or a
 --                        creature; opts:
 --     keys      the points (default: the layer's in curvas.csv)
@@ -22,7 +23,8 @@
 --               the points' x and y count from there
 --     angle     the spell's way, degrees clockwise from east: the x of the
 --               points goes along it; turn = true also turns the image
---               (flipped going west, so it stays the right way up)
+--               (flipped going west, so it stays the right way up); face
+--               turns the image to its own angle instead
 --     shift     ms added to every point (it comes in later)
 --     scaleTime the points' times multiplied (the preview's 900 ms clock
 --               is the server's `ms`)
@@ -33,9 +35,20 @@
 --                        (its clock keeps going: a streak that follows a
 --                        flight it learns step by step)
 --   set.lightKeys(moment), set.tremor(moment, position)
+--   set.held(moment, name, full, ms, hold)  a charge's points: the
+--                        designer's `full` ms made `ms`, then held
 --   set.particles(moment, position, opts) -> { placed, ... }  the rows of
 --                        particulas.csv for the moment; opts.angle,
 --                        opts.count (a share of it), opts.shift (ms later)
+--   set.flight(origin, heads, trail) -> flight  a projectile the server
+--                        moves a sqm at a time, each step said as it
+--                        begins: the heads (name -> { keys = the layer's
+--                        own points, looped over the flight: spin, pulse;
+--                        face = turned to the way it goes; delay, opacity:
+--                        an echo behind it }) and the trail
+--                        (name, its longest in sqm, how far behind) follow
+--                        the steps; flight.step(to, ms), flight.stop(fade),
+--                        flight.arrivesIn() (ms to the end of its step)
 -- placed is { tile, effect } (detachArt takes it off).
 
 LAYER_SCALE, LAYER_STRETCH, LAYER_OPACITY, LAYER_X, LAYER_Y, LAYER_ROTATION, LAYER_LIGHT = 0, 1, 2, 3, 4, 5, 6
@@ -154,6 +167,7 @@ function newLayerSet(base, path, label)
             key.x = tonumber(row.x_sqm) or 0
             key.y = tonumber(row.y_sqm) or 0
             key.rot = tonumber(row.rotacao_graus) or 0
+            key.stretch = tonumber(row.estica) or 1
             curves[moment] = curves[moment] or {}
             curves[moment][name] = curves[moment][name] or {}
             table.insert(curves[moment][name], key)
@@ -210,6 +224,32 @@ function newLayerSet(base, path, label)
         return lights[moment]
     end
 
+    -- a charge's points up to full (the designer's `full` ms made `ms`),
+    -- then held as they are when full for `hold` ms
+    function set.held(moment, name, full, ms, hold)
+        local keys = {}
+        for _, key in ipairs(set.keys(moment, name) or {}) do
+            if key.t <= full then
+                local copy = {}
+                for field, value in pairs(key) do
+                    copy[field] = value
+                end
+                copy.t = key.t * ms / full
+                keys[#keys + 1] = copy
+            end
+        end
+        local last = keys[#keys]
+        if last then
+            local copy = {}
+            for field, value in pairs(last) do
+                copy[field] = value
+            end
+            copy.t = last.t + hold
+            keys[#keys + 1] = copy
+        end
+        return keys
+    end
+
     -- the screen trembles for a heavy blow near the player
     function set.tremor(moment, position)
         local tremor = tremors[moment]
@@ -236,10 +276,13 @@ function newLayerSet(base, path, label)
             local dx, up = (key.x - home[1]) * SQM, (key.y - home[2]) * SQM
             timed[index] = {
                 t = key.t * scaleTime + shift, ease = key.ease, scale = key.scale, opacity = key.opacity,
-                px = dx * along, py = dx * across - up, rot = -key.rot
+                px = dx * along, py = dx * across - up, rot = -key.rot, stretch = key.stretch or 1
             }
         end
         effect:setCurve(LAYER_SCALE, flat(timed, function(k) return k.scale end))
+        if anyOf(timed, function(k) return k.stretch - 1 end) then
+            effect:setCurve(LAYER_STRETCH, flat(timed, function(k) return k.stretch end))
+        end
         effect:setCurve(LAYER_OPACITY, flat(timed, function(k) return k.opacity end))
         if anyOf(timed, function(k) return k.px end) then
             effect:setCurve(LAYER_X, flat(timed, function(k) return k.px end))
@@ -279,8 +322,8 @@ function newLayerSet(base, path, label)
             return nil
         end
         local last = apply(effect, keys, opts)
-        if opts.turn then
-            local degrees = opts.angle or 0
+        if opts.turn or opts.face then
+            local degrees = opts.face or opts.angle or 0
             effect:setRotation(degrees)
             -- going west it would be upside down: drawn flipped instead
             if math.cos(math.rad(degrees)) < -0.01 then
@@ -315,7 +358,7 @@ function newLayerSet(base, path, label)
             local spread = math.rad(tonumber(row.espalhamento_graus) or 360)
             local delay = (tonumber(row.atraso_ms) or 0) + (opts.shift or 0)
             local gravity = (tonumber(row.gravidade_sqm_s2) or 0) * SQM
-            local spins = row.gira == 'sim'
+            local spins = row.gira == 'sim' or row.gira == '1'
             for index = 1, count do
                 local name = names[(index - 1) % #names + 1]
                 local entry = set.entries[name]
@@ -347,6 +390,133 @@ function newLayerSet(base, path, label)
         return thrown
     end
 
+    -- a projectile moved a sqm at a time by the server. Its layers stay on
+    -- the sqm it left from and their points follow the steps (x, y in sqm
+    -- from there): each new step adds a point where the step ends, at the
+    -- time it ends, so it glides on as long as the steps come on time
+    function set.flight(origin, heads, trail)
+        local flight = { origin = origin, points = { { t = 0, x = 0, y = 0 } }, start = g_clock.millis(), placed = {} }
+        local function headKeys(spec, fade)
+            local own = spec.keys or {}
+            local period = (#own > 1) and own[#own].t or 0
+            local keys = {}
+            local function sample(t)
+                -- the layer's own points (spin, pulse) looped over the flight
+                if period <= 0 then
+                    return own[1] or { scale = 1, opacity = 1, rot = 0 }
+                end
+                local at = t % period
+                for index = 2, #own do
+                    if own[index].t >= at then
+                        local a, b = own[index - 1], own[index]
+                        local f = b.t > a.t and (at - a.t) / (b.t - a.t) or 1
+                        return { scale = a.scale + (b.scale - a.scale) * f, opacity = 1, rot = a.rot + (b.rot - a.rot) * f + math.floor(t / period) * (own[#own].rot - own[1].rot) }
+                    end
+                end
+                return own[#own]
+            end
+            for index, point in ipairs(flight.points) do
+                local look = sample(point.t)
+                local rot = look.rot or 0
+                if spec.face then
+                    rot = rot - (point.angle or flight.points[2] and flight.points[2].angle or 0)
+                end
+                keys[index] = {
+                    t = point.t + (spec.delay or 0), x = point.x, y = -point.y, scale = look.scale or 1,
+                    opacity = index == 1 and 0 or (spec.opacity or 1), rot = rot, ease = 0
+                }
+            end
+            local last = keys[#keys]
+            if fade then
+                keys[#keys + 1] = { t = last.t + fade, x = last.x, y = last.y, scale = last.scale, opacity = 0, rot = last.rot, ease = 0 }
+            end
+            return keys
+        end
+        local function trailKeys(fade)
+            local entry = trail and set.entries[trail.name]
+            if not entry then
+                return nil
+            end
+            local native = entry.size[1] / 64 -- the image's length in sqm
+            local keys = {}
+            for index, point in ipairs(flight.points) do
+                local angle = math.rad(point.angle or (flight.points[2] and flight.points[2].angle) or 0)
+                local length = math.min(trail.length or native, math.max(0.01, (point.flown or 0) - (trail.lag or 0)))
+                local back = (trail.lag or 0) + length / 2
+                keys[index] = {
+                    t = point.t, x = point.x - math.cos(angle) * back, y = -(point.y - math.sin(angle) * back),
+                    scale = 1, stretch = length / native, opacity = index == 1 and 0 or 1,
+                    rot = -math.deg(angle), ease = 0
+                }
+            end
+            local last = keys[#keys]
+            if fade then
+                keys[#keys + 1] = { t = last.t + fade, x = last.x, y = last.y, scale = 1, stretch = last.stretch, opacity = 0, rot = last.rot, ease = 0 }
+            end
+            return keys
+        end
+        local function refresh(fade)
+            -- a head is its image's name, or { image = name } (an echo)
+            for name, spec in pairs(heads) do
+                local keys = headKeys(spec, fade)
+                if flight.placed[name] then
+                    set.update(flight.placed[name], keys)
+                else
+                    flight.placed[name] = set.play(spec.image or name, origin, { keys = keys, duration = 30000 })
+                end
+            end
+            local keys = trailKeys(fade)
+            if keys then
+                if flight.placed.trail then
+                    set.update(flight.placed.trail, keys)
+                else
+                    flight.placed.trail = set.play(trail.name, origin, { keys = keys, duration = 30000 })
+                end
+            end
+        end
+        -- the head goes on to `to` (a position) in `ms`
+        function flight.step(to, ms)
+            local last = flight.points[#flight.points]
+            local x, y = to.x - origin.x, to.y - origin.y
+            local now = g_clock.millis() - flight.start
+            local angle = math.atan2(y - last.y, x - last.x)
+            flight.points[#flight.points + 1] = {
+                t = math.max(last.t, now) + (ms or 100), x = x, y = y, angle = math.deg(angle),
+                flown = (last.flown or 0) + math.sqrt((x - last.x) ^ 2 + (y - last.y) ^ 2)
+            }
+            refresh()
+            -- it stays where it is if no more steps come
+            for _, placed in pairs(flight.placed) do
+                placed.effect:setDuration(flight.points[#flight.points].t + 4000)
+            end
+        end
+        -- ms until the head gets to the end of its last step
+        function flight.arrivesIn()
+            local last = flight.points[#flight.points]
+            return math.max(0, last.t - (g_clock.millis() - flight.start))
+        end
+        -- where the head is now (where its last step ends)
+        function flight.at()
+            local last = flight.points[#flight.points]
+            return { x = origin.x + last.x, y = origin.y + last.y, z = origin.z }
+        end
+        -- fades out in `fade` ms from the end of its last step (0: now)
+        function flight.stop(fade)
+            if not fade or fade <= 0 then
+                for _, placed in pairs(flight.placed) do
+                    detachArt(placed)
+                end
+                flight.placed = {}
+                return
+            end
+            refresh(fade)
+            for _, placed in pairs(flight.placed) do
+                placed.effect:setDuration(flight.points[#flight.points].t + fade)
+            end
+        end
+        return flight
+    end
+
     -- every image drawn once, unseen (see warmUpArt)
     function set.warmUp(position)
         local tile = g_map.getTile(position)
@@ -371,6 +541,19 @@ function warmUpLayers(position)
     for _, set in ipairs(layerSets) do
         set.warmUp(position)
     end
+end
+
+-- the map light's color (Tibia's 6x6x6 palette) nearest to the
+-- designer's "#RRGGBB" (runtime.json's cor_luz)
+function layerLight(hex)
+    local r, g, b = tostring(hex):match('#?(%x%x)(%x%x)(%x%x)')
+    if not r then
+        return 215
+    end
+    local function level(v)
+        return math.floor(tonumber(v, 16) / 51 + 0.5)
+    end
+    return level(r) * 36 + level(g) * 6 + level(b)
 end
 
 -- the way from one sqm to another, degrees clockwise from east

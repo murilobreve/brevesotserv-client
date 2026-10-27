@@ -686,6 +686,7 @@ locale = {
     ["None"] = "Nenhuma",
     ["party only"] = "só party",
     ["Used %s"] = "Usou %s",
+    ["Auto food: eats the food in your backpacks until you are full."] = "Auto food: come a comida da mochila até você ficar cheio.",
     ["Anti idle: turns your character every 5 minutes so the server does not log you out."] = "Anti deslog: vira o personagem a cada 5 minutos pra você não ser deslogado.",
     ["You have not learned %s."] = "Você ainda não aprendeu %s.",
     ["You have %d."] = "Você tem %d.",
