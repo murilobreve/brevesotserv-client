@@ -1820,6 +1820,20 @@ function applyMessagePrefixies(name, level, message)
     return message
 end
 
+-- whether a player said it: the creature on the tile it came from, else the
+-- level the server only sends for players
+local function isPlayerSpeaking(name, level, creaturePos)
+    local tile = creaturePos and g_map.getTile(creaturePos)
+    if tile then
+        for _, creature in ipairs(tile:getCreatures()) do
+            if creature:getName() == name then
+                return creature:isPlayer()
+            end
+        end
+    end
+    return level > 0 or not g_game.getFeature(GameMessageLevel)
+end
+
 function onTalk(name, level, mode, message, channelId, creaturePos)
     if mode == MessageModes.GamemasterBroadcast then
         modules.game_textmessage.displayBroadcastMessage(name .. ': ' .. message)
@@ -1880,6 +1894,13 @@ function onTalk(name, level, mode, message, channelId, creaturePos)
 
         staticText:addMessage(name, mode, staticMessage)
         g_map.addStaticText(staticText, creaturePos)
+    end
+
+    -- the Local Chat is for the players: an NPC's voices ("Potions brewed by
+    -- ...") and a creature talking out loud stay only over its head
+    if (mode == MessageModes.Say or mode == MessageModes.Whisper or mode == MessageModes.Yell) and creaturePos
+        and not isPlayerSpeaking(name, level, creaturePos) then
+        return
     end
 
     local defaultMessage = mode <= 3 and true or false
