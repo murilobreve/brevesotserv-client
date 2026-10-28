@@ -1,8 +1,8 @@
 Module
   name: game_wiki
-  description: Mythos Wiki - monster tiers, item rarities and how the bonuses work
+  description: Mythos Wiki - every monster, monster tiers, item rarities and how the bonuses work
   author: Mythos
   sandboxed: true
-  scripts: [ teleports, pages, wiki ]
+  scripts: [ teleports, pages, wiki, monsters ]
   @onLoad: init()
   @onUnload: terminate()
