@@ -127,6 +127,31 @@ local function setupComboBox()
         setOption('crosshair', comboBox:getCurrentOption().data)
     end
 
+    -- the language: every installed one, in its own name; changing it
+    -- loads the client again in it
+    local languageCombo = panels.interface:recursiveGetChildById('language')
+    local locales = modules.client_locales and modules.client_locales.getInstalledLocales() or {}
+    local names = {}
+    for name in pairs(locales) do
+        names[#names + 1] = name
+    end
+    table.sort(names, function(a, b)
+        return locales[a].languageName < locales[b].languageName
+    end)
+    for _, name in ipairs(names) do
+        languageCombo:addOption(locales[name].languageName, name)
+    end
+    local current = modules.client_locales and modules.client_locales.getCurrentLocale()
+    if current then
+        languageCombo:setCurrentOptionByData(current.name, true)
+    end
+    languageCombo.onOptionChange = function(comboBox, option, data)
+        -- after this frame: the combo box is still closing its list
+        scheduleEvent(function()
+            modules.client_locales.changeLocale(data)
+        end, 50)
+    end
+
     mouseControlModeCombobox:addOption('Regular Controls', 0)
     mouseControlModeCombobox:addOption('Classic Controls', 1)
     mouseControlModeCombobox:addOption('Left Smart-Click', 2)
@@ -311,6 +336,15 @@ function controller:onInit()
         g_settings.setDefault(k, obj.value)
     end
 
+    -- the flag of the language in use: opens the language picker
+    local locale = modules.client_locales and modules.client_locales.getCurrentLocale()
+    extraWidgets.languageButton = modules.client_topmenu.addTopRightToggleButton('languageButton', 'Language / Idioma',
+        '/images/flags/' .. (locale and locale.name or 'en'), function()
+            modules.client_locales.showLanguages()
+        end)
+    extraWidgets.languageButton:setIconSize({ width = 16, height = 16 })
+    extraWidgets.languageButton:setIconAlign(AlignCenter)
+
     extraWidgets.audioButton = modules.client_topmenu.addTopRightToggleButton('audioButton', tr('Audio'),
         '/images/topbuttons/button_mute_up', function() toggleOption('enableAudio') end)
 
@@ -409,6 +443,9 @@ function controller:onTerminate()
     
     extraWidgets.optionsButton:destroy()
     extraWidgets.audioButton:destroy()
+    if extraWidgets.languageButton then
+        extraWidgets.languageButton:destroy()
+    end
     panels = {}
     extraWidgets = {}
     buttons = {}

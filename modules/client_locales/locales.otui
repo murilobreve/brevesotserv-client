@@ -10,6 +10,15 @@ LocalesButton < UIWidget
   text-offset: 0 96
   font: verdana-11px-antialised
 
+// closes the picker opened later on, without choosing
+LocalesCloseButton < MythosButton
+  size: 90 24
+  anchors.top: parent.top
+  anchors.right: parent.right
+  margin-top: 16
+  margin-right: 16
+  !text: tr('Close')
+
 UIWindow
   id: localesWindow
   background-color: #000000
