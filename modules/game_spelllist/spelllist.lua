@@ -229,6 +229,11 @@ function initializeSpelllist()
             tmpLabel:setImageSize(tosize(SpelllistSettings[SpelllistProfile].iconSize.width .. ' ' ..
                                              SpelllistSettings[SpelllistProfile].iconSize.height))
             tmpLabel.onClick = updateSpellInformation
+            tmpLabel.onDoubleClick = function(widget)
+                spellList:focusChild(widget)
+                putOnActionBar()
+                return true
+            end
         end
     end
 
@@ -335,6 +340,45 @@ function updateSpellInformation(widget)
     manaValueLabel:setText(mana)
     premiumValueLabel:setText(premium)
     descriptionValueLabel:setText(description)
+end
+
+-- the selected spell on the action bar (game_actionbar's addSpellToBar)
+function putOnActionBar()
+    local status = spelllistWindow:getChildById('barStatus')
+    local selected = spellList:getFocusedChild()
+    local info = selected and SpellInfo[SpelllistProfile][selected:getId()]
+    if not info then
+        status:setText(tr('Choose a spell first.'))
+        status:setColor('#c0c0c0')
+        return
+    end
+    local actionbar = modules.game_actionbar
+    if not actionbar or not actionbar.addSpellToBar or not g_game.isOnline() then
+        status:setText(tr('The action bars are not available now.'))
+        status:setColor('#ff6464')
+        return
+    end
+    local button, already, key = actionbar.addSpellToBar(info.words, info.parameter)
+    if not button then
+        status:setText(tr('Your action bars have no free button. Turn on another bar in Options, or clear a button.'))
+        status:setColor('#ff6464')
+        return
+    end
+    -- its hotkey, else which button it is on its bar
+    local where = key
+    if not where or where == '' then
+        where = tr('button %d, no hotkey', tonumber(button:getId():match('%.(%d+)$')) or 0)
+    end
+    if already then
+        status:setText(tr('%s is already on your action bar (%s).', info.words, where))
+        status:setColor('#e0c060')
+    elseif info.parameter then
+        status:setText(tr('%s is on your action bar (%s): it writes the words, add the name and press Enter.', info.words, where))
+        status:setColor('#7fd35a')
+    else
+        status:setText(tr('%s is on your action bar (%s).', info.words, where))
+        status:setColor('#7fd35a')
+    end
 end
 
 function selectDefaultVocation()

@@ -41,6 +41,46 @@ local function buttonIsEmpty(button)
     return button.item:getItemId() == 0 and string_empty(button.item.text:getText()) and
                string_empty(button.item.text:getImageSource())
 end
+--- The spell list's "Put on action bar": the spell's words on the first free
+--- button of the bars on screen, the bottom bars first and the buttons in
+--- view before the ones scrolled away. A spell with a parameter (a name, a
+--- creature) is only written in the chat, for the player to finish it.
+--- Returns the button, whether it was already there, and its hotkey (or nil);
+--- nil when every button is taken.
+function addSpellToBar(words, needsParam)
+    local wanted = words:lower()
+    local free, hidden
+    for _, actionbar in ipairs(actionBars) do
+        if actionbar:isVisible() then
+            for _, button in ipairs(actionbar.tabBar:getChildren()) do
+                -- only the action buttons (the bar holds other widgets too)
+                if button.item then
+                    if (button.cache and button.cache.param or ''):lower() == wanted then
+                        local key = button.cache.hotkey
+                        return button, true, key and translateDisplayHotkey(key) or nil
+                    end
+                    if not actionbar.locked and buttonIsEmpty(button) then
+                        if button:isVisible() then
+                            free = free or button
+                        else
+                            hidden = hidden or button
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local button = free or hidden
+    if not button then
+        return nil
+    end
+    local barId, buttonId = string.match(button:getId(), "(.*)%.(.*)")
+    ApiJson.createOrUpdateText(tonumber(barId), tonumber(buttonId), words, not needsParam)
+    updateButton(button)
+    local key = button.cache and button.cache.hotkey
+    return button, false, key and translateDisplayHotkey(key) or nil
+end
+
 --- Gets the name of an action type
 function getActionName(actionType)
     for k, v in pairs(UseTypes) do
