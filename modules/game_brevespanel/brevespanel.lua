@@ -1,8 +1,8 @@
 -- Mythos bar: the server's own systems (tasks, hunt rates, leaderboard,
 -- rarity market, heal bot) in a bar under the game screen, just above the
 -- spell bar: four framed sections side by side, Tasks, Hunts, Rarity and
--- Tools, and the VIP button after them. It cannot be closed; it lies over
--- the bottom of the map, which shows through it.
+-- Tools, and the VIP button after them. It cannot be closed; it sits right
+-- under the map, which is made that much shorter, so it covers no tile.
 -- The news window lists the systems on the first login after an update.
 --
 -- The feature modules register their row with addFeature() and get back the
@@ -655,21 +655,18 @@ function hidePoint(id)
     end
 end
 
--- the game writes its messages (loot, "You see", warnings) at the bottom of
--- the map (game_textmessage's statusLabel): they go up by the bar's height
--- so the bar never covers them
-local STATUS_MARGIN = 7 -- statusLabel's own margin-bottom (textmessage.otui)
-local function keepMessagesClear()
-    local root = modules.game_interface and modules.game_interface.getRootPanel()
-    local label = root and root:recursiveGetChildById('statusLabel')
-    if label then
-        local covered = (panel and panel:isVisible()) and panel:getHeight() or 0
-        label:setMarginBottom(STATUS_MARGIN + covered)
+-- the map ends where the bar starts: its bottom margin is the bar's height
+-- (open or folded), so the bar covers no tile of it
+local MAP_MARGIN = 1 -- gameMapPanel's own margin-bottom (gameinterface.otui)
+local function fitMap()
+    local map = modules.game_interface and modules.game_interface.getMapPanel()
+    if map then
+        local height = (panel and panel:isVisible()) and panel:getHeight() or 0
+        map:setMarginBottom(MAP_MARGIN + height)
     end
 end
 
--- the bar lies over the bottom of the map, just above the spell bars; the map
--- keeps its size and shows through the bar's background
+-- the bar sits under the map, just above the spell bars
 local function placeBar()
     local root = modules.game_interface and modules.game_interface.getRootPanel()
     if panel or not root then
@@ -678,7 +675,7 @@ local function placeBar()
     panel = g_ui.createWidget('BrevesBar', root)
     panel:addAnchor(AnchorLeft, 'gameMapPanel', AnchorLeft)
     panel:addAnchor(AnchorRight, 'gameMapPanel', AnchorRight)
-    panel:addAnchor(AnchorBottom, 'gameMapPanel', AnchorBottom)
+    panel:addAnchor(AnchorTop, 'gameMapPanel', AnchorBottom)
     for _, sector in ipairs(SECTORS) do
         local widget = g_ui.createWidget('BrevesSector', panel.strip)
         widget:setId('sector_' .. sector.id)
@@ -687,17 +684,18 @@ local function placeBar()
         widget:hide()
         sectors[sector.id] = widget
     end
-    -- names or icons follow the width of the map; the messages follow its
-    -- height (open or folded)
+    -- names or icons follow the width of the map; the map follows the
+    -- bar's height (open or folded)
     panel.onGeometryChange = function(widget, oldRect, newRect)
         if oldRect.width ~= newRect.width then
             resize()
         end
         if oldRect.height ~= newRect.height then
-            keepMessagesClear()
+            fitMap()
         end
     end
-    panel.onVisibilityChange = keepMessagesClear
+    panel.onVisibilityChange = fitMap
+    fitMap()
     return true
 end
 
@@ -716,7 +714,7 @@ local function onGameStart()
     -- open on every login, whatever it was when the player left
     setCollapsed(false)
     resize()
-    keepMessagesClear()
+    fitMap()
     if g_settings.getNumber('breves_news_version') < NEWS_VERSION then
         g_settings.set('breves_news_version', NEWS_VERSION)
         -- written now: a client that crashes never saves its settings on exit
@@ -754,6 +752,8 @@ function terminate()
         panel:destroy()
         panel = nil
     end
+    -- the map whole again
+    fitMap()
     for id, event in pairs(gainEvents) do
         removeEvent(event)
     end
