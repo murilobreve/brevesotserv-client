@@ -113,12 +113,8 @@ local function setRerollState(row)
     local cost = entry.rerollCost or 0
     local lockGold = locks[entry.slotId] and (entry.lockCost or 0) or 0
     row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
-    -- the first reroll of a character is free (Hunter's Journey)
-    if entry.freeSpin then
-        row.rerollItemButton:setTooltip(tr('Your first reroll is free.'))
-    end
-    row.rerollItemButton:setEnabled((entry.freeSpin or (cost > 0 and rarityXp >= cost)) and gold >= lockGold)
-    if not entry.freeSpin and cost > 0 and rarityXp < cost then
+    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost and gold >= lockGold)
+    if cost > 0 and rarityXp < cost then
         row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
     elseif lockGold > gold then
         row.rerollItemButton:setTooltip(tr('Keeping a bonus costs %s gold and you have %s.', formatGold(lockGold), formatGold(gold)))
@@ -243,9 +239,6 @@ function fillItems(items)
         local lockKey = locks[entry.slotId]
         -- the price says what it is paid in: Rarity XP, and gold for a kept bonus
         row.rerollItemButton:setText(lockKey and tr('%s XP + %s gold', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s XP', formatCost(cost)))
-        if entry.freeSpin then
-            row.rerollItemButton:setText(lockKey and tr('Free + %s gold', formatGold(entry.lockCost)) or tr('Reroll free'))
-        end
         row.rerollItemButton:setIcon(lockKey and '/game_raritybonus/images/lock_on' or '/game_raritybonus/images/reroll')
         row.entry = entry
         setRerollState(row)
@@ -259,12 +252,8 @@ function fillItems(items)
                 end
             end
             local text
-            if keptText and entry.freeSpin then
-                text = tr('Reroll %s for free (your first reroll) and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
-            elseif keptText then
+            if keptText then
                 text = tr('Reroll %s for %d Rarity XP and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
-            elseif entry.freeSpin then
-                text = tr('Reroll %s for free (your first reroll)?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), table.concat(lines, '\n'))
             else
                 text = tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n'))
             end
@@ -649,9 +638,6 @@ applyBonuses = function(data)
     if type(result) == 'table' then
         if result.code == 'rerolled' then
             message = tr('%s rerolled: %s. (-%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), tonumber(result.cost) or 0)
-            if result.free then
-                message = tr('%s rerolled: %s. (free spin)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '))
-            end
             if result.perfect then
                 message = message .. ' ' .. tr('Perfect roll!')
             end
@@ -1180,9 +1166,6 @@ local function showRoulette(result, onDone)
     roulette.name:setText(titleCase(result.name or ''))
     roulette.name:setColor(grade.color)
     local subtitle = tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0)
-    if result.free then
-        subtitle = tr('%s  up to %d bonuses  free spin', grade.label, result.maxBonuses or 0)
-    end
     if (tonumber(result.gold) or 0) > 0 then
         subtitle = subtitle .. '  ' .. (result.lock and tr('-%s gold (kept bonus)', formatGold(result.gold)) or tr('-%s gold', formatGold(result.gold)))
     end
