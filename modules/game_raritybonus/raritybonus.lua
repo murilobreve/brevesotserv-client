@@ -113,8 +113,12 @@ local function setRerollState(row)
     local cost = entry.rerollCost or 0
     local lockGold = locks[entry.slotId] and (entry.lockCost or 0) or 0
     row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
-    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost and gold >= lockGold)
-    if cost > 0 and rarityXp < cost then
+    -- the first reroll of a character is free (Hunter's Journey)
+    if entry.freeSpin then
+        row.rerollItemButton:setTooltip(tr('Your first reroll is free.'))
+    end
+    row.rerollItemButton:setEnabled((entry.freeSpin or (cost > 0 and rarityXp >= cost)) and gold >= lockGold)
+    if not entry.freeSpin and cost > 0 and rarityXp < cost then
         row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
     elseif lockGold > gold then
         row.rerollItemButton:setTooltip(tr('Keeping a bonus costs %s gold and you have %s.', formatGold(lockGold), formatGold(gold)))
@@ -239,6 +243,9 @@ function fillItems(items)
         local lockKey = locks[entry.slotId]
         -- the price says what it is paid in: Rarity XP, and gold for a kept bonus
         row.rerollItemButton:setText(lockKey and tr('%s XP + %s gold', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s XP', formatCost(cost)))
+        if entry.freeSpin then
+            row.rerollItemButton:setText(lockKey and tr('Free + %s gold', formatGold(entry.lockCost)) or tr('Reroll free'))
+        end
         row.rerollItemButton:setIcon(lockKey and '/game_raritybonus/images/lock_on' or '/game_raritybonus/images/reroll')
         row.entry = entry
         setRerollState(row)
@@ -252,8 +259,12 @@ function fillItems(items)
                 end
             end
             local text
-            if keptText then
+            if keptText and entry.freeSpin then
+                text = tr('Reroll %s for free (your first reroll) and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
+            elseif keptText then
                 text = tr('Reroll %s for %d Rarity XP and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
+            elseif entry.freeSpin then
+                text = tr('Reroll %s for free (your first reroll)?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), table.concat(lines, '\n'))
             else
                 text = tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n'))
             end
@@ -337,65 +348,6 @@ end
 local applyBonuses
 local rouletteTakes
 local updateRouletteXp
-
--- ---------------------------------------------------------------------------
--- Hunting incense (server: rarity/incense.lua): a row of the Mythos bar. It
--- offers "Light" while today's incense is unused, counts the minutes while it
--- burns, and says "tomorrow" once used.
--- ---------------------------------------------------------------------------
-
-local incenseButton
-local incense -- last status from the server
-local incenseEvent
-
-local function incenseLeft()
-    if not incense then
-        return 0
-    end
-    return math.max(0, (incense.left or 0) - (os.time() - (incense.receivedAt or os.time())))
-end
-
-local function updateIncense()
-    local panel = modules.game_brevespanel
-    if incenseEvent then
-        removeEvent(incenseEvent)
-        incenseEvent = nil
-    end
-    if not panel or not panel.setFeatureState or not incense then
-        return
-    end
-    local left = incenseLeft()
-    local tip = tr('Hunting incense: for %d minutes, +%d%% chance of rare monsters and +%d%% Rarity XP. One a day, %s gold (your level x 2,000).', incense.minutes or 60, incense.rareMonster or 10, incense.rarityXp or 5, formatGold(incense.price))
-    if left > 0 then
-        panel.setFeatureAction('incense', nil)
-        panel.setFeatureState('incense', tr('%d min', math.ceil(left / 60)), '#9be36b')
-        if incenseButton then
-            incenseButton:setTooltip(tr('Hunting incense burning: %d minutes left.', math.ceil(left / 60)))
-        end
-        incenseEvent = scheduleEvent(updateIncense, 20000)
-    elseif incense.usedToday then
-        panel.setFeatureAction('incense', nil)
-        panel.setFeatureState('incense', tr('tomorrow'), '#8d8270')
-        if incenseButton then
-            incenseButton:setTooltip(tip .. ' ' .. tr('You already used today\'s.'))
-        end
-    else
-        panel.setFeatureState('incense', nil)
-        panel.setFeatureAction('incense', tr('Light'), tip, lightIncense, true)
-        if incenseButton then
-            incenseButton:setTooltip(tip)
-        end
-    end
-end
-
-function lightIncense()
-    if not incense or incenseLeft() > 0 or incense.usedToday then
-        return
-    end
-    confirm(tr('Hunting incense'), tr('Light the hunting incense for %s gold?\n\nFor %d minutes: +%d%% chance of rare monsters and +%d%% Rarity XP.\nOne a day. The gold comes from your backpack, then your bank.', formatGold(incense.price), incense.minutes or 60, incense.rareMonster or 10, incense.rarityXp or 5), function()
-        send({ action = 'incense' })
-    end)
-end
 
 -- A rare monster rising from its corpse (art and motion: the design kit
 -- "Renascimento, quatro presencas"). Each tier is a material coming alive: a
@@ -657,12 +609,6 @@ local function onOpcode(protocol, opcode, data)
         showRevive(data)
         return
     end
-    if type(data) == 'table' and data.action == 'incense' then
-        incense = data
-        incense.receivedAt = os.time()
-        updateIncense()
-        return
-    end
     -- the balance, after every change: shown on the Rarity Bonuses row; past
     -- a multiple of 50 a notice offers the window without opening it
     if type(data) == 'table' and data.action == 'xp' then
@@ -703,6 +649,9 @@ applyBonuses = function(data)
     if type(result) == 'table' then
         if result.code == 'rerolled' then
             message = tr('%s rerolled: %s. (-%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), tonumber(result.cost) or 0)
+            if result.free then
+                message = tr('%s rerolled: %s. (free spin)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '))
+            end
             if result.perfect then
                 message = message .. ' ' .. tr('Perfect roll!')
             end
@@ -1231,6 +1180,9 @@ local function showRoulette(result, onDone)
     roulette.name:setText(titleCase(result.name or ''))
     roulette.name:setColor(grade.color)
     local subtitle = tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0)
+    if result.free then
+        subtitle = tr('%s  up to %d bonuses  free spin', grade.label, result.maxBonuses or 0)
+    end
     if (tonumber(result.gold) or 0) > 0 then
         subtitle = subtitle .. '  ' .. (result.lock and tr('-%s gold (kept bonus)', formatGold(result.gold)) or tr('-%s gold', formatGold(result.gold)))
     end
@@ -1624,9 +1576,6 @@ local function onGameStart()
     if not featureButton and modules.game_brevespanel then
         featureButton = modules.game_brevespanel.addFeature('bonus', toggle)
     end
-    if not incenseButton and modules.game_brevespanel then
-        incenseButton = modules.game_brevespanel.addFeature('incense', lightIncense)
-    end
 end
 
 local function onGameEnd()
@@ -1666,14 +1615,6 @@ function terminate()
     if featureButton then
         featureButton:destroy()
         featureButton = nil
-    end
-    if incenseButton then
-        incenseButton:destroy()
-        incenseButton = nil
-    end
-    if incenseEvent then
-        removeEvent(incenseEvent)
-        incenseEvent = nil
     end
     if window then
         window:destroy()
