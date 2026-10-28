@@ -21,8 +21,18 @@ function createWindow()
     local spacing = layout:getCellSpacing()
     local size = layout:getCellSize()
 
+    -- always in the same order, by the language's own name
+    local names = {}
+    for name in pairs(installedLocales) do
+        names[#names + 1] = name
+    end
+    table.sort(names, function(a, b)
+        return installedLocales[a].languageName < installedLocales[b].languageName
+    end)
+
     local count = 0
-    for name, locale in pairs(installedLocales) do
+    for _, name in ipairs(names) do
+        local locale = installedLocales[name]
         local widget = g_ui.createWidget('LocalesButton', localesPanel)
         widget:setImageSource('/images/flags/' .. name .. '')
         widget:setText(locale.languageName)
