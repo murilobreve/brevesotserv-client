@@ -100,6 +100,15 @@ local function outfitOf(raw)
     }
 end
 
+-- "Recompensa: +X de experiência, +Y Hunt Points e +Z charm points."
+-- (a server without charm rewards sends no charms)
+local function rewardText(experience, pointsText, charms)
+    if charms and charms > 0 then
+        return tr('Recompensa: +%s de experiência, %s e +%d charm points.', formatNumber(experience), pointsText, charms)
+    end
+    return tr('Recompensa: +%s de experiência e %s.', formatNumber(experience), pointsText)
+end
+
 local function setBar(bar, value, total, color)
     total = math.max(1, total or 1)
     value = math.max(0, math.min(value or 0, total))
@@ -177,7 +186,7 @@ local function renderDaily()
         card.info:setText(tr('Um monstro do seu level com hunt na sala de teleporte de uma cidade.'))
         card.badge:setText('')
         card.bar:setVisible(false)
-        card.reward:setText(tr('Recompensa: +%s de experiência e %d+ Hunt Points.', formatNumber(state.dailyExp), state.dailyBase or 20))
+        card.reward:setText(rewardText(state.dailyExp, string.format('%d+ Hunt Points', state.dailyBase or 20), state.dailyCharms))
         card.extra:setText(tr('A primeira troca do dia é grátis.'))
         card.action:setText(tr('Pegar task de hoje'))
         card.action.onClick = function()
@@ -206,7 +215,7 @@ local function renderDaily()
 
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
-    card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(state.dailyExp), daily.points or 0))
+    card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms))
     card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
     local cost = state.rerollCost or 0
     card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar monstro (grátis)'))
@@ -262,7 +271,7 @@ local function renderTrailCard()
         if step.milestone then
             card.badge:setColor('#ffb020')
         end
-        card.reward:setText(tr('Recompensa: +%s de experiência e +%d Hunt Points.', formatNumber(trail.exp), points))
+        card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms))
         local following = steps[trail.index + 1]
         card.extra:setText(following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!'))
         updateTeleportButton(card.action2, 'trail', state.teleportTrail)
@@ -320,7 +329,8 @@ local function renderTrailList()
     local steps = trail.steps or {}
     local done = trail.finished and #steps or trail.index - 1
     panel.summary:setText(tr('%d de %d etapas completas. Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.', done, #steps,
-        formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0)))
+        formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0))
+        .. ((trail.totalCharms or 0) > 0 and tr(' E %s charm points.', formatNumber(trail.totalCharms)) or ''))
 
     if not trailBuilt then
         panel.list:destroyChildren()
@@ -330,7 +340,8 @@ local function renderTrailList()
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
             row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
-            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0))
+            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
+                .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or ''))
         end
         trailBuilt = true
     end
