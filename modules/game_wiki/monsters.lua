@@ -270,7 +270,7 @@ local function behaviour(d, flags, ranged)
     if flags.illusionable then
         table.insert(parts, 'Dá para virar ele com Creature Illusion.')
     end
-    if d.bestiary and not flags.preyable then
+    if d.bestiary and not d.bestiary.hidden and not flags.preyable then
         table.insert(parts, 'Não aparece no Prey.')
     end
     return table.concat(parts, ' ')
@@ -485,7 +485,13 @@ function WIKI_BUILDERS.monsterhead(parent, block)
         local stars = math.max(0, math.min(5, tonumber(d.bestiary.stars) or 0))
         table.insert(right, line('Dificuldade:', T(DIFFICULTY[stars]), string.format('(%d/5)', stars)))
         table.insert(right, line('Ocorrência:', T(OCCURRENCE[math.max(0, math.min(3, tonumber(d.bestiary.occurrence) or 0))])))
-        table.insert(right, line('Charms:', num(d.bestiary.charms), T('(%s kills)', num(d.bestiary.kills))))
+        if d.bestiary.hidden then
+            -- a creature of Tibia that lives nowhere on our map
+            table.insert(right, T('{Fora do bestiário, #ef7a62}'))
+            table.insert(right, T('{(não vive no nosso mundo), #9789b3}'))
+        else
+            table.insert(right, line('Charms:', num(d.bestiary.charms), T('(%s kills)', num(d.bestiary.kills))))
+        end
     else
         table.insert(right, T('{Sem bestiário, #9789b3}'))
     end
