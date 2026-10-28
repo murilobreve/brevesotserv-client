@@ -360,10 +360,11 @@ function terminate()
     disconnect(g_game, 'onGameEnd', clearMessages)
     disconnect(g_game, { onGameStart = addPanelRow })
     hidePositionWindow()
-    if panelRow then
+    -- the bar may have gone first (a reload of every module)
+    if panelRow and not panelRow:isDestroyed() then
         panelRow:destroy()
-        panelRow = nil
     end
+    panelRow = nil
     clearMessages()
     messagesPanel:destroy()
     messagesPanel = nil
