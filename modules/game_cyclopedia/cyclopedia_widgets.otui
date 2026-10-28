@@ -859,6 +859,7 @@ BestiaryCategory < UIWidget
     margin-bottom: 5
     !text: tr('Known: ') .. '00'
     color: #C2C2C2
+    text-auto-resize: true
   Label
     id: TotalValue
     anchors.bottom: KnownValue.top
@@ -866,6 +867,8 @@ BestiaryCategory < UIWidget
     margin-bottom: 0
     !text: tr('Total: ') .. '00'
     color: #C2C2C2
+    // a class may have 100 creatures or more (the server's own class)
+    text-auto-resize: true
 BosstiaryItem < UIWidget
   image-source: /images/ui/outfits/minipanel
   image-border: 20
