@@ -298,6 +298,7 @@ WIKI_PAGES.quality = {
         { 'h', 'Itens que você já tinha' },
         { 'p', 'Os raros que já existiam ganharam o multiplicador do item uma vez, no mesmo lugar da faixa, e nenhum bônus diminuiu. Um Armor, Defense ou Attack antigo maior que a nova faixa continua como estava.' },
         { 'p', 'O Finisher saiu: um item que tinha ganhou outro bônus do seu tipo no lugar, no mesmo lugar da faixa.' },
+        { 'p', 'Espadas, machados e clavas agora rolam Melee Skills, que sobe sword, axe e club juntas. Um Sword, Axe ou Club antigo virou Melee Skills com o mesmo valor.' },
         { 'links', { 'pools', 'affixes' } },
     },
 }
@@ -314,7 +315,7 @@ WIKI_PAGES.pools = {
         { 'note', 'As faixas abaixo são as de um item de qualidade 0%. A qualidade do item base aumenta a maioria delas, até 3 vezes (página Qualidade do item).' },
         { 'h', 'Armas corpo a corpo' },
         poolTable({
-            { 'Attack', '8% a 50%', 'do ataque da arma, com o elemento' }, { 'Skill da arma', '1% a 10%', 'sword, axe, club ou fist' },
+            { 'Attack', '8% a 50%', 'do ataque da arma, com o elemento' }, { 'Melee Skills', '1% a 10%', 'sword, axe e club juntas; armas de punho: Fist Skill' },
             { 'Critical Hit Chance', '1% a 10%', '' }, { 'Critical Hit Damage', '1% a 25%', '' },
             { 'Life Leech', '1% a 12%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Cleave Damage', '3% a 15%', 'duas mãos: 5% a 25%' },
@@ -386,8 +387,8 @@ WIKI_PAGES.affixes = {
         { 'h', 'Ataque' },
         affixTable({
             { 'Attack', 'Ataque a mais na arma. Nas armas corpo a corpo é uma parte do ataque da própria arma.', '' },
-            { 'Sword, Axe, Club, Fist Skill', 'Porcentagem a mais na skill.', '50%' },
-            { 'Melee Skills', 'Sword, axe e club ao mesmo tempo.', '50%' },
+            { 'Melee Skills', 'Porcentagem a mais em sword, axe e club ao mesmo tempo. Vem de espadas, machados, clavas e armaduras de knight.', '50%' },
+            { 'Fist Skill', 'Porcentagem a mais em fist fighting. Vem das armas de punho e das armaduras de monk.', '50%' },
             { 'Distance Skill', 'Porcentagem a mais em distance.', '50%' },
             { 'Hit Chance', 'Chance de acerto a mais na arma de distância.', '' },
             { 'Critical Hit Chance', 'Chance de golpe crítico.', '50%' },
