@@ -61,6 +61,30 @@ MainWindow
     anchors.bottom: parent.bottom
     @onClick: toggle()
 
+  // the selected spell on the first free button of the action bars
+  Button
+    id: buttonToBar
+    !text: tr('Put on action bar')
+    !tooltip: tr('Puts the selected spell on the first free button of your action bars. A double click on a spell does the same.')
+    width: 130
+    anchors.right: buttonCancel.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: putOnActionBar()
+
+  // what "Put on action bar" did
+  Label
+    id: barStatus
+    anchors.left: spellList.right
+    anchors.right: parent.right
+    anchors.bottom: buttonCancel.top
+    margin-left: 10
+    margin-bottom: 6
+    height: 28
+    text-wrap: true
+    font: verdana-11px-monochrome
+    color: #c0c0c0
+
   VerticalScrollBar
     id: spellsScrollBar
     anchors.top: spellList.top
