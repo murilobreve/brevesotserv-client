@@ -39,10 +39,35 @@ MythosTourBubble < UIWidget
   focusable: true
   @onEscape: modules.game_tutorial.stop()
 
+  // ends the tour, like Skip
+  UIButton
+    id: closeButton
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin-top: -4
+    margin-right: -4
+    size: 18 18
+    text: x
+    text-offset: 0 -1
+    font: Verdana Bold-11px
+    color: #e6c98a
+    background-color: #0c0914
+    border-width: 1
+    border-color: #a7843f
+    change-cursor-image: true
+    cursor: pointer
+    !tooltip: tr('Close')
+    @onClick: modules.game_tutorial.stop()
+    $hover:
+      color: #ffffff
+      border-color: #ffd682
+      background-color: #2a1d44
+
   Label
     id: counter
     anchors.top: parent.top
-    anchors.right: parent.right
+    anchors.right: closeButton.left
+    margin-right: 8
     font: verdana-11px-rounded
     color: #9789b3
     text-auto-resize: true
