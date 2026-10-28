@@ -42,9 +42,26 @@ local function T(text, ...)
     return string.format(latin1(text), ...)
 end
 
+-- for monsters.lua (pages built from what the server sends)
+WIKI_TEXT = { T = T, latin1 = latin1, plain = plain }
+
 -- ---------------------------------------------------------------- helpers
 
+-- a page of pages.lua, or a monster page ("m:<name>", monsters.lua)
+local function pageOf(id)
+    if type(id) ~= 'string' then
+        return nil
+    end
+    if id:sub(1, 2) == 'm:' then
+        return WikiMonsters.page(id)
+    end
+    return WIKI_PAGES[id]
+end
+
 local function groupOf(id)
+    if id:sub(1, 2) == 'm:' then
+        id = 'monsters'
+    end
     for _, group in ipairs(WIKI_GROUPS) do
         for _, pageId in ipairs(group.pages) do
             if pageId == id then
@@ -104,6 +121,7 @@ end
 -- ---------------------------------------------------------------- blocks
 
 local builders = {}
+WIKI_BUILDERS = builders
 
 function builders.lead(parent, block)
     g_ui.createWidget('WikiLead', parent):setText(block[2])
@@ -268,6 +286,8 @@ end
 local function buildTopics()
     window.topics:destroyChildren()
     topicButtons = {}
+    -- monsters whose name matches the search, above the pages
+    window.topics.monsterHits = g_ui.createWidget('WikiMonsterHits', window.topics)
     for _, group in ipairs(WIKI_GROUPS) do
         local label = g_ui.createWidget('WikiGroupLabel', window.topics)
         label:setText(group.title)
@@ -284,7 +304,7 @@ local function buildTopics()
 end
 
 local function render(id)
-    local page = WIKI_PAGES[id]
+    local page = pageOf(id)
     local group = groupOf(id)
     window.group:setText(group and group.title or '')
     window.title:setText(page.title)
@@ -303,7 +323,7 @@ local function render(id)
 end
 
 function show(id)
-    id = WIKI_PAGES[id] and id or current or 'tiers'
+    id = pageOf(id) and id or current or 'tiers'
     if not window then
         window = g_ui.displayUI('wiki')
         buildTopics()
@@ -316,6 +336,19 @@ function show(id)
     window:show()
     window:raise()
     window:focus()
+end
+
+-- the server answered: draw the page again if it is the one open
+function refresh(id)
+    if window and current == id then
+        local scroll = window.pageScroll:getValue()
+        render(id)
+        window.pageScroll:setValue(scroll)
+    end
+end
+
+function isOpen(id)
+    return window ~= nil and current == id
 end
 
 function back()
@@ -343,11 +376,31 @@ function toggle()
     end
 end
 
+local function showMonsterHits(text)
+    local box = window.topics.monsterHits
+    box:destroyChildren()
+    local names = WikiMonsters.search(text, 12)
+    if #names == 0 then
+        box:setVisible(false)
+        return false
+    end
+    box:setVisible(true)
+    g_ui.createWidget('WikiGroupLabel', box):setText(T('Monstros'))
+    for _, name in ipairs(names) do
+        local button = g_ui.createWidget('WikiTopic', box)
+        button:setText(name)
+        button:setChecked(current == 'm:' .. name)
+        button.onClick = function() show('m:' .. name) end
+    end
+    return true
+end
+
 function onSearch(text)
     if not window then
         return
     end
     text = plain(text:trim())
+    local monsters = showMonsterHits(text)
     local visibleGroups, any = {}, false
     for _, button in pairs(topicButtons) do
         local match = text == '' or button.words:find(text, 1, true) ~= nil
@@ -362,7 +415,14 @@ function onSearch(text)
             child:setVisible(visibleGroups[child.group.title] == true)
         end
     end
-    window.noResults:setVisible(not any)
+    window.noResults:setVisible(not any and not monsters)
+end
+
+-- the monster list arrived while something was typed in the search box
+function searchAgain()
+    if window then
+        onSearch(window.searchEdit:getText())
+    end
 end
 
 -- ---------------------------------------------------------------- module
@@ -381,6 +441,7 @@ end
 
 local function onGameEnd()
     hide()
+    WikiMonsters.reset()
 end
 
 function init()
@@ -391,6 +452,7 @@ function init()
         convertAll(WIKI_PAGES)
         WIKI_CONVERTED = true
     end
+    WikiMonsters.init()
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     if g_game.isOnline() then
         onGameStart()
@@ -400,6 +462,7 @@ end
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     hide()
+    WikiMonsters.terminate()
     if wikiButton then
         wikiButton:destroy()
         wikiButton = nil

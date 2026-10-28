@@ -10,6 +10,12 @@
 --   grades          the five item grades with a tinted item each
 --   table           head + rows; a cell can be { text, color }
 --   links           buttons to other pages
+--   monsterlist     every monster of the server, searchable (monsters.lua,
+--                   which also builds each monster's page)
+
+-- this file runs again when the modules reload (changing the language does
+-- it): its tables are UTF-8 once more, so wiki.lua must convert them again
+WIKI_CONVERTED = false
 
 WIKI_GRADES = {
     { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3264, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%' },
@@ -73,6 +79,7 @@ local function gradeRow(label, color, weights)
 end
 
 WIKI_GROUPS = {
+    { title = 'Monstros', pages = { 'monsters' } },
     { title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { title = 'Itens raros', pages = { 'items', 'grades', 'pools' } },
     { title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
@@ -81,6 +88,16 @@ WIKI_GROUPS = {
 }
 
 WIKI_PAGES = {}
+
+WIKI_PAGES.monsters = {
+    menu = 'Todos os monstros',
+    title = 'Monstros',
+    blocks = {
+        { 'lead', 'Todos os monstros do servidor, como na TibiaWiki: vida, experiência, elementos, habilidades, comportamento e loot de cada um. Os dados vêm direto do servidor.' },
+        { 'p', 'Busque pelo nome aqui ou na busca da esquerda e clique no monstro para abrir a página dele.' },
+        { 'monsterlist' },
+    },
+}
 
 WIKI_PAGES.tiers = {
     menu = 'Como funciona',
