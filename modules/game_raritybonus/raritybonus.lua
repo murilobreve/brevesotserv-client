@@ -71,6 +71,19 @@ local function bonusText(bonus)
     return text
 end
 
+-- what a bonus does: the server's sentence (desc, with descArgs), translated;
+-- nil when the server sent none
+local function describe(entry)
+    if type(entry) ~= 'table' or type(entry.desc) ~= 'string' or entry.desc == '' then
+        return nil
+    end
+    local args = type(entry.descArgs) == 'table' and entry.descArgs or {}
+    return tr(entry.desc, unpack(args))
+end
+
+-- the totals carry each bonus's sentence; the items' bonus lines look it up
+local bonusDescs = {}
+
 local function titleCase(text)
     return (text:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end))
 end
@@ -170,6 +183,11 @@ function fillItems(items)
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
             line.text:setText(bonusText(bonus))
+            local desc = describe(bonusDescs[bonus.key])
+            line.info:setVisible(desc ~= nil)
+            if desc then
+                line.info:setTooltip(desc)
+            end
             -- near its top: the roulette's colour (from the server)
             if bonus.color and bonus.color ~= '' then
                 line.text:setColor(bonus.color)
@@ -177,7 +195,7 @@ function fillItems(items)
             -- "Keep": this bonus stays, with its value, on the next reroll (gold)
             line.keep:setVisible(lockable)
             if not lockable then
-                line.text:setMarginRight(-line.keep:getWidth())
+                line.info:setMarginRight(6 - line.keep:getWidth())
             else
                 local locked = locks[entry.slotId] == bonus.key
                 line.keep:setOn(locked)
@@ -268,6 +286,11 @@ local function fillTotals(totals, items)
         local row = g_ui.createWidget(index % 2 == 0 and 'BonusTotalRowEven' or 'BonusTotalRow', list)
         -- bonus names stay as the items and the wiki write them
         row.label:setText(entry.label)
+        local desc = describe(entry)
+        row.info:setVisible(desc ~= nil)
+        if desc then
+            row.info:setTooltip(desc)
+        end
         local total = '+' .. number(entry.total) .. (entry.unit or '')
         if entry.perItem then
             total = total .. ' ' .. tr('(on each item)')
@@ -705,6 +728,10 @@ applyBonuses = function(data)
         window.status:setText(message)
         window.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
     end
+    bonusDescs = {}
+    for _, entry in ipairs(data.totals or {}) do
+        bonusDescs[entry.key or ''] = entry
+    end
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
     local note = tr('Each item shows its own bonuses; on the right, the total you get of each one and the items it comes from.') .. ' ' ..
@@ -955,6 +982,12 @@ end
 local function paintResult(row, text, color)
     local widget = row.result
     widget:setOpacity(1)
+    -- (i): what the bonus does, once it is out
+    local desc = text and describe(row.entry)
+    widget.info:setVisible(desc ~= nil)
+    if desc then
+        widget.info:setTooltip(desc)
+    end
     widget.text:setText(text or tr('no bonus'))
     widget.text:setColor(text and color or '#5a5a5a')
     widget:setBorderColor(text and color or '#2a2a2a')
