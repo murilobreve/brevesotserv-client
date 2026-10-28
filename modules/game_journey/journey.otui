@@ -22,6 +22,24 @@ JourneyGoldButton < UIButton
     image-source: /images/mythos/kit_gold_24_disabled
     color: #9a8f7a
 
+// the close of a card or a window: a framed x, easy to find
+JourneyCloseButton < UIButton
+  size: 18 18
+  text: x
+  text-offset: 0 -1
+  font: Verdana Bold-11px
+  color: #e6c98a
+  background-color: #0c0914
+  border-width: 1
+  border-color: #a7843f
+  change-cursor-image: true
+  cursor: pointer
+  !tooltip: tr('Close')
+  $hover:
+    color: #ffffff
+    border-color: #ffd682
+    background-color: #2a1d44
+
 // a quiet text button ("see all", "later")
 JourneyLinkButton < UIButton
   height: 18
@@ -121,7 +139,6 @@ JourneyWindow < MiniWindow
   id: journeyWindow
   height: 420
   &save: true
-  @onClose: modules.game_journey.onWindowClose()
 
   UIWidget
     id: miniwindowIcon
@@ -208,18 +225,10 @@ JourneyHuntCard < UIWidget
     ttf-font-size: 14
     color: #ffd682
 
-  UIButton
+  JourneyCloseButton
     id: closeButton
     anchors.top: parent.top
     anchors.right: parent.right
-    size: 14 14
-    text: x
-    font: Verdana Bold-11px
-    color: #ab9fc6
-    change-cursor-image: true
-    cursor: pointer
-    $hover:
-      color: #ffffff
 
   Label
     id: level
@@ -328,6 +337,13 @@ JourneyRareWindow < UIWidget
     border-width: 2
     border-color: #e2a443
     padding: 12
+
+    JourneyCloseButton
+      id: closeButton
+      anchors.top: parent.top
+      anchors.right: parent.right
+      margin-top: -6
+      margin-right: -6
 
     Label
       id: title

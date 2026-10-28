@@ -4,7 +4,8 @@
 -- where it is by using it. Five steps: the Mythos bar, Teleports, the task's
 -- Go hunt, the Roulette and the Hunter's Journey (game_journey), which shows
 -- its hunt card when the tour ends. The small "?" next to the Mythos panel's
--- title starts it again; Esc or "Skip the tour" ends it.
+-- title starts it again (and brings back a closed journey); Esc, the x or
+-- "Skip the tour" ends it.
 
 local TICK_MS = 50
 local TELEPORT_SQM = 6 -- a step whose button teleports: this far counts as used
@@ -72,7 +73,7 @@ local STEPS = {
           return featureButton('tasks') or featureButton('trail')
       end },
     { title = 'The Roulette',
-      text = 'New bonuses for your rare items. First spin free.',
+      text = 'New bonuses for your rare items.',
       opens = true,
       target = function()
           return featureButton('bonus')
@@ -324,6 +325,9 @@ function start()
     end
     if bar() and bar().hidePoint then
         bar().hidePoint()
+    end
+    if mod('game_journey') and mod('game_journey').reopen then
+        mod('game_journey').reopen()
     end
     showPanel()
     steps = {}

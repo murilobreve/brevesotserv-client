@@ -10,6 +10,9 @@
 --     login and when the player stands idle in a protection zone;
 --   * a celebration when the first rarity item drops;
 --   * a hint when the player walks up to the hunts teleport of a temple.
+-- Each of them closes with its x. Closing the window turns the journey off
+-- for the character (no glow, card or hint); the "?" of the bar, which
+-- starts the tour, brings it back (reopen).
 
 local OPCODE = 136
 local IDLE_SECONDS = 25 -- standing still in a protection zone, before the card
@@ -29,12 +32,13 @@ local GRADE_COLORS = {
 local window, card, rareWindow
 local journey -- the server's state (see the server file)
 local taskState -- game_hunttasks' state: the daily task and the Trail
-local closedThisSession = false
+local cardDismissed = false -- the card's x: no idle card again this login
 local cardShownAt = 0
 local lastMoveAt = 0
 local portalHinted = false
 local hintShown = false -- the portal hint is on the Teleports row
 local checkEvent, raysEvent, firstStateEvent
+local closeForGood -- the journey window's own close (below)
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -47,8 +51,13 @@ local function panel()
     return modules.game_brevespanel
 end
 
-local function doneSettingKey()
-    return 'journey_done_' .. (g_game.getCharacterName() or '')
+-- the player closed the journey (per character)
+local function hiddenKey()
+    return 'journey_hidden_' .. (g_game.getCharacterName() or '')
+end
+
+local function isHidden()
+    return g_settings.getBoolean(hiddenKey())
 end
 
 local function allDone()
@@ -63,16 +72,18 @@ local function updateBar()
     if not bar or not bar.setFeatureHighlight or not journey then
         return
     end
+    -- a closed journey asks for nothing
+    local hidden = isHidden()
     local steps = journey.steps or {}
-    bar.setFeatureHighlight('rates', not steps.hunt)
-    bar.setFeatureHighlight('tasks', not steps.task)
-    bar.setFeatureHighlight('trail', not steps.task)
+    bar.setFeatureHighlight('rates', not hidden and not steps.hunt)
+    bar.setFeatureHighlight('tasks', not hidden and not steps.task)
+    bar.setFeatureHighlight('trail', not hidden and not steps.task)
     local spins = journey.spins or {}
     local count = tonumber(spins.count) or 0
-    bar.setFeatureHighlight('bonus', spins.worn and count > 0 and (spins.free or not steps.roulette) or false)
+    bar.setFeatureHighlight('bonus', not hidden and spins.worn and count > 0 and not steps.roulette or false)
     local flag
-    if spins.worn and spins.free then
-        flag = tr('FREE')
+    if hidden then
+        flag = nil
     elseif spins.worn and count == 1 then
         flag = tr('1 SPIN')
     elseif spins.worn and count > 1 then
@@ -115,7 +126,7 @@ local function stepHeight(step)
 end
 
 -- each step: its title, a short line only when it says something (the task's
--- kills, the free spin) and the button that does it
+-- kills) and the button that does it
 local function fillStep(widget, index, done, active)
     local def = STEPS[index]
     widget:setOn(active)
@@ -155,10 +166,6 @@ local function fillStep(widget, index, done, active)
             end
         end
     else
-        local spins = journey.spins or {}
-        if not done and spins.free ~= false then
-            text = tr('First spin free')
-        end
         button = tr('SPIN')
         onClick = function()
             if modules.game_raritybonus and modules.game_raritybonus.request then
@@ -168,7 +175,6 @@ local function fillStep(widget, index, done, active)
     end
     widget.text:setText(text or '')
     widget.text:setVisible(text ~= nil)
-    widget.text:setColor(def.key == 'roulette' and '#7fd35a' or '#e6e0f2')
     widget.action:setText(button)
     widget.action.onClick = onClick
     widget.action:setEnabled(true)
@@ -231,11 +237,7 @@ local function fillWindow()
     contents.doneButton:setVisible(finished)
     contents.doneButton:setText(tr('Close'))
     contents.doneButton.onClick = function()
-        g_settings.set(doneSettingKey(), true)
-        g_settings.save()
-        if window then
-            window:close()
-        end
+        closeForGood()
     end
     layoutWindow()
 end
@@ -265,6 +267,13 @@ local function ensureWindow()
             button:setVisible(false)
         end
     end
+    local closeButton = window:recursiveGetChildById('closeButton')
+    if closeButton then
+        closeButton.onClick = function()
+            closeForGood()
+            return true
+        end
+    end
     -- the journey goes first in its column
     local column = window:getParent()
     if column and column.moveChildToIndex then
@@ -274,21 +283,23 @@ local function ensureWindow()
 end
 
 local function showWindow()
-    if allDone() and journey.rewarded and g_settings.getBoolean(doneSettingKey()) then
-        return
-    end
-    if closedThisSession then
-        return
-    end
-    if not ensureWindow() then
+    if isHidden() or not ensureWindow() then
         return
     end
     window:open(true)
     fillWindow()
 end
 
-function onWindowClose()
-    closedThisSession = true
+-- the window's x (or Close once complete): the journey is off for good. Not
+-- every close() (the interface also closes a window it moves to another
+-- column), so the button says it
+function closeForGood()
+    g_settings.set(hiddenKey(), true)
+    g_settings.save()
+    updateBar()
+    if window then
+        window:close()
+    end
 end
 
 -- ---------------------------------------------------------------- the hunt card
@@ -349,7 +360,10 @@ local function showCard(hunt)
             panel().open('rates')
         end
     end
-    card.closeButton.onClick = hideCard
+    card.closeButton.onClick = function()
+        cardDismissed = true
+        hideCard()
+    end
     card:raise()
     cardShownAt = os.time()
     -- the card says it better than the NEW RATES callout
@@ -395,8 +409,8 @@ local function showRare(data)
     -- the name already says the grade; its colour too
     box.name:setText((info.name or ''):gsub('(%a)([%w\']*)', function(a, b) return a:upper() .. b end))
     box.name:setColor(color)
-    box.text:setText(data.free and tr('Wear it and spin the Roulette: first spin free.') or tr('Wear it and spin the Roulette.'))
-    box.spinButton:setText(data.free and tr('SPIN FREE') or tr('SPIN'))
+    box.text:setText(tr('Wear it and spin the Roulette.'))
+    box.spinButton:setText(tr('SPIN'))
     box.spinButton.onClick = function()
         hideRare()
         if modules.game_raritybonus and modules.game_raritybonus.request then
@@ -405,6 +419,7 @@ local function showRare(data)
     end
     box.laterButton:setText(tr('Later'))
     box.laterButton.onClick = hideRare
+    box.closeButton.onClick = hideRare
     rareWindow:raise()
     rareWindow:focus()
     -- the rays breathe
@@ -442,7 +457,7 @@ local function onPositionChange(creature, newPos)
     end
     lastMoveAt = os.time()
     -- the card already says it
-    if portalHinted or card or not journey or (journey.steps or {}).hunt or not newPos then
+    if portalHinted or card or isHidden() or not journey or (journey.steps or {}).hunt or not newPos then
         return
     end
     if nearHuntsPortal(newPos) and panel() and panel().point then
@@ -459,7 +474,7 @@ end
 local function check()
     checkEvent = scheduleEvent(check, 5000)
     local player = g_game.getLocalPlayer()
-    if not player or not journey or allDone() or card or rareWindow then
+    if not player or not journey or allDone() or card or rareWindow or cardDismissed or isHidden() then
         return
     end
     if os.time() - lastMoveAt < IDLE_SECONDS or os.time() - cardShownAt < CARD_COOLDOWN then
@@ -489,7 +504,7 @@ function handlers.state(data)
     end
     -- the card once a login, for the player who has not gone hunting yet or
     -- has not seen it today
-    if first and data.hunt then
+    if first and data.hunt and not isHidden() then
         local today = os.date('%Y-%m-%d')
         local key = 'journey_card_' .. (g_game.getCharacterName() or '')
         if not (data.steps or {}).hunt or g_settings.getString(key) ~= today then
@@ -523,12 +538,6 @@ function handlers.firstRare(data)
     showRare(data)
 end
 
-function handlers.completed(data)
-    -- the next state carries it; the window shows it right away
-    closedThisSession = false
-    g_settings.set(doneSettingKey(), false)
-end
-
 local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
         return
@@ -557,6 +566,15 @@ function getWindow()
     return window
 end
 
+-- the "?" of the bar: the journey again, for a player who closed it
+function reopen()
+    g_settings.set(hiddenKey(), false)
+    if journey then
+        showWindow()
+        updateBar()
+    end
+end
+
 -- called by the tour when it ends: the card it held back
 function onTourEnd()
     if journey and journey.hunt and not card and not (journey.steps or {}).hunt then
@@ -566,7 +584,7 @@ end
 
 local function onGameStart()
     journey = nil
-    closedThisSession = false
+    cardDismissed = false
     portalHinted = false
     cardShownAt = os.time()
     lastMoveAt = os.time()
