@@ -56,12 +56,21 @@ RouletteResult < UIWidget
   Label
     id: text
     anchors.left: slot.right
-    anchors.right: odds.left
+    anchors.right: info.left
     anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
     text-align: center
     font: Verdana Bold-11px
     color: #655780
     phantom: true
+
+  // (i): what the bonus does, on hover
+  BonusInfo
+    id: info
+    anchors.right: odds.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    visible: false
 
   // after the roll: the bonus's range on the item and the odds of this
   // value or better

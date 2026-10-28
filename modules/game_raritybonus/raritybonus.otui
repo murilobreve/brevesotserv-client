@@ -134,6 +134,15 @@ BonusKeepButton < UIButton
     border-color: #e0c060
     color: #f0cf6a
 
+// (i) next to a bonus: hovering it shows what the bonus does (the roulette
+// uses it too)
+BonusInfo < UIWidget
+  size: 14 14
+  image-source: /game_raritybonus/images/info
+  opacity: 0.8
+  $hover:
+    opacity: 1
+
 // one bonus of an item; "Keep" holds it, with its value, on the next reroll
 BonusLine < Panel
   height: 18
@@ -141,12 +150,20 @@ BonusLine < Panel
   Label
     id: text
     anchors.left: parent.left
-    anchors.right: keep.left
+    anchors.right: info.left
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
-    margin-right: 6
+    margin-right: 4
     font: verdana-11px-monochrome
     color: #7fd35a
+
+  // (i): what the bonus does, on hover
+  BonusInfo
+    id: info
+    anchors.right: keep.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    visible: false
 
   BonusKeepButton
     id: keep
@@ -167,10 +184,18 @@ BonusTotalRow < BrevesRow
     id: label
     anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: total.left
     height: 14
+    text-auto-resize: true
     color: #e6e0f2
     phantom: true
+
+  // (i): what the bonus does, on hover
+  BonusInfo
+    id: info
+    anchors.left: label.right
+    anchors.verticalCenter: label.verticalCenter
+    margin-left: 5
+    visible: false
 
   Label
     id: total
