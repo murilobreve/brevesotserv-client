@@ -341,7 +341,7 @@ WIKI_PAGES.pools = {
         { 'h', 'Escudos' },
         poolTable({
             { 'Defense', '8% a 60%', 'da defesa do escudo' }, { 'Resistência', '1% a 20%', 'um elemento' }, { 'Healing Received', '5% a 30%', '' },
-            { 'Max Health', '1% a 10%', '' }, { 'Physical Reflect', '2% a 30%', '' },
+            { 'Max Health', '1% a 10%', '' }, { 'Physical Reflect', '1% a 15%', '' },
         }),
         { 'h', 'Spellbooks' },
         poolTable({
@@ -354,7 +354,7 @@ WIKI_PAGES.pools = {
         poolTable({
             { 'Armor', '10% a 80%', 'do armor do item' }, { 'Resistência', '1% a 20%', 'pode vir duas' }, { 'Healing Received', '5% a 30%', '' },
             { 'Skill da vocação', '1% a 10%', 'ML, melee, distance ou fist' },
-            { 'Dodge Chance', '1% a 6%', '' }, { 'Physical Reflect', '2% a 30%', '' }, { 'Cooldown Reduction', '2% a 14%', '' },
+            { 'Dodge Chance', '1% a 6%', '' }, { 'Physical Reflect', '1% a 15%', '' }, { 'Cooldown Reduction', '2% a 14%', '' },
             { 'Speed', '5 a 50', 'só calças' },
             { 'Life Leech', '1% a 6%', 'só capacete e armadura' }, { 'Mana Leech', '1% a 10%', 'só capacete e armadura' },
         }),
@@ -429,7 +429,7 @@ WIKI_PAGES.affixes = {
             { 'Physical Resist', 'Menos dano físico. A mais forte e a mais rara.', '20%' },
             { 'Healing Received', 'Magias, runas e poções curam mais. Leech não conta.', '100%' },
             { 'Dodge Chance', 'Chance de desviar de um golpe.', '12%' },
-            { 'Physical Reflect', 'Devolve parte do dano físico que um monstro causa em você.', '30%' },
+            { 'Physical Reflect', 'Devolve parte do dano físico que um monstro causa em você.', '15%' },
             { 'Speed', 'Velocidade a mais. Vem de botas e calças.', '80' },
         }),
         { 'h', 'Anéis e amuletos' },
