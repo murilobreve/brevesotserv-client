@@ -26,6 +26,10 @@ function createWindow()
         local widget = g_ui.createWidget('LocalesButton', localesPanel)
         widget:setImageSource('/images/flags/' .. name .. '')
         widget:setText(locale.languageName)
+        -- the language in use, in gold
+        if currentLocale and currentLocale.name == name then
+            widget:setColor('#e2a443')
+        end
         widget.onClick = function()
             selectFirstLocale(name)
         end
@@ -41,6 +45,37 @@ function createWindow()
             localesWindow:focus()
         end)
     end)
+end
+
+-- the picker any time (the flag on the top bar, the options): it can be
+-- left without choosing, unlike the first one
+function showLanguages()
+    if localesWindow then
+        localesWindow:raise()
+        localesWindow:focus()
+        return
+    end
+    createWindow()
+    local close = g_ui.createWidget('LocalesCloseButton', localesWindow)
+    close.onClick = hideLanguages
+    localesWindow.onEscape = hideLanguages
+end
+
+function hideLanguages()
+    if localesWindow then
+        localesWindow:destroy()
+        localesWindow = nil
+    end
+end
+
+-- another language now: every module loads again in it
+function changeLocale(name)
+    if currentLocale and currentLocale.name == name then
+        return
+    end
+    if setLocale(name) then
+        g_modules.reloadModules()
+    end
 end
 
 function selectFirstLocale(name)

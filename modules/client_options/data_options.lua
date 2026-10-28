@@ -341,12 +341,14 @@ return {
         action = function(value, options, controller, panels, extraWidgets)
             local crossPath = '/images/game/crosshair/'
             local newValue = value
-            if newValue == 'disabled' then
+            -- the mouse highlight off hides the crosshair too (the corners on
+            -- the tile under the mouse): players took them for one thing
+            if newValue == 'disabled' or not options.enableHighlightMouseTarget.value then
                 newValue = nil
             end
 
             panels.gameMapPanel:setCrosshairTexture(newValue and crossPath .. newValue or nil)
-            panels.interface:recursiveGetChildById('crosshair'):setCurrentOptionByData(newValue, true)
+            panels.interface:recursiveGetChildById('crosshair'):setCurrentOptionByData(value, true)
         end
     },
     nativeCursor = {
@@ -380,6 +382,10 @@ return {
         value = true,
         action = function(value, options, controller, panels, extraWidgets)
             panels.gameMapPanel:setDrawHighlightTarget(value)
+            -- and the crosshair with it, as the Crosshair box says
+            local cross = options.crosshair.value
+            local crossOn = value and cross and cross ~= '' and cross ~= 'disabled'
+            panels.gameMapPanel:setCrosshairTexture(crossOn and '/images/game/crosshair/' .. cross or nil)
         end
     },
     showAnimatedCursor = {
