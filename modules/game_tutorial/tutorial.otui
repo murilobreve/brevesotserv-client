@@ -1,9 +1,42 @@
-// The tour window: small, at the top of the game screen, never modal, so the
-// window each step opens stays visible and usable next to it.
-MythosTutorialWindow < MythosWindow
-  id: mythosTutorialWindow
-  !text: tr('Mythos tour')
-  size: 430 236
+// The tour (tutorial.lua): the screen goes dark around the real button of
+// each step, a gold ring breathes around it and a bubble with an arrow says
+// what it does. Clicking the button itself goes on to the next step.
+
+// one of the four dark pieces around the hole
+MythosTourShade < UIWidget
+  background-color: #000000a8
+  focusable: false
+
+// the gold ring around the hole
+MythosTourRing < UIWidget
+  border-width: 2
+  border-color: #e2a443
+  phantom: true
+  focusable: false
+
+// a dot of the progress: one per step
+MythosTourDot < UIWidget
+  size: 7 7
+  margin-left: 4
+  background-color: #4a3670
+  phantom: true
+  $on:
+    background-color: #e2a443
+
+MythosTourArrow < UIWidget
+  size: 20 11
+  phantom: true
+  focusable: false
+
+MythosTourBubble < UIWidget
+  id: mythosTourBubble
+  width: 280
+  height: 110
+  background-color: #150f22f5
+  border-width: 2
+  border-color: #e2a443
+  padding: 10
+  focusable: true
   @onEscape: modules.game_tutorial.stop()
 
   Label
@@ -19,47 +52,44 @@ MythosTutorialWindow < MythosWindow
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: counter.left
-    font: verdana-11px-rounded
-    color: #ffd77a
-    text-auto-resize: true
-
-  UIWidget
-    id: progressBack
-    anchors.top: title.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    margin-top: 6
-    height: 3
-    background-color: #2a2140
-
-  UIWidget
-    id: progress
-    anchors.top: progressBack.top
-    anchors.left: progressBack.left
-    height: 3
-    width: 10
-    background-color: #d9a520
+    margin-right: 6
+    ttf-font: cinzel-bold
+    ttf-font-size: 14
+    color: #ffd682
+    height: 18
 
   Label
     id: text
-    anchors.top: progressBack.bottom
+    anchors.top: title.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 10
+    margin-top: 8
     text-wrap: true
     text-auto-resize: true
-    font: verdana-11px-monochrome
+    font: verdana-11px-rounded
     color: #e6e0f2
+
+  UIWidget
+    id: dots
+    anchors.left: parent.left
+    anchors.verticalCenter: nextButton.verticalCenter
+    margin-left: -4
+    size: 60 7
+    phantom: true
+    layout:
+      type: horizontalBox
 
   UIButton
     id: skipButton
-    anchors.left: parent.left
-    anchors.bottom: parent.bottom
-    margin-bottom: 6
+    anchors.left: dots.right
+    anchors.verticalCenter: nextButton.verticalCenter
+    margin-left: 10
     !text: tr('Skip the tour')
     font: verdana-11px-rounded
     color: #9789b3
     text-auto-resize: true
+    change-cursor-image: true
+    cursor: pointer
     @onClick: modules.game_tutorial.stop()
     $hover:
       color: #e6e0f2
@@ -68,15 +98,6 @@ MythosTutorialWindow < MythosWindow
     id: nextButton
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    size: 120 28
+    size: 100 28
     !text: tr('Next')
     @onClick: modules.game_tutorial.next()
-
-  MythosKitButton28
-    id: backButton
-    anchors.right: nextButton.left
-    anchors.bottom: parent.bottom
-    margin-right: 8
-    size: 100 28
-    !text: tr('Back')
-    @onClick: modules.game_tutorial.back()

@@ -68,6 +68,7 @@ Module
     - game_bosses
     - game_mythosvip
     - game_tutorial
+    - game_journey
     - game_forge
     - game_inspect
     - game_taskboard

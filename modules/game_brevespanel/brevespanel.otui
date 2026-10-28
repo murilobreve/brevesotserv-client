@@ -50,6 +50,25 @@ BrevesFeatureButton < UIButton
     $hover:
       border-color: #f1d399
 
+  // a pill over the row's top right corner (setFeatureFlag): the best hunt
+  // rate over Teleports, the spins the Roulette has
+  Label
+    id: flag
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin-top: -10
+    margin-right: -6
+    height: 12
+    text-auto-resize: true
+    text-align: center
+    padding: 0 4 0 4
+    font: verdana-9px-bold
+    color: #ffffff
+    border-width: 1
+    border-color: #ffffffcc
+    phantom: true
+    visible: false
+
   // a quick action on the row, e.g. the hunt teleport of the Trail row
   UIButton
     id: action
