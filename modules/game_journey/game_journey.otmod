@@ -1,0 +1,9 @@
+Module
+  name: game_journey
+  description: Hunter's Journey - the first steps of a new player, the recommended hunt and the first rare item
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ journey ]
+  @onLoad: init()
+  @onUnload: terminate()

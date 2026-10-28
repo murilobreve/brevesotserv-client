@@ -1,181 +1,371 @@
--- Mythos tour: on the first login a small window walks the player through
--- the server's own systems, one short step at a time. Each step opens the
--- window it talks about (and closes it again on the next step), so the
--- player sees the real thing instead of reading about it. The small "?" next
--- to the Mythos panel's title starts it again; Esc or "Skip" ends it.
+-- Mythos tour: on the first login the screen goes dark around the real
+-- button of each step, a gold ring breathes around it and a bubble says what
+-- it does. Using the button itself (or Next) goes on: the player learns
+-- where it is by using it. Five steps: the Mythos bar, Teleports, the task's
+-- Go hunt, the Roulette and the Hunter's Journey (game_journey), which shows
+-- its hunt card when the tour ends. The small "?" next to the Mythos panel's
+-- title starts it again; Esc or "Skip the tour" ends it.
 
-local window
+local TICK_MS = 50
+local TELEPORT_SQM = 6 -- a step whose button teleports: this far counts as used
+local RING_GAP = 3 -- px between the target and the ring
+local ARROW_GAP = 10 -- px between the ring and the bubble
+
+local bubble, ring, arrow
+local shades = {}
+local dots = {}
 local index = 0
-local closeCurrent
+local steps -- the steps whose target is on screen now
+local target -- the widget the current step points at
+local tickEvent, startEvent, startedAt
+local paused -- the window the step's button opened: the tour waits for it
+local stepTop, stepPos, stepReady -- the top window, the player's place and the
+-- task teleport's ready time when the step began
 
 local function mod(name)
     return modules[name]
 end
 
--- hide + open, so a toggle never closes a window the player already had open
-local function section(name, tab)
-    return function()
-        local m = mod(name)
-        if m and m.hide and m.openSection then
-            m.hide()
-            m.openSection(tab)
-        end
-    end, function()
-        local m = mod(name)
-        if m and m.hide then
-            m.hide()
-        end
-    end
+local function bar()
+    return mod('game_brevespanel')
 end
 
--- section() and plain() return the step's open and close functions
-local function plain(name, openFn, closeFn)
-    return function()
-        local m = mod(name)
-        if m and m[openFn] then
-            m[openFn]()
-        end
-    end, function()
-        local m = mod(name)
-        if m and m[closeFn] then
-            m[closeFn]()
-        end
-    end
+local function featureButton(id)
+    local panel = bar()
+    return panel and panel.getFeatureButton and panel.getFeatureButton(id)
+end
+
+local function visible(widget)
+    return widget and not widget:isDestroyed() and widget:isVisible() and widget:getWidth() > 0 and widget:getHeight() > 0
 end
 
 local function showPanel()
     local panel = rootWidget:recursiveGetChildById('brevespanel')
-    if panel and not panel:isVisible() and mod('game_brevespanel') then
-        mod('game_brevespanel').togglePanel()
+    if panel and not panel:isVisible() and bar() and bar().togglePanel then
+        bar().togglePanel()
     end
 end
 
+-- each step finds its widget when it starts (nil: the step is left out)
 local STEPS = {
-    { title = 'Welcome to Mythos',
-      text = 'This quick tour shows what is different here. Each step opens the window it talks about. Use Next and Back, or Esc to leave.' },
-    { title = 'The Mythos panel',
-      text = 'Everything Mythos has is in this bar under the game screen, above your spells, in four sections: Tasks, Hunts, Rarity and Tools, with your VIP on the right. Click a button to open it.',
-      open = showPanel },
-    { title = 'Hunts TP',
-      text = 'Every hunt is in this list, with the XP and loot rate of each monster: new rates every 2 hours, and a high rate makes the monster stronger, but it pays much more. The TP button takes you to the hunt, every 30 seconds.',
-      window = { section('game_huntboard', 'rates') } },
-    { title = 'Ranking',
-      text = 'All XP you make counts for the hour, the day and the month. First place wins Mythos Coins: 25 an hour, 250 a day and 5,000 a month.',
-      window = { section('game_huntboard', 'board') } },
-    { title = 'Daily Task and the Trail',
-      text = 'A monster of your level every day, and a trail of 70 monsters from the weakest to the strongest. Both pay XP and Hunt Points. Go to the hunt takes you straight there, free, out of combat.',
-      window = { section('game_hunttasks', 'tasks') } },
-    { title = 'Rare items and the Roulette',
-      text = 'Any monster can drop equipment with rarity, from Communis to Mythicus, with extra bonuses. Here you see every bonus you wear, and you can roll an item again with Rarity XP.',
-      window = { plain('game_raritybonus', 'request', 'hide') } },
-    { title = 'Rarity Market',
-      text = 'Sell the rare items you do not use and buy the ones you want, paid with the gold in your bank.',
-      window = { plain('game_raritymarket', 'show', 'hide') } },
-    { title = 'Auto Loot',
-      text = 'Choose what the loot picks up for you, without opening corpses: your recent drops and a search by name.',
-      window = { function()
-          local q = mod('game_quickloot')
-          if q and q.QuickLoot and q.QuickLoot.show then q.QuickLoot.show() end
-      end, function()
-          local q = mod('game_quickloot')
-          if q and q.QuickLoot and q.QuickLoot.hide then q.QuickLoot.hide() end
-      end } },
-    { title = 'Heal Bot',
-      text = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules, and it is allowed here.',
-      window = { plain('game_healbot', 'show', 'hide') } },
-    { title = 'Store and Mythos VIP',
-      text = 'Mythos Coins come from playing, from the ranking and from donations. VIP gives +10%% XP, loot and training and the Fusca, Uno and Gol mounts.',
-      window = { function()
-          local s = mod('game_store')
-          if s and s.openCategory then s.openCategory('Mythos VIP') end
-      end, function()
-          local s = mod('game_store')
-          if s and s.hide then s.hide() end
-      end } },
-    { title = 'Questions? The Wiki',
-      text = 'Rare monsters, every rarity bonus and the real numbers of the server are in the Wiki. Useful commands: !hunt, !task, !vip and !bless. To see this tour again, click the small ? next to the Mythos title. Good hunting!',
-      window = { plain('game_wiki', 'show', 'hide') } },
+    { title = 'The Mythos bar',
+      text = 'Everything Mythos has is here.',
+      target = function()
+          return bar() and bar().getPanel and bar().getPanel()
+      end },
+    { title = 'Teleports',
+      text = 'Every hunt, with a free TP. Click it.',
+      opens = true,
+      target = function()
+          return featureButton('rates')
+      end },
+    { title = 'Go hunt',
+      text = 'Free teleport to your task monster.',
+      teleports = true,
+      target = function()
+          for _, id in ipairs({ 'tasks', 'trail' }) do
+              local button = featureButton(id)
+              if button and visible(button.action) then
+                  return button.action
+              end
+          end
+          return featureButton('tasks') or featureButton('trail')
+      end },
+    { title = 'The Roulette',
+      text = 'New bonuses for your rare items. First spin free.',
+      opens = true,
+      target = function()
+          return featureButton('bonus')
+      end },
+    { title = "Hunter's Journey",
+      text = 'Three steps, one reward. Good hunting!',
+      -- the window may come after the tour starts (it waits for the server)
+      late = true,
+      target = function()
+          return mod('game_journey') and mod('game_journey').getWindow and mod('game_journey').getWindow()
+      end },
 }
 
-local function closeStepWindow()
-    if closeCurrent then
-        pcall(closeCurrent)
-        closeCurrent = nil
+-- ---------------------------------------------------------------- drawing
+
+local function destroyAll()
+    target = nil
+    paused = nil
+    if tickEvent then
+        removeEvent(tickEvent)
+        tickEvent = nil
     end
+    for _, widget in ipairs(shades) do
+        widget:destroy()
+    end
+    shades = {}
+    dots = {}
+    for _, widget in ipairs({ bubble, ring, arrow }) do
+        if widget then
+            widget:destroy()
+        end
+    end
+    bubble, ring, arrow = nil, nil, nil
 end
 
+local function clamp(value, low, high)
+    return math.max(low, math.min(high, value))
+end
+
+local function ours(widget)
+    if widget == bubble or widget == ring or widget == arrow then
+        return true
+    end
+    for _, shade in ipairs(shades) do
+        if widget == shade then
+            return true
+        end
+    end
+    return false
+end
+
+-- the top window on screen that is not the tour's (a tooltip or a notice
+-- is not a window)
+local function topWindow()
+    local children = rootWidget:getChildren()
+    for i = #children, 1, -1 do
+        local child = children[i]
+        if child:isVisible() and not child:isPhantom() and not ours(child) and child:getWidth() >= 200 and child:getHeight() >= 150 then
+            return child
+        end
+    end
+    return nil
+end
+
+local function playerPos()
+    local player = g_game.getLocalPlayer()
+    return player and player:getPosition()
+end
+
+local function teleportReadyAt()
+    local tasks = mod('game_hunttasks')
+    return tasks and tasks.getTeleportReadyAt and tasks.getTeleportReadyAt() or 0
+end
+
+-- the task teleport was used: the player moved far, or its wait started
+-- (the player may have stood at that hunt already)
+local function teleported()
+    local pos = playerPos()
+    if pos and stepPos and (pos.z ~= stepPos.z or math.max(math.abs(pos.x - stepPos.x), math.abs(pos.y - stepPos.y)) >= TELEPORT_SQM) then
+        return true
+    end
+    local now = os.time()
+    return stepReady <= now and teleportReadyAt() > now + 5
+end
+
+local function showTour(on)
+    for _, widget in ipairs(shades) do
+        widget:setVisible(on)
+    end
+    bubble:setVisible(on)
+    ring:setVisible(on)
+    arrow:setVisible(on)
+end
+
+-- the dark pieces around the hole, the ring and the bubble beside it
 local function place()
-    local map = modules.game_interface and modules.game_interface.getMapPanel()
-    if map then
-        -- MainWindow centres itself through its anchors
-        window:breakAnchors()
-        window:setPosition({ x = map:getX() + math.floor((map:getWidth() - window:getWidth()) / 2), y = map:getY() + 10 })
+    if not bubble then
+        return
     end
+    local screen = rootWidget:getRect()
+    local rect = visible(target) and target:getRect() or nil
+    if not rect then
+        -- no hole: all dark, the bubble in the middle
+        shades[1]:setRect(screen)
+        for i = 2, 4 do
+            shades[i]:setRect({ x = 0, y = 0, width = 0, height = 0 })
+        end
+        ring:hide()
+        arrow:hide()
+        bubble:setPosition({ x = math.floor((screen.width - bubble:getWidth()) / 2), y = math.floor((screen.height - bubble:getHeight()) / 2) })
+        return
+    end
+    local hole = {
+        x = rect.x - RING_GAP, y = rect.y - RING_GAP,
+        width = rect.width + RING_GAP * 2, height = rect.height + RING_GAP * 2,
+    }
+    local right = hole.x + hole.width
+    local bottom = hole.y + hole.height
+    shades[1]:setRect({ x = 0, y = 0, width = screen.width, height = math.max(0, hole.y) })
+    shades[2]:setRect({ x = 0, y = bottom, width = screen.width, height = math.max(0, screen.height - bottom) })
+    shades[3]:setRect({ x = 0, y = hole.y, width = math.max(0, hole.x), height = hole.height })
+    shades[4]:setRect({ x = right, y = hole.y, width = math.max(0, screen.width - right), height = hole.height })
+    ring:show()
+    ring:setRect(hole)
+
+    -- the bubble above the hole when it fits, else below it
+    local width, height = bubble:getWidth(), bubble:getHeight()
+    local centerX = hole.x + math.floor(hole.width / 2)
+    local x = clamp(centerX - math.floor(width / 2), 8, screen.width - width - 8)
+    local y
+    arrow:show()
+    if hole.y - ARROW_GAP - height >= 4 then
+        y = hole.y - ARROW_GAP - height
+        arrow:setImageSource('/game_tutorial/images/arrow_down')
+        arrow:setPosition({ x = clamp(centerX - 10, x + 6, x + width - 26), y = y + height - 2 })
+    else
+        y = math.min(bottom + ARROW_GAP, screen.height - height - 4)
+        arrow:setImageSource('/game_tutorial/images/arrow_up')
+        arrow:setPosition({ x = clamp(centerX - 10, x + 6, x + width - 26), y = y - 9 })
+    end
+    -- a hole as tall as the screen (the journey window): the bubble beside it
+    if y < 4 or (y < bottom and y + height > hole.y) then
+        arrow:hide()
+        y = clamp(hole.y + 20, 4, screen.height - height - 4)
+        x = right + ARROW_GAP
+        if x + width > screen.width - 4 then
+            x = hole.x - ARROW_GAP - width
+        end
+    end
+    bubble:setPosition({ x = x, y = y })
 end
 
-local function render()
-    local step = STEPS[index]
-    window.title:setText(tr(step.title))
-    window.text:setText(tr(step.text))
-    window.counter:setText(tr('%d of %d', index, #STEPS))
-    window.backButton:setEnabled(index > 1)
-    window.nextButton:setText(index == #STEPS and tr('Finish') or tr('Next'))
-    closeStepWindow()
-    if step.open then
-        pcall(step.open)
+-- the ring breathes and everything follows the target (windows move)
+local render
+
+local function tick()
+    tickEvent = nil
+    if not bubble then
+        return
     end
-    if step.window then
-        pcall(step.window[1])
-        closeCurrent = step.window[2]
+    tickEvent = scheduleEvent(tick, TICK_MS)
+    -- the window a step's button opened: back once it is closed
+    if paused then
+        if paused:isDestroyed() or not paused:isVisible() then
+            paused = nil
+            showTour(true)
+            render()
+        end
+        return
     end
-    -- once the text is laid out: the window fits it, keeps its place at
-    -- the top of the game screen and stays above the window it just opened
-    scheduleEvent(function()
-        if window then
-            window:setHeight(math.max(170, window.text:getY() - window:getY() + window.text:getHeight() + 62))
-            window.progress:setWidth(math.max(4, math.floor(window.progressBack:getWidth() * index / #STEPS)))
-            place()
-            window:raise()
+    -- the step's button was used: a window it opened (the tour steps aside
+    -- until it is closed) or a teleport
+    local step = steps[index]
+    if step.opens then
+        local top = topWindow()
+        if top and top ~= stepTop then
+            if index >= #steps then
+                stop()
+                return
+            end
+            index = index + 1
+            paused = top
+            showTour(false)
+            return
         end
-    end, 60)
+    elseif step.teleports and teleported() then
+        next()
+        return
+    end
+    -- above any window opened meanwhile
+    if rootWidget:getLastChild() ~= arrow then
+        ring:raise()
+        bubble:raise()
+        arrow:raise()
+    end
+    place()
+    local t = (g_clock.millis() - startedAt) / 1400
+    ring:setOpacity(0.45 + 0.55 * (0.5 + 0.5 * math.sin(t * math.pi * 2)))
+end
+
+function render()
+    local step = steps[index]
+    target = step.target()
+    if not visible(target) then
+        target = nil
+    end
+    bubble.title:setText(tr(step.title))
+    bubble.text:setText(tr(step.text))
+    bubble.counter:setText(tr('%d of %d', index, #steps))
+    bubble.nextButton:setText(index == #steps and tr('Finish') or tr('Next'))
+    for i, dot in ipairs(dots) do
+        dot:setOn(i <= index)
+    end
+    -- what the step's button changes, to see it used
+    stepTop = topWindow()
+    stepPos = playerPos()
+    stepReady = teleportReadyAt()
+    -- once the text is laid out: the bubble fits it
     scheduleEvent(function()
-        if window then
-            window:raise()
+        if not bubble then
+            return
         end
-    end, 400)
+        local height = bubble.text:getY() + bubble.text:getHeight()
+        bubble:setHeight(height - bubble:getY() + 12 + 28 + 10)
+        place()
+        bubble:raise()
+        arrow:raise()
+        bubble:focus()
+    end, 30)
+    place()
+    bubble:raise()
+    arrow:raise()
+    bubble:focus()
+end
+
+-- ---------------------------------------------------------------- the tour
+
+function isRunning()
+    return bubble ~= nil
 end
 
 function start()
     if not g_game.isOnline() then
         return
     end
-    if not window then
-        window = g_ui.createWidget('MythosTutorialWindow', rootWidget)
+    destroyAll()
+    if bar() and bar().hideNews then
+        bar().hideNews()
     end
-    if mod('game_brevespanel') and mod('game_brevespanel').hideNews then
-        mod('game_brevespanel').hideNews()
+    if bar() and bar().hidePoint then
+        bar().hidePoint()
     end
+    showPanel()
+    steps = {}
+    for _, step in ipairs(STEPS) do
+        if step.late or visible(step.target()) then
+            table.insert(steps, step)
+        end
+    end
+    if #steps == 0 then
+        return
+    end
+    for i = 1, 4 do
+        shades[i] = g_ui.createWidget('MythosTourShade', rootWidget)
+    end
+    ring = g_ui.createWidget('MythosTourRing', rootWidget)
+    bubble = g_ui.createWidget('MythosTourBubble', rootWidget)
+    arrow = g_ui.createWidget('MythosTourArrow', rootWidget)
+    bubble.dots:setWidth(#steps * 11)
+    for i = 1, #steps do
+        dots[i] = g_ui.createWidget('MythosTourDot', bubble.dots)
+    end
+    startedAt = g_clock.millis()
     index = 1
-    window:show()
-    place()
     render()
+    tick()
 end
 
 function stop()
-    closeStepWindow()
-    if window then
-        window:destroy()
-        window = nil
-    end
+    local wasRunning = bubble ~= nil
+    destroyAll()
     g_settings.set('mythos_tutorial_done', true)
     g_settings.save()
+    if wasRunning and mod('game_journey') and mod('game_journey').onTourEnd then
+        mod('game_journey').onTourEnd()
+    end
 end
 
 function next()
-    if not window then
+    if not bubble then
         return
     end
-    if index >= #STEPS then
+    if index >= #steps then
         stop()
         return
     end
@@ -183,18 +373,9 @@ function next()
     render()
 end
 
-function back()
-    if window and index > 1 then
-        index = index - 1
-        render()
-    end
-end
-
-local startEvent
-
 local function onGameStart()
     if not g_settings.getBoolean('mythos_tutorial_done') then
-        -- after the panel rows and the news window had their turn
+        -- after the panel rows and the journey window had their turn
         startEvent = scheduleEvent(function()
             startEvent = nil
             start()
@@ -207,11 +388,7 @@ local function onGameEnd()
         removeEvent(startEvent)
         startEvent = nil
     end
-    closeStepWindow()
-    if window then
-        window:destroy()
-        window = nil
-    end
+    destroyAll()
 end
 
 function init()

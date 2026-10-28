@@ -16,12 +16,15 @@ local FEATURES = {
     { id = 'vip', group = 'vip', label = 'Mythos VIP', icon = 'vip',
       news = 'Mythos VIP: +10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. The row shows your days left and opens the Store.' },
     { id = 'tasks', group = 'tasks', label = 'Daily Task', short = 'Task', icon = 'tasks',
+      tip = 'Go hunt: free teleport to the monster.',
       news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
     { id = 'trail', group = 'tasks', label = "Hunter's Trail", short = 'Trail', icon = 'trail',
+      tip = 'Go hunt: free teleport to the monster.',
       news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
     { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'rates',
+      tip = 'Every hunt, with a free TP.',
       news = 'Every hunt in one list: the XP and loot rate of each monster, which change every 2 hours, and a TP to its hunt every 30 seconds.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
@@ -32,9 +35,8 @@ local FEATURES = {
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
+      tip = 'New bonuses for your rare items.',
       news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
-    { id = 'incense', group = 'rarity', label = 'Incense', icon = 'incense',
-      news = 'Hunting incense: for an hour, more rare monsters and more Rarity XP. One a day, priced by your level.' },
     { id = 'ascensao', group = 'tools', label = 'Ascens\227o', short = 'Ascens\227o', icon = 'ascensao',
       news = 'Ascens\227o: from level 50 you earn 1 point every 10 levels for three paths of your vocation. The first circle of each path teaches one of the new aimed spells, and every circle makes it stronger, up to level 1500.' },
     { id = 'healbot', group = 'tools', label = 'Heal Bot', short = 'Bot', icon = 'healbot',
@@ -63,6 +65,8 @@ local states = {}
 local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
 local actions = {} -- row id -> { text, tooltip, enabled, callback }: a small button on the row
+local flags = {} -- row id -> { text, color }: a pill over the row's corner
+local highlights = {} -- row id -> true: the row's gold light breathes
 local sectors = {} -- section id -> section widget
 local vipHolder -- the VIP button's box in the bar
 
@@ -104,7 +108,13 @@ local function refreshBadge(id)
     local badge = button.badge
     local state = states[id]
     local feature = featureOf(id)
-    button:setTooltip(labels[id] and (tr(feature.label) .. ': ' .. labels[id]) or tr(feature.label))
+    -- "Roulette: Roulette" read as a mistake: the label only when it says more
+    local name = tr(feature.label)
+    local tooltip = (labels[id] and labels[id] ~= name) and (name .. ': ' .. labels[id]) or name
+    if feature.tip then
+        tooltip = tooltip .. '\n' .. tr(feature.tip)
+    end
+    button:setTooltip(tooltip)
     if state then
         badge:setText(state.text)
         badge:setColor(state.color)
@@ -271,6 +281,10 @@ function addFeature(id, callback)
         button.icon:setImageSource(iconPath(feature.icon))
         button.onClick = function() open(id) end
         buttons[id] = button
+        -- a flag set before the row was added
+        if flags[id] then
+            scheduleEvent(function() setFeatureFlag(id, flags[id] and flags[id].text, flags[id] and flags[id].color) end, 1)
+        end
         -- the feature module destroys its button on unload
         button.onDestroy = function()
             if buttons[id] == button then
@@ -444,6 +458,72 @@ end
 function setFeatureToggle(id, callback)
     toggles[id] = callback
     refreshBadge(id)
+end
+
+-- a small pill over the top right corner of a row (nil removes it), e.g. the
+-- best hunt rate over Teleports, or the spins the Roulette has
+function setFeatureFlag(id, text, color)
+    flags[id] = text and { text = text, color = color or '#d8483e' } or nil
+    local button = buttons[id]
+    if not button then
+        return
+    end
+    local flag = flags[id]
+    button.flag:setVisible(flag ~= nil)
+    if flag then
+        button.flag:setText(flag.text)
+        button.flag:setBackgroundColor(flag.color)
+        button.flag:raise()
+    end
+end
+
+-- a row that wants a click (the Hunter's Journey's next step): its gold light
+-- breathes until it is turned off
+local HIGHLIGHT_MS = 50
+local highlightEvent, highlightStart
+
+local function highlightTick()
+    highlightEvent = nil
+    if not next(highlights) then
+        return
+    end
+    -- one slow breath every 1.6 seconds
+    local t = (g_clock.millis() - highlightStart) / 1600
+    local opacity = 0.08 + 0.3 * (0.5 + 0.5 * math.sin(t * math.pi * 2))
+    for id in pairs(highlights) do
+        local button = buttons[id]
+        if button and not gainEvents[id] then
+            button.glow:show()
+            button.glow:setOpacity(opacity)
+        end
+    end
+    highlightEvent = scheduleEvent(highlightTick, HIGHLIGHT_MS)
+end
+
+function setFeatureHighlight(id, on)
+    on = on and true or nil
+    if highlights[id] == on then
+        return
+    end
+    highlights[id] = on
+    local button = buttons[id]
+    if not on and button and not gainEvents[id] then
+        button.glow:hide()
+    end
+    if on and not highlightEvent then
+        highlightStart = highlightStart or g_clock.millis()
+        highlightTick()
+    end
+end
+
+-- the row button of a feature (the tour points at it), or nil
+function getFeatureButton(id)
+    return buttons[id]
+end
+
+-- the bar itself (the tour points at it), or nil
+function getPanel()
+    return panel
 end
 
 -- ---------------------------------------------------------------- notices
@@ -758,6 +838,12 @@ function terminate()
         removeEvent(event)
     end
     gainEvents = {}
+    if highlightEvent then
+        removeEvent(highlightEvent)
+        highlightEvent = nil
+    end
+    highlights = {}
+    flags = {}
     buttons = {}
     callbacks = {}
     actions = {}

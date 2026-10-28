@@ -149,6 +149,12 @@ local function onPositionChange(creature)
     end
 end
 
+-- the teleports with a name ({ pos = {x, y, z}, text }): the Hunter's Journey
+-- (game_journey) notices the player next to the one of the hunts
+function getLabels()
+    return labels
+end
+
 local tick
 local function loop()
     refresh()

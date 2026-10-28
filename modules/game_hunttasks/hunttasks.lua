@@ -624,14 +624,14 @@ function updateBarTeleports()
         barTeleportEvent = nil
     end
     local left = teleportReadyAt - os.time()
-    local text = left > 0 and string.format('%d:%02d', math.floor(left / 60), left % 60) or tr('Teleportar')
+    local text = left > 0 and string.format('%d:%02d', math.floor(left / 60), left % 60) or tr('Go hunt')
     local tooltip = tr('Leva você direto para a hunt deste monstro, de graça. Só fora de combate (em área protegida ou sem battle), uma vez a cada 2 minutos.')
     local daily = state and state.daily
     local dailyOn = state and state.teleportDaily and daily and daily.monster and not daily.done
     local trail = state and state.trail
     local trailOn = state and state.teleportTrail and trail and not trail.finished
     -- on a bar short of room
-    local short = left > 0 and text or 'TP'
+    local short = left > 0 and text or tr('Hunt')
     panel.setFeatureAction('tasks', dailyOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'daily' }) end, left <= 0, short)
     panel.setFeatureAction('trail', trailOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'trail' }) end, left <= 0, short)
     if left > 0 and (dailyOn or trailOn) then
@@ -639,7 +639,24 @@ function updateBarTeleports()
     end
 end
 
+-- the task the Hunter's Journey shows (game_journey), and its teleport
+function getState()
+    return state
+end
+
+function teleport(which)
+    send({ action = 'teleport', which = which })
+end
+
+-- when the task teleport is ready again (the tour sees it used)
+function getTeleportReadyAt()
+    return teleportReadyAt
+end
+
 local function updateBadge()
+    if modules.game_journey and modules.game_journey.onTaskState then
+        modules.game_journey.onTaskState(state)
+    end
     local panel = modules.game_brevespanel
     if not panel or not panel.setFeatureLabel then
         return

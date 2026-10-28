@@ -312,7 +312,11 @@ end
 
 -- a refusal of the server, for a few seconds where the page count goes
 local function showTpMessage(text)
-    if not window then
+    -- a TP asked from outside the list (the Hunter's Journey card)
+    if not window or not window:isVisible() then
+        if modules.game_textmessage and modules.game_textmessage.displayFailureMessage then
+            modules.game_textmessage.displayFailureMessage(text)
+        end
         return
     end
     local label = window.ratesPanel.pageLabel
@@ -335,6 +339,17 @@ local function teleportTo(name, option)
         return
     end
     send({ action = 'teleport', name = name, option = option })
+end
+
+-- a hunt teleport asked from another window (the Hunter's Journey card);
+-- returns the seconds left to wait, 0 when it was sent
+function teleportToHunt(name)
+    local left = tpReadyAt - os.time()
+    if left > 0 then
+        return left
+    end
+    send({ action = 'teleport', name = name })
+    return 0
 end
 
 -- a hunt of the menu: "2. Near Ventera  -  floor -4  -  346 spawns"
@@ -717,6 +732,11 @@ local function pointNewRates()
     if g_settings.getNumber(SEEN_KEY) == rates.slot then
         return
     end
+    -- the tour and the Hunter's Journey card already point at the hunts
+    local tour, journey = modules.game_tutorial, modules.game_journey
+    if (tour and tour.isRunning and tour.isRunning()) or (journey and journey.isShowingCard and journey.isShowingCard()) then
+        return
+    end
     local best
     for _, monster in ipairs(rates.monsters) do
         if monster.tp > 0 and (not best or monster.xp + monster.loot > best.xp + best.loot) then
@@ -782,6 +802,17 @@ function handlers.rates(data)
         applyFilters()
     end
     pointNewRates()
+    -- the best rate of the roll over the Teleports row
+    local panel = modules.game_brevespanel
+    if panel and panel.setFeatureFlag then
+        local best = 0
+        for _, monster in ipairs(rates.monsters) do
+            if monster.tp > 0 then
+                best = math.max(best, monster.xp)
+            end
+        end
+        panel.setFeatureFlag('rates', best > 10 and string.format('x%.1f', best / 10) or nil, '#c8541c')
+    end
 end
 
 function handlers.board(data)
