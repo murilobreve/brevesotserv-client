@@ -11,7 +11,7 @@ BonusFrame < UIWidget
     virtual: true
     phantom: true
 
-// one rarity item: frame, name, grade and slot, then its bonuses
+// one rarity item: frame, name, who found it, then its bonuses
 BonusItemRow < BrevesRow
   focusable: false
   padding: 3
@@ -63,20 +63,26 @@ BonusItemRow < BrevesRow
     height: 14
     phantom: true
 
+  // found by the player (its bonuses +finderPercent on them) or not
   Label
-    id: info
+    id: finder
     anchors.top: name.bottom
     anchors.left: name.left
-    anchors.right: rerollItemButton.left
-    margin-top: 2
+    margin-top: 1
     height: 14
+    text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #ab9fc6
     phantom: true
+
+  BonusInfo
+    id: finderInfo
+    anchors.left: finder.right
+    anchors.verticalCenter: finder.verticalCenter
+    margin-left: 5
 
   Panel
     id: bonuses
-    anchors.top: info.bottom
+    anchors.top: finder.bottom
     anchors.left: name.left
     anchors.right: rerollItemButton.left
     margin-top: 3
@@ -84,21 +90,6 @@ BonusItemRow < BrevesRow
     layout:
       type: verticalBox
       spacing: 2
-
-  // how keeping a bonus works, under the bonuses of an item that can
-  Label
-    id: keepHint
-    anchors.top: bonuses.bottom
-    anchors.left: name.left
-    anchors.right: rerollItemButton.left
-    margin-top: 3
-    margin-right: 8
-    height: 40
-    text-wrap: true
-    font: verdana-11px-monochrome
-    color: #8f84a8
-    phantom: true
-    visible: false
 
 // reroll / change button: Store look, an icon and the price
 BonusActionButton < MythosButton
@@ -280,30 +271,26 @@ BonusTotalRow < BrevesRow
     color: #ab9fc6
     phantom: true
 
-// one line of the guide under the lists: a word in gold, what it does
-RarityGuideLine < UIWidget
-  height: 14
+// a column title over the items and its (i), centred in its box
+RarityColumnTitle < UIWidget
+  height: 20
   phantom: true
 
   Label
-    id: key
-    anchors.top: parent.top
-    anchors.left: parent.left
-    width: 118
-    font: verdana-11px-antialised
-    color: #e2a443
-    phantom: true
-
-  Label
-    id: text
-    anchors.top: parent.top
-    anchors.left: key.right
-    anchors.right: parent.right
-    text-wrap: true
+    id: title
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: -9
     text-auto-resize: true
     font: verdana-11px-antialised
     color: #b4afc3
     phantom: true
+
+  BonusInfo
+    id: info
+    anchors.left: title.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
 
 BonusTotalRowEven < BonusTotalRow
   background-color: #ffffff07
@@ -311,7 +298,7 @@ BonusTotalRowEven < BonusTotalRow
 MythosWindow
   id: rarityBonusWindow
   !text: tr('Rarity Bonuses')
-  size: 900 610
+  size: 900 560
   @onEscape: modules.game_raritybonus.hide()
 
   Label
@@ -355,17 +342,54 @@ MythosWindow
     width: 500
     !text: tr('Rarity items you wear')
 
+    // the columns of the rows below, each with its (i): the bonuses, Keep,
+    // Reroll and Raise (boxes over those columns, see BonusItemRow)
+    BrevesHeader
+      id: itemsHeader
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: itemsScroll.left
+
+      RarityColumnTitle
+        id: bonusesTitle
+        anchors.left: parent.left
+        anchors.top: parent.top
+        margin-left: 49
+        width: 62
+
+      RarityColumnTitle
+        id: keepTitle
+        anchors.right: parent.right
+        anchors.top: parent.top
+        margin-right: 149
+        width: 74
+
+      RarityColumnTitle
+        id: raiseTitle
+        anchors.right: parent.right
+        anchors.top: parent.top
+        margin-right: 5
+        width: 64
+
+      RarityColumnTitle
+        id: rerollTitle
+        anchors.right: raiseTitle.left
+        anchors.top: parent.top
+        width: 72
+
     BrevesList
       id: itemsList
-      anchors.top: parent.top
+      anchors.top: itemsHeader.bottom
       anchors.left: parent.left
       anchors.right: itemsScroll.left
       anchors.bottom: parent.bottom
       vertical-scrollbar: itemsScroll
 
+    // under the header (which ends where the scroll bar starts)
     MythosScrollBar
       id: itemsScroll
       anchors.top: parent.top
+      margin-top: 20
       anchors.bottom: parent.bottom
       anchors.right: parent.right
       step: 30
@@ -391,6 +415,14 @@ MythosWindow
     margin-bottom: 8
     !text: tr('Total of each bonus')
 
+    // (i) next to the title: MAX, the bar and the check (placed in Lua, after
+    // the centred title)
+    BonusInfo
+      id: titleInfo
+      anchors.top: parent.top
+      anchors.horizontalCenter: parent.horizontalCenter
+      margin-top: -22
+
     BrevesList
       id: totalsList
       anchors.top: parent.top
@@ -411,21 +443,8 @@ MythosWindow
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.bottom: guide.top
+    anchors.bottom: closeButton.top
     margin-bottom: 6
-
-  // how the Roulette works, one line per button (fillGuide)
-  UIWidget
-    id: guide
-    anchors.left: parent.left
-    anchors.right: refreshButton.left
-    anchors.bottom: parent.bottom
-    margin-right: 14
-    height: 80
-    phantom: true
-    layout:
-      type: verticalBox
-      spacing: 3
 
   MythosButton
     id: refreshButton
