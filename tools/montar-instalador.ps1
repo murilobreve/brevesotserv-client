@@ -61,9 +61,52 @@ if (-not $iscc) {
 }
 
 Write-Host ""
-Write-Host "Montando o instalador $saida.exe (versao $versao)"
-& $iscc /Q "/DFonte=$Pasta" "/DExe=$exe" "/DCanal=$Canal" "/DVersao=$versao" "/DSaida=$saida" (Join-Path $Raiz "installer\mythos.iss")
-if ($LASTEXITCODE -ne 0) { Write-Host "ERRO: o Inno Setup falhou" -ForegroundColor Red; exit 1 }
+Write-Host "Montando o instalador $saida.exe (versao $versao, pode levar alguns minutos)"
+
+# o Inno Setup so diz "the system cannot find the path specified", sem dizer
+# qual: antes dele, cada caminho que o mythos.iss abre (o antivirus ja tirou
+# arquivos destas pastas)
+$iss = Join-Path $Raiz "installer\mythos.iss"
+$pastaInno = Split-Path -Parent $iscc
+$precisa = @(
+    $Pasta,
+    (Join-Path $Pasta $exe),
+    $iss,
+    (Join-Path $Raiz "installer\wizard.bmp"),
+    (Join-Path $Raiz "installer\wizard@2x.bmp"),
+    (Join-Path $Raiz "installer\wizard-small.bmp"),
+    (Join-Path $Raiz "installer\wizard-small@2x.bmp"),
+    (Join-Path $Raiz "cmake\icon\otcicon.ico"),
+    $Dist,
+    (Join-Path $pastaInno "Default.isl"),
+    (Join-Path $pastaInno "Languages\BrazilianPortuguese.isl"),
+    $env:TEMP
+)
+$faltam = @($precisa | Where-Object { -not $_ -or -not (Test-Path -LiteralPath $_) })
+if ($faltam.Count -gt 0) {
+    Write-Host "ERRO: o instalador precisa destes caminhos, que nao existem:" -ForegroundColor Red
+    $faltam | ForEach-Object { Write-Host "  $_" }
+    Write-Host "  (veja a quarentena do antivirus, ou reinstale o Inno Setup 6)"
+    exit 1
+}
+
+# a saida inteira vai para dist\instalador.log; numa falha, o fim dela aparece
+# aqui (o arquivo que ele estava lendo e o erro)
+$log = Join-Path $Dist "instalador.log"
+$argumentos = @("/DFonte=$Pasta", "/DExe=$exe", "/DCanal=$Canal", "/DVersao=$versao", "/DSaida=$saida", $iss)
+$antes = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$saidaInno = @(& $iscc @argumentos 2>&1 | ForEach-Object { "$_" })
+$codigo = $LASTEXITCODE
+$ErrorActionPreference = $antes
+[System.IO.File]::WriteAllLines($log, [string[]]$saidaInno)
+if ($codigo -ne 0) {
+    Write-Host "ERRO: o Inno Setup falhou (codigo $codigo). O fim do que ele disse:" -ForegroundColor Red
+    $saidaInno | Select-Object -Last 25 | ForEach-Object { Write-Host "  $_" }
+    Write-Host "  comando: `"$iscc`" $($argumentos -join ' ')"
+    Write-Host "  tudo em: $log"
+    exit 1
+}
 $setup = Join-Path $Dist "$saida.exe"
 Info ("instalador: {0} ({1} MB)" -f $setup, [math]::Round((Get-Item $setup).Length / 1MB, 1))
 
