@@ -265,7 +265,7 @@ MythosWindow
     margin-left: 8
     size: 130 22
     !text: tr('Buy Rarity XP')
-    !tooltip: tr('Opens the Store on the Rarity category, where Rarity XP is sold.')
+    !tooltip: tr('Buy Rarity XP here, with Mythos Coins or Hunt Points.')
     @onClick: modules.game_raritybonus.buyRarityXp()
 
   MythosPrimaryButton
