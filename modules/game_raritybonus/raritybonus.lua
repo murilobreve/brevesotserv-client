@@ -73,12 +73,33 @@ end
 
 -- what a bonus does: the server's sentence (desc, with descArgs), translated;
 -- nil when the server sent none
+-- a tooltip in lines of about `width` letters: the client draws it as it
+-- comes, and one long line runs off the screen
+local function wrapTip(text, width)
+    width = width or 56
+    local paragraphs = {}
+    for paragraph in (text .. '\n'):gmatch('(.-)\n') do
+        local lines, line = {}, ''
+        for word in paragraph:gmatch('%S+') do
+            if line ~= '' and #line + 1 + #word > width then
+                table.insert(lines, line)
+                line = word
+            else
+                line = line == '' and word or (line .. ' ' .. word)
+            end
+        end
+        table.insert(lines, line)
+        table.insert(paragraphs, table.concat(lines, '\n'))
+    end
+    return table.concat(paragraphs, '\n')
+end
+
 local function describe(entry)
     if type(entry) ~= 'table' or type(entry.desc) ~= 'string' or entry.desc == '' then
         return nil
     end
     local args = type(entry.descArgs) == 'table' and entry.descArgs or {}
-    return tr(entry.desc, unpack(args))
+    return wrapTip(tr(entry.desc, unpack(args)))
 end
 
 -- the totals carry each bonus's sentence; the items' bonus lines look it up
@@ -140,6 +161,7 @@ local function setRerollState(row)
 end
 
 local lastItems
+local lastFinderPercent = 0 -- how much more the finder gets (the server says)
 
 function fillItems(items)
     lastItems = items
@@ -160,14 +182,18 @@ function fillItems(items)
         end
         row.name:setText(titleCase(entry.name or ''))
         row.name:setColor(grade.color)
-        local info = tr(entry.slot or '') .. '  ' .. grade.label
-        if (entry.level or 0) > 0 then
-            info = info .. '  ' .. tr('level %d', entry.level)
-        end
+        -- who found it: the finder gets more of every bonus
+        local finderPercent = lastFinderPercent or 0
         if entry.finder then
-            info = info .. '  ' .. tr('found by you')
+            row.finder:setText(finderPercent > 0 and tr('Found by you  +%d%%', finderPercent) or tr('Found by you'))
+            row.finder:setColor('#7fd35a')
+            row.finderInfo:setTooltip(wrapTip(tr('Whoever finds an item gets +%d%% on all its bonuses while wearing it. The numbers here already include it.', finderPercent)))
+        else
+            row.finder:setText(tr('Not found by you'))
+            row.finder:setColor('#8f84a8')
+            row.finderInfo:setTooltip(wrapTip(tr('Only whoever finds an item gets +%d%% on its bonuses. You did not find this one, so its numbers are the plain ones.', finderPercent)))
         end
-        row.info:setText(info)
+        row.finderInfo:setVisible(finderPercent > 0)
         local count = 0
         local lockable = (entry.lockCost or 0) > 0
         -- a kept bonus the item no longer has (rerolled elsewhere) is dropped
@@ -178,7 +204,6 @@ function fillItems(items)
         if not kept then
             locks[entry.slotId] = nil
         end
-        local keptBonus
         for _, bonus in ipairs(entry.bonuses or {}) do
             count = count + 1
             local line = g_ui.createWidget('BonusLine', row.bonuses)
@@ -204,7 +229,6 @@ function fillItems(items)
                     or tr('Keep this bonus with its value on the next reroll: only the others are rolled again. %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
                 -- the whole line lights up, so a kept bonus is never missed
                 if locked then
-                    keptBonus = bonus
                     line:setBackgroundColor('#e0c06024')
                     line:setBorderWidth(1)
                     line:setBorderColor('#e0c06070')
@@ -222,17 +246,6 @@ function fillItems(items)
                     end
                     fillItems(lastItems or {})
                 end
-            end
-        end
-        -- under the bonuses: what keeping one does, or what is kept
-        row.keepHint:setVisible(lockable)
-        if lockable then
-            if keptBonus then
-                row.keepHint:setText(tr('The next Reroll keeps %s and rolls only the others (+%s gold).', bonusText(keptBonus), formatGold(entry.lockCost)))
-                row.keepHint:setColor('#e0c060')
-            else
-                row.keepHint:setText(tr('Like a bonus? Press Keep on it: the next Reroll keeps it and rolls only the others (+%s gold).', formatGold(entry.lockCost)))
-                row.keepHint:setColor('#8f84a8')
             end
         end
         local cost = entry.rerollCost or 0
@@ -273,10 +286,51 @@ function fillItems(items)
         end
         local linesHeight = count * 20
         row.bonuses:setHeight(linesHeight)
-        local hintHeight = lockable and (3 + row.keepHint:getHeight()) or 0
         -- the upgrade's price line under the two buttons needs a little more
-        row:setHeight(math.max(entry.upgrade and 60 or 48, 3 + 15 + 16 + 3 + linesHeight + hintHeight + 6))
+        row:setHeight(math.max(entry.upgrade and 60 or 48, 3 + 15 + 15 + 3 + linesHeight + 6))
     end
+end
+
+-- How the Roulette works, on hover: the (i) of each column title over the
+-- items, and the (i) of the totals' title
+local COLUMN_TITLES = {
+    { id = 'bonusesTitle', title = 'Bonuses', tip = 'The colour says if the rolled value was good: green is common, blue is good, purple is very good, orange is near the maximum and gold is perfect. The (i) of each bonus says what it does.' },
+    { id = 'keepTitle', title = 'Keep', tip = 'Locks one bonus with its value: the next Reroll keeps it and rolls only the others. It costs gold on top of the Rarity XP, one bonus per item.' },
+    { id = 'rerollTitle', title = 'Reroll', tip = 'Rolls the whole item again with Rarity XP: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back.\n\nFewer bonuses come stronger: a single bonus gets all the strength. The item, its grade and who found it stay.' },
+    { id = 'raiseTitle', title = 'Raise', tip = 'Raises the item one grade for gold and Rarity XP, with the chance shown on the button. On a success it rolls new, stronger bonuses at the new grade; on a failure it stays as it was and the cost is spent.' },
+}
+
+local function fillTitles()
+    local header = window.itemsSection.itemsHeader
+    for _, column in ipairs(COLUMN_TITLES) do
+        local widget = header[column.id]
+        widget.title:setText(tr(column.title))
+        widget.info:setTooltip(wrapTip(tr(column.tip)))
+    end
+    -- the totals' (i) right after their centred title
+    local section = window.totalsSection
+    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe name takes the colour the bonus has on its best item.')))
+    section.titleInfo:setMarginLeft(math.floor(section:getTextSize().width / 2) + 14)
+end
+
+-- a bonus's colour on the right is the one it has on the items on the left
+-- (how good its roll is: blue, purple, orange near the top, light gold when
+-- perfect, green below); from several items, the best of them
+local QUALITY_RANK = { ['#4f8fe8'] = 1, ['#a679e6'] = 2, ['#e2a443'] = 3, ['#ffe7a6'] = 4 }
+local PLAIN_BONUS_COLOR = '#7fd35a' -- BonusLine's own colour
+
+local function bonusColor(entry, items)
+    local best, bestRank = nil, 0
+    for _, source in ipairs(entry.sources or {}) do
+        local item = items[source.item]
+        for _, bonus in ipairs(item and item.bonuses or {}) do
+            local rank = bonus.key == entry.key and QUALITY_RANK[bonus.color or ''] or 0
+            if rank > bestRank then
+                best, bestRank = bonus.color, rank
+            end
+        end
+    end
+    return best or PLAIN_BONUS_COLOR
 end
 
 local function fillTotals(totals, items)
@@ -286,21 +340,53 @@ local function fillTotals(totals, items)
         local row = g_ui.createWidget(index % 2 == 0 and 'BonusTotalRowEven' or 'BonusTotalRow', list)
         -- bonus names stay as the items and the wiki write them
         row.label:setText(entry.label)
+        local color = bonusColor(entry, items)
+        row.label:setColor(color)
         local desc = describe(entry)
         row.info:setVisible(desc ~= nil)
         if desc then
             row.info:setTooltip(desc)
         end
+        -- a bonus with a limit shows the limit here (MAX) and the total on its
+        -- bar below; one without, its total
+        local cap = (not entry.perItem) and tonumber(entry.cap) or nil
+        if cap and cap <= 0 then
+            cap = nil
+        end
         local total = '+' .. number(entry.total) .. (entry.unit or '')
         if entry.perItem then
             total = total .. ' ' .. tr('(on each item)')
-        elseif entry.cap then
-            total = total .. ' / ' .. number(entry.cap) .. (entry.unit or '')
         end
-        row.total:setText(total)
-        row.total:setColor(entry.capped and '#e2a443' or '#7fd35a')
+        row.total:setText(cap and tr('MAX: %s', number(cap) .. (entry.unit or '')) or total)
+        row.total:setColor(color)
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
+        end
+        -- the bar from 0 to the limit, the total at its end; full, a green check
+        local meter = row.meter
+        local meterHeight = 0
+        if cap then
+            local share = math.min(1, (tonumber(entry.total) or 0) / cap)
+            local full = entry.capped or share >= 1
+            meter:show()
+            meter.low:setText('0' .. (entry.unit or ''))
+            meter.high:setText(number(entry.total) .. (entry.unit or ''))
+            meter.high:setVisible(not full)
+            meter.check:setVisible(full)
+            meter.bar.fill:setBackgroundColor(full and '#7fd35a' or '#63c08a')
+            meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))
+            meterHeight = 4 + meter:getHeight()
+            -- the bar's width is known once the row is laid out
+            scheduleEvent(function()
+                if not meter:isDestroyed() then
+                    local inner = meter.bar:getWidth() - 2
+                    meter.bar.fill:setWidth(math.max(share > 0 and 1 or 0, math.floor(inner * share)))
+                end
+            end, 1)
+        else
+            meter:hide()
+            meter:setHeight(0)
+            meter:setMarginTop(0)
         end
         local lines = {}
         for _, source in ipairs(entry.sources or {}) do
@@ -311,7 +397,7 @@ local function fillTotals(totals, items)
         end
         row.sources:setText(table.concat(lines, '\n'))
         row.sources:setHeight(#lines * LINE)
-        row:setHeight(3 + 14 + 2 + #lines * LINE + 5)
+        row:setHeight(3 + 14 + meterHeight + 3 + #lines * LINE + 5)
     end
 end
 
@@ -667,14 +753,10 @@ applyBonuses = function(data)
     for _, entry in ipairs(data.totals or {}) do
         bonusDescs[entry.key or ''] = entry
     end
+    lastFinderPercent = tonumber(data.finderPercent) or lastFinderPercent
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
-    local note = tr('Each item shows its own bonuses; on the right, the total you get of each one and the items it comes from.') .. ' ' ..
-        tr('A percent bonus on several items is combined: each one works on what the others leave. Orange: the bonus is at its limit.')
-    if (data.finderPercent or 0) > 0 then
-        note = note .. ' ' .. tr('Items you found yourself are %d%% stronger on you; the numbers here already include that.', data.finderPercent)
-    end
-    window.note:setText(note)
+    fillTitles()
     if not window:isVisible() then
         window:show()
         window:raise()
