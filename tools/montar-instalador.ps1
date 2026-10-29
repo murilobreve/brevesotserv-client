@@ -68,6 +68,15 @@ Write-Host "Montando o instalador $saida.exe (versao $versao, pode levar alguns 
 # arquivos destas pastas)
 $iss = Join-Path $Raiz "installer\mythos.iss"
 $pastaInno = Split-Path -Parent $iscc
+$doGit = @("installer\mythos.iss", "installer\wizard.bmp", "installer\wizard@2x.bmp", "installer\wizard-small.bmp", "installer\wizard-small@2x.bmp", "cmake\icon\otcicon.ico")
+if (@($doGit | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Raiz $_)) }).Count -gt 0) {
+    # a pasta installer ja sumiu do PC (antivirus): volta com a do git
+    Info "a pasta installer sumiu: voltando com a do git"
+    $antes = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    git -C $Raiz checkout -- installer cmake/icon 2>&1 | Out-Null
+    $ErrorActionPreference = $antes
+}
 $precisa = @(
     $Pasta,
     (Join-Path $Pasta $exe),

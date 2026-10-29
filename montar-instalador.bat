@@ -14,6 +14,8 @@ if not exist "tools\montar-instalador.ps1" (
     echo   git checkout -- tools/montar-instalador.ps1
     goto :falhou
 )
+rem a pasta installer tambem ja sumiu do mesmo jeito
+if not exist "installer\mythos.iss" git checkout -- installer
 
 if /i "%~1"=="opengl" (
     powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\tools\montar-instalador.ps1" -Canal opengl
