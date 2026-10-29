@@ -1154,6 +1154,8 @@ locale = {
     ["%s of %s"] = "%s de %s",
     ["Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing."] = "Cada bônus: o MAX (o limite) e uma barra com quanto você tem dele. Barra cheia, com o check verde: chegou no MAX, e mais dele em outro item não conta.",
     ["MAX: %s"] = "MAX: %s",
+    ["Colours"] = "Cores",
+    ["How good the rolled value is on its item: green, then blue, purple, orange near the top and light gold when perfect. On the right, each total takes the colour of its best item."] = "Quão bom é o valor sorteado no item: verde, depois azul, roxo, laranja perto do máximo e dourado claro quando é perfeito. À direita, cada total fica com a cor do seu melhor item.",
   }
 }
 

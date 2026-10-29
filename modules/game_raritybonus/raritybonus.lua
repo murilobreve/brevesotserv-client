@@ -286,6 +286,7 @@ local GUIDE = {
     { key = 'Keep (gold)', text = 'Locks one bonus with its value: the next Reroll rolls only the others.' },
     { key = 'Raise the grade', text = 'Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent).' },
     { key = 'Fewer is more', text = 'The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one.' },
+    { key = 'Colours', text = 'How good the rolled value is on its item: green, then blue, purple, orange near the top and light gold when perfect. On the right, each total takes the colour of its best item.' },
     { key = 'Total (right)', text = 'Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing.' },
 }
 
@@ -316,6 +317,26 @@ function fillGuide(finderPercent)
     end, 1)
 end
 
+-- a bonus's colour on the right is the one it has on the items on the left
+-- (how good its roll is: blue, purple, orange near the top, light gold when
+-- perfect, green below); from several items, the best of them
+local QUALITY_RANK = { ['#4f8fe8'] = 1, ['#a679e6'] = 2, ['#e2a443'] = 3, ['#ffe7a6'] = 4 }
+local PLAIN_BONUS_COLOR = '#7fd35a' -- BonusLine's own colour
+
+local function bonusColor(entry, items)
+    local best, bestRank = nil, 0
+    for _, source in ipairs(entry.sources or {}) do
+        local item = items[source.item]
+        for _, bonus in ipairs(item and item.bonuses or {}) do
+            local rank = bonus.key == entry.key and QUALITY_RANK[bonus.color or ''] or 0
+            if rank > bestRank then
+                best, bestRank = bonus.color, rank
+            end
+        end
+    end
+    return best or PLAIN_BONUS_COLOR
+end
+
 local function fillTotals(totals, items)
     local list = window.totalsSection.totalsList
     list:destroyChildren()
@@ -323,6 +344,8 @@ local function fillTotals(totals, items)
         local row = g_ui.createWidget(index % 2 == 0 and 'BonusTotalRowEven' or 'BonusTotalRow', list)
         -- bonus names stay as the items and the wiki write them
         row.label:setText(entry.label)
+        local color = bonusColor(entry, items)
+        row.label:setColor(color)
         local desc = describe(entry)
         row.info:setVisible(desc ~= nil)
         if desc then
@@ -339,7 +362,7 @@ local function fillTotals(totals, items)
             total = total .. ' ' .. tr('(on each item)')
         end
         row.total:setText(cap and tr('MAX: %s', number(cap) .. (entry.unit or '')) or total)
-        row.total:setColor(cap and '#b4afc3' or (entry.capped and '#e2a443' or '#7fd35a'))
+        row.total:setColor(color)
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
         end
@@ -352,6 +375,7 @@ local function fillTotals(totals, items)
             meter:show()
             meter.low:setText('0' .. (entry.unit or ''))
             meter.high:setText(number(entry.total) .. (entry.unit or ''))
+            meter.high:setVisible(not full)
             meter.check:setVisible(full)
             meter.bar.fill:setBackgroundColor(full and '#7fd35a' or '#63c08a')
             meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))
