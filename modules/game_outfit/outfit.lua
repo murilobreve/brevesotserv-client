@@ -150,11 +150,204 @@ end
 local AppearanceData = { "preset", "outfit", "mount", "familiar", "wings", "aura", "effects", "shader", "healthBar",
     "title" }
 
+-- ---------------------------------------------------------------- Store outfits
+-- The Store's outfits show their price on the card (a coin and the amount)
+-- and are bought right here: the bar at the bottom while one is selected, or
+-- Ok on it (server: scripts/outfit_shop/outfit_shop.lua, extended opcode
+-- 137). Short of coins, Buy offers the site's coins page instead.
+
+local SHOP_OPCODE = 137
+local storePrices = {} -- lookType -> { price, name }
+local storeCoins = 0
+local shopBox = nil
+
+local function sendShop(data)
+    local protocol = g_game.getProtocolGame()
+    if protocol then
+        protocol:sendExtendedJSONOpcode(SHOP_OPCODE, data)
+    end
+end
+
+local function closeShopBox()
+    if shopBox then
+        shopBox:destroy()
+        shopBox = nil
+    end
+end
+
+local function askShop(title, message, onYes)
+    closeShopBox()
+    shopBox = displayGeneralBox(title, message, {
+        { text = tr('Yes'), callback = function() closeShopBox(); onYes() end },
+        { text = tr('No'), callback = closeShopBox },
+        anchor = AnchorHorizontalCenter,
+    }, function() closeShopBox(); onYes() end, closeShopBox)
+end
+
+local function tellShop(message)
+    closeShopBox()
+    shopBox = displayInfoBox(tr('Buy outfit'), message)
+    shopBox.onDestroy = function() shopBox = nil end
+end
+
+local function openCoinsSite()
+    local url = Services and Services.getCoinsUrl or ''
+    if url ~= '' then
+        g_platform.openUrl(url)
+    end
+end
+
+local function outfitEntry(lookType)
+    for _, outfitData in ipairs(ServerData.outfits or {}) do
+        if outfitData[1] == lookType then
+            return outfitData
+        end
+    end
+    return nil
+end
+
+-- a Store outfit the player does not have yet: its price
+local function forSale(lookType)
+    local outfitData = lookType and outfitEntry(lookType)
+    if outfitData and outfitData[4] == statesOutft.store then
+        return storePrices[lookType]
+    end
+    return nil
+end
+
+local function showingOutfits()
+    return window and window.selectionList.onChildFocusChange == onOutfitSelect
+end
+
+local function setPriceTag(button)
+    if button.priceTag then
+        button.priceTag:destroy()
+        button.priceTag = nil
+    end
+    local offer = forSale(tonumber(button:getId()))
+    if offer then
+        local tag = g_ui.createWidget('OutfitPriceTag', button)
+        tag.price:setText(offer.price)
+        tag:setWidth(3 + 12 + 3 + tag.price:getWidth() + 4)
+        button.priceTag = tag
+    end
+end
+
+-- the bar follows the selected outfit: its price and Buy, or that it was
+-- just bought
+local function updateBuyBar()
+    local bar = window and window.buyBar
+    if not bar then
+        return
+    end
+    local focused = showingOutfits() and window.selectionList:getFocusedChild()
+    local lookType = focused and tonumber(focused:getId())
+    local offer = forSale(lookType)
+    bar.lookType = offer and lookType or nil
+    if offer then
+        bar.coin:show()
+        bar.buyButton:show()
+        bar.price:setText(offer.price)
+        bar.text:setColor('#dfdfdf')
+        bar.text:setText(offer.name)
+        bar.have:setText(tr('you have %d coins', storeCoins))
+        bar.have:setColor(storeCoins >= offer.price and '#9a9a9a' or '#e06c6c')
+        bar:show()
+    elseif lookType and lookType == bar.bought then
+        bar.coin:hide()
+        bar.buyButton:hide()
+        bar.price:setText('')
+        bar.text:setColor('#7ed67e')
+        bar.text:setText(tr('Yours now! Press Ok to wear it.'))
+        bar.have:setText('')
+        bar:show()
+    else
+        bar:hide()
+    end
+end
+
+local function askCoins(offer)
+    askShop(tr('Mythos Coins'), tr('The %s costs %d Mythos Coins and you have %d.\n\nOpen the site to get more coins?', offer.name, offer.price, storeCoins), openCoinsSite)
+end
+
+local function buyOutfit(lookType)
+    local offer = forSale(lookType)
+    if not offer then
+        return false
+    end
+    if storeCoins < offer.price then
+        askCoins(offer)
+    else
+        askShop(tr('Buy outfit'), tr('Buy the %s for %d Mythos Coins?\n\nYou have %d coins.', offer.name, offer.price, storeCoins), function()
+            sendShop({ action = 'buy', lookType = lookType })
+        end)
+    end
+    return true
+end
+
+local SHOP_ERRORS = {
+    owned = 'You already have this outfit.',
+    offer = 'This outfit is not sold in the Store.',
+}
+
+local function onShopMessage(protocol, opcode, data)
+    if type(data) ~= 'table' then
+        return
+    end
+    storeCoins = tonumber(data.coins) or storeCoins
+    if data.action == 'prices' then
+        storePrices = {}
+        for _, entry in ipairs(data.outfits or {}) do
+            local lookType = tonumber(entry.lookType)
+            if lookType then
+                storePrices[lookType] = { price = tonumber(entry.price) or 0, name = tostring(entry.name or '') }
+            end
+        end
+        if showingOutfits() then
+            for _, child in ipairs(window.selectionList:getChildren()) do
+                setPriceTag(child)
+            end
+        end
+        updateBuyBar()
+    elseif data.action == 'result' then
+        local lookType = tonumber(data.lookType)
+        if data.ok then
+            -- the outfit is the player's now: an ordinary card, ready to wear
+            local outfitData = lookType and outfitEntry(lookType)
+            if outfitData then
+                outfitData[4] = statesOutft.available
+                outfitData[3] = tonumber(data.addons) or outfitData[3]
+            end
+            if window and window.buyBar then
+                window.buyBar.bought = lookType
+            end
+            local button = showingOutfits() and window.selectionList:getChildById(tostring(lookType))
+            if button then
+                button.state = statesOutft.available
+                button:setImageSource('/images/ui/button-grey-qt')
+                setPriceTag(button)
+                if button:isFocused() and outfitData then
+                    configureAddons(outfitData[3])
+                end
+            end
+            updateBuyBar()
+        elseif data.code == 'coins' then
+            local offer = storePrices[lookType]
+            if offer then
+                askCoins(offer)
+            end
+        else
+            tellShop(tr(SHOP_ERRORS[data.code] or 'Something went wrong: nothing was bought.'))
+        end
+    end
+end
+
 function init()
     connect(g_game, {
         onOpenOutfitWindow = create,
         onGameEnd = destroy
     })
+    ProtocolGame.registerExtendedJSONOpcode(SHOP_OPCODE, onShopMessage)
 end
 
 function terminate()
@@ -162,6 +355,7 @@ function terminate()
         onOpenOutfitWindow = create,
         onGameEnd = destroy
     })
+    pcall(ProtocolGame.unregisterExtendedJSONOpcode, SHOP_OPCODE)
     destroy()
 end
 
@@ -518,9 +712,18 @@ function create(player, outfitList, creatureMount, mountList, familiarList, wing
     previewCreature:getCreature():setDirection(2)
     window.listSearch.search.onKeyPress = onFilterSearch
     window.listSearch.onlyMine.onCheckChange = onFilterOnlyMine
+
+    local buyBar = g_ui.createWidget('OutfitBuyBar', window)
+    buyBar.buyButton.onClick = function()
+        if buyBar.lookType then
+            buyOutfit(buyBar.lookType)
+        end
+    end
+    sendShop({ action = 'prices' })
 end
 
 function destroy()
+    closeShopBox()
     if window then
         floor = nil
         movementCheck = nil
@@ -801,6 +1004,7 @@ function onAppearanceChange(widget, selectedWidget)
     elseif id == "title" then
         showTitle()
     end
+    updateBuyBar()
 end
 
 function showPresets()
@@ -895,6 +1099,9 @@ function showOutfits()
             if state ~= statesOutft.available then
                 button:setImageSource("/images/ui/button-blue-qt")
             end
+            if state == statesOutft.store then
+                setPriceTag(button)
+            end
         end
 
         button.name:setText(outfitData[2])
@@ -917,6 +1124,7 @@ function showOutfits()
     window.selectionList:show()
     window.selectionScroll:show()
     window.listSearch:show()
+    updateBuyBar()
 end
 
 function showMounts()
@@ -1288,6 +1496,7 @@ function onOutfitSelect(list, focusedChild, unfocusedChild, reason)
         end
         updateAppearanceText("outfit", focusedChild.name:getText())
     end
+    updateBuyBar()
 end
 
 function onMountSelect(list, focusedChild, unfocusedChild, reason)
@@ -1851,6 +2060,10 @@ function loadDefaultSettings()
 end
 
 function accept()
+    -- a Store outfit can't be worn before it is bought: Ok offers it
+    if buyOutfit(tempOutfit.type) then
+        return
+    end
     if g_game.getFeature(GamePlayerMounts) then
         local player = g_game.getLocalPlayer()
         local isMountedChecked = window.configure.mount.check:isChecked()

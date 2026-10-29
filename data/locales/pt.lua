@@ -1175,6 +1175,14 @@ locale = {
     ["This pack costs %d Mythos Coins and you have %d."] = "Este pacote custa %d Mythos Coins e você tem %d.",
     ["This pack costs %d Hunt Points and you have %d."] = "Este pacote custa %d Hunt Points e você tem %d.",
     ["This pack is not sold any more."] = "Este pacote não é mais vendido.",
+    ["Buy outfit"] = "Comprar outfit",
+    ["you have %d coins"] = "você tem %d coins",
+    ["Buy the %s for %d Mythos Coins?\n\nYou have %d coins."] = "Comprar o %s por %d Mythos Coins?\n\nVocê tem %d coins.",
+    ["The %s costs %d Mythos Coins and you have %d.\n\nOpen the site to get more coins?"] = "O %s custa %d Mythos Coins e você tem %d.\n\nAbrir o site para conseguir mais coins?",
+    ["Yours now! Press Ok to wear it."] = "Agora é seu! Aperte Ok para vestir.",
+    ["You already have this outfit."] = "Você já tem este outfit.",
+    ["This outfit is not sold in the Store."] = "Este outfit não é vendido na Store.",
+    ["Something went wrong: nothing was bought."] = "Algo deu errado: nada foi comprado.",
   }
 }
 
