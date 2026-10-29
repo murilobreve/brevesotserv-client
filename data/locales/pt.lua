@@ -815,9 +815,6 @@ locale = {
     ["(on each item)"] = "(em cada item)",
     ["This bonus is at its limit: more of it on other items adds nothing."] = "Esse bônus está no limite: mais dele em outros itens não soma nada.",
     ["combined, not added up"] = "combinados, não somados",
-    ["A percent bonus on several items is combined: each one works on what the others leave. Orange: the bonus is at its limit."] = "Um bônus percentual em vários itens se combina: cada um age sobre o que os outros deixam. Laranja: o bônus está no limite.",
-    ["Each item shows its own bonuses; on the right, the total you get of each one and the items it comes from."] = "Cada item mostra os próprios bônus; à direita, o total que você ganha de cada um e de quais itens ele vem.",
-    ["Items you found yourself are %d%% stronger on you; the numbers here already include that."] = "Itens que você mesmo achou são %d%% mais fortes em você; os números aqui já contam isso.",
     ["Amulet"] = "Amuleto",
     ["Hand"] = "Mão",
     ["Legs"] = "Pernas",
@@ -1144,6 +1141,18 @@ locale = {
     ["Go hunt: free teleport to the monster."] = "Ir caçar: teleporte grátis até o monstro.",
     ["Every hunt, with a free TP."] = "Todas as hunts, com TP grátis.",
     ["New bonuses for your rare items."] = "Bônus novos para seus itens raros.",
+    ["Reroll (XP)"] = "Refazer (XP)",
+    ["Keep (gold)"] = "Manter (gold)",
+    ["Fewer is more"] = "Menos é mais",
+    ["Total (right)"] = "Total (direita)",
+    ["Rolls the whole item again: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back."] = "Sorteia o item inteiro de novo: quantos bônus, quais e os valores. Pode vir melhor ou pior, e não tem volta.",
+    ["Locks one bonus with its value: the next Reroll rolls only the others."] = "Trava um bônus com o valor dele: o próximo Refazer sorteia só os outros.",
+    ["Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent)."] = "Gold e XP pela chance mostrada. Se der certo, o item sobe um grau e sorteia bônus novos, mais fortes; se falhar, fica como estava (o custo é gasto).",
+    ["The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one."] = "A roleta também sorteia quantos bônus o item tem: quanto menos bônus, mais forte vem cada um.",
+    ["The sum of each bonus and its bar up to the limit. A full bar with the green check is at the limit: more of it on another item adds nothing."] = "A soma de cada bônus e a barra até o limite. Barra cheia, com o check verde: o bônus está no limite e mais dele em outro item não conta.",
+    ["Items you found yourself are %d%% stronger on you (already counted)."] = "Itens que você mesmo achou são %d%% mais fortes em você (já contado).",
+    ["At the limit"] = "No limite",
+    ["%s of %s"] = "%s de %s",
   }
 }
 

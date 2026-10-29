@@ -279,6 +279,43 @@ function fillItems(items)
     end
 end
 
+-- How the Roulette works, one line per thing the player can do, under the
+-- lists
+local GUIDE = {
+    { key = 'Reroll (XP)', text = 'Rolls the whole item again: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back.' },
+    { key = 'Keep (gold)', text = 'Locks one bonus with its value: the next Reroll rolls only the others.' },
+    { key = 'Raise the grade', text = 'Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent).' },
+    { key = 'Fewer is more', text = 'The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one.' },
+    { key = 'Total (right)', text = 'The sum of each bonus and its bar up to the limit. A full bar with the green check is at the limit: more of it on another item adds nothing.' },
+}
+
+function fillGuide(finderPercent)
+    local guide = window.guide
+    guide:destroyChildren()
+    for index, line in ipairs(GUIDE) do
+        local widget = g_ui.createWidget('RarityGuideLine', guide)
+        widget.key:setText(tr(line.key))
+        local text = tr(line.text)
+        if index == #GUIDE and finderPercent > 0 then
+            text = text .. ' ' .. tr('Items you found yourself are %d%% stronger on you (already counted).', finderPercent)
+        end
+        widget.text:setText(text)
+    end
+    -- each line as tall as its wrapped text, the guide as tall as its lines
+    scheduleEvent(function()
+        if not window or guide:isDestroyed() then
+            return
+        end
+        local total = 0
+        local lines = guide:getChildren()
+        for _, widget in ipairs(lines) do
+            widget:setHeight(math.max(14, widget.text:getHeight()))
+            total = total + widget:getHeight()
+        end
+        guide:setHeight(total + math.max(0, #lines - 1) * 3)
+    end, 1)
+end
+
 local function fillTotals(totals, items)
     local list = window.totalsSection.totalsList
     list:destroyChildren()
@@ -302,6 +339,33 @@ local function fillTotals(totals, items)
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
         end
+        -- the bar from 0 to the limit; full, a green check instead of the limit
+        local cap = (not entry.perItem) and tonumber(entry.cap) or nil
+        local meter = row.meter
+        local meterHeight = 0
+        if cap and cap > 0 then
+            local share = math.min(1, (tonumber(entry.total) or 0) / cap)
+            local full = entry.capped or share >= 1
+            meter:show()
+            meter.low:setText('0' .. (entry.unit or ''))
+            meter.high:setText(number(cap) .. (entry.unit or ''))
+            meter.high:setVisible(not full)
+            meter.check:setVisible(full)
+            meter.bar.fill:setBackgroundColor(full and '#7fd35a' or '#63c08a')
+            meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))
+            meterHeight = 4 + meter:getHeight()
+            -- the bar's width is known once the row is laid out
+            scheduleEvent(function()
+                if not meter:isDestroyed() then
+                    local inner = meter.bar:getWidth() - 2
+                    meter.bar.fill:setWidth(math.max(share > 0 and 1 or 0, math.floor(inner * share)))
+                end
+            end, 1)
+        else
+            meter:hide()
+            meter:setHeight(0)
+            meter:setMarginTop(0)
+        end
         local lines = {}
         for _, source in ipairs(entry.sources or {}) do
             table.insert(lines, string.format('  %s: +%s%s', titleCase(source.name or ''), number(source.value), entry.unit or ''))
@@ -311,7 +375,7 @@ local function fillTotals(totals, items)
         end
         row.sources:setText(table.concat(lines, '\n'))
         row.sources:setHeight(#lines * LINE)
-        row:setHeight(3 + 14 + 2 + #lines * LINE + 5)
+        row:setHeight(3 + 14 + meterHeight + 3 + #lines * LINE + 5)
     end
 end
 
@@ -669,12 +733,7 @@ applyBonuses = function(data)
     end
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
-    local note = tr('Each item shows its own bonuses; on the right, the total you get of each one and the items it comes from.') .. ' ' ..
-        tr('A percent bonus on several items is combined: each one works on what the others leave. Orange: the bonus is at its limit.')
-    if (data.finderPercent or 0) > 0 then
-        note = note .. ' ' .. tr('Items you found yourself are %d%% stronger on you; the numbers here already include that.', data.finderPercent)
-    end
-    window.note:setText(note)
+    fillGuide(data.finderPercent or 0)
     if not window:isVisible() then
         window:show()
         window:raise()

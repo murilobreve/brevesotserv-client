@@ -207,14 +207,101 @@ BonusTotalRow < BrevesRow
     color: #7fd35a
     phantom: true
 
-  Label
-    id: sources
+  // how far the total is from the bonus's limit: 0 on the left, the limit on
+  // the right, a green check once it is there (bonuses with a limit only)
+  UIWidget
+    id: meter
     anchors.top: label.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 2
+    margin-top: 4
+    height: 12
+    phantom: true
+
+    Label
+      id: low
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      width: 28
+      font: verdana-10px-rounded
+      color: #9789b3
+      phantom: true
+
+    Label
+      id: high
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: 38
+      text-align: right
+      font: verdana-10px-rounded
+      color: #d1ccd9
+      phantom: true
+
+    UIWidget
+      id: check
+      anchors.left: bar.right
+      anchors.verticalCenter: parent.verticalCenter
+      margin-left: 6
+      size: 12 12
+      image-source: /game_raritybonus/images/check
+      phantom: true
+      visible: false
+
+    UIWidget
+      id: bar
+      anchors.left: low.right
+      anchors.right: high.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-right: 6
+      height: 8
+      background-color: #1a1328
+      border-width: 1
+      border-color: #4a3670
+      phantom: true
+
+      UIWidget
+        id: fill
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        margin: 1
+        width: 0
+        background-color: #63c08a
+        phantom: true
+
+  Label
+    id: sources
+    anchors.top: meter.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 3
     font: verdana-11px-monochrome
     color: #ab9fc6
+    phantom: true
+
+// one line of the guide under the lists: a word in gold, what it does
+RarityGuideLine < UIWidget
+  height: 14
+  phantom: true
+
+  Label
+    id: key
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 118
+    font: verdana-11px-antialised
+    color: #e2a443
+    phantom: true
+
+  Label
+    id: text
+    anchors.top: parent.top
+    anchors.left: key.right
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #b4afc3
     phantom: true
 
 BonusTotalRowEven < BonusTotalRow
@@ -223,7 +310,7 @@ BonusTotalRowEven < BonusTotalRow
 MythosWindow
   id: rarityBonusWindow
   !text: tr('Rarity Bonuses')
-  size: 900 560
+  size: 900 610
   @onEscape: modules.game_raritybonus.hide()
 
   Label
@@ -323,15 +410,21 @@ MythosWindow
     id: bottomSep
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.bottom: note.top
+    anchors.bottom: guide.top
     margin-bottom: 6
 
-  BrevesNote
-    id: note
+  // how the Roulette works, one line per button (fillGuide)
+  UIWidget
+    id: guide
     anchors.left: parent.left
     anchors.right: refreshButton.left
     anchors.bottom: parent.bottom
-    margin-right: 10
+    margin-right: 14
+    height: 80
+    phantom: true
+    layout:
+      type: verticalBox
+      spacing: 3
 
   MythosButton
     id: refreshButton
