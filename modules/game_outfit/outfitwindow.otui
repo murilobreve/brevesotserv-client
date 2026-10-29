@@ -3,5 +3,85 @@ FloorTile < UIWidget
   size: 32 32
   phantom: true
 
-OutfitWindow
+// a Store outfit's price, in the corner of its card (outfit.lua, Store outfits)
+OutfitPriceTag < UIWidget
+  anchors.top: parent.top
+  anchors.right: parent.right
+  margin-top: 3
+  margin-right: 3
+  height: 15
+  background-color: #000000b0
+  phantom: true
 
+  UIWidget
+    id: coin
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    size: 12 12
+    image-source: /images/store/icon-tibiacoin
+    phantom: true
+
+  Label
+    id: price
+    anchors.left: coin.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    font: verdana-11px-rounded
+    color: #ffd76a
+    text-auto-resize: true
+    phantom: true
+
+// the selected Store outfit: its price, the player's coins and Buy, at the
+// bottom left, next to Ok and Cancel
+OutfitBuyBar < UIWidget
+  id: buyBar
+  anchors.left: parent.left
+  anchors.right: parent.right
+  anchors.bottom: parent.bottom
+  margin-right: 135
+  height: 22
+  visible: false
+
+  UIWidget
+    id: coin
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 12 12
+    image-source: /images/store/icon-tibiacoin
+
+  Label
+    id: price
+    anchors.left: coin.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    font: verdana-11px-rounded
+    color: #ffd76a
+    text-auto-resize: true
+
+  Label
+    id: text
+    anchors.left: price.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-rounded
+    color: #dfdfdf
+    text-auto-resize: true
+
+  Label
+    id: have
+    anchors.left: text.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-rounded
+    color: #9a9a9a
+    text-auto-resize: true
+
+  Button
+    id: buyButton
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 80
+    !text: tr('Buy')
+
+OutfitWindow
