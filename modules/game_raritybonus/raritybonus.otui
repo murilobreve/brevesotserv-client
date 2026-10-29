@@ -207,8 +207,9 @@ BonusTotalRow < BrevesRow
     color: #7fd35a
     phantom: true
 
-  // how far the total is from the bonus's limit: 0 on the left, the limit on
-  // the right, a green check once it is there (bonuses with a limit only)
+  // how far the total is from the bonus's limit (MAX, above on the right): 0
+  // on the left, the total now on the right, a green check once it is full
+  // (bonuses with a limit only)
   UIWidget
     id: meter
     anchors.top: label.bottom
@@ -227,25 +228,28 @@ BonusTotalRow < BrevesRow
       color: #9789b3
       phantom: true
 
-    Label
-      id: high
-      anchors.right: parent.right
-      anchors.verticalCenter: parent.verticalCenter
-      width: 38
-      text-align: right
-      font: verdana-10px-rounded
-      color: #d1ccd9
-      phantom: true
-
+    // a green check once the bar is full (its place is kept, so every bar
+    // ends at the same spot)
     UIWidget
       id: check
-      anchors.left: bar.right
+      anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      margin-left: 6
       size: 12 12
       image-source: /game_raritybonus/images/check
       phantom: true
       visible: false
+
+    // what the player has now, in white
+    Label
+      id: high
+      anchors.right: check.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-right: 3
+      width: 40
+      text-align: right
+      font: verdana-11px-rounded
+      color: #ffffff
+      phantom: true
 
     UIWidget
       id: bar

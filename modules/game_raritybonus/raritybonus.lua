@@ -286,7 +286,7 @@ local GUIDE = {
     { key = 'Keep (gold)', text = 'Locks one bonus with its value: the next Reroll rolls only the others.' },
     { key = 'Raise the grade', text = 'Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent).' },
     { key = 'Fewer is more', text = 'The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one.' },
-    { key = 'Total (right)', text = 'The sum of each bonus and its bar up to the limit. A full bar with the green check is at the limit: more of it on another item adds nothing.' },
+    { key = 'Total (right)', text = 'Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing.' },
 }
 
 function fillGuide(finderPercent)
@@ -328,27 +328,30 @@ local function fillTotals(totals, items)
         if desc then
             row.info:setTooltip(desc)
         end
-        -- the limit is at the end of the bar below
+        -- a bonus with a limit shows the limit here (MAX) and the total on its
+        -- bar below; one without, its total
+        local cap = (not entry.perItem) and tonumber(entry.cap) or nil
+        if cap and cap <= 0 then
+            cap = nil
+        end
         local total = '+' .. number(entry.total) .. (entry.unit or '')
         if entry.perItem then
             total = total .. ' ' .. tr('(on each item)')
         end
-        row.total:setText(total)
-        row.total:setColor(entry.capped and '#e2a443' or '#7fd35a')
+        row.total:setText(cap and tr('MAX: %s', number(cap) .. (entry.unit or '')) or total)
+        row.total:setColor(cap and '#b4afc3' or (entry.capped and '#e2a443' or '#7fd35a'))
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
         end
-        -- the bar from 0 to the limit; full, a green check instead of the limit
-        local cap = (not entry.perItem) and tonumber(entry.cap) or nil
+        -- the bar from 0 to the limit, the total at its end; full, a green check
         local meter = row.meter
         local meterHeight = 0
-        if cap and cap > 0 then
+        if cap then
             local share = math.min(1, (tonumber(entry.total) or 0) / cap)
             local full = entry.capped or share >= 1
             meter:show()
             meter.low:setText('0' .. (entry.unit or ''))
-            meter.high:setText(number(cap) .. (entry.unit or ''))
-            meter.high:setVisible(not full)
+            meter.high:setText(number(entry.total) .. (entry.unit or ''))
             meter.check:setVisible(full)
             meter.bar.fill:setBackgroundColor(full and '#7fd35a' or '#63c08a')
             meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))

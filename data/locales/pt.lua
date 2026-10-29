@@ -1149,10 +1149,11 @@ locale = {
     ["Locks one bonus with its value: the next Reroll rolls only the others."] = "Trava um bônus com o valor dele: o próximo Refazer sorteia só os outros.",
     ["Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent)."] = "Gold e XP pela chance mostrada. Se der certo, o item sobe um grau e sorteia bônus novos, mais fortes; se falhar, fica como estava (o custo é gasto).",
     ["The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one."] = "A roleta também sorteia quantos bônus o item tem: quanto menos bônus, mais forte vem cada um.",
-    ["The sum of each bonus and its bar up to the limit. A full bar with the green check is at the limit: more of it on another item adds nothing."] = "A soma de cada bônus e a barra até o limite. Barra cheia, com o check verde: o bônus está no limite e mais dele em outro item não conta.",
     ["Items you found yourself are %d%% stronger on you (already counted)."] = "Itens que você mesmo achou são %d%% mais fortes em você (já contado).",
     ["At the limit"] = "No limite",
     ["%s of %s"] = "%s de %s",
+    ["Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing."] = "Cada bônus: o MAX (o limite) e uma barra com quanto você tem dele. Barra cheia, com o check verde: chegou no MAX, e mais dele em outro item não conta.",
+    ["MAX: %s"] = "MAX: %s",
   }
 }
 
