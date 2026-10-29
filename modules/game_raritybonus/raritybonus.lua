@@ -328,11 +328,10 @@ local function fillTotals(totals, items)
         if desc then
             row.info:setTooltip(desc)
         end
+        -- the limit is at the end of the bar below
         local total = '+' .. number(entry.total) .. (entry.unit or '')
         if entry.perItem then
             total = total .. ' ' .. tr('(on each item)')
-        elseif entry.cap then
-            total = total .. ' / ' .. number(entry.cap) .. (entry.unit or '')
         end
         row.total:setText(total)
         row.total:setColor(entry.capped and '#e2a443' or '#7fd35a')
