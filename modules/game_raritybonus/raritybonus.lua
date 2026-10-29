@@ -285,8 +285,8 @@ local GUIDE = {
     { key = 'Reroll (XP)', text = 'Rolls the whole item again: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back.' },
     { key = 'Keep (gold)', text = 'Locks one bonus with its value: the next Reroll rolls only the others.' },
     { key = 'Raise the grade', text = 'Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent).' },
-    { key = 'Fewer is more', text = 'The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one.' },
-    { key = 'Colours', text = 'How good the rolled value is on its item: green, then blue, purple, orange near the top and light gold when perfect. On the right, each total takes the colour of its best item.' },
+    { key = 'How many bonuses', text = 'The Roulette also rolls how many bonuses the item gets. Fewer bonuses come stronger: a single bonus gets all the strength.' },
+    { key = 'Bonus colour', text = 'Says if the rolled value was good: green is common, blue is good, purple is very good, orange is near the maximum and gold is perfect. On the right, a total takes the colour of its best item.' },
     { key = 'Total (right)', text = 'Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing.' },
 }
 

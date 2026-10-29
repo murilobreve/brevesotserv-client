@@ -1143,19 +1143,19 @@ locale = {
     ["New bonuses for your rare items."] = "Bônus novos para seus itens raros.",
     ["Reroll (XP)"] = "Refazer (XP)",
     ["Keep (gold)"] = "Manter (gold)",
-    ["Fewer is more"] = "Menos é mais",
     ["Total (right)"] = "Total (direita)",
     ["Rolls the whole item again: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back."] = "Sorteia o item inteiro de novo: quantos bônus, quais e os valores. Pode vir melhor ou pior, e não tem volta.",
     ["Locks one bonus with its value: the next Reroll rolls only the others."] = "Trava um bônus com o valor dele: o próximo Refazer sorteia só os outros.",
     ["Gold and XP for the chance shown. On a success the item goes up a grade and rolls new, stronger bonuses; on a failure it stays as it was (the cost is spent)."] = "Gold e XP pela chance mostrada. Se der certo, o item sobe um grau e sorteia bônus novos, mais fortes; se falhar, fica como estava (o custo é gasto).",
-    ["The Roulette also rolls how many bonuses the item gets: the fewer they are, the stronger each one."] = "A roleta também sorteia quantos bônus o item tem: quanto menos bônus, mais forte vem cada um.",
     ["Items you found yourself are %d%% stronger on you (already counted)."] = "Itens que você mesmo achou são %d%% mais fortes em você (já contado).",
     ["At the limit"] = "No limite",
     ["%s of %s"] = "%s de %s",
     ["Each bonus: its MAX (the limit) and a bar with how much of it you have. A full bar with the green check is at the MAX: more of it on another item adds nothing."] = "Cada bônus: o MAX (o limite) e uma barra com quanto você tem dele. Barra cheia, com o check verde: chegou no MAX, e mais dele em outro item não conta.",
     ["MAX: %s"] = "MAX: %s",
-    ["Colours"] = "Cores",
-    ["How good the rolled value is on its item: green, then blue, purple, orange near the top and light gold when perfect. On the right, each total takes the colour of its best item."] = "Quão bom é o valor sorteado no item: verde, depois azul, roxo, laranja perto do máximo e dourado claro quando é perfeito. À direita, cada total fica com a cor do seu melhor item.",
+    ["How many bonuses"] = "Quantos bônus",
+    ["Bonus colour"] = "Cor do bônus",
+    ["The Roulette also rolls how many bonuses the item gets. Fewer bonuses come stronger: a single bonus gets all the strength."] = "A roleta também sorteia quantos bônus o item vai ter. Menos bônus vêm mais fortes: com um bônus só, ele leva toda a força.",
+    ["Says if the rolled value was good: green is common, blue is good, purple is very good, orange is near the maximum and gold is perfect. On the right, a total takes the colour of its best item."] = "Diz se o valor sorteado foi bom: verde é comum, azul é bom, roxo é muito bom, laranja é quase o máximo e dourado é perfeito. Na direita, o total usa a cor do melhor item.",
   }
 }
 
