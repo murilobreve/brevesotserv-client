@@ -312,28 +312,24 @@ local function fillTitles()
     end
     -- the totals' (i) right after their centred title
     local section = window.totalsSection
-    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe name takes the colour the bonus has on its best item.')))
+    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe bar, the name and the MAX go from a muted to a bright green as the total gets closer to the MAX.')))
     section.titleInfo:setMarginLeft(math.floor(section:getTextSize().width / 2) + 14)
 end
 
--- a bonus's colour on the right is the one it has on the items on the left
--- (how good its roll is: blue, purple, orange near the top, light gold when
--- perfect, green below); from several items, the best of them
-local QUALITY_RANK = { ['#4f8fe8'] = 1, ['#a679e6'] = 2, ['#e2a443'] = 3, ['#ffe7a6'] = 4 }
-local PLAIN_BONUS_COLOR = '#7fd35a' -- BonusLine's own colour
+-- how close a total is to its MAX, in one green: muted at 0, bright at the
+-- limit. The bar, the name and the MAX share it, so the colour reads as the
+-- bonus's progress (the quality colours stay on the items on the left)
+local PROGRESS_FROM = { 0x4b, 0x72, 0x55 }
+local PROGRESS_TO = { 0x8e, 0xf2, 0x5a }
+local PLAIN_TOTAL_COLOR = '#7fd35a' -- a total with no limit (on each item)
 
-local function bonusColor(entry, items)
-    local best, bestRank = nil, 0
-    for _, source in ipairs(entry.sources or {}) do
-        local item = items[source.item]
-        for _, bonus in ipairs(item and item.bonuses or {}) do
-            local rank = bonus.key == entry.key and QUALITY_RANK[bonus.color or ''] or 0
-            if rank > bestRank then
-                best, bestRank = bonus.color, rank
-            end
-        end
+local function progressColor(share)
+    share = math.max(0, math.min(1, share or 0))
+    local rgb = {}
+    for i = 1, 3 do
+        rgb[i] = math.floor(PROGRESS_FROM[i] + (PROGRESS_TO[i] - PROGRESS_FROM[i]) * share + 0.5)
     end
-    return best or PLAIN_BONUS_COLOR
+    return string.format('#%02x%02x%02x', rgb[1], rgb[2], rgb[3])
 end
 
 local function fillTotals(totals, items)
@@ -343,8 +339,6 @@ local function fillTotals(totals, items)
         local row = g_ui.createWidget(index % 2 == 0 and 'BonusTotalRowEven' or 'BonusTotalRow', list)
         -- bonus names stay as the items and the wiki write them
         row.label:setText(entry.label)
-        local color = bonusColor(entry, items)
-        row.label:setColor(color)
         local desc = describe(entry)
         row.info:setVisible(desc ~= nil)
         if desc then
@@ -360,8 +354,11 @@ local function fillTotals(totals, items)
         if entry.perItem then
             total = total .. ' ' .. tr('(on each item)')
         end
+        local share = cap and math.min(1, (tonumber(entry.total) or 0) / cap) or nil
+        local color = share and progressColor(share) or nil
+        row.label:setColor(color or '#e6e0f2')
         row.total:setText(cap and tr('MAX: %s', number(cap) .. (entry.unit or '')) or total)
-        row.total:setColor(color)
+        row.total:setColor(color or PLAIN_TOTAL_COLOR)
         if entry.capped then
             row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
         end
@@ -369,14 +366,13 @@ local function fillTotals(totals, items)
         local meter = row.meter
         local meterHeight = 0
         if cap then
-            local share = math.min(1, (tonumber(entry.total) or 0) / cap)
             local full = entry.capped or share >= 1
             meter:show()
             meter.low:setText('0' .. (entry.unit or ''))
             meter.high:setText(number(entry.total) .. (entry.unit or ''))
             meter.high:setVisible(not full)
             meter.check:setVisible(full)
-            meter.bar.fill:setBackgroundColor(full and '#7fd35a' or '#63c08a')
+            meter.bar.fill:setBackgroundColor(color)
             meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))
             meterHeight = 4 + meter:getHeight()
             -- the bar's width is known once the row is laid out
