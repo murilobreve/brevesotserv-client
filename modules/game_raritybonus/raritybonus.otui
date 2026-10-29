@@ -317,7 +317,7 @@ MythosWindow
     margin-left: 10
     size: 130 20
     !text: tr('Buy Rarity XP')
-    !tooltip: tr('Opens the Store on the Rarity category, where Rarity XP is sold.')
+    !tooltip: tr('Buy Rarity XP here, with Mythos Coins or Hunt Points.')
     @onClick: modules.game_raritybonus.buyRarityXp()
 
   Label
@@ -462,3 +462,137 @@ MythosWindow
     size: 60 22
     !text: tr('Close')
     @onClick: modules.game_raritybonus.hide()
+
+// one Rarity XP pack of the shop below: the amount, how much cheaper it is
+// than the smallest pack, and the price to click
+RarityXpPack < BrevesRow
+  height: 28
+  focusable: false
+
+  UIWidget
+    id: icon
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    size: 16 16
+    image-source: /game_raritybonus/images/reroll
+    phantom: true
+
+  Label
+    id: amount
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #e6e0f2
+    phantom: true
+
+  Label
+    id: note
+    anchors.left: amount.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    text-auto-resize: true
+    font: verdana-11px-rounded
+    color: #7fd35a
+    phantom: true
+
+  MythosButton
+    id: buy
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 5
+    size: 120 20
+
+// Rarity XP right in the window (server: xpShop in bonus_window.lua): the
+// Store's packs for Mythos Coins and the task shop's for Hunt Points
+RarityXpShop < MythosWindow
+  id: rarityXpShop
+  !text: tr('Buy Rarity XP')
+  size: 420 300
+  @onEscape: self:hide()
+
+  Label
+    id: balance
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 16
+    color: #e2a443
+
+  Label
+    id: coinsTitle
+    anchors.top: balance.bottom
+    anchors.left: parent.left
+    margin-top: 10
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #f1d399
+    !text: tr('With Mythos Coins')
+
+  Label
+    id: coinsHave
+    anchors.right: parent.right
+    anchors.verticalCenter: coinsTitle.verticalCenter
+    text-auto-resize: true
+    color: #ab9fc6
+
+  BrevesList
+    id: coinsList
+    anchors.top: coinsTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 90
+
+  Label
+    id: pointsTitle
+    anchors.top: coinsList.bottom
+    anchors.left: parent.left
+    margin-top: 10
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #f1d399
+    !text: tr('With Hunt Points')
+
+  Label
+    id: pointsHave
+    anchors.right: parent.right
+    anchors.verticalCenter: pointsTitle.verticalCenter
+    text-auto-resize: true
+    color: #ab9fc6
+
+  BrevesList
+    id: pointsList
+    anchors.top: pointsTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    height: 60
+
+  Label
+    id: status
+    anchors.top: pointsList.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 16
+    text-align: center
+    color: #7fd35a
+
+  // no coins: the site sells them
+  MythosButton
+    id: siteButton
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    size: 180 22
+    !text: tr('Get Mythos Coins on the site')
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 70 22
+    !text: tr('Close')
+    @onClick: self:getParent():hide()

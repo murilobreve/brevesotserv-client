@@ -162,6 +162,9 @@ end
 
 local lastItems
 local lastFinderPercent = 0 -- how much more the finder gets (the server says)
+local xpShop -- the Rarity XP packs and the balances (buyRarityXp)
+local shopWindow
+local fillShop
 
 function fillItems(items)
     lastItems = items
@@ -736,6 +739,15 @@ applyBonuses = function(data)
         elseif result.code == 'cannot' or result.code == 'busy' then
             -- fixed sentences from the server, translated here
             message = tr(data.message or '')
+        elseif result.code == 'bought' then
+            message = result.currency == 'coins' and tr('+%d Rarity XP! (-%d Mythos Coins)', tonumber(result.xp) or 0, tonumber(result.price) or 0)
+                or tr('+%d Rarity XP! (-%d Hunt Points)', tonumber(result.xp) or 0, tonumber(result.price) or 0)
+        elseif result.code == 'coins' then
+            message = tr('This pack costs %d Mythos Coins and you have %d.', tonumber(result.price) or 0, tonumber(result.have) or 0)
+        elseif result.code == 'points' then
+            message = tr('This pack costs %d Hunt Points and you have %d.', tonumber(result.price) or 0, tonumber(result.have) or 0)
+        elseif result.code == 'pack' then
+            message = tr('This pack is not sold any more.')
         elseif result.code == 'upgradeFailed' then
             message = tr('The upgrade to %s failed (%d%% chance): %s stays as it was. (-%s gold, -%d Rarity XP)', result.to or '', tonumber(result.chance) or 0, titleCase(result.name or ''), formatGold(result.gold), tonumber(result.xp) or 0)
         end
@@ -754,6 +766,16 @@ applyBonuses = function(data)
         bonusDescs[entry.key or ''] = entry
     end
     lastFinderPercent = tonumber(data.finderPercent) or lastFinderPercent
+    xpShop = type(data.shop) == 'table' and data.shop or xpShop
+    if shopWindow and shopWindow:isVisible() then
+        fillShop()
+        -- the shop says how the purchase went, where it was made
+        local code = type(result) == 'table' and result.code
+        if code == 'bought' or code == 'coins' or code == 'points' or code == 'pack' then
+            shopWindow.status:setText(message or '')
+            shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
+        end
+    end
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
     fillTitles()
@@ -1529,12 +1551,106 @@ rouletteTakes = function(data)
 end
 
 -- the Store on its Rarity category, where Rarity XP is sold
-function buyRarityXp()
-    if modules.game_store and modules.game_store.openCategory then
-        modules.game_store.openCategory('Rarity', 'Rarity XP')
-    elseif modules.game_store and modules.game_store.toggle then
-        modules.game_store.toggle()
+-- ---------------------------------------------------------------------------
+-- Rarity XP shop, right in the window (server: xpShop in bonus_window.lua):
+-- the Store's packs for Mythos Coins and the task shop's for Hunt Points.
+-- Short of coins, a pack opens the site's coins page instead.
+-- ---------------------------------------------------------------------------
+
+local function openCoinsSite()
+    local url = Services and Services.getCoinsUrl or ''
+    if url ~= '' then
+        g_platform.openUrl(url)
     end
+end
+
+local function packPrice(pack)
+    return pack.currency == 'coins' and tr('%d coins', pack.price) or tr('%d Hunt Points', pack.price)
+end
+
+function fillShop()
+    if not shopWindow or not xpShop then
+        return
+    end
+    local balances = { coins = tonumber(xpShop.coins) or 0, points = tonumber(xpShop.points) or 0 }
+    shopWindow.balance:setText(tr('You have %d Rarity XP.', rarityXp))
+    shopWindow.coinsHave:setText(tr('you have %d', balances.coins))
+    shopWindow.pointsHave:setText(tr('you have %d', balances.points))
+    shopWindow.coinsList:destroyChildren()
+    shopWindow.pointsList:destroyChildren()
+    -- the smallest pack's price per point: the others say how much less
+    local baseRate = {}
+    for _, pack in ipairs(xpShop.packs or {}) do
+        local rate = pack.price / math.max(1, pack.xp)
+        baseRate[pack.currency] = math.max(baseRate[pack.currency] or 0, rate)
+    end
+    local counts = { coins = 0, points = 0 }
+    for _, pack in ipairs(xpShop.packs or {}) do
+        local coins = pack.currency == 'coins'
+        local list = coins and shopWindow.coinsList or shopWindow.pointsList
+        counts[pack.currency] = (counts[pack.currency] or 0) + 1
+        local row = g_ui.createWidget('RarityXpPack', list)
+        row.amount:setText(tr('%d Rarity XP', pack.xp))
+        local saving = math.floor((1 - (pack.price / math.max(1, pack.xp)) / baseRate[pack.currency]) * 100 + 0.5)
+        row.note:setText(saving >= 1 and tr('%d%% cheaper', saving) or '')
+        local have = balances[pack.currency] or 0
+        local enough = have >= pack.price
+        row.buy:setText(packPrice(pack))
+        if coins then
+            -- short of coins: the button still works, and opens the site
+            row.buy:setTooltip(enough and tr('Buy %d Rarity XP for %d Mythos Coins.', pack.xp, pack.price)
+                or tr('You have %d Mythos Coins, %d short. Click to get coins on the site.', have, pack.price - have))
+            row.buy.onClick = function()
+                if not enough then
+                    confirm(tr('Mythos Coins'), tr('This pack costs %d Mythos Coins and you have %d.\n\nOpen the site to get more coins?', pack.price, have), openCoinsSite)
+                    return
+                end
+                confirm(tr('Buy Rarity XP'), tr('Buy %d Rarity XP for %d Mythos Coins?', pack.xp, pack.price), function()
+                    send({ action = 'buyXp', pack = pack.id })
+                end)
+            end
+        else
+            row.buy:setEnabled(enough)
+            row.buy:setTooltip(enough and tr('Buy %d Rarity XP for %d Hunt Points.', pack.xp, pack.price)
+                or tr('You have %d Hunt Points, %d short. The daily task and the Hunter\'s Trail give more.', have, pack.price - have))
+            row.buy.onClick = function()
+                confirm(tr('Buy Rarity XP'), tr('Buy %d Rarity XP for %d Hunt Points?', pack.xp, pack.price), function()
+                    send({ action = 'buyXp', pack = pack.id })
+                end)
+            end
+        end
+    end
+    -- each list as tall as its packs, the window as tall as both
+    local rowHeight = 28
+    local coinsHeight = math.max(1, counts.coins) * rowHeight + 4
+    local pointsHeight = math.max(1, counts.points) * rowHeight + 4
+    shopWindow.coinsList:setHeight(coinsHeight)
+    shopWindow.pointsList:setHeight(pointsHeight)
+    shopWindow.pointsTitle:setVisible(counts.points > 0)
+    shopWindow.pointsHave:setVisible(counts.points > 0)
+    shopWindow.pointsList:setVisible(counts.points > 0)
+    shopWindow:setHeight(30 + 16 + (10 + 14 + 4 + coinsHeight) + (counts.points > 0 and (10 + 14 + 4 + pointsHeight) or 0) + 8 + 16 + 12 + 22 + 16)
+end
+
+function buyRarityXp()
+    -- a server without the shop: the Store, as before
+    if not xpShop then
+        if modules.game_store and modules.game_store.openCategory then
+            modules.game_store.openCategory('Rarity', 'Rarity XP')
+        elseif modules.game_store and modules.game_store.toggle then
+            modules.game_store.toggle()
+        end
+        return
+    end
+    if not shopWindow then
+        shopWindow = g_ui.createWidget('RarityXpShop', rootWidget)
+        shopWindow.siteButton.onClick = openCoinsSite
+    end
+    shopWindow.status:setText('')
+    fillShop()
+    shopWindow:show()
+    shopWindow:raise()
+    shopWindow:focus()
 end
 
 function spinAgain()
@@ -1644,6 +1760,9 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    if shopWindow then
+        shopWindow:hide()
+    end
     for key in pairs(revivals) do
         dropRevive(key)
     end
@@ -1680,6 +1799,10 @@ function terminate()
     if featureButton then
         featureButton:destroy()
         featureButton = nil
+    end
+    if shopWindow then
+        shopWindow:destroy()
+        shopWindow = nil
     end
     if window then
         window:destroy()
