@@ -1,8 +1,16 @@
+-- effects without a config said once each (lib.lua says why)
+local unconfigured = {}
+
 local function onAttach(effect, owner)
     local category, thingId = AttachedEffectManager.getDataThing(owner)
     local config = AttachedEffectManager.getConfig(effect:getId(), category, thingId)
 
     if not config then
+        local key = 'onAttach' .. effect:getId()
+        if unconfigured[key] then
+            return
+        end
+        unconfigured[key] = true
         g_logger.debug(string.format("[AttachedEffect] onAttach: No config found for effect ID %d (category: %d, thingId: %d)", effect:getId(), category, thingId))
         return
     end
@@ -21,6 +29,11 @@ local function onDetach(effect, oldOwner)
     local config = AttachedEffectManager.getConfig(effect:getId(), category, thingId)
 
     if not config then
+        local key = 'onDetach' .. effect:getId()
+        if unconfigured[key] then
+            return
+        end
+        unconfigured[key] = true
         g_logger.debug(string.format("[AttachedEffect] onDetach: No config found for effect ID %d (category: %d, thingId: %d)", effect:getId(), category, thingId))
         return
     end

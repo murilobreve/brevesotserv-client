@@ -64,6 +64,7 @@ local callbacks = {}
 local states = {}
 local toggles = {}
 local labels = {} -- per-row text that replaces the feature name
+local labelColors = {} -- row id -> the color of its text (labels)
 local actions = {} -- row id -> { text, tooltip, enabled, callback }: a small button on the row
 local flags = {} -- row id -> { text, color }: a pill over the row's corner
 local highlights = {} -- row id -> true: the row's gold light breathes
@@ -94,6 +95,11 @@ local function featureOf(id)
             return feature, index
         end
     end
+end
+
+-- the text color of a row: its label's (setFeatureLabel), else the plain one
+local function labelColor(id)
+    return labels[id] and labelColors[id] or (id == 'vip' and '#fff4d8' or '#e6e0f2')
 end
 
 local function iconPath(name)
@@ -209,6 +215,19 @@ local function resize()
     placeCallout()
 end
 
+-- the rows' changes lay the bar out once, on the next frame: every row
+-- restyled at each level is slow, and an area spell that kills a few
+-- monsters changes the task row several times at once (the browser froze)
+local resizeEvent
+local function resizeSoon()
+    if not resizeEvent then
+        resizeEvent = scheduleEvent(function()
+            resizeEvent = nil
+            resize()
+        end, 1)
+    end
+end
+
 styleButton = function(id)
     local button = buttons[id]
     local feature = featureOf(id)
@@ -278,6 +297,10 @@ function addFeature(id, callback)
         end
         button:setId(id)
         button:setText(tr(feature.label))
+        -- a label set before the row existed
+        if labels[id] then
+            button:setColor(labelColor(id))
+        end
         button.icon:setImageSource(iconPath(feature.icon))
         button.onClick = function() open(id) end
         buttons[id] = button
@@ -421,10 +444,15 @@ end
 -- a short state on the right of a row, e.g. ON / OFF; when the number in it
 -- goes up (Hunt Points, Rarity XP) the badge counts up to the new value
 function setFeatureState(id, text, color)
-    local before = numberIn(states[id] and states[id].text)
-    states[id] = text and { text = text, color = color or '#dfdfdf' } or nil
+    color = color or '#dfdfdf'
+    local old = states[id]
+    if (old and old.text) == text and (not text or old.color == color) then
+        return
+    end
+    local before = numberIn(old and old.text)
+    states[id] = text and { text = text, color = color } or nil
     styleButton(id)
-    resize()
+    resizeSoon()
     local after = numberIn(text)
     if before and after and after > before then
         animateGain(id, before, after, text)
@@ -434,12 +462,14 @@ end
 -- replaces the name shown on a row (nil puts the feature name back), e.g.
 -- the Hunt Tasks row shows the current monster and kills
 function setFeatureLabel(id, text, color)
+    local same = labels[id] == text and labelColors[id] == color
     labels[id] = text
+    labelColors[id] = color
     local button = buttons[id]
-    if button then
-        button:setColor(text and color or (id == 'vip' and '#fff4d8' or '#e6e0f2'))
+    if button and not same then
+        button:setColor(labelColor(id))
         styleButton(id)
-        resize()
+        resizeSoon()
     end
 end
 
@@ -447,10 +477,22 @@ end
 -- row's hunt teleport; `enabled` false greys it, for a cooldown; `short` is
 -- its text when the bar is short of room
 function setFeatureAction(id, text, tooltip, callback, enabled, short)
-    actions[id] = (text and callback) and { text = text, short = short or text, tooltip = tooltip, callback = callback, enabled = enabled } or nil
+    local old = actions[id]
+    if not (text and callback) then
+        if not old then
+            return
+        end
+        actions[id] = nil
+    elseif old and old.text == text and old.short == (short or text) and old.tooltip == tooltip and old.enabled == enabled then
+        -- the same button: its click runs the newest callback
+        old.callback = callback
+        return
+    else
+        actions[id] = { text = text, short = short or text, tooltip = tooltip, callback = callback, enabled = enabled }
+    end
     if buttons[id] then
         styleButton(id)
-        resize()
+        resizeSoon()
     end
 end
 
@@ -825,6 +867,10 @@ end
 
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    if resizeEvent then
+        removeEvent(resizeEvent)
+        resizeEvent = nil
+    end
     hideNews()
     hideNotice()
     dropCallout()
