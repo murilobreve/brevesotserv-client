@@ -303,6 +303,15 @@ local COLUMN_TITLES = {
     { id = 'raiseTitle', title = 'Raise', tip = 'Raises the item one grade for gold and Rarity XP, with the chance shown on the button. On a success it rolls new, stronger bonuses at the new grade; on a failure it stays as it was and the cost is spent.' },
 }
 
+local currentRole -- the wearer's vocation affinity, from the server
+
+local function roleSentence()
+    if not currentRole then
+        return ''
+    end
+    return '\n\n' .. tr('Your vocation: %s (%s). Its bonuses, marked +%d%%, count %d%% more for you and their MAX is %d%% higher.', tr(currentRole.vocation or ''), tr(currentRole.name or ''), currentRole.percent or 0, currentRole.percent or 0, currentRole.percent or 0)
+end
+
 local function fillTitles()
     local header = window.itemsSection.itemsHeader
     for _, column in ipairs(COLUMN_TITLES) do
@@ -312,7 +321,7 @@ local function fillTitles()
     end
     -- the totals' (i) right after their centred title
     local section = window.totalsSection
-    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe bar, the name and the MAX go from a muted to a bright green as the total gets closer to the MAX.')))
+    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe bar, the name and the MAX go from a muted to a bright green as the total gets closer to the MAX.') .. roleSentence()))
     section.titleInfo:setMarginLeft(math.floor(section:getTextSize().width / 2) + 14)
 end
 
@@ -343,6 +352,13 @@ local function fillTotals(totals, items)
         row.info:setVisible(desc ~= nil)
         if desc then
             row.info:setTooltip(desc)
+        end
+        -- a bonus of the wearer's role: counts more, higher MAX
+        local affinity = tonumber(entry.affinity)
+        row.affinity:setVisible(affinity ~= nil and currentRole ~= nil)
+        if affinity and currentRole then
+            row.affinity:setText('+' .. affinity .. '%')
+            row.affinity:setTooltip(wrapTip(tr('A %s bonus (%s): it counts %d%% more for you and its MAX is %d%% higher.', tr(currentRole.vocation or ''), tr(currentRole.name or ''), affinity, affinity)))
         end
         -- a bonus with a limit shows the limit here (MAX) and the total on its
         -- bar below; one without, its total
@@ -393,6 +409,9 @@ local function fillTotals(totals, items)
         end
         if entry.combined then
             table.insert(lines, '  ' .. tr('combined, not added up'))
+        end
+        if tonumber(entry.affinity) and currentRole then
+            table.insert(lines, string.format('  %s (%s): +%d%%', tr(currentRole.vocation or ''), tr(currentRole.name or ''), tonumber(entry.affinity)))
         end
         row.sources:setText(table.concat(lines, '\n'))
         row.sources:setHeight(#lines * LINE)
@@ -772,6 +791,7 @@ applyBonuses = function(data)
             shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
         end
     end
+    currentRole = type(data.role) == 'table' and data.role or nil
     fillItems(data.items or {})
     fillTotals(data.totals or {}, data.items or {})
     fillTitles()
