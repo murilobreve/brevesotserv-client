@@ -11,6 +11,10 @@ cancelNextRelease = nil
 partyMemberCheckEvent = nil
 local lastPartyMembers = {}
 
+-- XP gained this frame, for the analysers at once (addPendingXpGain)
+local pendingXpGain = 0
+local xpGainEvent
+
 local analyserWindows = {
   huntingButton = 'styles/hunting',
   lootButton = 'styles/loot',
@@ -194,6 +198,11 @@ function init()
 end
 
 function terminate()
+  if xpGainEvent then
+    removeEvent(xpGainEvent)
+    xpGainEvent = nil
+  end
+  pendingXpGain = 0
   if analyserButton then
     analyserButton:destroy()
     analyserButton = nil
@@ -400,6 +409,21 @@ function toggleAnalysers(buttonId)
   end
 end
 
+-- the XP of the kills of one frame goes to the analysers at once: they
+-- redraw their windows and graphs on every gain, and an area spell that
+-- killed many monsters did it once per monster
+local function addPendingXpGain()
+  xpGainEvent = nil
+  local gain = pendingXpGain
+  pendingXpGain = 0
+  if gain > 0 then
+    HuntingAnalyser:addRawXPGain(gain)
+    HuntingAnalyser:addXpGain(gain)
+    XPAnalyser:addRawXPGain(gain)
+    XPAnalyser:addXpGain(gain)
+  end
+end
+
 function onExperienceChange(localPlayer, value)
   -- This function is called when the player's total experience changes
   -- We should track the experience progression here
@@ -414,11 +438,10 @@ function onExperienceChange(localPlayer, value)
   -- Calculate XP gain from experience change using the previous value
   -- Only calculate gain if we have a previous value and current value is higher
   if previousExp and previousExp > 0 and value > previousExp then
-    local gain = value - previousExp
-    HuntingAnalyser:addRawXPGain(gain)
-    HuntingAnalyser:addXpGain(gain)
-    XPAnalyser:addRawXPGain(gain)
-    XPAnalyser:addXpGain(gain)
+    pendingXpGain = pendingXpGain + (value - previousExp)
+    if not xpGainEvent then
+      xpGainEvent = scheduleEvent(addPendingXpGain, 1)
+    end
   end
   
   -- Update the last experience for next comparison
