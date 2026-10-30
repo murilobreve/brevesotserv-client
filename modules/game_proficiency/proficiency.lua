@@ -520,10 +520,14 @@ function onWeaponProficiencyExperience(itemId, experience, hasUnusedPerk)
         end
     end
 
-    -- Re-sort all categories when experience changes
-    sortWeaponProficiency(MarketCategory.WeaponsAll)
-    for _, categoryId in pairs(WeaponProficiency.ItemCategory) do
-        sortWeaponProficiency(categoryId)
+    -- Re-sort all categories when experience changes: now for an open
+    -- window, else when it opens. Every kill gives proficiency, and sorting
+    -- every weapon list on each one froze the game when many monsters died
+    -- at once.
+    if WeaponProficiency.window and WeaponProficiency.window:isVisible() then
+        sortAllWeaponProficiency()
+    else
+        WeaponProficiency.sortPending = true
     end
 
     -- Store the unused perk state globally
@@ -571,6 +575,11 @@ function show()
 
     -- Reset filter buttons visual state (but keep filter state)
     -- The filters persist across open/close
+
+    -- the proficiency the kills gave while it was closed
+    if WeaponProficiency.sortPending then
+        sortAllWeaponProficiency()
+    end
 
     WeaponProficiency.window:show()
     WeaponProficiency.window:raise()
@@ -1023,6 +1032,15 @@ function WeaponProficiency:createItemCache()
     end
 
     self._itemCacheReady = true
+end
+
+-- Every category sorted (sortWeaponProficiency)
+function sortAllWeaponProficiency()
+    WeaponProficiency.sortPending = nil
+    sortWeaponProficiency(MarketCategory.WeaponsAll)
+    for _, categoryId in pairs(WeaponProficiency.ItemCategory) do
+        sortWeaponProficiency(categoryId)
+    end
 end
 
 -- Sort weapons by experience (highest first), then by name
