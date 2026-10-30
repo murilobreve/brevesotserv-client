@@ -1293,7 +1293,23 @@ function addTabText(text, speaktype, tab, creatureName)
 
     local panel = consoleTabBar:getTabPanel(tab)
     local consoleBuffer = panel:getChildById('consoleBuffer')
-    local label = g_ui.createWidget('ConsoleLabel', consoleBuffer)
+    -- a full console takes its oldest line for the new one: a new label (a
+    -- styled text edit) per message was most of what a hunt's messages cost,
+    -- and many monsters dying at once froze the game. A line with clickable
+    -- words (an NPC's) is not reused: it goes below, as before.
+    local label = consoleBuffer:getChildCount() >= MAX_LINES and consoleBuffer:getFirstChild()
+    if label and not label:hasEventListener(EVENT_TEXT_CLICK) then
+        -- a selection counts lines by index, and they all move up one
+        if consoleBuffer.selection then
+            clearSelection(consoleBuffer)
+        else
+            label:clearSelection()
+        end
+        consoleBuffer:moveChildToIndex(label, consoleBuffer:getChildCount())
+        label.coloredData = nil
+    else
+        label = g_ui.createWidget('ConsoleLabel', consoleBuffer)
+    end
     label:setId('consoleLabel' .. consoleBuffer:getChildCount())
 
     -- Overlay for consoleBuffer which shows highlighted words only
@@ -1449,7 +1465,9 @@ function addTabText(text, speaktype, tab, creatureName)
 
     if consoleBuffer:getChildCount() > MAX_LINES then
         local child = consoleBuffer:getFirstChild()
-        clearSelection(consoleBuffer)
+        if consoleBuffer.selection then
+            clearSelection(consoleBuffer)
+        end
         child:destroy()
     end
 end
