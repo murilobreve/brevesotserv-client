@@ -4,6 +4,9 @@ dofile 'neededtranslations'
 local defaultLocaleName = 'en'
 local installedLocales
 local currentLocale
+-- texts already reported as untranslated: once each, or a bar that restyles
+-- its rows fills the log (and slows the browser) with the same lines
+local untranslated = {}
 
 function sendLocale(localeName)
     local protocolGame = g_game.getProtocolGame()
@@ -267,7 +270,8 @@ function _G.tr(text, ...)
             local translation = currentLocale.translation[text]
             if not translation then
                 if translation == nil then
-                    if currentLocale.name ~= defaultLocaleName then
+                    if currentLocale.name ~= defaultLocaleName and not untranslated[text] then
+                        untranslated[text] = true
                         pdebug('Unable to translate: \"' .. text .. '\"')
                     end
                 end

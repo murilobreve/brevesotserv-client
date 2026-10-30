@@ -1,5 +1,8 @@
 local __EFFECTS = {}
 local __THING_CONFIG = {}
+-- effects without a config said once each: the skillshot art (thousands of
+-- layers, attached on every cast) has none, and the log slowed the browser
+local __UNCONFIGURED = {}
 
 local executeConfig = function(attachedEffect, config)
     if not config then
@@ -187,7 +190,8 @@ AttachedEffectManager = {
             end
         end
         local effectConfig = __EFFECTS[id] and __EFFECTS[id].config or nil
-        if not effectConfig then
+        if not effectConfig and not __UNCONFIGURED[id] then
+            __UNCONFIGURED[id] = true
             g_logger.debug(string.format("[AttachedEffect]getConfig: No config registered for effect ID %d", id))
         end
         return effectConfig
