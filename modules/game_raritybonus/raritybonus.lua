@@ -23,6 +23,11 @@ local rarityXp = 0
 local gold = 0 -- backpack + bank, for the gold prices (lock, upgrade)
 local locks = {} -- slot id -> affix key kept on that item's next reroll
 local upgradeAsked -- { entry }: an upgrade sent, its answer plays on the reel
+-- a reroll or upgrade sent: if no answer comes in this long, the roulette
+-- stops waiting (expectAnswer)
+local ANSWER_TIMEOUT = 8000
+local answerEvent
+local expectAnswer
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -275,6 +280,7 @@ function fillItems(items)
             end
             confirm(tr('Reroll item'), text, function()
                 send({ action = 'rerollItem', slot = entry.slotId, lock = lockKey })
+                expectAnswer()
             end)
         end
         row.upgradeItemButton.onClick = function()
@@ -285,6 +291,7 @@ function fillItems(items)
             confirm(tr('Raise the grade'), tr('Raise %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid even if it fails.\nChance: %d%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. On a failure it stays exactly as it is.', titleCase(entry.name or ''), up.label, formatGold(up.gold), up.xp, up.chance, up.label), function()
                 upgradeAsked = { entry = entry }
                 send({ action = 'upgradeItem', slot = entry.slotId })
+                expectAnswer()
             end)
         end
         local linesHeight = count * 20
@@ -701,6 +708,10 @@ local function onOpcode(protocol, opcode, data)
     end
     if type(data) ~= 'table' or data.action ~= 'bonuses' or not window then
         return
+    end
+    if answerEvent and type(data.result) == 'table' then
+        removeEvent(answerEvent)
+        answerEvent = nil
     end
     -- a reroll plays the roulette first; the list below only shows the new
     -- bonuses once the reels stop
@@ -1128,6 +1139,7 @@ local function animate()
         return
     end
     local now = g_clock.millis()
+    spin.tick = now
     local row = spin.rows[spin.current]
     if row and now >= row.startsAt then
         if not row.active then
@@ -1414,6 +1426,7 @@ local function animateUpgrade()
     if not upgrade or upgrade.finished or not rouletteVisible() then
         return
     end
+    upgrade.tick = g_clock.millis()
     local p = (g_clock.millis() - upgrade.startsAt) / UPGRADE_SPIN_TIME
     if p >= 1 then
         stopUpgrade()
@@ -1491,6 +1504,12 @@ local function showUpgrade(entry, data)
     end)
 end
 
+-- a reel that stopped moving (an error in its animation) keeps nothing for
+-- later: the answers go to the list, or the window would never open again
+local function reelAlive(state)
+    return state.tick == nil or g_clock.millis() - state.tick < 2000
+end
+
 -- an answer from the server while the roulette is open
 rouletteTakes = function(data)
     local result = data.result
@@ -1515,7 +1534,7 @@ rouletteTakes = function(data)
             return false
         end
     end
-    if upgrade and rouletteVisible() and (not upgrade.finished or upgrade.waiting) then
+    if upgrade and rouletteVisible() and ((not upgrade.finished and reelAlive(upgrade)) or upgrade.waiting) then
         -- an automatic refresh while the reel runs: kept for its end
         upgrade.pending = data
         return true
@@ -1537,7 +1556,7 @@ rouletteTakes = function(data)
         setAgainButton()
         return true
     end
-    if spin and rouletteVisible() and (not spin.finished or spin.waiting) then
+    if spin and rouletteVisible() and ((not spin.finished and reelAlive(spin)) or spin.waiting) then
         -- an automatic refresh while the strips run or "spin again" waits for
         -- its answer: keep it for the end
         spin.pending = data
@@ -1661,6 +1680,7 @@ function spinAgain()
         roulette.status:setColor('#e0c060')
         roulette.againButton:setEnabled(false)
         send({ action = 'upgradeItem', slot = next.slotId })
+        expectAnswer()
         return
     end
     if not spin or not spin.result or not spin.finished then
@@ -1676,12 +1696,59 @@ function spinAgain()
     roulette.againButton:setEnabled(false)
     -- the same bonus stays kept, for gold again
     send({ action = 'rerollItem', slot = spin.result.slot, lock = spin.result.lock })
+    expectAnswer()
 end
 
-function closeRoulette()
-    if not roulette then
-        return
+-- forgets the roulette's state; returns the newest answer it was keeping
+local function resetRoulette()
+    if spin and spin.event then
+        removeEvent(spin.event)
     end
+    if upgrade and upgrade.event then
+        removeEvent(upgrade.event)
+    end
+    if answerEvent then
+        removeEvent(answerEvent)
+        answerEvent = nil
+    end
+    local pending = (spin and spin.pending) or (upgrade and (upgrade.pending or (upgrade.success and upgrade.data)))
+    spin, upgrade, upgradeAsked = nil, nil, nil
+    return pending
+end
+
+-- no answer to a reroll or upgrade: stop waiting, say so and ask for the
+-- list again (a lost answer used to leave the roulette spinning forever)
+expectAnswer = function()
+    if answerEvent then
+        removeEvent(answerEvent)
+    end
+    answerEvent = scheduleEvent(function()
+        answerEvent = nil
+        local stuck = upgradeAsked ~= nil
+        upgradeAsked = nil
+        if spin and spin.waiting then
+            spin.waiting = false
+            spin.finished = true
+            stuck = true
+        end
+        if upgrade and upgrade.waiting then
+            upgrade.waiting = false
+            stuck = true
+        end
+        if not stuck then
+            return
+        end
+        if rouletteVisible() then
+            roulette.status:setText(tr('No answer from the server. Try again.'))
+            roulette.status:setColor('#ff6464')
+            roulette.closeButton:setText(tr('Close'))
+            pcall(setAgainButton)
+        end
+        send({ action = 'open' })
+    end, ANSWER_TIMEOUT)
+end
+
+local function closeRouletteNow()
     if upgrade then
         if not upgrade.finished then
             stopUpgrade()
@@ -1701,6 +1768,27 @@ function closeRoulette()
         return
     end
     roulette:hide()
+end
+
+-- Skip, Close and Escape: whatever went wrong in the reels, the roulette
+-- closes (an error there used to fail on every click, so it never closed)
+function closeRoulette()
+    if not roulette then
+        return
+    end
+    local ok, err = pcall(closeRouletteNow)
+    if ok then
+        return
+    end
+    g_logger.warning('[raritybonus] the roulette closed after an error: ' .. tostring(err))
+    local pending = resetRoulette()
+    roulette:hide()
+    if pending then
+        pcall(applyBonuses, pending)
+    end
+    if window and window:isVisible() then
+        send({ action = 'open' })
+    end
 end
 
 function request()
@@ -1756,6 +1844,11 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    -- the roulette first, and nothing of it kept for the next login
+    if roulette then
+        roulette:hide()
+    end
+    resetRoulette()
     if shopWindow then
         shopWindow:hide()
     end
@@ -1764,10 +1857,6 @@ local function onGameEnd()
     end
     clearLootFinds()
     hide()
-    if roulette then
-        roulette:hide()
-    end
-    spin = nil
 end
 
 function init()
@@ -1804,15 +1893,11 @@ function terminate()
         window:destroy()
         window = nil
     end
-    if upgrade and upgrade.event then
-        removeEvent(upgrade.event)
-    end
-    upgrade, upgradeAsked = nil, nil
+    resetRoulette()
     if roulette then
         roulette:destroy()
         roulette = nil
     end
-    spin = nil
     for key in pairs(revivals) do
         dropRevive(key)
     end
