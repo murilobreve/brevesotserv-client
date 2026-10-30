@@ -188,18 +188,6 @@ BonusTotalRow < BrevesRow
     margin-left: 5
     visible: false
 
-  // the wearer's vocation counts this bonus more (vocation affinity)
-  Label
-    id: affinity
-    anchors.left: info.right
-    anchors.verticalCenter: label.verticalCenter
-    margin-left: 5
-    height: 14
-    text-auto-resize: true
-    font: verdana-11px-rounded
-    color: #e0c060
-    visible: false
-
   Label
     id: total
     anchors.top: parent.top
