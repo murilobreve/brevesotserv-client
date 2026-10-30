@@ -386,15 +386,6 @@ WIKI_PAGES.affixes = {
     title = 'Lista de bônus',
     blocks = {
         { 'lead', 'Todos os bônus que um item raro pode ter. O teto é o máximo que todos os seus itens juntos podem dar, já contando o bônus de quem achou. Na janela Rarity Bonuses e na roleta, o (i) ao lado de um bônus explica o que ele faz.' },
-        { 'h', 'Afinidade por vocação' },
-        { 'p', 'Cada vocação tem uma função, e os bônus dessa função valem 25% a mais para ela, com o teto 25% maior. Não importa para quem o item foi feito: um Max Health numa armadura vale mais num knight. Para as outras vocações nada fica mais fraco. Na janela Rarity Bonuses, esses bônus aparecem com +25% em dourado.' },
-        { 'table', widths = { 90, 90, 330 }, head = { 'Vocação', 'Função', 'Bônus que valem +25%' }, rows = {
-            { 'Knight', 'Tanque', 'Max Health, as resistências (Physical também), Physical Reflect, Healing Received e Life Leech' },
-            { 'Paladin', 'Equilíbrio', 'Distance Skill, Critical Hit Chance, Dodge Chance, Attack Speed, Perfect Shot e Splinter' },
-            { 'Sorcerer', 'Dano', 'Magic Level, Attack Spell Damage, Critical Hit Damage, Wand/Rod Damage e Resist Pierce' },
-            { 'Druid', 'Utilidade', 'Ally Healing, Max Mana, vida e mana por tick, Cooldown Reduction e Mana Leech' },
-            { 'Monk', 'Agilidade', 'Fist Skill, Dodge Chance, Attack Speed, Life Leech, Cleave Damage e Speed' },
-        } },
         { 'h', 'Ataque' },
         affixTable({
             { 'Attack', 'Ataque a mais na arma. Nas armas corpo a corpo é uma parte do ataque da própria arma.', '' },
