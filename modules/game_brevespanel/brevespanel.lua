@@ -72,10 +72,12 @@ local sectors = {} -- section id -> section widget
 local vipHolder -- the VIP button's box in the bar
 
 local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
-local SECTOR_SPACING = 6 -- between the sections (otui)
+local SECTOR_SPACING = 4 -- between the sections (otui)
 local SECTOR_PADDING = 8 -- the buttons' margins, left and right
 local TITLE_ROOM = 18 + 16 + 6 + 22 -- header art end, icon, gap, the other end
 local ICON_ONLY = 24 -- a button's width with its icon alone
+local VIP_MIN_WIDTH = 64 -- the gold VIP button with a short text
+local VIP_ICON_ONLY = 52 -- the gold VIP button with its crown alone
 -- how much the buttons show: their names, short names, the icon with its
 -- state (ON / OFF, points, minutes), the icon alone. The bar keeps FULL: a
 -- narrow map gives it a second line instead (resize)
@@ -153,7 +155,7 @@ local function buttonWidth(button)
     if density == ICONS and button:getId() ~= 'vip' then
         return ICON_ONLY
     end
-    local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 6
+    local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 4
     if button.badge:isVisible() then
         width = width + button.badge:getWidth() + 4
     end
@@ -196,13 +198,34 @@ local function resize()
             blocks[#blocks + 1] = widget
         end
     end
-    if buttons.vip then
-        buttons.vip:setWidth(math.max(110, buttons.vip:getTextSize().width + 56))
-        vipHolder:setWidth(buttons.vip:getWidth())
-        blocks[#blocks + 1] = vipHolder
-    end
     -- the first line takes what fits; the rest goes to the second
     local room = panel:getWidth() - 24
+    if buttons.vip then
+        -- the VIP button keeps to the first line when it can: when the
+        -- sections fit there and it does not, it shrinks to the days ("16d")
+        -- and then to its crown alone (the days in the tooltip)
+        local sectionsWidth = 0
+        for _, block in ipairs(blocks) do
+            sectionsWidth = sectionsWidth + block:getWidth() + (sectionsWidth > 0 and SECTOR_SPACING or 0)
+        end
+        local vip = buttons.vip
+        local full = vip:getText()
+        local days = full:match('(%d+)')
+        local texts = { full }
+        if days then
+            texts[#texts + 1] = days .. 'd'
+        end
+        texts[#texts + 1] = ''
+        for _, text in ipairs(texts) do
+            vip:setText(text)
+            vip:setWidth(text == '' and VIP_ICON_ONLY or math.max(VIP_MIN_WIDTH, vip:getTextSize().width + 58))
+            if room <= 0 or sectionsWidth > room or sectionsWidth + SECTOR_SPACING + vip:getWidth() <= room then
+                break
+            end
+        end
+        vipHolder:setWidth(vip:getWidth())
+        blocks[#blocks + 1] = vipHolder
+    end
     local strips = { panel.strip, panel.strip2 }
     local wanted = { {}, {} }
     local used, line = 0, 1
