@@ -154,16 +154,22 @@ RateRow < BrevesRow
 
   MultBar
     id: lootBar
-    anchors.right: perKill.left
+    // off the TP button, not off perKill: perKill and goldKill sit on the
+    // bars' centres, and anchors that go both ways crash the browser client
+    // (8 + 96 of the labels, then 10 of room)
+    anchors.right: tp.left
     anchors.bottom: parent.bottom
-    margin-right: 10
+    margin-right: 114
     margin-bottom: 4
 
   MultBar
     id: xpBar
-    anchors.right: perKill.left
+    // off the TP button, not off perKill: perKill and goldKill sit on the
+    // bars' centres, and anchors that go both ways crash the browser client
+    // (8 + 96 of the labels, then 10 of room)
+    anchors.right: tp.left
     anchors.top: parent.top
-    margin-right: 10
+    margin-right: 114
     margin-top: 4
 
   UIWidget
