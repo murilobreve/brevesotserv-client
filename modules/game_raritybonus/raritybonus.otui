@@ -320,10 +320,29 @@ MythosWindow
     !tooltip: tr('Buy Rarity XP here, with Mythos Coins or Hunt Points.')
     @onClick: modules.game_raritybonus.buyRarityXp()
 
+  // the gold in the bank, with a coin (the gold prices are paid from the
+  // backpack and the bank)
+  Label
+    id: bankLabel
+    anchors.verticalCenter: buyXpButton.verticalCenter
+    anchors.left: buyXpButton.right
+    margin-left: 16
+    height: 18
+    text-auto-resize: true
+    color: #e2a443
+    !text: tr('Bank')
+
+  BrevesValueBox
+    id: bankBox
+    anchors.verticalCenter: buyXpButton.verticalCenter
+    anchors.left: bankLabel.right
+    margin-left: 6
+    width: 120
+
   Label
     id: status
     anchors.verticalCenter: buyXpButton.verticalCenter
-    anchors.left: buyXpButton.right
+    anchors.left: bankBox.right
     anchors.right: parent.right
     margin-left: 16
     height: 26
