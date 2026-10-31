@@ -205,11 +205,25 @@ BrevesBar < UIWidget
   UIWidget
     id: strip
     anchors.top: parent.top
-    anchors.bottom: parent.bottom
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 3
-    margin-bottom: 3
+    height: 47
     phantom: true
+    layout:
+      type: horizontalBox
+      spacing: 6
+      fit-children: true
+
+  // the sections that do not fit on the first line (a narrow map): the
+  // bar keeps every name and grows a second line instead
+  UIWidget
+    id: strip2
+    anchors.top: strip.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 3
+    height: 47
+    phantom: true
+    visible: false
     layout:
       type: horizontalBox
       spacing: 6

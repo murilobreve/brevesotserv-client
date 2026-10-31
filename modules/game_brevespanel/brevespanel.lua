@@ -76,8 +76,9 @@ local SECTOR_SPACING = 6 -- between the sections (otui)
 local SECTOR_PADDING = 8 -- the buttons' margins, left and right
 local TITLE_ROOM = 18 + 16 + 6 + 22 -- header art end, icon, gap, the other end
 local ICON_ONLY = 24 -- a button's width with its icon alone
--- how much the buttons show, as the screen narrows: their names, short
--- names, the icon with its state (ON / OFF, points, minutes), the icon alone
+-- how much the buttons show: their names, short names, the icon with its
+-- state (ON / OFF, points, minutes), the icon alone. The bar keeps FULL: a
+-- narrow map gives it a second line instead (resize)
 local FULL, SHORT, STATES, ICONS = 0, 1, 2, 3
 local density = FULL
 local TOGGLE_WIDTH = 28 -- a switch's badge, as wide for ON as for OFF
@@ -162,55 +163,81 @@ local function buttonWidth(button)
     return width
 end
 
--- widths of the buttons and the sections; when everything does not fit, the
--- names get short, then give way to the icons with their state, and only on a
--- very narrow screen to the icons alone
+-- widths of the buttons and the sections. The bar always shows the names in
+-- full: when they do not fit in one line, the last sections (and the VIP
+-- button) go to a second line instead of shrinking
+local lines = 1
+local barHeight
+local collapsed = false
 local function resize()
     if not panel then
         return
     end
-    local function measure()
-        local total = 0
-        local blocks = 0
-        if buttons.vip then
-            buttons.vip:setWidth(math.max(110, buttons.vip:getTextSize().width + 56))
-            vipHolder:setWidth(buttons.vip:getWidth())
-            total = total + buttons.vip:getWidth()
-            blocks = blocks + 1
+    density = FULL
+    for id in pairs(buttons) do
+        styleButton(id)
+    end
+    local blocks = {}
+    for _, sector in ipairs(SECTORS) do
+        local widget = sectors[sector.id]
+        local children = widget.rows:getChildren()
+        widget:setVisible(#children > 0)
+        if #children > 0 then
+            local rows = 0
+            for _, button in ipairs(children) do
+                local key = button:getId() .. ':' .. density
+                widest[key] = math.max(widest[key] or 0, buttonWidth(button))
+                button:setWidth(widest[key])
+                rows = rows + button:getWidth()
+            end
+            rows = rows + (#children - 1) * BUTTON_SPACING
+            local title = TITLE_ROOM + widget.title:getWidth()
+            widget:setWidth(math.max(rows, title) + SECTOR_PADDING)
+            blocks[#blocks + 1] = widget
         end
-        for _, sector in ipairs(SECTORS) do
-            local widget = sectors[sector.id]
-            local children = widget.rows:getChildren()
-            widget:setVisible(#children > 0)
-            if #children > 0 then
-                local rows = 0
-                for _, button in ipairs(children) do
-                    local key = button:getId() .. ':' .. density
-                    widest[key] = math.max(widest[key] or 0, buttonWidth(button))
-                    button:setWidth(widest[key])
-                    rows = rows + button:getWidth()
-                end
-                rows = rows + (#children - 1) * BUTTON_SPACING
-                local title = TITLE_ROOM + widget.title:getWidth()
-                widget:setWidth(math.max(rows, title) + SECTOR_PADDING)
-                total = total + widget:getWidth()
-                blocks = blocks + 1
+    end
+    if buttons.vip then
+        buttons.vip:setWidth(math.max(110, buttons.vip:getTextSize().width + 56))
+        vipHolder:setWidth(buttons.vip:getWidth())
+        blocks[#blocks + 1] = vipHolder
+    end
+    -- the first line takes what fits; the rest goes to the second
+    local room = panel:getWidth() - 24
+    local strips = { panel.strip, panel.strip2 }
+    local wanted = { {}, {} }
+    local used, line = 0, 1
+    for _, block in ipairs(blocks) do
+        local width = block:getWidth() + (used > 0 and SECTOR_SPACING or 0)
+        if line == 1 and used > 0 and room > 0 and used + width > room then
+            line, used = 2, 0
+            width = block:getWidth()
+        end
+        table.insert(wanted[line], block)
+        used = used + width
+    end
+    for index, strip in ipairs(strips) do
+        for _, block in ipairs(wanted[index]) do
+            if block:getParent() ~= strip then
+                block:getParent():removeChild(block)
+                strip:addChild(block)
             end
         end
-        return total + math.max(0, blocks - 1) * SECTOR_SPACING
-    end
-    local function apply(level)
-        density = level
-        for id in pairs(buttons) do
-            styleButton(id)
+        -- the hidden sections stay on the first line, out of the way
+        if index == 1 then
+            for _, sector in ipairs(SECTORS) do
+                local widget = sectors[sector.id]
+                if not widget:isVisible() and widget:getParent() ~= strip then
+                    widget:getParent():removeChild(widget)
+                    strip:addChild(widget)
+                end
+            end
         end
-        return measure()
+        strip:reorderChildren(wanted[index])
     end
-    local room = panel:getWidth() - 24
-    for level = FULL, ICONS do
-        if apply(level) <= room or room <= 0 then
-            break
-        end
+    lines = #wanted[2] > 0 and 2 or 1
+    panel.strip2:setVisible(lines == 2 and not collapsed)
+    if not collapsed then
+        panel:setHeight(barHeight())
     end
     placeCallout()
 end
@@ -288,7 +315,8 @@ function addFeature(id, callback)
         if feature.group == 'vip' then
             -- last in the bar, after Tools, where the eye ends its sweep
             vipHolder = vipHolder or g_ui.createWidget('BrevesVipHolder', panel.strip)
-            panel.strip:moveChildToIndex(vipHolder, panel.strip:getChildCount())
+            local line = vipHolder:getParent()
+            line:moveChildToIndex(vipHolder, line:getChildCount())
             button = g_ui.createWidget('BrevesVipButton', vipHolder)
             -- the crown clear of the pointed end
             button.icon:setMarginLeft(18)
@@ -657,8 +685,12 @@ function showNews()
 end
 
 
-local BAR_HEIGHT, FOLDED_HEIGHT = 53, 22
-local collapsed = false
+local BAR_HEIGHT, LINE_HEIGHT, FOLDED_HEIGHT = 53, 50, 22
+
+-- open: one line of sections, or two when the map is narrow
+barHeight = function()
+    return BAR_HEIGHT + (lines == 2 and LINE_HEIGHT or 0)
+end
 
 -- folds the bar to one line or opens it
 local function setCollapsed(fold)
@@ -666,8 +698,9 @@ local function setCollapsed(fold)
     if not panel then
         return
     end
-    panel:setHeight(fold and FOLDED_HEIGHT or BAR_HEIGHT)
+    panel:setHeight(fold and FOLDED_HEIGHT or barHeight())
     panel.strip:setVisible(not fold)
+    panel.strip2:setVisible(not fold and lines == 2)
     panel.tutorialButton:setVisible(not fold)
     panel.collapsedLabel:setVisible(fold)
     panel.collapseButton:setOn(fold)
