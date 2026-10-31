@@ -1492,6 +1492,14 @@ function init()
             attackNext(true)
         end
     end }})
+    -- the monster on screen with the least health left (monsters have no
+    -- level here): the quickest kill
+    Keybind.new("Battle", "Attack Lowest Health Monster", "", "")
+    Keybind.bind("Battle", "Attack Lowest Health Monster", {{ type = KEY_DOWN, callback = function()
+        if g_game.isOnline() then
+            attackLowestHealth()
+        end
+    end }})
 
     -- Setup scrollbar - use default MiniWindow behavior
     local scrollbar = battleWindow:getChildById('miniwindowScrollBar')
@@ -2041,6 +2049,42 @@ local function attackNearby(previous)
         index = index == #list and 1 or index + 1
     end
     g_game.attack(list[index].creature)
+    return true
+end
+
+-- attacks the monster on the screen (this floor) with the least health in
+-- percent; between two as hurt, the closer one. Not NPCs, players or
+-- summons. Pressed again on that monster, it keeps it.
+function attackLowestHealth()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return false
+    end
+    local pos = player:getPosition()
+    local best, bestHealth, bestDistance
+    for _, creature in ipairs(g_map.getSpectators(pos, false)) do
+        local cpos = creature:getPosition()
+        local health = creature:getHealthPercent()
+        if creature:isMonster() and not creature:isDead() and health > 0 and creature:canBeSeen()
+            and creature:getMasterId() == 0 and cpos.z == pos.z then
+            local distance = math.max(math.abs(cpos.x - pos.x), math.abs(cpos.y - pos.y))
+            if not best or health < bestHealth or (health == bestHealth and (distance < bestDistance
+                or (distance == bestDistance and creature:getId() < best:getId()))) then
+                best, bestHealth, bestDistance = creature, health, distance
+            end
+        end
+    end
+    if not best then
+        return false
+    end
+    local current = g_game.getAttackingCreature()
+    if current and current:getId() ~= best:getId() and current:isMonster() and not current:isDead()
+        and current:getHealthPercent() == bestHealth and current:getPosition().z == pos.z then
+        return true -- as hurt as the lowest: no need to switch
+    end
+    if not current or current:getId() ~= best:getId() then
+        g_game.attack(best)
+    end
     return true
 end
 
@@ -2674,6 +2718,7 @@ function terminate() -- Terminating the Module (unload)
     Keybind.delete("Windows", "Show/hide battle list")
     Keybind.delete("Battle", "Attack Next Target")
     Keybind.delete("Battle", "Attack Previous Target")
+    Keybind.delete("Battle", "Attack Lowest Health Monster")
 
     disconnect(g_game, {
         onAttackingCreatureChange = onAttack,
