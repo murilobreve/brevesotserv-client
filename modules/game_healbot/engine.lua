@@ -135,6 +135,17 @@ local function isPartyMember(creature)
     return shield >= ShieldBlue and shield <= ShieldYellowNoSharedExp
 end
 
+-- the whole party, anyone, or the one character the rule names
+local function isTarget(rule, creature)
+    local target = rule.target or HealData.FRIEND_PARTY
+    if target == HealData.FRIEND_ANYONE then
+        return true
+    elseif target == HealData.FRIEND_PARTY then
+        return isPartyMember(creature)
+    end
+    return creature:getName():lower() == target:lower()
+end
+
 local function woundedFriend(player, rule)
     local pos = player:getPosition()
     local best
@@ -143,7 +154,7 @@ local function woundedFriend(player, rule)
             local cpos = creature:getPosition()
             local hp = creature:getHealthPercent()
             if math.abs(cpos.x - pos.x) <= 7 and math.abs(cpos.y - pos.y) <= 5 and hp > 0 and hp < rule.below
-                and (not rule.party or isPartyMember(creature)) and (not best or hp < best:getHealthPercent()) then
+                and isTarget(rule, creature) and (not best or hp < best:getHealthPercent()) then
                 best = creature
             end
         end

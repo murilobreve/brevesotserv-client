@@ -4,6 +4,11 @@
 
 HealData = {}
 
+-- who a friend rule heals, besides one character by name (no name starts
+-- with @)
+HealData.FRIEND_PARTY = '@party'
+HealData.FRIEND_ANYONE = '@anyone'
+
 -- base vocation ids, as the server and SpellInfo use them
 local SORCERER, DRUID, PALADIN, KNIGHT, MONK = 1, 2, 3, 4, 9
 
