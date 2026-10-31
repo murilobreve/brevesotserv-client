@@ -13,6 +13,8 @@ local SEND_INTERVAL = 350
 
 local FILTERS = {
     { key = 'tp', label = 'Hunts with TP' },
+    { key = 'tpGold2', label = 'With TP, 2k+ gold/kill' },
+    { key = 'tpGold5', label = 'With TP, 5k+ gold/kill' },
     { key = 'all', label = 'All monsters' },
     { key = 'xp', label = 'Boosted XP (1.5x+)' },
     { key = 'loot', label = 'Boosted loot (1.5x+)' },
@@ -26,6 +28,7 @@ local SORTS = {
     { key = 'xp', label = 'Highest XP rate' },
     { key = 'loot', label = 'Highest loot rate' },
     { key = 'perKill', label = 'Most XP per kill' },
+    { key = 'gold', label = 'Most gold per kill' },
     { key = 'spawns', label = 'Most spawns' },
     { key = 'exp', label = 'Base experience' },
     { key = 'name', label = 'Name' },
@@ -347,6 +350,10 @@ local function matchesFilter(monster, filter, search, hideBosses)
     end
     if filter == 'tp' then
         return monster.tp > 0
+    elseif filter == 'tpGold2' then
+        return monster.tp > 0 and (monster.goldPerKill or 0) >= 2000
+    elseif filter == 'tpGold5' then
+        return monster.tp > 0 and (monster.goldPerKill or 0) >= 5000
     elseif filter == 'xp' then
         return monster.xp >= 15
     elseif filter == 'loot' then
@@ -383,6 +390,13 @@ local SORTERS = {
     perKill = function(a, b)
         if a.perKill ~= b.perKill then
             return a.perKill > b.perKill
+        end
+        return a.lname < b.lname
+    end,
+    gold = function(a, b)
+        local goldA, goldB = a.goldPerKill or -1, b.goldPerKill or -1
+        if goldA ~= goldB then
+            return goldA > goldB
         end
         return a.lname < b.lname
     end,
@@ -528,8 +542,16 @@ local function renderPage()
         setBar(row.lootBar, monster.loot, rates.lootMax, lootTone)
         row.perKill:setText(formatShort(monster.perKill) .. ' xp')
         row.perKill:setColor(xpTone(monster.xp))
+        row.goldKill:setVisible(monster.goldPerKill ~= nil)
+        if monster.goldPerKill then
+            row.goldKill:setText(formatShort(monster.goldPerKill) .. ' gold')
+        end
         local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
             formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
+        if monster.goldPerKill then
+            tooltip = tooltip .. '\n' .. tr('Gold: %s x %.1f = %s per kill (average, at the prices Gersao pays)',
+                formatNumber(monster.gold), monster.loot / 10, formatNumber(monster.goldPerKill))
+        end
         if monster.dmgMult > 1 then
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
         end
@@ -903,6 +925,11 @@ function handlers.rates(data)
         monster.loot = tonumber(monster.loot) or 10
         monster.elements = parseElements(monster.elements)
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
+        -- gold per kill: the server's average at the normal loot rate (what
+        -- Gersao pays for the items, the coins at their worth) times this
+        -- monster's loot rate; nil with a server that does not send it
+        monster.gold = tonumber(monster.gold)
+        monster.goldPerKill = monster.gold and math.floor(monster.gold * monster.loot / 10 + 0.5) or nil
         -- a monster with an experience rate above 1x is tougher (server:
         -- huntboard strength)
         monster.hpMult, monster.dmgMult = 1, 1
@@ -1038,7 +1065,7 @@ end
 -- with the Mythos panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
-    rates = { title = 'Hunts TP', intro = 'Every hunt, with its XP and loot rate and a TP' },
+    rates = { title = 'Hunts TP', intro = 'Every hunt with its XP, its loot and gold per kill, and a TP' },
     board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
 }
 
