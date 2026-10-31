@@ -289,6 +289,7 @@ locale = {
     ["Become VIP"] = "Seja VIP",
     ["+10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. Opens the VIP page of the site."] = "+10%% de experiência, loot e treino, as montarias Fusca, Uno e Gol e mais. Abre a página VIP do site.",
     ["VIP: %d days"] = "VIP: %d dias",
+    ["VIP %dd"] = "VIP %dd",
     ["Mythos tour"] = "Tour do Mythos",
     ["Skip the tour"] = "Pular o tour",
     ["Next"] = "Próximo",

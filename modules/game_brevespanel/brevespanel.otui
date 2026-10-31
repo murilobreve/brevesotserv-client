@@ -211,7 +211,7 @@ BrevesBar < UIWidget
     phantom: true
     layout:
       type: horizontalBox
-      spacing: 6
+      spacing: 4
       fit-children: true
 
   // the sections that do not fit on the first line (a narrow map): the
@@ -226,7 +226,7 @@ BrevesBar < UIWidget
     visible: false
     layout:
       type: horizontalBox
-      spacing: 6
+      spacing: 4
       fit-children: true
 
   // starts the Mythos tour again (game_tutorial)
