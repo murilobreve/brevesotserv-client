@@ -444,7 +444,7 @@ return {
         end
     },
     mapZoom                           = {
-        value = 'wide',
+        value = 'medium',
         action = function(value, options, controller, panels, extraWidgets)
             panels.graphicsPanel:recursiveGetChildById('mapZoom'):setCurrentOptionByData(value, true)
             if modules.game_interface and modules.game_interface.setMapZoom then

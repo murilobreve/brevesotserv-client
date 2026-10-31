@@ -14,7 +14,8 @@ local function refresh()
         return
     end
     if status and status.vip then
-        panel.setFeatureLabel('vip', tr('VIP: %d days', tonumber(status.days) or 0), '#ffd77a')
+        -- short: the bar has to fit it in its first line
+        panel.setFeatureLabel('vip', tr('VIP %dd', tonumber(status.days) or 0), '#ffd77a')
         row:setTooltip(tr('Mythos VIP until %s', os.date('%d/%m/%Y %H:%M', tonumber(status.expires) or 0)))
     else
         panel.setFeatureLabel('vip', tr('Become VIP'), '#e6cf8f')
