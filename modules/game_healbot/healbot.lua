@@ -6,6 +6,7 @@ local window, toolbarButton, countEvent
 local cfg
 local CONFIG_VERSION = 3
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
+local FRIEND_PARTY, FRIEND_ANYONE = HealData.FRIEND_PARTY, HealData.FRIEND_ANYONE
 local PAGES = { 'healing', 'potions', 'friends', 'support', 'loot' }
 local PAGE_ICONS = {
     healing = '/images/icons/icon-healing',
@@ -109,8 +110,10 @@ local function defaults(player)
     config.potions[2].item, config.potions[2].stat, config.potions[2].below = bestPotion('mp'), 'mp', 40
     config.potions[1].on = config.potions[1].item ~= 0
     config.potions[2].on = config.potions[2].item ~= 0
+    -- target: the whole party (FRIEND_PARTY), anyone (FRIEND_ANYONE) or one
+    -- character by name
     for i = 1, FRIEND_RULES do
-        config.friends[i] = { on = false, spell = 0, below = 60, party = true }
+        config.friends[i] = { on = false, spell = 0, below = 60, target = FRIEND_PARTY }
     end
     config.friends[1].spell = bestSpell(HealData.friendSpells(vocation))
     config.support = {
@@ -205,6 +208,13 @@ local function load()
     -- every login starts with the bot on; turning it off lasts the session
     saved.running = nil
     local version = tonumber(saved.version)
+    -- a rule saved before the target: its old "party only" box decides
+    for i, rule in ipairs(cfg.friends) do
+        local old = type(saved.friends) == 'table' and (saved.friends[i] or saved.friends[tostring(i)])
+        if type(old) == 'table' and old.target == nil and (old.party == false or old.party == 'false') then
+            old.target = FRIEND_ANYONE
+        end
+    end
     if version == CONFIG_VERSION then
         merge(cfg, saved)
         sanitize(cfg, HealData.vocation(player))
@@ -378,10 +388,63 @@ local function addPotionRule(panel, rule, potions)
     widget.potionRule = rule
 end
 
+-- who a friend rule heals: the whole party, anyone, or one of the party
+-- members on screen (the chosen one stays listed while away)
+local friendTargets = {}
+
+local function partyMembersInView()
+    local names = {}
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return names
+    end
+    for _, creature in ipairs(g_map.getSpectators(player:getPosition(), false)) do
+        local shield = creature:getShield()
+        if creature:isPlayer() and not creature:isLocalPlayer() and shield >= ShieldBlue and shield <= ShieldYellowNoSharedExp then
+            names[#names + 1] = creature:getName()
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+local function fillTargets(combo, rule)
+    combo.onOptionChange = nil
+    combo:clearOptions()
+    combo:addOption(tr('Whole party'), FRIEND_PARTY)
+    combo:addOption(tr('Anyone'), FRIEND_ANYONE)
+    local listed = rule.target == FRIEND_PARTY or rule.target == FRIEND_ANYONE
+    for _, name in ipairs(partyMembersInView()) do
+        combo:addOption(name, name)
+        listed = listed or name:lower() == rule.target:lower()
+    end
+    if not listed then
+        combo:addOption(rule.target, rule.target)
+    end
+    combo:setCurrentOptionByData(rule.target, true)
+    combo.onOptionChange = function(_, _, data)
+        rule.target = data
+        save()
+    end
+end
+
+local function refreshTargets()
+    for combo, rule in pairs(friendTargets) do
+        if combo:isDestroyed() then
+            friendTargets[combo] = nil
+        else
+            fillTargets(combo, rule)
+        end
+    end
+end
+
 local function addFriendRule(panel, rule, spells)
     local widget = g_ui.createWidget('FriendRule', panel)
+    -- room for the target list at the end of the row
+    widget.choice:setWidth(112)
     bindCheck(widget.enabled, rule, 'on')
-    bindCheck(widget.party, rule, 'party')
+    friendTargets[widget.target] = rule
+    fillTargets(widget.target, rule)
     setSpellIcon(widget.icon, HealData.spell(rule.spell))
     fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
         rule.spell = id
@@ -601,6 +664,18 @@ local function onVocationChange()
     end
 end
 
+-- someone joins or leaves the party: the target lists follow
+local targetsEvent
+local function onShieldChange(creature)
+    if not window or not window:isVisible() or targetsEvent or not creature:isPlayer() then
+        return
+    end
+    targetsEvent = scheduleEvent(function()
+        targetsEvent = nil
+        refreshTargets()
+    end, 200)
+end
+
 local function onGameEnd()
     save()
     setRunning(false, true)
@@ -626,6 +701,7 @@ function init()
     countEvent = cycleEvent(refreshCounts, 1000)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     connect(LocalPlayer, { onVocationChange = onVocationChange })
+    connect(Creature, { onShieldChange = onShieldChange })
     if g_game.isOnline() then
         onGameStart()
     end
@@ -634,6 +710,7 @@ end
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     disconnect(LocalPlayer, { onVocationChange = onVocationChange })
+    disconnect(Creature, { onShieldChange = onShieldChange })
     save()
     HealEngine.terminate()
     if countEvent then
