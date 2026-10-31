@@ -115,6 +115,21 @@ function instantRewardAccess()
     return player and player:getResourceBalance(ResourceTypes.DAILYREWARD_STREAK) or 0
 end
 
+local function destroyWindows(windows)
+    if type(windows) == "table" then
+        for _, window in pairs(windows) do
+            if window and not window:isDestroyed() then
+                window:destroy()
+            end
+        end
+    else
+        if windows and not windows:isDestroyed() then
+            windows:destroy()
+        end
+    end
+    return nil
+end
+
 -- Claims the chosen reward: free at a shrine; from the button it costs one
 -- Instant Reward Access, asked first, or says there is none
 local function confirmClaim()
@@ -130,20 +145,6 @@ local function confirmClaim()
         return
     end
     managerMessageBoxWindow(CONST_WINDOWS_BOX.CONFIRMATION_IRA)
-end
-local function destroyWindows(windows)
-    if type(windows) == "table" then
-        for _, window in pairs(windows) do
-            if window and not window:isDestroyed() then
-                window:destroy()
-            end
-        end
-    else
-        if windows and not windows:isDestroyed() then
-            windows:destroy()
-        end
-    end
-    return nil
 end
 
 local function premiumStatusWindwos(isPremium)

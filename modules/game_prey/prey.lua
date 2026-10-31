@@ -40,6 +40,7 @@ local restoreRaceListItemBackground
 local setWidgetTreePhantom
 local updatePickSpecificPreyButton
 local refreshRerollButtonState
+local showListRerollConfirmation
 
 function bonusDescription(bonusType, bonusValue, bonusGrade)
     if bonusType == PREY_BONUS_DAMAGE_BOOST then
@@ -932,7 +933,7 @@ function refreshRerollButtonState(slot)
     updatePanel(prey.inactive)
 end
 
-local function showListRerollConfirmation(slot)
+showListRerollConfirmation = function(slot)
     local price = getDisplayedRerollPrice(slot)
 
     if price == nil then
