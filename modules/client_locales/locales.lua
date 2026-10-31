@@ -277,7 +277,10 @@ function _G.tr(text, ...)
                 end
                 translation = text
             end
-            return string.format(translation, ...)
+            -- a text from the server can carry a plain "%" ("60% more"),
+            -- which string.format refuses: show it as it is
+            local ok, formatted = pcall(string.format, translation, ...)
+            return ok and formatted or translation
         end
     end
     return text
