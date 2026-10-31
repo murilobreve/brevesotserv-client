@@ -84,10 +84,15 @@ local VIP_ICON_ONLY = 52 -- the gold VIP button with its crown alone
 local FULL, SHORT, STATES, ICONS = 0, 1, 2, 3
 local density = FULL
 local TOGGLE_WIDTH = 28 -- a switch's badge, as wide for ON as for OFF
--- the widest each button has been at each level since login: a name or a
--- badge that changes by itself (the teleport countdown, points, minutes)
--- never makes the bar jump between levels; only the window size does
+-- the widest each row's badge and quick action have been since login: what
+-- changes by itself (the teleport countdown, points, minutes) never makes
+-- the bar jump. The name is measured as it is, so a row gets narrow again
+-- when its text does (another monster on the task row)
 local widest = {}
+-- the task rows in short ("Lost Th. 0/65", "Hunt"): the last thing the bar
+-- tries before it takes a second line (resize)
+local compact = false
+local shortLabels = {} -- row id -> its label in short (setFeatureLabel)
 
 local styleButton
 local placeCallout, closeCallout -- the callout over a row (point)
@@ -150,24 +155,59 @@ local function refreshBadge(id)
     end
 end
 
+local function widestOf(key, width)
+    widest[key] = math.max(widest[key] or 0, width)
+    return widest[key]
+end
+
 -- a button is as wide as its icon, its name and its badge
 local function buttonWidth(button)
-    if density == ICONS and button:getId() ~= 'vip' then
+    local id = button:getId()
+    if density == ICONS and id ~= 'vip' then
         return ICON_ONLY
     end
     local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 4
     if button.badge:isVisible() then
-        width = width + button.badge:getWidth() + 4
+        width = width + widestOf(id .. ':badge', button.badge:getWidth()) + 4
     end
     if button.action:isVisible() then
-        width = width + button.action:getWidth() + 6
+        width = width + widestOf(id .. (compact and ':short' or ':action'), button.action:getWidth()) + 6
     end
     return width
 end
 
--- widths of the buttons and the sections. The bar always shows the names in
--- full: when they do not fit in one line, the last sections (and the VIP
--- button) go to a second line instead of shrinking
+-- sizes every row and section; returns the sections shown and how wide they
+-- are side by side
+local function measureSections()
+    for id in pairs(buttons) do
+        styleButton(id)
+    end
+    local blocks, total = {}, 0
+    for _, sector in ipairs(SECTORS) do
+        local widget = sectors[sector.id]
+        local children = widget.rows:getChildren()
+        widget:setVisible(#children > 0)
+        if #children > 0 then
+            local rows = 0
+            for _, button in ipairs(children) do
+                button:setWidth(buttonWidth(button))
+                rows = rows + button:getWidth()
+            end
+            rows = rows + (#children - 1) * BUTTON_SPACING
+            local title = TITLE_ROOM + widget.title:getWidth()
+            widget:setWidth(math.max(rows, title) + SECTOR_PADDING)
+            blocks[#blocks + 1] = widget
+            total = total + widget:getWidth() + (total > 0 and SECTOR_SPACING or 0)
+        end
+    end
+    return blocks, total
+end
+
+-- widths of the buttons and the sections. The bar keeps to one line while
+-- it can: the VIP button shrinks to its days ("16d"), then to its crown
+-- alone (the days in the tooltip), and last the task rows go short. When not
+-- even that fits, every name is back in full and the last sections (and the
+-- VIP button) go to a second line
 local lines = 1
 local barHeight
 local collapsed = false
@@ -176,54 +216,55 @@ local function resize()
         return
     end
     density = FULL
-    for id in pairs(buttons) do
-        styleButton(id)
-    end
-    local blocks = {}
-    for _, sector in ipairs(SECTORS) do
-        local widget = sectors[sector.id]
-        local children = widget.rows:getChildren()
-        widget:setVisible(#children > 0)
-        if #children > 0 then
-            local rows = 0
-            for _, button in ipairs(children) do
-                local key = button:getId() .. ':' .. density
-                widest[key] = math.max(widest[key] or 0, buttonWidth(button))
-                button:setWidth(widest[key])
-                rows = rows + button:getWidth()
-            end
-            rows = rows + (#children - 1) * BUTTON_SPACING
-            local title = TITLE_ROOM + widget.title:getWidth()
-            widget:setWidth(math.max(rows, title) + SECTOR_PADDING)
-            blocks[#blocks + 1] = widget
-        end
-    end
-    -- the first line takes what fits; the rest goes to the second
     local room = panel:getWidth() - 24
-    if buttons.vip then
-        -- the VIP button keeps to the first line when it can: when the
-        -- sections fit there and it does not, it shrinks to the days ("16d")
-        -- and then to its crown alone (the days in the tooltip)
-        local sectionsWidth = 0
-        for _, block in ipairs(blocks) do
-            sectionsWidth = sectionsWidth + block:getWidth() + (sectionsWidth > 0 and SECTOR_SPACING or 0)
-        end
-        local vip = buttons.vip
-        local full = vip:getText()
-        local days = full:match('(%d+)')
-        local texts = { full }
-        if days then
-            texts[#texts + 1] = days .. 'd'
-        end
-        texts[#texts + 1] = ''
-        for _, text in ipairs(texts) do
-            vip:setText(text)
-            vip:setWidth(text == '' and VIP_ICON_ONLY or math.max(VIP_MIN_WIDTH, vip:getTextSize().width + 58))
-            if room <= 0 or sectionsWidth > room or sectionsWidth + SECTOR_SPACING + vip:getWidth() <= room then
-                break
+    local vip = buttons.vip
+    local function vipWidth(text)
+        vip:setText(text)
+        vip:setWidth(text == '' and VIP_ICON_ONLY or math.max(VIP_MIN_WIDTH, vip:getTextSize().width + 58))
+        vipHolder:setWidth(vip:getWidth())
+        return vip:getWidth()
+    end
+    local blocks, width
+    local oneLine = false
+    for _, short in ipairs({ false, true }) do
+        compact = short
+        blocks, width = measureSections()
+        if room <= 0 then
+            -- not laid out yet
+            oneLine = true
+            if vip then
+                vipWidth(vip:getText())
+            end
+        elseif not vip then
+            oneLine = width <= room
+        else
+            -- styleButton gave the VIP button its full text back
+            local full = vip:getText()
+            local days = full:match('(%d+)')
+            local texts = { full }
+            if days then
+                texts[#texts + 1] = days .. 'd'
+            end
+            texts[#texts + 1] = ''
+            for _, text in ipairs(texts) do
+                if width + SECTOR_SPACING + vipWidth(text) <= room then
+                    oneLine = true
+                    break
+                end
             end
         end
-        vipHolder:setWidth(vip:getWidth())
+        if oneLine then
+            break
+        end
+    end
+    if not oneLine then
+        compact = false
+        blocks = measureSections()
+        if vip then
+            vipWidth(vip:getText())
+        end
+    end
+    if vip then
         blocks[#blocks + 1] = vipHolder
     end
     local strips = { panel.strip, panel.strip2 }
@@ -286,7 +327,7 @@ styleButton = function(id)
     end
     -- the VIP button keeps its text: it is the one that sells
     local level = id == 'vip' and FULL or density
-    local name = labels[id] or tr(level == SHORT and feature.short or feature.label)
+    local name = (compact and shortLabels[id]) or labels[id] or tr(level == SHORT and feature.short or feature.label)
     button:setText(level >= STATES and '' or name)
     -- without its name, the name is in the tooltip (refreshBadge)
     refreshBadge(id)
@@ -298,7 +339,7 @@ styleButton = function(id)
     local action = actions[id]
     button.action:setVisible(action ~= nil and not iconsOnly)
     if action then
-        button.action:setText(level >= SHORT and action.short or action.text)
+        button.action:setText((level >= SHORT or compact) and action.short or action.text)
         button.action:setTooltip(action.tooltip or '')
         button.action:setEnabled(action.enabled ~= false)
         button.action.onClick = function()
@@ -354,6 +395,13 @@ function addFeature(id, callback)
         end
         button.icon:setImageSource(iconPath(feature.icon))
         button.onClick = function() open(id) end
+        -- the end of a hover or of the open window puts the style's color
+        -- back: the row's own color (the task's gold) comes back with it
+        connect(button, { onStyleApply = function(widget)
+            if not widget:isOn() and not widget:isHovered() then
+                widget:setColor(labelColor(id))
+            end
+        end })
         buttons[id] = button
         -- a flag set before the row was added
         if flags[id] then
@@ -511,11 +559,13 @@ function setFeatureState(id, text, color)
 end
 
 -- replaces the name shown on a row (nil puts the feature name back), e.g.
--- the Hunt Tasks row shows the current monster and kills
-function setFeatureLabel(id, text, color)
-    local same = labels[id] == text and labelColors[id] == color
+-- the Hunt Tasks row shows the current monster and kills; `short` is the
+-- text when the bar is short of room (the tooltip keeps the full one)
+function setFeatureLabel(id, text, color, short)
+    local same = labels[id] == text and labelColors[id] == color and shortLabels[id] == short
     labels[id] = text
     labelColors[id] = color
+    shortLabels[id] = text and short or nil
     local button = buttons[id]
     if button and not same then
         button:setColor(labelColor(id))
