@@ -124,13 +124,14 @@ FriendRule < HealBotRule
     color: #e6e0f2
     text: %
 
-  QtCheckBox
-    id: party
-    width: 80
+  // the whole party, anyone, or one party member
+  MythosComboBox
+    id: target
+    width: 104
     anchors.left: belowLabel.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
-    !text: tr('party only')
+    !tooltip: tr('Who to heal')
 
 SupportRule < HealBotRule
   Label
