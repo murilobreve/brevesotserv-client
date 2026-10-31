@@ -17,7 +17,7 @@ local FILTERS = {
     { key = 'xp', label = 'Boosted XP (1.5x+)' },
     { key = 'loot', label = 'Boosted loot (1.5x+)' },
     { key = 'both', label = 'Double boost (2x+ both)' },
-    { key = 'jackpot', label = 'Jackpot (3.5x+)' },
+    { key = 'jackpot', label = 'Jackpot (XP 3.5x+ or loot 2.5x+)' },
     { key = 'nerfed', label = 'Below normal (<1x)' },
 }
 
@@ -47,7 +47,7 @@ local tickEvent
 
 local currentTab = 'rates'
 local currentPeriod = 'hour'
-local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 40, slot = -1 }
+local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 30, slot = -1 }
 local filtered = {}
 local page = 1
 local boards = {}
@@ -142,8 +142,9 @@ local function xpTone(tenths)
     return ramp(math.max(0, math.min(1, (tenths - 10) / 90)), { 120, 108, 140 }, { 196, 170, 255 })
 end
 
+-- loot goes from 1x to 3x (its own roll since 2026-10-31)
 local function lootTone(tenths)
-    return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 138, 122, 85 }, { 235, 205, 130 })
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 20)), { 138, 122, 85 }, { 235, 205, 130 })
 end
 
 local function multText(tenths)
@@ -238,7 +239,7 @@ local function matchesFilter(monster, filter, search, hideBosses)
     elseif filter == 'both' then
         return monster.xp >= 20 and monster.loot >= 20
     elseif filter == 'jackpot' then
-        return monster.xp >= 35 or monster.loot >= 35
+        return monster.xp >= 35 or monster.loot >= 25
     elseif filter == 'nerfed' then
         return monster.xp < 10 or monster.loot < 10
     end
@@ -397,7 +398,7 @@ local function renderPage()
         end
         row.creature:setOutfit(outfitOf(monster))
         row.name:setText(monster.boss == 1 and (monster.name .. '  [boss]') or monster.name)
-        if monster.xp >= 60 or monster.loot >= 18 then
+        if monster.xp >= 40 or monster.loot >= 25 then
             row.name:setColor('#ffb020')
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
@@ -755,7 +756,7 @@ function handlers.rates(data)
     rates.nextAt = data.nextAt or 0
     rates.interval = data.interval or 7200
     rates.max = data.max or 100
-    rates.lootMax = data.lootMax or 40
+    rates.lootMax = data.lootMax or 30
     local fields = data.fields or {}
     local index = {}
     for i, name in ipairs(fields) do
