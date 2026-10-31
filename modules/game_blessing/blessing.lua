@@ -1,17 +1,5 @@
 BlessingController = Controller:new()
 
-local BLESSINGS_LIST = {
-    { flag = Blessings.Adventurer,         name = "Adventurer's Blessing" },
-    { flag = Blessings.TwistOfFate,        name = "Twist of Fate"         },
-    { flag = Blessings.WisdomOfSolitude,   name = "Wisdom of Solitude"    },
-    { flag = Blessings.SparkOfPhoenix,     name = "Spark of the Phoenix"  },
-    { flag = Blessings.FireOfSuns,         name = "Fire of the Suns"      },
-    { flag = Blessings.SpiritualShielding, name = "Spiritual Shielding"   },
-    { flag = Blessings.EmbraceOfTibia,     name = "Embrace of Tibia"      },
-    { flag = Blessings.HeartOfMountain,    name = "Heart of the Mountain" },
-    { flag = Blessings.BloodOfMountain,    name = "Blood of the Mountain" },
-}
-
 local GLOWSTATE ={
     Disabled = 1,
     Normal = 2,
@@ -152,28 +140,29 @@ function BlessingController:onClickSendStore()
     g_game.sendRequestStorePremiumBoost()
 end
 
+-- The server's blessing packet (0x9C) carries the glow of the equipment
+-- (1 or 0) and a state: 1 = not all regular blessings, 2 = the five
+-- regular ones, 3 = all of them. The first field is no list of blessings,
+-- so the button follows the state, on both layouts of the inventory.
+local BLESS_TOOLTIPS = {
+    [GLOWSTATE.Disabled] = 'You are not protected by all the blessings.',
+    [GLOWSTATE.Normal] = 'You are protected by the five regular blessings.',
+    [GLOWSTATE.Green] = 'You are protected by all the blessings.',
+}
+
 function onBlessingsChange(player, blessings, oldBlessings, blessVisualState)
     local hasAdventurerBlessing = Bit.hasBit(blessings, Blessings.Adventurer)
     if hasAdventurerBlessing ~= Bit.hasBit(oldBlessings, Blessings.Adventurer) then
         modules.game_inventory.toggleAdventurerStyle(hasAdventurerBlessing)
     end
-    local blessedButton = modules.game_inventory.getButtonBlessings()
-    if not blessedButton then
-        return
-    end
-    if blessings == Blessings.None then
-        blessedButton:setTooltip('You are currently not protected by any blessing.')
-    else
-        local lines = {'You are protected by the following blessings:'}
-        for _, blessing in ipairs(BLESSINGS_LIST) do
-            if Bit.hasBit(blessings, blessing.flag) then
-                lines[#lines + 1] = '- ' .. blessing.name
-            end
-        end
-        blessedButton:setTooltip(table.concat(lines, '\n'))
-    end
     local image = VISUAL_STATE_IMAGES[blessVisualState]
-    if image then
-        blessedButton:setImageSource(image)
+    local tooltip = BLESS_TOOLTIPS[blessVisualState]
+    for _, button in ipairs(modules.game_inventory.getButtonsBlessings()) do
+        if image then
+            button:setImageSource(image)
+        end
+        if tooltip then
+            button:setTooltip(tr(tooltip))
+        end
     end
 end

@@ -555,3 +555,12 @@ end
 function getButtonBlessings()
     return getInventoryUi().blessings
 end
+
+-- the blessings button of both layouts (full and shrunk inventory)
+function getButtonsBlessings()
+    local ui = inventoryController.ui
+    if not ui then
+        return {}
+    end
+    return { ui.onPanel.blessings, ui.offPanel.blessings }
+end
