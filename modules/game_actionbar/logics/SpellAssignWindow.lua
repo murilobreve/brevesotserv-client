@@ -25,6 +25,7 @@ local COLORS = {
     ascensao = '#f0c96a',
     wheel = '#9cc0f0',
     value = '#e8e8e8',
+    reduced = '#8fe08f',
 }
 
 local STATUS_STYLE = {
@@ -97,10 +98,12 @@ local function seconds(ms)
     if ms >= 60000 and ms % 60000 == 0 then
         return string.format('%dmin', ms / 60000)
     end
-    if ms % 1000 == 0 then
-        return string.format('%ds', ms / 1000)
+    -- to the nearest tenth: 1450 ms is 1,5 s
+    local tenths = math.floor(ms / 100 + 0.5)
+    if tenths % 10 == 0 then
+        return string.format('%ds', tenths / 10)
     end
-    local text = string.format('%.1fs', ms / 1000)
+    local text = string.format('%d.%ds', math.floor(tenths / 10), tenths % 10)
     local locale = modules.client_locales and modules.client_locales.getCurrentLocale and modules.client_locales.getCurrentLocale()
     if locale and locale.decimalSeperator then
         text = text:gsub('%.', locale.decimalSeperator)
@@ -188,9 +191,41 @@ local function targetText(info)
     return tr('on yourself')
 end
 
-local function addStat(panel, key, value)
+-- "Mana: 160", the value bright; `color` for the value, `after` in grey
+local function addStat(panel, key, value, color, after)
     local label = g_ui.createWidget('SpellAssignStat', panel)
-    label:setColoredText(string.format('%s {%s, %s}', key, value, COLORS.value))
+    label:setColoredText(string.format('%s {%s, %s}%s', key, value, color or COLORS.value, after and (' ' .. after) or ''))
+end
+
+local function percent(value)
+    value = tonumber(value) or 0
+    local text = value == math.floor(value) and string.format('%d', value) or string.format('%.1f', value)
+    local locale = modules.client_locales and modules.client_locales.getCurrentLocale and modules.client_locales.getCurrentLocale()
+    if locale and locale.decimalSeperator then
+        text = text:gsub('%.', locale.decimalSeperator)
+    end
+    return text
+end
+
+-- the wait the server really puts (Spell::postCastSpell): the rarity
+-- Cooldown Reduction (`share` of it: all on the spell, half on the group),
+-- never under half, then rateSpellCooldown
+local function realWait(ms, share)
+    ms = math.floor(tonumber(ms) or 0)
+    if ms <= 0 then
+        return 0
+    end
+    local cdr = book and tonumber(book.cdr) or 0
+    local rate = book and tonumber(book.rate) or 1
+    if rate <= 0 then
+        rate = 1
+    end
+    local wait = ms
+    local cut = math.floor(ms * cdr * share / 100)
+    if cut > 0 then
+        wait = math.max(math.floor(ms / 2), ms - cut)
+    end
+    return math.floor(wait / rate)
 end
 
 local function showDetails(row)
@@ -221,8 +256,8 @@ local function showDetails(row)
     local stats = details.stats
     stats:destroyChildren()
     local cells = 0
-    local function stat(key, value)
-        addStat(stats, key, value)
+    local function stat(key, value, color, after)
+        addStat(stats, key, value, color, after)
         cells = cells + 1
     end
     local mana = tonumber(info.m) or 0
@@ -232,8 +267,21 @@ local function showDetails(row)
         stat(tr('Mana:'), tostring(mana))
     end
     stat(tr('Level:'), tostring(info.lv or 0))
-    stat(tr('Cooldown:'), seconds(info.cd))
-    stat(tr('Group:'), string.format('%s %s', word('Spell kind', GROUP_NAME[info.g] or 'Support'), seconds(info.gcd)))
+    -- the cooldowns as they are for this character, the spell's own in grey
+    local cdr = book and tonumber(book.cdr) or 0
+    local reducedColor = cdr > 0 and COLORS.reduced or nil
+    local function waitStat(key, label, ms, share, own)
+        local base = tonumber(ms) or 0
+        local wait = own and base or realWait(base, share)
+        local value = (label and (label .. ' ') or '') .. seconds(wait)
+        if wait ~= base and wait > 0 then
+            stat(key, value, reducedColor, '(' .. seconds(base) .. ')')
+        else
+            stat(key, value)
+        end
+    end
+    waitStat(tr('Cooldown:'), nil, info.cd, 1, info.own)
+    waitStat(tr('Group:'), word('Spell kind', GROUP_NAME[info.g] or 'Support'), info.gcd, 0.5, false)
     stat(tr('Target:'), targetText(info))
     if (tonumber(info.r) or 0) > 0 then
         stat(tr('Range:'), tr('%d sqm', info.r))
@@ -298,6 +346,14 @@ local function showDetails(row)
     end
     -- three numbers a line
     stats:setHeight(math.ceil(cells / 3) * 16)
+    local note = details.cdrNote
+    if cdr > 0 then
+        note:setText(tr('Your rare items take %s%% off the cooldown and %s%% off the group (already counted above).', percent(cdr), percent(cdr / 2)))
+        note:setHeight(14)
+    else
+        note:setText('')
+        note:setHeight(0)
+    end
     local box = details.statusBox
     box.status:setText(text)
     box.status:setColor(style.color)
@@ -705,7 +761,7 @@ local function onOpcode(protocol, opcode, data)
             byWords[entry.w:lower()] = entry
         end
     end
-    book = { byWords = byWords, ascensao = data.ascensao }
+    book = { byWords = byWords, ascensao = data.ascensao, cdr = tonumber(data.cdr) or 0, rate = tonumber(data.rate) or 1 }
     if not window then
         return
     end
