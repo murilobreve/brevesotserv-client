@@ -956,6 +956,16 @@ function Cyclopedia.internalCreateItem(data)
         end
 
         local buy, sell = Cyclopedia.formatSaleData(internalData:getNpcSaleData())
+        -- Mythos: Gersao buys everything any NPC on the map buys, at the best
+        -- price (server scripts/quickloot/loot_prices.lua). He takes the
+        -- place of the appearances' list, whose NPCs are real Tibia's
+        local quickLoot = modules.game_quickloot and modules.game_quickloot.QuickLoot
+        local gersaoPrice = quickLoot and quickLoot.prices and quickLoot.prices[data:getId()]
+        if gersaoPrice and gersaoPrice > 0 then
+            local buyer = quickLoot.buyer or {}
+            sell = { string.format("%s gp, %s\nResidence: %s", Cyclopedia.formatGold(gersaoPrice),
+                buyer.name or "Gersao", buyer.town or "Ventera") }
+        end
         local sellColor = "#484848"
 
         for index, value in ipairs(sell) do
