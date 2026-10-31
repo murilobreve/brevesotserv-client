@@ -165,6 +165,12 @@ local function onOpcode(protocol, opcode, data)
     end
 end
 
+-- whether the spell of these words is aimed with the mouse (the Assign
+-- Spell window of game_actionbar says so in its details)
+function isSkillshot(text)
+    return words[normalize(text)] == true
+end
+
 function clearArt()
     clearHookArt()
     clearMeteorArt()
