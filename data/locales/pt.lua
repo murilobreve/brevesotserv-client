@@ -52,6 +52,7 @@ locale = {
     ["Open the Wheel of Destiny"] = "Abrir a Roda do Destino",
     ["You can use it from level %d (%d levels to go)."] = "Você pode usar a partir do level %d (faltam %d levels).",
     ["You can already use this spell."] = "Você já pode usar esta magia.",
+    ["Your rare items take %s%% off the cooldown and %s%% off the group (already counted above)."] = "Seus itens raros tiram %s%% do cooldown e %s%% do grupo (já descontado acima).",
     ["No spell selected"] = "Nenhuma magia escolhida",
     ["ASCENSION"] = "ASCENSÃO",
     ["WHEEL"] = "RODA",

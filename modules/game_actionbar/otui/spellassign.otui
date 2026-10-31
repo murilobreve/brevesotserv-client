@@ -114,7 +114,7 @@ SpellAssignStat < Label
 
 SpellAssignWindow < MainWindow
   id: spellAssignWindow
-  size: 560 650
+  size: 560 662
   !text: tr('Assign Spell')
 
   UIWidget
@@ -215,7 +215,7 @@ SpellAssignWindow < MainWindow
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 7
-    height: 160
+    height: 172
     image-source: /images/ui/1pixel_down_frame
     image-border: 1
     padding: 7
@@ -257,10 +257,20 @@ SpellAssignWindow < MainWindow
         cell-size: 168 16
         flow: true
 
+    // what the rare items take off the cooldowns above
+    Label
+      id: cdrNote
+      anchors.top: stats.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      height: 0
+      color: #8fd08f
+
     // the state of the spell: a coloured box with a bar on its left
     UIWidget
       id: statusBox
-      anchors.top: stats.bottom
+      anchors.top: cdrNote.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 6
