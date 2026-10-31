@@ -15,6 +15,7 @@ Module
     dofile 'createAccount'
     dofile 'crashreport'
     dofile 'patchnotes'
+    dofile 'createcharacter'
     EnterGame.init()
     CharacterList.init()
     pcall(CrashReport.init)
@@ -24,3 +25,4 @@ Module
     EnterGame.terminate()
     CharacterList.terminate()
     PatchNotes.terminate()
+    CreateCharacter.terminate()

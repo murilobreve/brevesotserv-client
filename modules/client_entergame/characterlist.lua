@@ -835,6 +835,15 @@ function CharacterList.create(characters, account, otui)
 
     CharacterList.rebuildCharactersList()
 
+    -- an account without characters goes straight to creating one
+    if #characters == 0 and CreateCharacter and CreateCharacter.isAvailable() then
+        scheduleEvent(function()
+            if charactersWindow and charactersWindow:isVisible() and not g_game.isOnline() then
+                CreateCharacter.show()
+            end
+        end, 200)
+    end
+
     autoReconnectButton.onClick = function(widget)
         local autoReconnect = not g_settings.getBoolean('autoReconnect', false)
         autoReconnectButton:setOn(autoReconnect)
@@ -975,9 +984,31 @@ end
 function CharacterList.hide(showLogin)
     removeAutoReconnectEvent()
     charactersWindow:hide()
+    if CreateCharacter then
+        CreateCharacter.hide()
+    end
 
     if showLogin and EnterGame and not g_game.isOnline() then
         EnterGame.show()
+    end
+end
+
+-- the list again from the login server, after creating a character in
+-- createcharacter.lua: it comes with the new one chosen
+function CharacterList.reload(focusName)
+    if focusName and focusName ~= '' then
+        local world = G.characters and G.characters[1] and G.characters[1].worldName
+        g_settings.set('last-used-character', focusName)
+        if world then
+            g_settings.set('last-used-world', world)
+        end
+    end
+    if charactersWindow then
+        removeAutoReconnectEvent()
+        charactersWindow:hide()
+    end
+    if not EnterGame.reloadCharacterList() and charactersWindow then
+        CharacterList.show()
     end
 end
 

@@ -848,7 +848,11 @@ function EnterGame.doLogin()
     end
 
     EnterGame.hide()
+    EnterGame.loginAccount(clientVersion, httpLogin)
+end
 
+-- asks the login server for the character list of G.account
+function EnterGame.loginAccount(clientVersion, httpLogin)
     if clientVersion >= 1281 and G.port ~= 7171 then
         EnterGame.tryHttpLogin(clientVersion, httpLogin)
     else
@@ -888,6 +892,21 @@ function EnterGame.doLogin()
             return
         end
     end
+end
+
+-- the character list again with the account in use (a character was just
+-- created on it). The account fields can be empty by now ("remember" off
+-- clears them), G keeps what was typed.
+function EnterGame.reloadCharacterList()
+    if g_game.isOnline() or not G.account or G.account == '' or not G.password or not G.host then
+        return false
+    end
+    local clientVersion = G.clientVersion or tonumber(clientBox:getText())
+    if not clientVersion then
+        return false
+    end
+    EnterGame.loginAccount(clientVersion, enterGame:getChildById('httpLoginBox'):isChecked())
+    return true
 end
 
 function EnterGame.displayMotd()
