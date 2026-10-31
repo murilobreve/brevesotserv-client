@@ -78,6 +78,7 @@ function quickLootController:onGameStart()
     QuickLoot.prices = nil
     QuickLoot.supplyPrices = nil
     QuickLoot.rareSell = nil
+    QuickLoot.buyer = nil
     QuickLoot.requestPrices()
     QuickLoot.refreshPriceRule()
 
@@ -458,6 +459,8 @@ function QuickLoot.Define()
         end
         QuickLoot.supplyPrices = supplyPrices
         QuickLoot.rareSell = type(data.rare) == 'table' and data.rare or nil
+        -- who pays `prices` (Gersao) and his town, for the Cyclopedia
+        QuickLoot.buyer = type(data.buyer) == 'table' and data.buyer or nil
         QuickLoot.alwaysTake = {}
         for _, id in ipairs(type(data.always) == 'table' and data.always or {}) do
             if tonumber(id) then
