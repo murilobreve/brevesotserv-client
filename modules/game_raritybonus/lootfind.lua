@@ -224,7 +224,13 @@ function showLootDrop(data)
                 end
             end
         end
-        entry.event = scheduleEvent(frame, (beamDone and travelDone) and 50 or 30)
+        -- off screen (no tile) nothing is drawn: look again twice a second
+        -- instead of twenty times (a gem can wait up to half an hour)
+        local wait = (beamDone and travelDone) and 50 or 30
+        if not tile and beamDone and travelDone then
+            wait = 500
+        end
+        entry.event = scheduleEvent(frame, wait)
     end
     frame()
 end

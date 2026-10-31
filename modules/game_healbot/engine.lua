@@ -109,12 +109,11 @@ local function cast(spell, t, target)
 end
 
 local function itemCount(player, id)
-    -- the server keeps this list for the action bar; open backpacks as fallback
-    local count = player:getInventoryCount(id, 0)
-    if count == 0 then
-        count = player:getItemsCount(id)
-    end
-    return count
+    -- the server's list for the action bar, else the equipment and the open
+    -- backpacks (LocalPlayer::getInventoryCount looks there itself: the Lua
+    -- getItemsCount fallback walked them all again for every food missing,
+    -- about 140 times every half second)
+    return player:getInventoryCount(id, 0)
 end
 
 local function potionReady(player, potion, t)

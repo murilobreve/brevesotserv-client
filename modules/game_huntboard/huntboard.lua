@@ -830,8 +830,19 @@ end
 function handlers.ratesChanged(data)
     rates.nextAt = data.nextAt or rates.nextAt
     -- the labels on the monsters need the new rates too; the NEW RATES
-    -- callout comes with them
-    send({ action = 'rates' })
+    -- callout comes with them. Every client gets this notice in the same
+    -- second, and the list is about 65 KB: each one asks a moment later, at
+    -- random (soon when the window is open), not all at once
+    if ratesEvent then
+        removeEvent(ratesEvent)
+    end
+    local open = window and window:isVisible()
+    ratesEvent = scheduleEvent(function()
+        ratesEvent = nil
+        if g_game.isOnline() then
+            send({ action = 'rates' })
+        end
+    end, math.random(open and 200 or 1000, open and 2000 or 20000))
 end
 
 function handlers.coins(data)
