@@ -232,7 +232,7 @@ function builders.tier(parent, block)
     local stats = {
         { T('Vida'), tier.hp }, { T('Loot'), tier.loot },
         { T('Ataque'), tier.attack }, { T('Rolagens extras'), tier.rolls },
-        { T('Ouro'), tier.gold }, { T('Item vira raro'), tier.affix },
+        { T('Ouro'), tier.gold }, { T('Itens raros'), tier.affix },
         { T('Experiência'), tier.xp }, { T('Caveira'), tier.skull },
     }
     for _, stat in ipairs(stats) do
