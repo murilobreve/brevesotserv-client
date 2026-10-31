@@ -56,6 +56,24 @@ local function formatCost(cost)
     return tostring(cost)
 end
 
+-- the bank's gold next to the Rarity XP, with a coin; a server that does
+-- not send it apart shows the backpack and bank together
+local function showBank(data)
+    if not window or not window.bankBox then
+        return
+    end
+    local bank = tonumber(data.bank)
+    local backpack = tonumber(data.backpack)
+    local amount = bank or gold
+    window.bankBox:setText(formatMoney(math.floor(amount), '.'))
+    window.bankBox.icon:setImageSource('/images/game/cyclopedia/icons/icon-goldcoin')
+    local tooltip = bank and backpack
+        and tr('Bank: %s gold\nBackpack: %s gold\nThe gold prices (Keep, Raise) are paid from the backpack and the bank.', formatMoney(bank, '.'), formatMoney(backpack, '.'))
+        or tr('Your gold, backpack and bank.')
+    window.bankLabel:setTooltip(tooltip)
+    window.bankBox:setTooltip(tooltip)
+end
+
 -- 25000000 -> "25kk", 3500000 -> "3.5kk", 800000 -> "800k"
 local function formatGold(value)
     value = tonumber(value) or 0
@@ -727,6 +745,7 @@ applyBonuses = function(data)
     showXpBadge(rarityXp)
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
     window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the items you wear; items of a higher grade or level cost more.'))
+    showBank(data)
     -- automatic refreshes (equipment changed) carry no message: keep the
     -- answer to the last reroll on screen
     local message = data.message
