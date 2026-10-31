@@ -16,11 +16,13 @@
 --   eclipse  ... it landed
 -- The files are 2x: the sizes here are half of theirs.
 
+-- tint: the colour the map takes while a spell of the tier is coming (the
+-- Lord of Death's eclipse darkens it; the others tint it in their colour)
 local TIERS = {
-    rare_pale = { folder = 'pale', base = 5000 },
-    rare_ashen = { folder = 'ashen', base = 5100 },
-    rare_obsidian = { folder = 'obsidian', base = 5200 },
-    rare_deathlord = { folder = 'lord-of-death', base = 5300 },
+    rare_pale = { folder = 'pale', base = 5000, tint = '#08304f' },
+    rare_ashen = { folder = 'ashen', base = 5100, tint = '#3d1000' },
+    rare_obsidian = { folder = 'obsidian', base = 5200, tint = '#1a0326' },
+    rare_deathlord = { folder = 'lord-of-death', base = 5300, tint = '#07040a' },
 }
 local ROOT = '/game_skillshot/images/renascimento/'
 
@@ -30,12 +32,16 @@ local SPIKE_MS, REST_AFTER_MS = 450, 350
 local REFUGE_IN_MS = 300
 local ECLIPSE_MS = 700
 local DARK_WARN, DARK_PEAK = 0.28, 0.45 -- how dark the map gets for the eclipse
+-- the other tiers: how strong their tint gets while the spell comes, and
+-- the flash when it lands
+local TINT_WARN, TINT_PEAK, TINT_OUT_MS = 0.3, 0.42, 700
 
 -- one art set per tier: its common pieces (anchors: the centre of the
 -- monster's sqm, a little up like the aura, and the player's) and its spell's
 local sets = {}
 for fx, tier in pairs(TIERS) do
     local set = newArtSet(tier.base, ROOT .. tier.folder .. '/', 'Renascimento ' .. tier.folder)
+    set.tint = tier.tint
     sets[fx] = set
 end
 
@@ -129,8 +135,9 @@ local function stopDarkness()
     end
 end
 
--- the map goes from its opacity now to `to` in `ms`
-local function fadeDarkness(to, ms, after)
+-- the map goes from its opacity now to `to` in `ms`, in `color` (the
+-- eclipse's dark by default)
+local function fadeDarkness(to, ms, after, color)
     if not darkness then
         local mapPanel = modules.game_interface and modules.game_interface.getMapPanel()
         if not mapPanel then
@@ -140,9 +147,9 @@ local function fadeDarkness(to, ms, after)
         darkness:fill('parent')
         darkness:setPhantom(true)
         darkness:setFocusable(false)
-        darkness:setBackgroundColor('#07040a')
         darkness:setOpacity(0)
     end
+    darkness:setBackgroundColor(color or TIERS.rare_deathlord.tint)
     for _, event in ipairs(darkEvents) do
         removeEvent(event)
     end
@@ -178,6 +185,34 @@ local function attachToCreature(set, name, creature, duration)
     return placed
 end
 
+-- the map takes the tier's colour while the spell comes, flashes when it
+-- lands and clears
+local function tint(set, ms)
+    fadeDarkness(TINT_WARN, ms, nil, set.tint)
+end
+
+local function tintLanded(set)
+    fadeDarkness(TINT_PEAK, 120, function()
+        fadeDarkness(0, TINT_OUT_MS, stopDarkness, set.tint)
+    end, set.tint)
+end
+
+-- a mark drawn for `ms` when its picture lasts less: the picture plays in
+-- the last part (it counts down to the hit) and `early` (a ground picture
+-- that can loop) shows the sqm until then
+local function markFor(set, name, p, ms, early)
+    local own = set.entries[name].duration
+    if ms <= own then
+        return set.burst(name, p)
+    end
+    if early then
+        set.place(early, p, ms - own)
+    end
+    later(ms - own, function()
+        set.burst(name, p)
+    end)
+end
+
 local handlers = {}
 
 function handlers.cast(set, data)
@@ -204,7 +239,8 @@ end
 
 function handlers.tear(set, data)
     local p, ms = data.p, tonumber(data.ms) or 1600
-    set.burst('lagrimas/marca', p)
+    markFor(set, 'lagrimas/marca', p, ms, 'lagrimas/geada_loop')
+    tint(set, ms)
     later(ms - QUEDA_MS, function()
         set.place('lagrimas/queda', p, QUEDA_MS - 10)
     end)
@@ -212,6 +248,7 @@ end
 
 function handlers.splash(set, data)
     local p, ms = data.p, tonumber(data.ms) or 2500
+    tintLanded(set)
     set.burst('lagrimas/impacto', p)
     set.burst('lagrimas/geada_entrada', p)
     later(GEADA_IN_MS - 10, function()
@@ -233,7 +270,9 @@ function handlers.bud(set, data)
     end
     local cast = castOf(c, ms + 2000)
     cast.lines = {}
-    set.burst('flor/botao', p)
+    -- the bud pulses until it blooms
+    set.place('flor/botao', p, ms)
+    tint(set, ms)
     for index, line in ipairs(type(data.l) == 'table' and data.l or {}) do
         local tiles = {}
         for i, spot in ipairs(line) do
@@ -248,6 +287,7 @@ end
 
 function handlers.bloom(set, data)
     local c, p, step = data.c, data.p, tonumber(data.ms) or 60
+    tintLanded(set)
     set.burst('flor/desabrocha', p)
     local cast = type(c) == 'number' and casts[c]
     if not cast or not cast.lines then
@@ -277,12 +317,15 @@ end
 
 function handlers.crack(set, data)
     local name = tonumber(data.n) == 2 and 'coroa/marca_fase2' or 'coroa/marca'
+    local ms = tonumber(data.ms) or set.entries[name].duration
     for _, p in ipairs(type(data.t) == 'table' and data.t or {}) do
-        set.burst(name, p)
+        markFor(set, name, p, ms, 'coroa/resto')
     end
+    tint(set, ms)
 end
 
 function handlers.spike(set, data)
+    tintLanded(set)
     for _, p in ipairs(type(data.t) == 'table' and data.t or {}) do
         set.burst('coroa/espinho', p)
         later(REST_AFTER_MS, function()
