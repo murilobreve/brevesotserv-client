@@ -411,6 +411,14 @@ local OFFER_INFO = {
 
 local selectedOffer
 
+-- how many of the chosen offer the Buy button buys (the server buys at most
+-- SHOP_MAX_COUNT in one go, hunt_tasks shopMaxCount); a mount and the Loot
+-- Pouch go one at a time
+local SHOP_MAX_COUNT = 100
+local SINGLE_OFFERS = { montaria = true, pouch = true }
+local quantity = 1
+local quantityKey
+
 -- mount picture when the player has every mount (nothing left to preview)
 local FALLBACK_MOUNT_LOOK = 370
 
@@ -433,15 +441,75 @@ local function setOfferImage(box, offer, mountLook)
     end
 end
 
+-- the most of `offer` the points pay for (at least 1, to show its price)
+local function maxQuantity(offer)
+    if SINGLE_OFFERS[offer.key] then
+        return 1
+    end
+    local can = math.floor((state.points or 0) / math.max(1, offer.price))
+    return math.max(1, math.min(SHOP_MAX_COUNT, can))
+end
+
+-- the total price and the Buy button for the quantity
+local function refreshQuantity(offer, keepText)
+    local details = window.shopPanel.details
+    local row = details.quantity
+    local top = maxQuantity(offer)
+    quantity = math.max(1, math.min(top, quantity))
+    row:setVisible(not SINGLE_OFFERS[offer.key])
+    if not keepText then
+        row.amount.updating = true
+        row.amount:setText(tostring(quantity))
+        row.amount.updating = false
+    end
+    row.minus:setEnabled(quantity > 1)
+    row.plus:setEnabled(quantity < top)
+    row.max:setEnabled(quantity < top)
+    local total = offer.price * quantity
+    local affordable = (state.points or 0) >= total
+    details.price:setText(formatNumber(total))
+    details.price:setColor(affordable and '#dfdfdf' or '#ff7a6b')
+    details.buy:setText(quantity > 1 and tr('Comprar %dx', quantity) or tr('Comprar'))
+    return affordable
+end
+
 local function showOfferDetails(offer)
     selectedOffer = offer
     local details = window.shopPanel.details
     local info = OFFER_INFO[offer.key] or {}
     details.name:setText(info.name and tr(info.name) or offer.label)
-    details.price:setText(formatNumber(offer.price))
-    local affordable = (state.points or 0) >= offer.price
-    details.price:setColor(affordable and '#dfdfdf' or '#ff7a6b')
+    -- a new offer starts at 1; after a purchase the same one keeps its count
+    if quantityKey ~= offer.key then
+        quantity = 1
+        quantityKey = offer.key
+    end
+    local affordable = refreshQuantity(offer)
     details.buy:setEnabled(affordable)
+    local row = details.quantity
+    local function change(value, keepText)
+        quantity = value
+        details.buy:setEnabled(refreshQuantity(offer, keepText))
+    end
+    row.minus.onClick = function()
+        change(quantity - 1)
+    end
+    row.plus.onClick = function()
+        change(quantity + 1)
+    end
+    row.max.onClick = function()
+        change(maxQuantity(offer))
+    end
+    row.amount.onTextChange = function(widget, text)
+        if widget.updating then
+            return
+        end
+        local value = tonumber((text or ''):match('%d+'))
+        if value then
+            -- keep what is being typed unless it goes past the maximum
+            local top = maxQuantity(offer)
+            change(value, value >= 1 and value <= top)
+        end
+    end
     setOfferImage(details.image, offer)
 
     details.descBox:destroyChildren()
@@ -501,9 +569,9 @@ local function showOfferDetails(offer)
                 send({ action = 'buy', key = offer.key, mount = option.data[1] })
             end
         elseif option and option.data then
-            send({ action = 'buy', key = offer.key, option = option.data[1] })
+            send({ action = 'buy', key = offer.key, option = option.data[1], count = quantity })
         else
-            send({ action = 'buy', key = offer.key })
+            send({ action = 'buy', key = offer.key, count = quantity })
         end
     end
 end
