@@ -103,13 +103,14 @@ local function serverNow()
     return os.time() + timeOffset
 end
 
+-- the server's rates go up to 5x (HuntBoard.config.rates.max)
 local RATE_COLORS = {
     { 1, 235, 235, 235 },
-    { 3, 255, 236, 96 },
-    { 6, 255, 158, 40 },
-    { 10, 255, 52, 52 },
+    { 2, 255, 236, 96 },
+    { 3.5, 255, 158, 40 },
+    { 5, 255, 52, 52 },
 }
-local RATE_ALERT = 8 -- from here the label also gets a "!"
+local RATE_ALERT = 4 -- from here the label also gets a "!"
 
 local function rateColor(rate)
     if rate <= RATE_COLORS[1][1] then
@@ -673,7 +674,7 @@ end
 -- experience rate (tenths) of each monster, by lower-case name
 local rateByName = {}
 
--- the label's colour by rate: light grey at 1x, yellow, orange, red at 10x
+-- the label's colour by rate: light grey at 1x, yellow, orange, red at 5x
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return

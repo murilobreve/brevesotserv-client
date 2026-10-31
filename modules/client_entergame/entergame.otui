@@ -156,7 +156,7 @@ EnterGameWindow
       @onSetup: |
         self.bullet:setImageSource('/images/mythos/gem_sapphire')
         self.title:setText(tr('Hunt Board'))
-        self.desc:setText(tr('Rates up to x10, new roll every 2h'))
+        self.desc:setText(tr('Rates up to x5, new roll every 2h'))
 
     BrevesFeature
       id: featCoins
