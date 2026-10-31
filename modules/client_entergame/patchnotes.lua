@@ -1,8 +1,8 @@
 -- Patch notes of the site (plugins/brevesot/data/patches.php, served as JSON
 -- by plugins/brevesot/patches.php). The character list gets a "Patch notes"
--- button with a "!". When a patch is new on this account the window opens by
--- itself and cannot be closed before entering the game; closing it in game
--- marks the patch as read and the "!" goes away.
+-- button, with a red "!" while this account has a patch it has not opened.
+-- The window opens only from that button; opening it marks the patches as
+-- read and the "!" goes away.
 PatchNotes = {}
 
 local SEEN_KEY = 'patchnotes-seen-'
@@ -12,7 +12,6 @@ local button = nil
 local account = nil
 local notes = nil
 local request = 0
-local forced = false
 
 local function endpoint()
     local site = Services and Services.website or ''
@@ -86,33 +85,10 @@ local function markSeen()
     updateBadge()
 end
 
--- the close button works only in game while the window is forced open
-local function updateClose()
-    if not patchWindow then
-        return
-    end
-    local locked = forced and not g_game.isOnline()
-    local closeButton = patchWindow:getChildById('closeButton')
-    closeButton:setEnabled(not locked)
-    patchWindow:getChildById('siteHint'):setText(locked
-        and tr('New patch! You can close this window once you are in the game.')
-        or tr('Every patch is also on the site, under Patch notes.'))
-end
-
-local function onGameStart()
-    if patchWindow then
-        updateClose()
-        patchWindow:raise()
-    end
-end
-
 function PatchNotes.init()
-    connect(g_game, { onGameStart = onGameStart })
 end
 
 function PatchNotes.terminate()
-    disconnect(g_game, { onGameStart = onGameStart })
-    forced = false
     PatchNotes.close()
     button = nil
     notes = nil
@@ -137,56 +113,31 @@ function PatchNotes.attach(window, accountName)
         if ok and type(decoded) == 'table' and type(decoded.patches) == 'table' then
             notes = decoded
             updateBadge()
-            if latestId() > g_settings.getNumber(seenKey(), 0) and not g_game.isOnline() then
-                PatchNotes.open(true)
-            elseif patchWindow then
+            if patchWindow then
                 fill()
             end
         end
     end)
 end
 
-function PatchNotes.open(force)
+function PatchNotes.open()
     if not notes then
         return
     end
-    if force then
-        forced = true
-    end
-    local fresh = not patchWindow
-    if fresh then
+    if not patchWindow then
         patchWindow = g_ui.displayUI('patchnotes')
     end
     fill()
-    updateClose()
     patchWindow:show()
-    if fresh and force then
-        -- beside the character list when there is room, so its Ok stays free
-        local list = rootWidget:recursiveGetChildById('charactersWindow')
-        if list and list:isVisible() then
-            local x = list:getX() - patchWindow:getWidth() - 12
-            patchWindow:breakAnchors()
-            patchWindow:setPosition({ x = math.max(8, x), y = math.max(8, list:getY()) })
-        end
-    end
     patchWindow:raise()
     patchWindow:focus()
-    if not forced then
-        markSeen()
-    end
+    markSeen()
 end
 
--- Escape and the Close button: kept open on the character list while forced
+-- Escape and the Close button
 function PatchNotes.close()
     if not patchWindow then
         return
-    end
-    if forced and not g_game.isOnline() then
-        return
-    end
-    if forced then
-        forced = false
-        markSeen()
     end
     patchWindow:destroy()
     patchWindow = nil
