@@ -27,8 +27,8 @@ limitedZoom = false
 currentViewMode = 0
 -- tiles shown in the normal view. data/setup.otml has viewport 14 7 so that
 -- the view that fills a wide window (up to 27 x 13) has every tile it shows
-MAP_VISIBLE_WIDTH = 23
-MAP_VISIBLE_HEIGHT = 13
+MAP_VISIBLE_WIDTH = 19
+MAP_VISIBLE_HEIGHT = 11
 -- "Map zoom" in Options > Graphics: the classic Tibia view or the wider one
 MAP_ZOOMS = {
     original = { width = 15, height = 11 },
@@ -1785,7 +1785,7 @@ function nextViewMode()
 end
 
 function setMapZoom(value)
-    local zoom = MAP_ZOOMS[value] or MAP_ZOOMS.wide
+    local zoom = MAP_ZOOMS[value] or MAP_ZOOMS.medium
     MAP_VISIBLE_WIDTH = zoom.width
     MAP_VISIBLE_HEIGHT = zoom.height
     if not gameMapPanel then

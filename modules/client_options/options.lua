@@ -245,6 +245,13 @@ local function setup()
         g_settings.set('enableLights', false)
     end
 
+    -- the map starts at Medium zoom (19 x 11): once, also on installs that
+    -- saved the old default (Zoomed out); a player can change it afterwards
+    if not g_settings.getBoolean('breves_zoom_medium') then
+        g_settings.set('breves_zoom_medium', true)
+        g_settings.set('mapZoom', 'medium')
+    end
+
     -- load options
     for k, obj in pairs(options) do
         local v = obj.value
