@@ -23,7 +23,15 @@ local tickEvent
 local running = false
 local getConfig, onAction
 local spellUntil, groupUntil, potionUntil = {}, {}, 0
-local unlearned, lastCast = {}, nil
+-- spell id -> until when it is skipped as not learned (the server said so)
+local unlearned = {}
+-- spells the server has accepted this session (it sent their cooldown):
+-- learned for sure, a "learn this spell first" is never about them
+local confirmed = {}
+-- the bot's own last casts, newest first: { spell, time }
+local castLog = {}
+local UNLEARNED_RETRY = 2 * 60 * 1000 -- ms: then the spell is tried again
+local NOT_LEARNED_WINDOW = 1500 -- ms: how old a cast the server's answer can be about
 local lastTurn = 0
 -- the regeneration time the server sent (s) and when; it counts down here
 local regen, regenAt = 0, 0
@@ -47,6 +55,8 @@ end
 
 local function onSpellCooldown(spellId, delay)
     spellUntil[spellId] = now() + delay
+    confirmed[spellId] = true
+    unlearned[spellId] = nil
 end
 
 local function onSpellGroupCooldown(groupId, delay)
@@ -54,18 +64,33 @@ local function onSpellGroupCooldown(groupId, delay)
 end
 
 -- the client has no list of learned spells, so stop trying a spell the
--- server refused instead of repeating the same error every second
+-- server refused instead of repeating the same error every second. The
+-- answer does not say which spell it is about: a spell the player cast by
+-- hand (a monk's Spiritual Outburst not learned yet) got the same answer
+-- right after the bot healed, and the heal was skipped until its rule was
+-- changed. Now only a bot cast of the last moments that the server has not
+-- accepted yet can be the one, and only for a while.
 local function onTextMessage(_, text)
-    if text == FULL_MESSAGE and ateAt and now() - ateAt < MEAL_WAIT then
-        filling, ateAt, fullUntil = false, nil, now() + FULL_PAUSE
+    local t = now()
+    if text == FULL_MESSAGE and ateAt and t - ateAt < MEAL_WAIT then
+        filling, ateAt, fullUntil = false, nil, t + FULL_PAUSE
         return
     end
-    if text == NOT_LEARNED and lastCast and now() - lastCast.time < 1500 then
-        unlearned[lastCast.spell.id] = true
-        if onAction then
-            onAction(tr('You have not learned %s.', lastCast.spell.words))
+    if text ~= NOT_LEARNED then
+        return
+    end
+    for _, entry in ipairs(castLog) do
+        if t - entry.time > NOT_LEARNED_WINDOW then
+            break
         end
-        lastCast = nil
+        if not confirmed[entry.spell.id] then
+            unlearned[entry.spell.id] = t + UNLEARNED_RETRY
+            if onAction then
+                onAction(tr('You have not learned %s.', entry.spell.words))
+            end
+            castLog = {}
+            return
+        end
     end
 end
 
@@ -80,7 +105,7 @@ local function onMultiUseCooldown(delay)
 end
 
 local function spellReady(player, spell, t)
-    if not spell or unlearned[spell.id] or player:getLevel() < spell.level or player:getMana() < spell.mana then
+    if not spell or (unlearned[spell.id] or 0) > t or player:getLevel() < spell.level or player:getMana() < spell.mana then
         return false
     end
     if (spellUntil[spell.id] or 0) > t then
@@ -102,7 +127,8 @@ local function cast(spell, t, target)
     for group, delay in pairs(spell.group) do
         groupUntil[group] = math.max(groupUntil[group] or 0, t + delay)
     end
-    lastCast = { spell = spell, time = t }
+    table.insert(castLog, 1, { spell = spell, time = t })
+    castLog[6] = nil
     if onAction then
         onAction(tr('Used %s', words))
     end
@@ -323,7 +349,7 @@ end
 
 function HealEngine.reset()
     spellUntil, groupUntil, potionUntil = {}, {}, 0
-    unlearned, lastCast = {}, nil
+    unlearned, confirmed, castLog = {}, {}, {}
     lastTurn = now()
     local player = g_game.getLocalPlayer()
     regen, regenAt = player and player:getRegenerationTime() or 0, now()
