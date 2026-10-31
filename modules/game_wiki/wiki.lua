@@ -266,6 +266,12 @@ function builders.grades(parent)
         row.bar.fill:setWidth(math.max(2, math.floor(BAND_BAR * (to - from) / 100)))
         row.bar.fill:setBackgroundColor(grade.color)
         row.bar:setTooltip(T('Os valores saem entre %s do mínimo e do máximo de cada bônus.', grade.band))
+        -- a real roll of this grade, under its row
+        if grade.example then
+            local example = g_ui.createWidget('WikiText', parent)
+            example:setText(T('Exemplo: %s %s: %s', grade.example[1], grade.name, grade.example[2]))
+            example:setColor(grade.color)
+        end
     end
 end
 
