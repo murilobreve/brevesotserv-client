@@ -673,9 +673,19 @@ end
 -- the monster and the kills left show on the Hunt Tasks row of the Mythos
 -- panel (like the Heal Bot's ON): the daily task while it runs, otherwise the
 -- current Hunter's Trail step
-local function shortName(name)
+local function shortName(name, max)
     name = tostring(name or '?')
-    return #name > 16 and (name:sub(1, 15) .. '.') or name
+    max = max or 16
+    if #name <= max then
+        return name
+    end
+    return (name:sub(1, max - 1):gsub('%s+$', '')) .. '.'
+end
+
+-- "Lost Thrower 0/65", and "Lost Th. 0/65" for a bar short of room
+local function rowText(name, kills, need)
+    local count = string.format(' %d/%d', kills or 0, need or 0)
+    return shortName(name) .. count, shortName(name, 8) .. count
 end
 
 -- "Teleport" on the daily task and Trail rows of the Mythos bar: the same
@@ -731,25 +741,28 @@ local function updateBadge()
     end
     local split = next(sectionButtons) ~= nil
     local daily = state and state.daily
-    local dailyText
+    local dailyText, dailyShort
     if daily and daily.monster and not daily.done and (daily.need or 0) > 0 then
-        dailyText = string.format('%s %d/%d', shortName(daily.monster), daily.kills or 0, daily.need)
+        dailyText, dailyShort = rowText(daily.monster, daily.kills, daily.need)
     end
     local trail = state and state.trail
     local step = trail and not trail.finished and trail.steps and trail.steps[trail.index]
-    local trailText = step and string.format('%s %d/%d', shortName(step.name), trail.kills or 0, step.need or 0)
+    local trailText, trailShort
+    if step then
+        trailText, trailShort = rowText(step.name, trail.kills, step.need)
+    end
     if not split then
         -- one row for everything: the daily task, else the trail step
         if dailyText then
-            panel.setFeatureLabel('tasks', dailyText, '#e0c060')
+            panel.setFeatureLabel('tasks', dailyText, '#e0c060', dailyShort)
         else
-            panel.setFeatureLabel('tasks', trailText, '#7fb2ff')
+            panel.setFeatureLabel('tasks', trailText, '#7fb2ff', trailShort)
         end
         return
     end
-    panel.setFeatureLabel('tasks', dailyText, '#e0c060')
+    panel.setFeatureLabel('tasks', dailyText, '#e0c060', dailyShort)
     panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#7fd35a')
-    panel.setFeatureLabel('trail', trailText, '#b7a2ff')
+    panel.setFeatureLabel('trail', trailText, '#b7a2ff', trailShort)
     panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#e2a443')
     updateBarTeleports()
 end
