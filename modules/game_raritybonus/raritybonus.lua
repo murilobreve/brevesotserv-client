@@ -234,7 +234,7 @@ function fillItems(items)
                 line.keep:setOn(locked)
                 line.keep:setText(locked and tr('Kept') or tr('Keep'))
                 line.keep:setTooltip(locked and tr('Kept: the next reroll keeps this bonus with its value and rolls only the others. Click to let it go.')
-                    or tr('Keep this bonus with its value on the next reroll: only the others are rolled again. %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
+                    or tr('Keep this bonus with its value on the next reroll: only the others are rolled again, as many as there are now. %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
                 -- the whole line lights up, so a kept bonus is never missed
                 if locked then
                     line:setBackgroundColor('#e0c06024')
@@ -305,7 +305,7 @@ end
 -- items, and the (i) of the totals' title
 local COLUMN_TITLES = {
     { id = 'bonusesTitle', title = 'Bonuses', tip = 'The colour says if the rolled value was good: green is common, blue is good, purple is very good, orange is near the maximum and gold is perfect. The (i) of each bonus says what it does.' },
-    { id = 'keepTitle', title = 'Keep', tip = 'Locks one bonus with its value: the next Reroll keeps it and rolls only the others. It costs gold on top of the Rarity XP, one bonus per item.' },
+    { id = 'keepTitle', title = 'Keep', tip = 'Locks one bonus with its value: the next Reroll keeps it and rolls only the others, as many as the item has now (so it needs two or more bonuses). It costs gold on top of the Rarity XP, one bonus per item.' },
     { id = 'rerollTitle', title = 'Reroll', tip = 'Rolls the whole item again with Rarity XP: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back.\n\nFewer bonuses come stronger: a single bonus gets all the strength. The item, its grade and who found it stay.' },
     { id = 'raiseTitle', title = 'Raise', tip = 'Raises the item one grade for gold and Rarity XP, with the chance shown on the button. On a success it rolls new, stronger bonuses at the new grade; on a failure it stays as it was and the cost is spent.' },
 }
