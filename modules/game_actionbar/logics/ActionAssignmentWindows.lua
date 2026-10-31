@@ -1,227 +1,14 @@
 -- /*=============================================
 -- =            Spells html Windows             =
 -- =============================================*/
-local function string_empty(str)
-    return #str == 0
-end
-
-function ActionBarController:onSearchTextChange(event)
-    for _, child in pairs(ActionBarController:findWidget("#spellList"):getChildren()) do
-        local name = child:getText():lower()
-        if name:find(event.value:lower()) or event.value == '' or #event.value < 3 then
-            child:setVisible(true)
-        else
-            child:setVisible(false)
-        end
-    end
-end
-
-function ActionBarController:onClearSearchText()
-    local search = ActionBarController:findWidget("#searchText")
-    search:setText('')
-end
-
+-- the Assign Spell window lives in SpellAssignWindow.lua
 function assignSpell(button, multiSlotIndex)
-    local dev = true
     local actionbar = button:getParent():getParent()
     if actionbar.locked then
         alert('Action bar is locked')
         return
     end
-    local radio = UIRadioGroup.create()
-    if ActionBarController.ui then
-        ActionBarController:unloadHtml()
-    end
-    ActionBarController:loadHtml('html/spells.html')
-    ActionBarController.ui:show()
-    ActionBarController.ui:raise()
-    local titleSuffix = multiSlotIndex and (" (Slot " .. multiSlotIndex .. ")") or ""
-    ActionBarController.ui:setTitle("Assign Spell to Action Button " .. button:getId() .. titleSuffix)
-    local spellList = ActionBarController:findWidget("#spellList")
-    local previewWidget = ActionBarController:findWidget("#preview")
-    local imageWidget = ActionBarController:findWidget("#image")
-    local paramLabel = ActionBarController:findWidget("#paramLabel")
-    local paramText = ActionBarController:findWidget("#paramText")
-    ActionBarController:findWidget("#dev"):setVisible(dev)
-    local playerVocation = translateVocation(player:getVocation())
-    local playerLevel = player:getLevel()
-    local spells = modules.gamelib.SpellInfo['Default']
-    local defaultIconsFolder = SpelllistSettings['Default'].iconFile
-    local showAllSpells = (playerVocation == 0)
-    for spellName, spellData in pairs(spells) do
-        if showAllSpells or table.contains(spellData.vocations, playerVocation) then
-            local widget = g_ui.createWidget('SpellPreview', spellList)
-            local spellId = spellData.clientId
-            local clip = Spells.getImageClip(spellId)
-            radio:addWidget(widget)
-            widget:setId(spellData.id)
-            widget:setText(spellName .. "\n" .. spellData.words)
-            widget.voc = spellData.vocations
-            widget.param = spellData.parameter
-            widget.source = defaultIconsFolder
-            widget.clip = clip
-            widget.image:setImageSource(widget.source)
-            widget.image:setImageClip(widget.clip)
-            if spellData.level then
-                widget.levelLabel:setVisible(true)
-                widget.levelLabel:setText(string.format("Level: %d", spellData.level))
-                widget.image.gray:setVisible(playerLevel < spellData.level)
-            end
-            local primaryGroup = Spells.getPrimaryGroup(spellData)
-            if primaryGroup ~= -1 then
-                local offSet = (primaryGroup == 2 and 20) or (primaryGroup == 3 and 40) or 0
-                widget.imageGroup:setImageClip(offSet .. " 0 20 20")
-                widget.imageGroup:setVisible(true)
-            end
-        end
-    end
-    local widgets = spellList:getChildren()
-    table.sort(widgets, function(a, b)
-        return a:getText() < b:getText()
-    end)
-    for i, widget in ipairs(widgets) do
-        spellList:moveChildToIndex(widget, i)
-    end
-    local preselectSpellData = nil
-    local preselectCastParam = nil
-    if multiSlotIndex and button.cache and button.cache.multiActions then
-        local slot = button.cache.multiActions[multiSlotIndex]
-        if slot and slot["chatText"] then
-            local spellData, param = Spells.getSpellDataByParamWords(slot["chatText"]:lower())
-            if spellData then
-                preselectSpellData = spellData
-                if param then
-                    preselectCastParam = param:gsub('"', '')
-                end
-            end
-        end
-    elseif button.cache.spellData and not button.cache.isRuneSpell then
-        preselectSpellData = button.cache.spellData
-        preselectCastParam = button.cache.castParam
-    end
-
-    if preselectSpellData then
-        local spellData = preselectSpellData
-        local spellId = spellData.clientId
-        if not spellId then
-            print("Warning Spell ID not found L81 modules/game_actionbar/logics/ActionAssignmentWindows.lua")
-            return
-        end
-        local clip = Spells.getImageClip(spellId, 'Default')
-        imageWidget:setImageSource(defaultIconsFolder)
-        imageWidget:setImageClip(clip)
-        paramLabel:setOn(spellData.parameter)
-        paramText:setEnabled(spellData.parameter)
-        if spellData.parameter and preselectCastParam then
-            paramText:setText(preselectCastParam)
-            paramText:setCursorPos(#preselectCastParam)
-        end
-        for i, k in ipairs(widgets) do
-            if k:getId() == tostring(spellData.id) then
-                radio:selectWidget(k)
-                spellList:ensureChildVisible(k)
-                break
-            end
-        end
-    end
-    radio.onSelectionChange = function(widget, selected)
-        if selected then
-            previewWidget:setText(selected:getText())
-            imageWidget:setImageSource(selected.source)
-            imageWidget:setImageClip(selected.clip)
-            paramLabel:setOn(selected.param)
-            paramText:setEnabled(selected.param)
-            paramText:clearText()
-            if selected:getText():lower():find("levitate") then
-                paramText:setText("up|down")
-            end
-        end
-    end
-    if #widgets > 0 and not preselectSpellData then
-        radio:selectWidget(widgets[1])
-    end
-    local function cancelFunc()
-        ActionBarController:unloadHtml()
-    end
-
-    local function okFunc(destroy)
-        local selected = radio:getSelectedWidget()
-        if not selected then
-            cancelFunc()
-            return
-        end
-
-        local barID, buttonID = string.match(button:getId(), "(.*)%.(.*)")
-        local param = string.match(selected:getText(), "\n(.*)")
-        local paramValue = paramText:getText()
-        local check = param .. " " .. paramValue
-        if check:find("utevo res ina") then
-            param = "utevo res ina"
-            paramValue = paramValue:gsub("ina ", "")
-        end
-        if paramValue:lower():find("up|down") then
-            paramValue = ""
-        end
-        if not string_empty(paramValue) then
-            param = param .. ' "' .. paramValue:gsub('"', '') .. '"'
-        end
-        if multiSlotIndex then
-            if not button.cache.multiActions then button.cache.multiActions = {{}, {}, {}} end
-            button.cache.multiActions[multiSlotIndex] = {chatText = param, sendAutomatically = true}
-            ApiJson.createOrUpdateMultiText(tonumber(barID), tonumber(buttonID), multiSlotIndex, param, true)
-            if updateMultiButtonState then updateMultiButtonState(button) end
-            if assignMultiAction then assignMultiAction(button, true) end
-        else
-            ApiJson.createOrUpdateText(tonumber(barID), tonumber(buttonID), param, true)
-            updateButton(button)
-        end
-
-        if destroy then
-            ActionBarController:unloadHtml()
-        end
-    end
-    ActionBarController:findWidget("#buttonOk").onClick = function()
-        okFunc(true)
-    end
-    ActionBarController:findWidget("#buttonApply").onClick = function()
-        okFunc(false)
-    end
-    ActionBarController:findWidget("#buttonClose").onClick = cancelFunc
-    ActionBarController:findWidget("#dev").onClick = function()
-        spellList:destroyChildren()
-        for spellName, spellData in pairs(spells) do
-            local widget = g_ui.createWidget('SpellPreview', spellList)
-            local spellId = spellData.clientId
-            local clip = Spells.getImageClip(spellId)
-            radio:addWidget(widget)
-            widget:setId(spellData.id)
-            widget:setText(spellName .. "\n" .. spellData.words)
-            widget.voc = spellData.vocations
-            widget.param = spellData.parameter
-            widget.source = defaultIconsFolder
-            widget.clip = clip
-            widget.image:setImageSource(widget.source)
-            widget.image:setImageClip(widget.clip)
-            if spellData.level then
-                widget.levelLabel:setVisible(true)
-                widget.levelLabel:setText(string.format("Level: %d", spellData.level))
-                widget.image.gray:setVisible(playerLevel < spellData.level)
-            end
-            local primaryGroup = Spells.getPrimaryGroup(spellData)
-            if primaryGroup ~= -1 then
-                local offSet = (primaryGroup == 2 and 20) or (primaryGroup == 3 and 40) or 0
-                widget.imageGroup:setImageClip(offSet .. " 0 20 20")
-                widget.imageGroup:setVisible(true)
-            end
-        end
-        local newWidgets = spellList:getChildren()
-        table.sort(newWidgets, function(a, b)
-            return a:getText() < b:getText()
-        end)
-        for i, widget in ipairs(newWidgets) do
-            spellList:moveChildToIndex(widget, i)
-        end
-    end
+    SpellAssign.open(button, multiSlotIndex)
 end
 -- /*=============================================
 -- =            SetText html Windows             =
@@ -235,6 +22,7 @@ function assignText(button, multiSlotIndex)
     if ActionBarController.ui then
         ActionBarController:unloadHtml()
     end
+    SpellAssign.close()
     ActionBarController:loadHtml('html/text.html')
     local ui = ActionBarController.ui
     ActionBarController:scheduleEvent(function()
@@ -345,6 +133,7 @@ function assignItem(button, itemId, itemTier, dragEvent, multiSlotIndex)
     if ActionBarController.ui then
         ActionBarController:unloadHtml()
     end
+    SpellAssign.close()
     ActionBarController:loadHtml('html/object.html')
     local ui = ActionBarController.ui
     ActionBarController:scheduleEvent(function()
@@ -569,6 +358,7 @@ function assignPassive(button)
     if ActionBarController.ui then
         ActionBarController:unloadHtml()
     end
+    SpellAssign.close()
     ActionBarController:loadHtml('html/passive.html')
     local ui = ActionBarController.ui
     ui:show()

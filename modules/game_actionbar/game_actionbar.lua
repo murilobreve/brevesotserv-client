@@ -340,6 +340,7 @@ end
 function ActionBarController:onInit()
     g_ui.importStyle("otui/style.otui")
     g_ui.importStyle("otui/multiaction.otui")
+    SpellAssign.init()
     gameRootPanel = modules.game_interface.getRootPanel()
     mouseGrabberWidget = g_ui.createWidget('UIWidget')
     mouseGrabberWidget:setVisible(false)
@@ -350,6 +351,7 @@ end
 --- Handles termination event
 function ActionBarController:onTerminate()
     ApiJson.saveData()
+    SpellAssign.terminate()
     cleanupMultiActionState()
     for _, actionbar in pairs(actionBars) do
         if actionbar and not actionbar:isDestroyed() then
@@ -380,6 +382,7 @@ end
 --- Handles game start event
 function ActionBarController:onGameStart()
     onCreateActionBars()
+    SpellAssign.onGameStart()
     
     -- Ensure fresh cache
     if clearHotkeyCache then clearHotkeyCache() end
@@ -414,6 +417,7 @@ end
 
 function ActionBarController:onGameEnd()
     isLoaded = false
+    SpellAssign.onGameEnd()
     cleanupMultiActionState()
     spellGroupCooldownCache = {}
     for _, actionbar in pairs(activeActionBars) do
