@@ -706,7 +706,7 @@ function handlers.progress(data)
         state.daily.kills = data.daily.kills
         state.daily.need = data.daily.need
     end
-    if data.trail then
+    if data.trail and state.trail then
         state.trail.index = data.trail.index or state.trail.index
         state.trail.kills = data.trail.kills or state.trail.kills
     end

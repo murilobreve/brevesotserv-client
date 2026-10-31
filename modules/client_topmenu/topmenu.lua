@@ -382,8 +382,19 @@ function refreshSocialWidgets()
     setSocialWidgetVisible(topMenu.topLeftYoutube, not isExtendedView and url_youtube ~= "", 100)
 end
 
+-- the links come from the site (login.php "cacheinfo") and the platform
+-- opens them with the system's handler: only a plain https:// web address,
+-- never another protocol handler (search-ms:, file:...) a bad answer could
+-- slip in
+local function webLink(value)
+    if type(value) ~= "string" or not value:match("^https://[%w%-%._~:/%?#%[%]@!%$&'%(%)%*%+,;=%%]+$") then
+        return ""
+    end
+    return value
+end
+
 function setLinkYoutube(value)
-    url_youtube = type(value) == "string" and value or ""
+    url_youtube = webLink(value)
     topLeftYoutubeLink.onClick = function()
         if url_youtube ~= "" then
             g_platform.openUrl(url_youtube)
@@ -393,7 +404,7 @@ function setLinkYoutube(value)
 end
 
 function setLinkDiscord(value)
-    url_discord = type(value) == "string" and value or ""
+    url_discord = webLink(value)
     topLeftDiscordLink.onClick = function()
         if url_discord ~= "" then
             g_platform.openUrl(url_discord)

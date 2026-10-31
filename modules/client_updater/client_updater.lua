@@ -575,11 +575,13 @@ local function showVersion()
 end
 
 function Updater.init()
-  pcall(g_resources.cleanupOldFilesInWorkDir)
   localInfo = readLocalInfo()
   if not localInfo then
     return
   end
+  -- the leftovers (*.old, *.part) of the last update; only in a client the
+  -- updater manages: the walk deletes those names in every folder below
+  pcall(g_resources.cleanupOldFilesInWorkDir)
   showVersion()
   Updater.check(true)
   checkEvent = cycleEvent(function() Updater.check(false) end, checkInterval() * 1000)
