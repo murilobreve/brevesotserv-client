@@ -27,6 +27,8 @@
 
 #include <algorithm>
 #ifdef __EMSCRIPTEN__
+#include "framework/core/asyncdispatcher.h"
+
 #include <cstring>
 #include <limits>
 #else
@@ -286,39 +288,7 @@ int Http::get(const std::string& url, int timeout)
 
     int operationId = 0;
     auto result = registerOperation(url, operationId);
-    auto context = std::make_unique<FetchContext>();
-    context->http = this;
-    context->result = result;
-    context->kind = FetchKind::Get;
-    context->headerStorage.reserve((m_custom_header.size() * 2) + 2);
-    context->headerStorage.emplace_back("Accept");
-    context->headerStorage.emplace_back("*/*");
-    for (const auto& header : m_custom_header) {
-        context->headerStorage.emplace_back(header.first);
-        context->headerStorage.emplace_back(header.second);
-    }
-    context->headerPointers.reserve(context->headerStorage.size() + 1);
-    for (const auto& header : context->headerStorage)
-        context->headerPointers.push_back(header.c_str());
-    context->headerPointers.push_back(nullptr);
-
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    std::strcpy(attr.requestMethod, "GET");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    attr.timeoutMSecs = timeout * 1000;
-    attr.requestHeaders = context->headerPointers.data();
-    attr.userData = context.get();
-    attr.onsuccess = &Http::onFetchSuccess;
-    attr.onerror = &Http::onFetchError;
-    attr.onprogress = &Http::onFetchProgress;
-
-    if (!emscripten_fetch(&attr, url.c_str())) {
-        completeFetch(context.release(), nullptr, "http_error::queue");
-    } else {
-        context.release();
-    }
-
+    fetchOnWorker(result, false, {}, {}, timeout);
     return operationId;
 }
 
@@ -339,46 +309,74 @@ int Http::post(const std::string& url, const std::string& data, int timeout, boo
     int operationId = 0;
     auto result = registerOperation(url, operationId);
     result->postData = data;
-
-    auto context = std::make_unique<FetchContext>();
-    context->http = this;
-    context->result = result;
-    context->kind = FetchKind::Post;
-    context->body = data;
-    context->headerStorage.reserve((m_custom_header.size() * 2) + 4);
-    context->headerStorage.emplace_back("Accept");
-    context->headerStorage.emplace_back("*/*");
-    context->headerStorage.emplace_back("Content-Type");
-    context->headerStorage.emplace_back(isJson ? "application/json" : "application/x-www-form-urlencoded");
-    for (const auto& header : m_custom_header) {
-        context->headerStorage.emplace_back(header.first);
-        context->headerStorage.emplace_back(header.second);
-    }
-    context->headerPointers.reserve(context->headerStorage.size() + 1);
-    for (const auto& header : context->headerStorage)
-        context->headerPointers.push_back(header.c_str());
-    context->headerPointers.push_back(nullptr);
-
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    std::strcpy(attr.requestMethod, "POST");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    attr.timeoutMSecs = timeout * 1000;
-    attr.requestHeaders = context->headerPointers.data();
-    attr.requestData = context->body.data();
-    attr.requestDataSize = context->body.size();
-    attr.userData = context.get();
-    attr.onsuccess = &Http::onFetchSuccess;
-    attr.onerror = &Http::onFetchError;
-    attr.onprogress = &Http::onFetchProgress;
-
-    if (!emscripten_fetch(&attr, url.c_str())) {
-        completeFetch(context.release(), nullptr, "http_error::queue");
-    } else {
-        context.release();
-    }
-
+    fetchOnWorker(result, true, data, isJson ? "application/json" : "application/x-www-form-urlencoded", timeout);
     return operationId;
+}
+
+// get and post. The client's own thread never gives the browser a turn to
+// deliver the answer of an asynchronous fetch: only a failure that happened
+// at once came back, the site's answers (VIP status, patch notes, character
+// creation) never reached Lua. Like the login (httplogin.cpp), the request
+// runs synchronously on a worker of the async dispatcher and the answer goes
+// back to Lua through the dispatcher.
+void Http::fetchOnWorker(const HttpResult_ptr& result, const bool post, std::string body, std::string contentType, const int timeout)
+{
+    std::vector<std::pair<std::string, std::string>> headers;
+    headers.emplace_back("Accept", "*/*");
+    if (post)
+        headers.emplace_back("Content-Type", std::move(contentType));
+    for (const auto& header : m_custom_header)
+        headers.emplace_back(header.first, header.second);
+
+    g_asyncDispatcher->detach_task([this, result, post, body = std::move(body), headers = std::move(headers), timeout] {
+        std::vector<const char*> headerPointers;
+        headerPointers.reserve((headers.size() * 2) + 1);
+        for (const auto& header : headers) {
+            headerPointers.push_back(header.first.c_str());
+            headerPointers.push_back(header.second.c_str());
+        }
+        headerPointers.push_back(nullptr);
+
+        emscripten_fetch_attr_t attr;
+        emscripten_fetch_attr_init(&attr);
+        std::strcpy(attr.requestMethod, post ? "POST" : "GET");
+        attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS;
+        attr.timeoutMSecs = timeout * 1000;
+        attr.requestHeaders = headerPointers.data();
+        if (post) {
+            attr.requestData = body.data();
+            attr.requestDataSize = body.size();
+        }
+
+        std::string error;
+        std::string response;
+        emscripten_fetch_t* fetch = emscripten_fetch(&attr, result->url.c_str());
+        if (fetch) {
+            result->status = fetch->status;
+            if (fetch->data && fetch->numBytes > 0)
+                response.assign(fetch->data, fetch->data + fetch->numBytes);
+            error = describeFetchError(fetch, result->canceled.load());
+            emscripten_fetch_close(fetch);
+        } else {
+            error = "http_error::no_response";
+        }
+
+        result->size = static_cast<int>(response.size());
+        result->progress = 100;
+        result->response = response;
+        result->error = error;
+        result->finished = true;
+
+        const int operationId = result->operationId;
+        const std::string url = result->url;
+        unregisterOperation(operationId);
+        if (!m_working.load())
+            return;
+
+        g_dispatcher.addEvent([post, operationId, url, error, response] {
+            g_lua.callGlobalField("g_http", post ? "onPost" : "onGet", operationId, url, error, response);
+        });
+    });
 }
 
 int Http::download(const std::string& url, const std::string& path, int timeout)
