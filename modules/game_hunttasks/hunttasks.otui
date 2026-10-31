@@ -521,6 +521,58 @@ MythosWindow
         height: 20
         visible: false
 
+      // how many of the offer to buy at once (up to what the points pay)
+      Panel
+        id: quantity
+        anchors.top: image.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 9
+        height: 22
+
+        Label
+          id: caption
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
+          font: verdana-11px-antialised
+          color: #d1ccd9
+          text-auto-resize: true
+          !text: tr('Quantidade')
+
+        MythosButton
+          id: minus
+          anchors.left: caption.right
+          anchors.verticalCenter: parent.verticalCenter
+          margin-left: 8
+          size: 22 22
+          text: -
+
+        MythosTextEdit
+          id: amount
+          anchors.left: minus.right
+          anchors.verticalCenter: parent.verticalCenter
+          margin-left: 4
+          width: 48
+          text-align: center
+          max-length: 3
+
+        MythosButton
+          id: plus
+          anchors.left: amount.right
+          anchors.verticalCenter: parent.verticalCenter
+          margin-left: 4
+          size: 22 22
+          text: +
+
+        MythosButton
+          id: max
+          anchors.left: plus.right
+          anchors.verticalCenter: parent.verticalCenter
+          margin-left: 6
+          size: 48 22
+          !text: tr('Máx')
+          !tooltip: tr('O máximo que os seus Hunt Points pagam')
+
       ShopPanelLight
         id: descBox
         anchors.top: image.bottom
