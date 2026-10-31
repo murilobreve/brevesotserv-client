@@ -103,7 +103,7 @@ local ELEMENTS = {
     ice = { 'Ice', '#52dcff' },
     lifedrain = { 'Life drain', '#e0485a' },
 }
-local ELEMENTS_BY_NAME = 3 -- shown beside the name; the tooltip has them all
+local ELEMENTS_BY_NAME = 4 -- shown beside the name; the tooltip has them all
 
 -- what to hunt it with first (the biggest weakness first), then what not
 -- to use: immunities, then the strongest resistances
@@ -140,8 +140,10 @@ local function elementChange(entry)
     return string.format('%+d%%', entry.taken - 100)
 end
 
--- "Ice +20%  Death immune  Fire -20%", each in its element's colour: the
--- best element to use and the worst one, then whichever comes next
+-- Beside the name: the best element to use and the worst one, then
+-- whichever comes next, each as the bestiary's icon of the element and the
+-- change in damage, green for a weakness, amber for a resistance, grey for
+-- an immunity (the monster wiki's colours). The tooltip names them.
 local function elementsBesideName(list)
     local weak, avoid = {}, {}
     for _, entry in ipairs(list) do
@@ -165,15 +167,33 @@ local function elementsBesideName(list)
         end
     end
     table.sort(shown, elementOrder)
-    local parts = {}
+    return shown, #list > #shown
+end
+
+local function elementTone(entry)
+    if entry.taken == 0 then
+        return '#9aa3ad'
+    end
+    return entry.taken > 100 and '#7fd35a' or '#f1c84b'
+end
+
+local function fillElementTags(panel, list)
+    panel:destroyChildren()
+    local shown, more = elementsBesideName(list)
     for _, entry in ipairs(shown) do
-        local info = ELEMENTS[entry.key]
-        parts[#parts + 1] = string.format('{%s %s,%s}', tr(info[1]), elementChange(entry), info[2])
+        local tag = g_ui.createWidget('ElementTag', panel)
+        tag.icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. entry.key .. '-resist')
+        tag.value:setText(string.format('%+d%%', entry.taken - 100))
+        tag.value:setColor(elementTone(entry))
+        tag:setWidth(11 + tag.value:getTextSize().width)
     end
-    if #list > #shown then
-        parts[#parts + 1] = '{...,#9789b3}'
+    if more then
+        local tag = g_ui.createWidget('ElementTag', panel)
+        tag.icon:setVisible(false)
+        tag.value:setMarginLeft(-11)
+        tag.value:setText('...')
+        tag:setWidth(tag.value:getTextSize().width)
     end
-    return table.concat(parts, '  ')
 end
 
 -- the tooltip's lines: what it is weak to, what it resists, what it is immune to
@@ -559,7 +579,7 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. elementLines(monster.elements)
             -- right after the name, on its line
             row.elements:setMarginLeft(row.name:getTextSize().width + 12)
-            row.elements:setColoredText(elementsBesideName(monster.elements))
+            fillElementTags(row.elements, monster.elements)
         end
         row:setTooltip(tooltip)
         row.tp:setVisible(monster.tp > 0)

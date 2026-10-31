@@ -109,6 +109,28 @@ HotCard < BrevesCell
     text-auto-resize: true
     phantom: true
 
+// one element beside a monster's name: the bestiary's icon and the change
+// in damage it takes (huntboard.lua fills and sizes it)
+ElementTag < UIWidget
+  height: 14
+  phantom: true
+
+  UIWidget
+    id: icon
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 9 9
+    phantom: true
+
+  Label
+    id: value
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 2
+    text-auto-resize: true
+    font: verdana-11px-monochrome
+    phantom: true
+
 RateRow < BrevesRow
   height: 46
   padding: 2
@@ -217,17 +239,16 @@ RateRow < BrevesRow
 
   // weaknesses, immunities and resistances, on the name's line right after
   // the name (huntboard.lua moves it past the name and fills it)
-  Label
+  Panel
     id: elements
     anchors.top: name.top
     anchors.left: name.left
     anchors.right: name.right
-    margin-top: 1
     height: 14
-    font: verdana-11px-monochrome
-    color: #9789b3
-    text-auto-resize: false
     phantom: true
+    layout:
+      type: horizontalBox
+      spacing: 7
 
 RateRowEven < RateRow
   background-color: #ffffff07
