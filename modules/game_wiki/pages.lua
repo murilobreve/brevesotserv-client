@@ -17,12 +17,19 @@
 -- it): its tables are UTF-8 once more, so wiki.lua must convert them again
 WIKI_CONVERTED = false
 
+-- example: a real roll of the server for each grade (scripts/rarity), on a
+-- weapon; the grade's item is that weapon
 WIKI_GRADES = {
-    { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3264, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%' },
-    { key = 'rare', name = 'Rarus', color = '#4f8fe8', frame = 2, item = 3369, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%' },
-    { key = 'epic', name = 'Praeclarus', color = '#a679e6', frame = 3, item = 3079, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%' },
-    { key = 'legendary', name = 'Legendarius', color = '#e2a443', frame = 4, item = 3409, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '20% a 85%' },
-    { key = 'mythic', name = 'Mythicus', color = '#e8e4ff', frame = 5, item = 3366, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '30% a 100%' },
+    { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3271, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%',
+      example = { 'Spike Sword', '+6% Melee Skills' } },
+    { key = 'rare', name = 'Rarus', color = '#4f8fe8', frame = 2, item = 3280, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%',
+      example = { 'Fire Sword', '+19% Cleave Damage, +9% Melee Skills' } },
+    { key = 'epic', name = 'Praeclarus', color = '#a679e6', frame = 3, item = 3071, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%',
+      example = { 'Wand of Inferno', '+21% Exevo Gran Mas Flam Damage, +6% Critical Hit Chance, +3% Onslaught' } },
+    { key = 'legendary', name = 'Legendarius', color = '#e2a443', frame = 4, item = 3288, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '20% a 85%',
+      example = { 'Magic Sword', '+40% Attack Spell Damage, +14% Melee Skills, +6% Critical Hit Chance, +4% Onslaught' } },
+    { key = 'mythic', name = 'Mythicus', color = '#e8e4ff', frame = 5, item = 3296, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '30% a 100%',
+      example = { 'Warlord Sword', '+33% Melee Skills, +26 Attack, +22% Life Leech, +15% Critical Hit Chance, +5% Onslaught' } },
 }
 
 -- stack: forge stack the tier gives the monster. The engine turns it into
@@ -33,21 +40,21 @@ WIKI_TIERS = {
     pale = {
         name = 'Pale', color = '#c9d6e3', shader = 'Rarity - Pale', outfit = 34, monster = 'Dragon',
         chance = '2%', hp = 'x2,94', attack = 'x1,75', defense = 'x1', xp = 'x1,5',
-        loot = 'x3', rolls = '+1', gold = 'x10', affix = '50%', skull = 'Branca',
+        loot = 'x3', rolls = '+1', gold = 'x10', affix = '25%', skull = 'Branca',
         grades = { 60, 29, 9, 1.8, 0.2 },
         arrival = '"You sense something pale stirring..." e um brilho azul no corpo.',
     },
     ashen = {
         name = 'Ashen', color = '#9aa0a8', shader = 'Rarity - Ashen', outfit = 55, monster = 'Behemoth',
         chance = '0,7%', hp = 'x4,32', attack = 'x2,15', defense = 'x1', xp = 'x1,9',
-        loot = 'x6', rolls = '+1', gold = 'x30', affix = '80%', skull = 'Vermelha',
+        loot = 'x6', rolls = '+1', gold = 'x30', affix = '40%', skull = 'Vermelha',
         grades = { 45, 33, 15, 6, 1 },
         arrival = 'Fogo no chão, fumaça em volta e "*the ground scorches*".',
     },
     obsidian = {
         name = 'Obsidian', color = '#9b7bff', shader = 'Rarity - Obsidian', outfit = 121, monster = 'Hydra',
         chance = '0,5%', hp = 'x6,56', attack = 'x2,65', defense = 'x1', xp = 'x2,4',
-        loot = 'x12', rolls = '+2', gold = 'x50', affix = '100%', skull = 'Preta',
+        loot = 'x12', rolls = '+2', gold = 'x50', affix = '50%', skull = 'Preta',
         grades = { 27, 30, 25, 12, 6 },
         arrival = 'Explosões, anéis de morte e "IT HAS ARRIVED!".',
     },
@@ -119,14 +126,9 @@ WIKI_PAGES.tiers = {
         { 'p', 'Ouro multiplica o ouro que o monstro dá normalmente: um Dragon Lord Obsidian deixa uns 4.600 de ouro em vez de uns 90. Ele vem em crystal e platinum coins.' },
         { 'p', 'O monstro que volta com tier não pertence a nenhum spawn: se ficar 5 minutos sem nenhum jogador a até 10 sqm, ele some.' },
         { 'h', 'Regras' },
-        { 'p', 'Um monstro raro que morre pode voltar uma camada acima, com chance bem maior que a de um monstro comum: Pale é o caminho para o Ashen, Ashen para o Obsidian e Obsidian para o Lord of Death. Pular camada é raro. Bosses, summons e monstros de treino nunca voltam.' },
-        { 'table', widths = { 110, 90, 90, 110 },
-          head = { 'Morreu como', 'Volta Ashen', 'Volta Obsidian', 'Volta Lord of Death' },
-          rows = {
-              { { 'Pale', '#c9d6e3' }, '20%', '2%', '0,2%' },
-              { { 'Ashen', '#9aa0a8' }, '', '15%', '1%' },
-              { { 'Obsidian', '#9b7bff' }, '', '', '10%' },
-          } },
+        { 'p', 'A chance é a mesma para qualquer monstro comum. Um monstro raro que morre não volta de novo: matar um Pale não deixa um Ashen ou outro Pale mais provável. Bosses, summons e monstros de treino nunca voltam.' },
+        { 'p', 'Só os monstros raros dão itens raros. Um monstro comum nunca dá.' },
+        { 'p', 'Cada monstro raro lança a sua magia: o chão marca a área uns 3 segundos antes e o mapa fica na cor dele (azul gelado no Pale, brasa no Ashen, roxo escuro no Obsidian, escuro no Lord of Death). Saia da área marcada.' },
         { 'p', 'Todo o loot de um monstro raro vai para uma Loot Bag dentro do corpo. A bag não sai do corpo, só os itens de dentro.' },
         { 'p', 'Nada é anunciado para o servidor: só quem está perto vê os avisos.' },
         { 'p', 'Se o monstro estiver com rate alta no Hunt Board, as chances sobem. Veja a página do Hunt Board.' },
@@ -149,20 +151,20 @@ local function tierPage(key, menu, extra)
 end
 
 WIKI_PAGES.pale = tierPage('pale', 'Pale', {
-    { 'p', 'A camada mais comum: 2% das mortes. Tem quase o triplo da vida e o triplo de loot. Metade das vezes, um item que cair no corpo vira item raro.' },
+    { 'p', 'A camada mais comum: 2% das mortes. Tem quase o triplo da vida e o triplo de loot. Uma vez em cada quatro, um item que cair no corpo vira item raro.' },
     { 'p', 'Ele tem caveira branca e uma cor fria, quase sem saturação.' },
     { 'links', { 'tiers', 'ashen' } },
 })
 
 WIKI_PAGES.ashen = tierPage('ashen', 'Ashen', {
     { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,7% das mortes, com caveira vermelha e fumaça em volta.' },
-    { 'p', 'O loot é 6 vezes maior e 80% das vezes um item do corpo vira raro.' },
+    { 'p', 'O loot é 6 vezes maior e 40% das vezes um item do corpo vira raro.' },
     { 'links', { 'pale', 'obsidian' } },
 })
 
 WIKI_PAGES.obsidian = tierPage('obsidian', 'Obsidian', {
     { 'p', 'Roxo e azul, com caveira preta. Aparece em 0,5% das mortes (1 em 200).' },
-    { 'p', 'Todo item que ele dá é raro, e o corpo tem 2 rolagens extras de loot. Um quarto dos itens já sai Praeclarus ou melhor.' },
+    { 'p', 'Metade das vezes um item do corpo vira raro, e o corpo tem 2 rolagens extras de loot. Quase metade dos raros já sai Praeclarus ou melhor.' },
     { 'links', { 'ashen', 'deathlord' } },
 })
 
@@ -208,15 +210,15 @@ WIKI_PAGES.items = {
     menu = 'Item vira raro',
     title = 'Como um item vira raro',
     blocks = {
-        { 'lead', 'Itens raros caem de monstros e de baús de quest. Eles têm de 1 a 5 bônus, uma cor própria e uma moldura com a cor do grau.' },
+        { 'lead', 'Itens raros caem dos monstros raros (Pale, Ashen, Obsidian e Lord of Death) e de baús de quest. Eles têm de 1 a 5 bônus, uma cor própria e uma moldura com a cor do grau.' },
         { 'h', 'De onde vêm' },
         { 'table', widths = { 210, 300 },
           head = { 'Origem', 'Chance de um equipamento virar raro' },
           rows = {
-              { 'Monstro comum', '9% por morte, para um equipamento do corpo' },
-              { { 'Pale', '#c9d6e3' }, '50%' },
-              { { 'Ashen', '#9aa0a8' }, '80%' },
-              { { 'Obsidian', '#9b7bff' }, '100%' },
+              { 'Monstro comum', 'Nunca: itens raros só caem de monstros raros' },
+              { { 'Pale', '#c9d6e3' }, '25%' },
+              { { 'Ashen', '#9aa0a8' }, '40%' },
+              { { 'Obsidian', '#9b7bff' }, '50%' },
               { { 'Lord of Death', '#e04848' }, '100%, nunca abaixo de Praeclarus' },
               { 'Recompensa de quest', '30%' },
           } },
@@ -248,11 +250,10 @@ WIKI_PAGES.items = {
         { 'p', 'Nenhum grau passa do teto que só o grau acima alcança, e nenhum bônus fica abaixo da metade do começo da faixa do grau (num Mythicus, nunca abaixo de 15% da faixa do bônus). Refazer o item na janela Rarity Bonuses sorteia tudo de novo, inclusive quantos bônus ele tem.' },
         { 'table', widths = { 140, 74, 60, 80, 86, 70 }, head = { 'Origem', 'Communis', 'Rarus', 'Praeclarus', 'Legendarius', 'Mythicus' },
           rows = {
-              gradeRow('Monstro comum', '#c8c8c8', { 81, 17.5, 1.2, 0.25, 0.05 }),
               gradeRow('Quest', '#c8c8c8', { 40, 32, 18, 8, 2 }),
           } },
-        { 'h', 'Qualquer monstro, qualquer grau' },
-        { 'p', 'Todo monstro pode dar todos os graus, do rat ao demon. O que muda a chance é o tier: um monstro comum quase nunca dá Legendarius ou Mythicus, um Obsidian dá com frequência e o Lord of Death nunca dá menos que Praeclarus.' },
+        { 'h', 'Qualquer monstro raro, qualquer grau' },
+        { 'p', 'Todo monstro raro pode dar todos os graus, do rat ao demon. O que muda a chance é o tier: um Pale quase nunca dá Legendarius ou Mythicus, um Obsidian dá com frequência e o Lord of Death nunca dá menos que Praeclarus.' },
         { 'h', 'Bônus de quem achou' },
         { 'p', 'Quem matou o monstro tem o nome gravado no item ("Found by ..."). Enquanto essa pessoa usa o item, todos os bônus dele ficam 20% mais fortes. Para qualquer outro jogador, o item vale o valor que aparece na descrição.' },
         { 'h', 'Rolagem perfeita' },
@@ -265,8 +266,9 @@ WIKI_PAGES.grades = {
     menu = 'Graus de raridade',
     title = 'Graus de raridade',
     blocks = {
-        { 'lead', 'São cinco graus. Cada um tem uma cor no item e na moldura, um número de bônus e uma faixa de valores.' },
+        { 'lead', 'São cinco graus. Cada um tem uma cor no item e na moldura, um número máximo de bônus e uma faixa de valores. Quanto mais alto o grau, mais bônus o item pode ter e mais fortes eles são. Embaixo de cada grau, um exemplo real de arma sorteada pelo servidor.' },
         { 'grades' },
+        { 'p', 'Um item pode ter menos bônus que o máximo do grau: o número também é sorteado, e com menos bônus cada um fica mais forte (a força do item é dividida entre eles).' },
         { 'p', 'A faixa diz de onde os valores saem dentro do mínimo e do máximo de cada bônus. Nos três graus de cima, os valores se concentram perto da parte de baixo da faixa e ficam cada vez mais raros perto do topo. Em um bônus de 1 a 20, metade dos Mythicus fica entre 7 e 10 e só uns 2% passam de 18.' },
         { 'p', 'Cada bônus rola sozinho: um item pode ter um bônus alto e os outros baixos.' },
         { 'links', { 'items', 'quality', 'pools' } },
