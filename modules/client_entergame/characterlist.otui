@@ -729,6 +729,20 @@ MythosWindow
     $on:
       color: #7fd35a
 
+  // a new character right here, like Path of Exile (createcharacter.lua)
+  MythosKitButton28
+    id: createCharacterButton
+    !text: tr('Create Character')
+    size: 168 28
+    anchors.right: buttonOk.left
+    anchors.bottom: parent.bottom
+    margin-right: 10
+    @onClick: CreateCharacter.show()
+    @onSetup: |
+      if not g_game.getFeature(GameEnterGameShowAppearance) then
+        self:hide()
+      end
+
   MythosKitGoldButton28
     id: buttonOk
     !text: tr('Ok')
