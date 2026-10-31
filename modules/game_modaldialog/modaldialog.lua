@@ -127,22 +127,28 @@ local function applyFinalHeight(ui, messageLabel, additionalHeight)
 end
 
 -- The anti-bot window does not take the keyboard, so it has to be seen: a
--- red frame that blinks, the word to pick in big gold letters, the seconds
--- left counting down in red, and a warning in the middle of the screen.
+-- red frame that blinks, what to do in big gold letters, the seconds left
+-- counting down in red, and a warning in the middle of the screen. The
+-- server's check is one button ("Estou aqui"); an older one asked for a word.
 local function styleAntibot(ui, messageLabel, message)
-    local answer = (message:match("Escolha: (%S+)") or "?"):upper()
+    local word = message:match("Escolha: (%S+)")
     local left = tonumber(message:match("(%d+) segundos")) or 0
-    local noXp = message:find("Sem XP", 1, true) ~= nil
-    messageLabel:html(string.format(
-        '<div style="color: #ffffff; text-align: center; height: 16px;">Escolha a palavra / Choose:</div>' ..
-        '<div style="color: #ffd23a; text-align: center; height: 24px;">%s</div>' ..
-        '<div id="antibotLeft" style="color: #ff8a5c; text-align: center; height: 16px;">%d segundos / seconds</div>%s',
-        answer, left, noXp and '<div style="color: #ff8a5c; text-align: center; height: 16px;">Sem XP ate responder</div>' or ''))
-    local word = messageLabel:getChildren()[2]
-    if word then
-        word:setFont('sans-bold-16px')
+    local title = word and word:upper() or 'ESTOU AQUI'
+    -- the text is drawn again every second: the seconds left live in it
+    local function render()
+        messageLabel:html(string.format(
+            '<div style="color: #ffffff; text-align: center; height: 16px;">%s</div>' ..
+            '<div style="color: #ffd23a; text-align: center; height: 24px;">%s</div>' ..
+            '<div style="color: %s; text-align: center; height: 16px;">%d segundos / seconds</div>%s',
+            word and 'Escolha a palavra / Choose:' or 'Clique em / Click:', title,
+            left <= 10 and '#ff3030' or '#ff8a5c', left,
+            word and '' or '<div style="color: #ff8a5c; text-align: center; height: 16px;">ou voce sera desconectado</div>'))
+        local big = messageLabel:getChildren()[2]
+        if big then
+            big:setFont('sans-bold-16px')
+        end
     end
-    local leftLabel = messageLabel:getChildren()[3]
+    render()
     ui:setBorderWidth(3)
     ui:setBorderColor('#ff2a2a')
     local tick = 0
@@ -152,14 +158,14 @@ local function styleAntibot(ui, messageLabel, message)
         end
         tick = tick + 1
         ui:setBorderColor(tick % 2 == 0 and '#ff2a2a' or '#ffd23a')
-        if tick % 2 == 0 and left > 0 and leftLabel then
+        if tick % 2 == 0 and left > 0 then
             left = left - 1
-            leftLabel:setText(string.format("%d segundos / seconds", left))
-            leftLabel:setColor(left <= 10 and '#ff3030' or '#ff8a5c')
+            render()
         end
     end, 500)
     if modules.game_textmessage then
-        modules.game_textmessage.displayBroadcastMessage("ANTI-BOT: escolha " .. answer .. " na janela do canto")
+        modules.game_textmessage.displayBroadcastMessage(word and ("ANTI-BOT: escolha " .. title .. " na janela do canto")
+            or string.format("ANTI-BOT: clique em Estou aqui na janela do canto (%d s)", left))
     end
 end
 
