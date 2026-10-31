@@ -202,6 +202,20 @@ RateRow < BrevesRow
     color: #9789b3
     phantom: true
 
+  // weaknesses, immunities and resistances, on the name's line right after
+  // the name (huntboard.lua moves it past the name and fills it)
+  Label
+    id: elements
+    anchors.top: name.top
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 1
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9789b3
+    text-auto-resize: false
+    phantom: true
+
 RateRowEven < RateRow
   background-color: #ffffff07
 

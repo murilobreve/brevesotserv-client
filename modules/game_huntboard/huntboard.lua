@@ -87,6 +87,121 @@ local function formatShort(value)
     return formatNumber(value)
 end
 
+-- The damage a monster takes from each element, in percent (100 = normal,
+-- 0 = immune): the server sends the ones that are not 100, "ice:120,fire:80".
+-- The colours are the monster wiki's.
+local ELEMENTS = {
+    physical = { 'Physical', '#b8bec6' },
+    earth = { 'Earth', '#6cd13a' },
+    fire = { 'Fire', '#ff6a2a' },
+    death = { 'Death', '#a45ad6' },
+    energy = { 'Energy', '#b56bff' },
+    holy = { 'Holy', '#ffd84a' },
+    ice = { 'Ice', '#52dcff' },
+    lifedrain = { 'Life drain', '#e0485a' },
+}
+local ELEMENTS_BY_NAME = 3 -- shown beside the name; the tooltip has them all
+
+-- what to hunt it with first (the biggest weakness first), then what not
+-- to use: immunities, then the strongest resistances
+local function elementOrder(a, b)
+    local weakA, weakB = a.taken > 100, b.taken > 100
+    if weakA ~= weakB then
+        return weakA
+    end
+    if a.taken ~= b.taken then
+        return weakA and a.taken > b.taken or (not weakA and a.taken < b.taken)
+    end
+    return a.key < b.key
+end
+
+-- nil when the server sent none (an older server): nothing is said then
+local function parseElements(text)
+    if type(text) ~= 'string' then
+        return nil
+    end
+    local list = {}
+    for key, taken in text:gmatch('(%a+):(%d+)') do
+        if ELEMENTS[key] then
+            list[#list + 1] = { key = key, taken = tonumber(taken) }
+        end
+    end
+    table.sort(list, elementOrder)
+    return list
+end
+
+local function elementChange(entry)
+    if entry.taken == 0 then
+        return tr('immune')
+    end
+    return string.format('%+d%%', entry.taken - 100)
+end
+
+-- "Ice +20%  Death immune  Fire -20%", each in its element's colour: the
+-- best element to use and the worst one, then whichever comes next
+local function elementsBesideName(list)
+    local weak, avoid = {}, {}
+    for _, entry in ipairs(list) do
+        table.insert(entry.taken > 100 and weak or avoid, entry)
+    end
+    local shown = {}
+    if weak[1] then
+        shown[#shown + 1] = weak[1]
+    end
+    if avoid[1] then
+        shown[#shown + 1] = avoid[1]
+    end
+    local w, a = 2, 2
+    while #shown < ELEMENTS_BY_NAME and (weak[w] or avoid[a]) do
+        if weak[w] then
+            shown[#shown + 1] = weak[w]
+            w = w + 1
+        else
+            shown[#shown + 1] = avoid[a]
+            a = a + 1
+        end
+    end
+    table.sort(shown, elementOrder)
+    local parts = {}
+    for _, entry in ipairs(shown) do
+        local info = ELEMENTS[entry.key]
+        parts[#parts + 1] = string.format('{%s %s,%s}', tr(info[1]), elementChange(entry), info[2])
+    end
+    if #list > #shown then
+        parts[#parts + 1] = '{...,#9789b3}'
+    end
+    return table.concat(parts, '  ')
+end
+
+-- the tooltip's lines: what it is weak to, what it resists, what it is immune to
+local function elementLines(list)
+    local weak, resists, immune = {}, {}, {}
+    for _, entry in ipairs(list) do
+        local name = tr(ELEMENTS[entry.key][1])
+        if entry.taken == 0 then
+            immune[#immune + 1] = name
+        elseif entry.taken > 100 then
+            weak[#weak + 1] = name .. ' ' .. elementChange(entry)
+        else
+            resists[#resists + 1] = name .. ' ' .. elementChange(entry)
+        end
+    end
+    local lines = {}
+    if #weak > 0 then
+        lines[#lines + 1] = tr('Weak to: %s', table.concat(weak, ', '))
+    end
+    if #resists > 0 then
+        lines[#lines + 1] = tr('Resists: %s', table.concat(resists, ', '))
+    end
+    if #immune > 0 then
+        lines[#lines + 1] = tr('Immune to: %s', table.concat(immune, ', '))
+    end
+    if #lines == 0 then
+        lines[1] = tr('Takes normal damage from every element')
+    end
+    return table.concat(lines, '\n')
+end
+
 local function formatDuration(seconds)
     seconds = math.max(0, math.floor(seconds))
     local days = math.floor(seconds / 86400)
@@ -416,6 +531,12 @@ local function renderPage()
             formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
         if monster.dmgMult > 1 then
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
+        end
+        if monster.elements then
+            tooltip = tooltip .. '\n' .. elementLines(monster.elements)
+            -- right after the name, on its line
+            row.elements:setMarginLeft(row.name:getTextSize().width + 12)
+            row.elements:setColoredText(elementsBesideName(monster.elements))
         end
         row:setTooltip(tooltip)
         row.tp:setVisible(monster.tp > 0)
@@ -779,6 +900,7 @@ function handlers.rates(data)
         end
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
+        monster.elements = parseElements(monster.elements)
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
         -- a monster with an experience rate above 1x is tougher (server:
         -- huntboard strength)
