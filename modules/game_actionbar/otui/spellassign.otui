@@ -1,0 +1,340 @@
+// The Assign Spell window (logics/SpellAssignWindow.lua): the spells of the
+// vocation split by kind on the left, like the side menu of the Options,
+// the list in the middle, and the details of the chosen spell below.
+
+// one kind of spell on the left: icon, name and how many are in the list
+SpellAssignTab < UIWidget
+  height: 26
+  image-source: /images/ui/button-grey-up
+  image-border: 5
+  image-color: #b4b4b4
+  focusable: false
+  $hover !checked:
+    image-color: #dcdcdc
+  $checked:
+    image-source: /images/ui/button-grey-down
+    image-color: #ffffff
+
+  UIWidget
+    id: icon
+    size: 20 20
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    phantom: true
+
+  Label
+    id: title
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    color: #dcdcdc
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: count
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 7
+    color: #8c8c8c
+    text-auto-resize: true
+    phantom: true
+
+// a spell of the list: icon, name and words, a tag for the Ascensão and the
+// Wheel of Destiny, and the level (or the path) on the right
+SpellAssignRow < UICheckBox
+  height: 36
+  focusable: true
+  background-color: alpha
+  $hover !checked:
+    background-color: #ffffff12
+  $checked:
+    background-color: #585858
+
+  UIWidget
+    id: icon
+    size: 32 32
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 2
+    phantom: true
+
+    UIWidget
+      id: gray
+      anchors.fill: parent
+      image-source: /images/ui/ditherpattern
+      visible: false
+      phantom: true
+
+  Label
+    id: name
+    anchors.left: icon.right
+    anchors.top: icon.top
+    margin-left: 7
+    margin-top: 2
+    color: #dcdcdc
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: tag
+    anchors.left: name.right
+    anchors.verticalCenter: name.verticalCenter
+    margin-left: 6
+    font: cipsoftFont
+    text-auto-resize: true
+    padding: 1 3 0 3
+    border-width: 1
+    visible: false
+    phantom: true
+
+  Label
+    id: words
+    anchors.left: name.left
+    anchors.top: name.bottom
+    margin-top: 2
+    color: #9a9a9a
+    text-auto-resize: true
+    phantom: true
+
+  Label
+    id: right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    color: #dcdcdc
+    text-auto-resize: true
+    phantom: true
+
+// one number of the details: "Mana: 160"
+SpellAssignStat < Label
+  color: #8c8c8c
+  phantom: true
+
+SpellAssignWindow < MainWindow
+  id: spellAssignWindow
+  size: 560 662
+  !text: tr('Assign Spell')
+
+  UIWidget
+    id: previewIcon
+    size: 32 32
+    anchors.top: parent.top
+    anchors.left: parent.left
+    image-source: /images/game/spells/spell-icons-32x32
+    image-clip: 0 0 32 32
+
+  Label
+    id: previewText
+    anchors.left: previewIcon.right
+    anchors.verticalCenter: previewIcon.verticalCenter
+    anchors.right: parent.right
+    margin-left: 10
+    text-wrap: true
+    text-auto-resize: true
+    color: #dcdcdc
+
+  HorizontalSeparator
+    id: separatorTop
+    anchors.top: previewIcon.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+
+  TextEdit
+    id: searchText
+    anchors.top: separatorTop.bottom
+    anchors.left: parent.left
+    anchors.right: clearSearch.left
+    margin-top: 6
+    margin-right: 4
+    !placeholder: tr('Search by name or words')
+
+  UIButton
+    id: clearSearch
+    size: 18 18
+    anchors.right: parent.right
+    anchors.top: separatorTop.bottom
+    margin-top: 7
+    image-source: /images/ui/button-clear-18x18-up
+    $pressed:
+      image-source: /images/ui/button-clear-18x18-down
+
+  Panel
+    id: tabs
+    anchors.top: searchText.bottom
+    anchors.left: parent.left
+    width: 118
+    height: 290
+    margin-top: 6
+    layout:
+      type: verticalBox
+      spacing: 3
+
+  ScrollablePanel
+    id: spellList
+    anchors.top: tabs.top
+    anchors.left: tabs.right
+    anchors.right: listScroll.left
+    height: 290
+    margin-left: 6
+    image-source: /images/ui/1pixel_down_frame
+    image-border: 1
+    padding: 1
+    vertical-scrollbar: listScroll
+    layout:
+      type: verticalBox
+
+  VerticalScrollBar
+    id: listScroll
+    anchors.top: tabs.top
+    anchors.bottom: tabs.bottom
+    anchors.right: parent.right
+    step: 36
+    pixels-scroll: true
+
+  Label
+    id: emptyLabel
+    anchors.centerIn: spellList
+    color: #8c8c8c
+    text-auto-resize: true
+    visible: false
+
+  CheckBox
+    id: usableFilter
+    anchors.top: spellList.bottom
+    anchors.left: spellList.left
+    anchors.right: parent.right
+    margin-top: 7
+    !text: tr('Show only the spells I can use now')
+
+  Panel
+    id: details
+    anchors.top: usableFilter.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 7
+    height: 172
+    image-source: /images/ui/1pixel_down_frame
+    image-border: 1
+    padding: 7
+
+    UIWidget
+      id: groupIcon
+      size: 20 20
+      anchors.top: parent.top
+      anchors.left: parent.left
+      image-source: /images/game/spells/spellgroup-icons-20x20
+      image-clip: 0 0 20 20
+
+    Label
+      id: name
+      anchors.left: groupIcon.right
+      anchors.verticalCenter: groupIcon.verticalCenter
+      margin-left: 7
+      font: Verdana Bold-11px
+      color: #ffffff
+      text-auto-resize: true
+
+    Label
+      id: words
+      anchors.left: name.right
+      anchors.verticalCenter: groupIcon.verticalCenter
+      margin-left: 8
+      color: #c8b77a
+      text-auto-resize: true
+
+    Panel
+      id: stats
+      anchors.top: groupIcon.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+      height: 32
+      layout:
+        type: grid
+        cell-size: 168 16
+        flow: true
+
+    // what the rare items take off the cooldowns above
+    Label
+      id: cdrNote
+      anchors.top: stats.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      height: 0
+      color: #8fd08f
+
+    // the state of the spell: a coloured box with a bar on its left
+    UIWidget
+      id: statusBox
+      anchors.top: cdrNote.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+      height: 22
+      border-width-left: 3
+
+      Label
+        id: status
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin: 4 6 0 10
+        text-wrap: true
+        text-auto-resize: true
+
+    Button
+      id: action
+      anchors.top: statusBox.bottom
+      anchors.left: statusBox.left
+      margin-top: 5
+      height: 20
+      visible: false
+
+  Label
+    id: paramLabel
+    anchors.top: details.bottom
+    anchors.left: parent.left
+    margin-top: 11
+    !text: tr('Parameter:')
+    text-auto-resize: true
+
+  TextEdit
+    id: paramText
+    anchors.left: paramLabel.right
+    anchors.verticalCenter: paramLabel.verticalCenter
+    margin-left: 10
+    width: 250
+
+  HorizontalSeparator
+    id: separatorBottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: okButton.top
+    margin-bottom: 8
+
+  Button
+    id: cancelButton
+    !text: tr('Cancel')
+    width: 64
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+
+  Button
+    id: applyButton
+    !text: tr('Apply')
+    width: 64
+    anchors.right: cancelButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+
+  Button
+    id: okButton
+    !text: tr('Ok')
+    width: 64
+    anchors.right: applyButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
