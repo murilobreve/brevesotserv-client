@@ -79,18 +79,24 @@ local ICON_ONLY = 24 -- a button's width with its icon alone
 local VIP_MIN_WIDTH = 64 -- the gold VIP button with a short text
 local VIP_ICON_ONLY = 52 -- the gold VIP button with its crown alone
 -- how much the buttons show: their names, short names, the icon with its
--- state (ON / OFF, points, minutes), the icon alone. The bar keeps FULL: a
--- narrow map gives it a second line instead (resize)
+-- state (ON / OFF, points, minutes), the icon alone
 local FULL, SHORT, STATES, ICONS = 0, 1, 2, 3
 local density = FULL
+-- when the bar is short of room the rows give up their names one at a time,
+-- the least needed first and the task rows last (resize); each one keeps its
+-- icon and its state (ON / OFF, points, minutes), its name in the tooltip
+local COLLAPSE_ORDER = { 'fullscreen', 'wiki', 'messages', 'board', 'bosses', 'ascensao', 'bonus', 'loot', 'rarity', 'healbot', 'rates', 'taskshop', 'trail', 'tasks' }
+local levels = {} -- row id -> its own density in this layout (else `density`)
+local tiny = false -- the sections show their icon without their title
+local vipHidden = false -- the VIP button left out: the last step (resize)
 local TOGGLE_WIDTH = 28 -- a switch's badge, as wide for ON as for OFF
 -- the widest each row's badge and quick action have been since login: what
 -- changes by itself (the teleport countdown, points, minutes) never makes
 -- the bar jump. The name is measured as it is, so a row gets narrow again
 -- when its text does (another monster on the task row)
 local widest = {}
--- the task rows in short ("Lost Th. 0/65", "Hunt"): the last thing the bar
--- tries before it takes a second line (resize)
+-- the task rows in short ("Lost Th. 0/65", "Hunt"): the first thing the
+-- bar gives up when it is short of room (resize)
 local compact = false
 local shortLabels = {} -- row id -> its label in short (setFeatureLabel)
 
@@ -163,7 +169,7 @@ end
 -- a button is as wide as its icon, its name and its badge
 local function buttonWidth(button)
     local id = button:getId()
-    if density == ICONS and id ~= 'vip' then
+    if (levels[id] or density) == ICONS and id ~= 'vip' then
         return ICON_ONLY
     end
     local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 4
@@ -178,13 +184,16 @@ end
 
 -- sizes every row and section; returns the sections shown and how wide they
 -- are side by side
-local function measureSections()
-    for id in pairs(buttons) do
-        styleButton(id)
+local function measureSections(restyle)
+    if restyle ~= false then
+        for id in pairs(buttons) do
+            styleButton(id)
+        end
     end
     local blocks, total = {}, 0
     for _, sector in ipairs(SECTORS) do
         local widget = sectors[sector.id]
+        widget.title:setText(tiny and '' or tr(sector.label))
         local children = widget.rows:getChildren()
         widget:setVisible(#children > 0)
         if #children > 0 then
@@ -203,11 +212,16 @@ local function measureSections()
     return blocks, total
 end
 
--- widths of the buttons and the sections. The bar keeps to one line while
--- it can: the VIP button shrinks to its days ("16d"), then to its crown
--- alone (the days in the tooltip), and last the task rows go short. When not
--- even that fits, every name is back in full and the last sections (and the
--- VIP button) go to a second line
+-- widths of the buttons and the sections. The bar keeps to one line (a
+-- second one is a black strip over the spell bars). Short of room, step by
+-- step until everything fits, the VIP button first trying its full text,
+-- its days ("16d") and its crown alone at each step:
+--   the task rows in short ("Lost Th. 0/65", "Hunt"),
+--   the short names ("Market", "Bot"),
+--   the rows' names one at a time (COLLAPSE_ORDER), down to icon and state,
+--   the icons alone, the sections' titles, and last the VIP button.
+-- Only a map too narrow even for that (four side columns on the smallest
+-- window) gives it a second line, with the icons alone
 local lines = 1
 local barHeight
 local collapsed = false
@@ -215,7 +229,6 @@ local function resize()
     if not panel then
         return
     end
-    density = FULL
     local room = panel:getWidth() - 24
     local vip = buttons.vip
     local function vipWidth(text)
@@ -225,46 +238,81 @@ local function resize()
         return vip:getWidth()
     end
     local blocks, width
-    local oneLine = false
-    for _, short in ipairs({ false, true }) do
-        compact = short
-        blocks, width = measureSections()
+    -- true when the layout as it is now fits on one line (it measures it)
+    local function fits(restyle)
+        blocks, width = measureSections(restyle)
         if room <= 0 then
             -- not laid out yet
-            oneLine = true
             if vip then
                 vipWidth(vip:getText())
             end
-        elseif not vip then
-            oneLine = width <= room
-        else
-            -- styleButton gave the VIP button its full text back
-            local full = vip:getText()
-            local days = full:match('(%d+)')
-            local texts = { full }
-            if days then
-                texts[#texts + 1] = days .. 'd'
+            return true
+        end
+        if not vip or vipHidden then
+            return width <= room
+        end
+        -- styleButton gave the VIP button its full text back
+        local full = labels.vip or tr(featureOf('vip').label)
+        local days = full:match('(%d+)')
+        local texts = { full }
+        if days then
+            texts[#texts + 1] = days .. 'd'
+        end
+        texts[#texts + 1] = ''
+        for _, text in ipairs(texts) do
+            if width + SECTOR_SPACING + vipWidth(text) <= room then
+                return true
             end
-            texts[#texts + 1] = ''
-            for _, text in ipairs(texts) do
-                if width + SECTOR_SPACING + vipWidth(text) <= room then
-                    oneLine = true
-                    break
+        end
+        return false
+    end
+    local function layout()
+        levels, tiny, vipHidden = {}, false, false
+        density, compact = FULL, false
+        if fits() then
+            return true
+        end
+        compact = true
+        if fits() then
+            return true
+        end
+        density = SHORT
+        if fits() then
+            return true
+        end
+        for _, id in ipairs(COLLAPSE_ORDER) do
+            if buttons[id] then
+                levels[id] = STATES
+                styleButton(id)
+                if fits(false) then
+                    return true
                 end
             end
         end
-        if oneLine then
-            break
+        levels, density = {}, ICONS
+        if fits() then
+            return true
         end
+        tiny = true
+        if fits() then
+            return true
+        end
+        -- (it is in the Store too)
+        vipHidden = vip ~= nil
+        return fits()
     end
-    if not oneLine then
-        compact = false
+    if not layout() then
+        -- the icons alone on two lines, so nothing runs past the edge
+        vipHidden = false
         blocks = measureSections()
         if vip then
-            vipWidth(vip:getText())
+            vipWidth('')
         end
     end
-    if vip then
+    if vipHolder then
+        vipHolder:setVisible(vip ~= nil and not vipHidden)
+    end
+    if vip and not vipHidden then
         blocks[#blocks + 1] = vipHolder
     end
     local strips = { panel.strip, panel.strip2 }
@@ -296,7 +344,17 @@ local function resize()
                 end
             end
         end
-        strip:reorderChildren(wanted[index])
+        -- reorderChildren wants every child: the hidden ones go after
+        local order = {}
+        for _, block in ipairs(wanted[index]) do
+            order[#order + 1] = block
+        end
+        for _, child in ipairs(strip:getChildren()) do
+            if not table.contains(order, child) then
+                order[#order + 1] = child
+            end
+        end
+        strip:reorderChildren(order)
     end
     lines = #wanted[2] > 0 and 2 or 1
     panel.strip2:setVisible(lines == 2 and not collapsed)
@@ -326,7 +384,7 @@ styleButton = function(id)
         return
     end
     -- the VIP button keeps its text: it is the one that sells
-    local level = id == 'vip' and FULL or density
+    local level = id == 'vip' and FULL or levels[id] or density
     local name = (compact and shortLabels[id]) or labels[id] or tr(level == SHORT and feature.short or feature.label)
     button:setText(level >= STATES and '' or name)
     -- without its name, the name is in the tooltip (refreshBadge)
@@ -491,7 +549,7 @@ end
 -- gold, and the badge blinks when it lands on the new value
 local function animateGain(id, from, to, text)
     local button = buttons[id]
-    if not button or density == ICONS or not button.badge:isVisible() then
+    if not button or (levels[id] or density) == ICONS or not button.badge:isVisible() then
         return
     end
     if gainEvents[id] then
