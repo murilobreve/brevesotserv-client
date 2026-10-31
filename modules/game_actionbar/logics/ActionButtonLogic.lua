@@ -37,6 +37,8 @@ local function getButtonById(id)
 end
 
 --- Checks if a button is empty
+local translateDisplayHotkey
+
 local function buttonIsEmpty(button)
     return button.item:getItemId() == 0 and string_empty(button.item.text:getText()) and
                string_empty(button.item.text:getImageSource())
@@ -430,7 +432,7 @@ function onExecuteAction(button, isPress)
 end
 
 --- Translates hotkey text for display
-local function translateDisplayHotkey(text)
+translateDisplayHotkey = function(text)
     if HotkeyShortcuts[text] then
         text = HotkeyShortcuts[text]
     elseif string.len(text) > 5 then
