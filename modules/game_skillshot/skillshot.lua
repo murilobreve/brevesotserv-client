@@ -8,7 +8,10 @@
 -- map, or over a window on it, the spell goes at the creature being
 -- attacked (said so, t = 1: the Salto do Tita does not leap onto it, it
 -- goes the way the character faces), else the way the character faces.
--- The server says at login which words are skillshots; the client answers
+-- The server says at login which words are skillshots, and again when the
+-- client asks at game start (logging back in while the character is still
+-- online, as a browser page reloaded with F5 does, runs no onLogin on the
+-- server, and without the words no aim was sent); the client answers
 -- with the spells it has art for (ART) and the server then sends their
 -- moments to draw (hook.lua, palm.lua, arrow.lua, judgement.lua, wall.lua,
 -- orb.lua, seed.lua, shard.lua, crack.lua, step.lua, leap.lua, beam.lua,
@@ -192,6 +195,11 @@ end
 local warmUpEvent
 
 local function warmUp()
+    -- the words, also when the server ran no onLogin for this game
+    local protocol = g_game.getProtocolGame()
+    if protocol then
+        protocol:sendExtendedJSONOpcode(OPCODE, { ask = 1 })
+    end
     removeEvent(warmUpEvent)
     warmUpEvent = scheduleEvent(function()
         local player = g_game.getLocalPlayer()
