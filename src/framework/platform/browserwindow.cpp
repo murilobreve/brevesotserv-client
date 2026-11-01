@@ -44,6 +44,7 @@ BrowserWindow::BrowserWindow() {
     web_keymap.push_back({ "Backspace", Fw::KeyBackspace });
     web_keymap.push_back({ "Tab", Fw::KeyTab });
     web_keymap.push_back({ "Enter", Fw::KeyEnter });
+    web_keymap.push_back({ "NumpadEnter", Fw::KeyEnter });
     web_keymap.push_back({ "ShiftLeft", Fw::KeyShift });
     web_keymap.push_back({ "ShiftRight", Fw::KeyShift });
     web_keymap.push_back({ "ControlLeft", Fw::KeyCtrl });
@@ -138,9 +139,12 @@ BrowserWindow::BrowserWindow() {
     web_keymap.push_back({ "Minus", Fw::KeyMinus });
     web_keymap.push_back({ "Period", Fw::KeyPeriod });
     web_keymap.push_back({ "Slash", Fw::KeySlash });
+    // the ABNT2 keyboard's own keys: / beside the right Shift, \ beside the left one
+    web_keymap.push_back({ "IntlRo", Fw::KeySlash });
     web_keymap.push_back({ "Backquote", Fw::KeyGrave });
     web_keymap.push_back({ "BracketLeft", Fw::KeyLeftBracket });
     web_keymap.push_back({ "Backslash", Fw::KeyBackslash });
+    web_keymap.push_back({ "IntlBackslash", Fw::KeyBackslash });
     web_keymap.push_back({ "BracketRight", Fw::KeyRightBracket });
     web_keymap.push_back({ "Quote", Fw::KeyQuote });
     web_keymap.push_back({ 0, Fw::KeyUnknown });

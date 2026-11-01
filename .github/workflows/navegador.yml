@@ -17,6 +17,8 @@ on:
       - "init.lua"
       - "config.ini"
       - "CMakeLists.txt"
+      - "cmake/**"
+      - "vcpkg-configuration.json"
       - "vcpkg.json"
       - ".github/workflows/navegador.yml"
   workflow_dispatch:

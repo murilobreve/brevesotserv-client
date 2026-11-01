@@ -388,7 +388,11 @@
         keepLog(payload);
         // stderr is only a message, and a promise nobody waited on rarely
         // stops anything: kept for a later report. The others stop the game.
-        if (prefix === "stderr" || prefix === "unhandledrejection") return;
+        if (prefix === "stderr") return;
+        // while the game is still loading, a promise that fails is the
+        // download or the start of the game failing (the wasm or the 270 MB
+        // data): without this the screen sat on "Baixando o jogo" forever
+        if (prefix === "unhandledrejection" && document.getElementById("splash").classList.contains("ready")) return;
         window.mythosStopped = true;
         if (unsupported) return;
         showCrash(payload);
@@ -534,14 +538,20 @@
         });
         callMain();
         document.addEventListener("touchstart", function (ev) {
+          // the crash box and the notices keep their taps (their buttons)
+          if (ev.target.closest && ev.target.closest("#crash, .notice")) return;
           ev.preventDefault();
           ev.stopPropagation();
         });
         document.addEventListener("touchmove", function (ev) {
+          // the crash box and the notices keep their taps (their buttons)
+          if (ev.target.closest && ev.target.closest("#crash, .notice")) return;
           ev.preventDefault();
           ev.stopPropagation();
         });
         document.addEventListener("touchend", function (ev) {
+          // the crash box and the notices keep their taps (their buttons)
+          if (ev.target.closest && ev.target.closest("#crash, .notice")) return;
           ev.preventDefault();
           ev.stopPropagation();
         });
@@ -555,8 +565,13 @@
           if (window.mythosStopped) return;
           // (Esc cannot ask for full screen)
           if (ev.key !== "Escape") claimFullscreen();
+          // AltGr arrives as Ctrl+Alt on Windows: it types @ { } [ ] \ ° ª º §
+          // and the US-International ç, so its characters are text too
+          var altGr =
+            ev.key.length === 1 &&
+            ((ev.getModifierState && ev.getModifierState("AltGraph")) || (ev.ctrlKey && ev.altKey));
           if (
-            !ev.ctrlKey &&
+            (!ev.ctrlKey || altGr) &&
             ev.key !== "Enter" &&
             ev.key !== "Escape" &&
             ev.key !== "Backspace" &&
