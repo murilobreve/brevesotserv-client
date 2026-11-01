@@ -822,6 +822,22 @@ function handlers.pointsReady(data)
         end)
 end
 
+-- Szuszkin was asked for his shop: the window opens on it (the offers are
+-- too many for his speech bubble)
+function handlers.openShop(data)
+    if not window then
+        return
+    end
+    if window:isVisible() then
+        selectTab('shop')
+        window:raise()
+        window:focus()
+        return
+    end
+    currentTab = 'shop'
+    toggle()
+end
+
 function handlers.message(data)
     showMessage(data.text, data.ok)
 end
