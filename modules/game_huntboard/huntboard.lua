@@ -11,16 +11,22 @@ local PAGE_SIZE = 40
 -- (huntboard/02_events.lua), so requests leave at least this far apart
 local SEND_INTERVAL = 350
 
-local FILTERS = {
+-- The filters panel: which monsters (showBox), which rates (rateBox), an
+-- element the monster is weak to or does not resist (elementBox), the sort,
+-- and ranges of XP and gold per kill and of the recommended level.
+local SHOWS = {
     { key = 'tp', label = 'Hunts with TP' },
-    { key = 'tpGold2', label = 'With TP, 2k+ gold/kill' },
-    { key = 'tpGold5', label = 'With TP, 5k+ gold/kill' },
     { key = 'all', label = 'All monsters' },
+    { key = 'noBosses', label = 'All, no bosses' },
+}
+
+local RATE_FILTERS = {
+    { key = 'any', label = 'Any rate' },
     { key = 'xp', label = 'Boosted XP (1.5x+)' },
     { key = 'loot', label = 'Boosted loot (1.5x+)' },
     { key = 'both', label = 'Double boost (2x+ both)' },
-    { key = 'jackpot', label = 'Jackpot (XP 3.5x+ or loot 2.5x+)' },
-    { key = 'nerfed', label = 'Below normal (<1x)' },
+    { key = 'jackpot', label = 'Jackpot' },
+    { key = 'nerfed', label = 'Below 1x' },
 }
 
 local SORTS = {
@@ -29,10 +35,18 @@ local SORTS = {
     { key = 'loot', label = 'Highest loot rate' },
     { key = 'perKill', label = 'Most XP per kill' },
     { key = 'gold', label = 'Most gold per kill' },
+    { key = 'xpPerHp', label = 'Most XP per health' },
+    { key = 'level', label = 'Lowest recommended level' },
     { key = 'spawns', label = 'Most spawns' },
     { key = 'exp', label = 'Base experience' },
     { key = 'name', label = 'Name' },
 }
+-- sorts whose first rows get no medal colour
+local NO_MEDALS = { name = true, level = true }
+
+-- the "My level" button: the hunts of the daily task's level window
+-- (hunt_tasks/00_config.lua, daily.levelWindow) and the wiki's "near my level"
+local MY_LEVEL = { 0.55, 1.1 }
 
 local PERIOD_LABELS = { hour = 'Hourly', day = 'Daily', month = 'Monthly' }
 local MEDALS = {
@@ -52,6 +66,7 @@ local currentTab = 'rates'
 local currentPeriod = 'hour'
 local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 30, slot = -1 }
 local filtered = {}
+local currentSort = 'combined'
 local page = 1
 local boards = {}
 local timeOffset = 0 -- server time - local time
@@ -103,7 +118,25 @@ local ELEMENTS = {
     ice = { 'Ice', '#52dcff' },
     lifedrain = { 'Life drain', '#e0485a' },
 }
-local ELEMENTS_BY_NAME = 4 -- shown beside the name; the tooltip has them all
+-- Every row has a column for each element a player deals, in the
+-- Cyclopedia's order, under the element's icon in the list header
+-- (huntboard.otui, ElementCells and ElementHead): the change in damage the
+-- monster takes, "+10" green for a weakness, "-15" amber for a resistance,
+-- "x" grey for an immunity, a faint dot for normal damage. Life drain, which
+-- only monsters deal, is in the tooltip with the rest.
+local ELEMENT_COLUMNS = { 'physical', 'earth', 'fire', 'death', 'energy', 'holy', 'ice' }
+local IMMUNE_MARK = '\215' -- the multiplication sign of the fonts (cp1252)
+local NORMAL_MARK = '\183' -- the middle dot
+
+-- the element filter: weak to it (takes more than 100%), or at least no
+-- resistance (100% or more)
+local ELEMENT_FILTERS = { { key = '', label = 'Any element' } }
+for _, key in ipairs(ELEMENT_COLUMNS) do
+    ELEMENT_FILTERS[#ELEMENT_FILTERS + 1] = { key = 'weak:' .. key, label = 'Weak to ' .. key }
+end
+for _, key in ipairs(ELEMENT_COLUMNS) do
+    ELEMENT_FILTERS[#ELEMENT_FILTERS + 1] = { key = 'open:' .. key, label = 'No resistance to ' .. key }
+end
 
 -- what to hunt it with first (the biggest weakness first), then what not
 -- to use: immunities, then the strongest resistances
@@ -118,19 +151,22 @@ local function elementOrder(a, b)
     return a.key < b.key
 end
 
--- nil when the server sent none (an older server): nothing is said then
+-- the list for the tooltip and the damage taken by element key; nil when
+-- the server sent none (an older server): nothing is said then
 local function parseElements(text)
     if type(text) ~= 'string' then
         return nil
     end
-    local list = {}
-    for key, taken in text:gmatch('(%a+):(%d+)') do
+    local list, taken = {}, {}
+    for key, value in text:gmatch('(%a+):(%d+)') do
         if ELEMENTS[key] then
-            list[#list + 1] = { key = key, taken = tonumber(taken) }
+            value = tonumber(value)
+            list[#list + 1] = { key = key, taken = value }
+            taken[key] = value
         end
     end
     table.sort(list, elementOrder)
-    return list
+    return list, taken
 end
 
 local function elementChange(entry)
@@ -140,59 +176,20 @@ local function elementChange(entry)
     return string.format('%+d%%', entry.taken - 100)
 end
 
--- Beside the name: the best element to use and the worst one, then
--- whichever comes next, each as the bestiary's icon of the element and the
--- change in damage, green for a weakness, amber for a resistance, grey for
--- an immunity (the monster wiki's colours). The tooltip names them.
-local function elementsBesideName(list)
-    local weak, avoid = {}, {}
-    for _, entry in ipairs(list) do
-        table.insert(entry.taken > 100 and weak or avoid, entry)
+local function elementCell(taken)
+    if not taken or taken == 100 then
+        return NORMAL_MARK, '#4d4463'
+    elseif taken == 0 then
+        return IMMUNE_MARK, '#a3abb5'
     end
-    local shown = {}
-    if weak[1] then
-        shown[#shown + 1] = weak[1]
-    end
-    if avoid[1] then
-        shown[#shown + 1] = avoid[1]
-    end
-    local w, a = 2, 2
-    while #shown < ELEMENTS_BY_NAME and (weak[w] or avoid[a]) do
-        if weak[w] then
-            shown[#shown + 1] = weak[w]
-            w = w + 1
-        else
-            shown[#shown + 1] = avoid[a]
-            a = a + 1
-        end
-    end
-    table.sort(shown, elementOrder)
-    return shown, #list > #shown
+    return string.format('%+d', taken - 100), taken > 100 and '#7fd35a' or '#f1c84b'
 end
 
-local function elementTone(entry)
-    if entry.taken == 0 then
-        return '#9aa3ad'
-    end
-    return entry.taken > 100 and '#7fd35a' or '#f1c84b'
-end
-
-local function fillElementTags(panel, list)
-    panel:destroyChildren()
-    local shown, more = elementsBesideName(list)
-    for _, entry in ipairs(shown) do
-        local tag = g_ui.createWidget('ElementTag', panel)
-        tag.icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. entry.key .. '-resist')
-        tag.value:setText(string.format('%+d%%', entry.taken - 100))
-        tag.value:setColor(elementTone(entry))
-        tag:setWidth(11 + tag.value:getTextSize().width)
-    end
-    if more then
-        local tag = g_ui.createWidget('ElementTag', panel)
-        tag.icon:setVisible(false)
-        tag.value:setMarginLeft(-11)
-        tag.value:setText('...')
-        tag:setWidth(tag.value:getTextSize().width)
+local function fillElementCells(cells, taken)
+    for _, key in ipairs(ELEMENT_COLUMNS) do
+        local text, color = elementCell(taken and taken[key])
+        cells[key]:setText(text)
+        cells[key]:setColor(color)
     end
 end
 
@@ -361,29 +358,97 @@ end
 
 -- ---------------------------------------------------------------- rates tab
 
-local function matchesFilter(monster, filter, search, hideBosses)
-    if hideBosses and monster.boss == 1 then
+-- A number typed in a range box: "6000", "6.000" and "6,000" (the marks
+-- only group thousands), "6k", "1,5k", "2kk" and "2m" (Tibia's kk is a
+-- million). nil when the box is empty, false when it is not a number.
+local SUFFIXES = { [''] = 1, k = 1000, kk = 1000000, m = 1000000 }
+
+local function parseAmount(text)
+    text = (tostring(text or ''):lower():gsub('%s+', ''))
+    if text == '' then
+        return nil
+    end
+    local digits, suffix = text:match('^(%d[%d%.,]*)(%a*)$')
+    local multiplier = digits and SUFFIXES[suffix]
+    if not multiplier then
         return false
     end
-    if search ~= '' and not monster.lname:find(search, 1, true) then
+    local value
+    if multiplier > 1 then
+        -- "1,5k" and "1.5k": here the mark is the decimal point
+        value = tonumber((digits:gsub(',', '.')))
+    else
+        value = tonumber((digits:gsub('[%.,]', '')))
+    end
+    return value and math.floor(value * multiplier + 0.5) or false
+end
+
+local INPUT_COLOR, BAD_INPUT_COLOR = '#e6e2ee', '#ff7a6b'
+
+-- the two boxes of a range; a box that is not a number turns red and is
+-- left out
+local function readRange(minEdit, maxEdit)
+    local low, high = parseAmount(minEdit:getText()), parseAmount(maxEdit:getText())
+    minEdit:setColor(low == false and BAD_INPUT_COLOR or INPUT_COLOR)
+    maxEdit:setColor(high == false and BAD_INPUT_COLOR or INPUT_COLOR)
+    return low or nil, high or nil
+end
+
+local function inRange(value, low, high)
+    value = value or 0
+    return (not low or value >= low) and (not high or value <= high)
+end
+
+local function comboKey(combo, default)
+    local option = combo:getCurrentOption()
+    return option and option.data or default
+end
+
+-- every choice of the filters panel, read once per filtering
+local function readFilters(section)
+    local filters = {
+        search = section.searchEdit:getText():lower():trim(),
+        show = comboKey(section.showBox, 'tp'),
+        rate = comboKey(section.rateBox, 'any'),
+    }
+    local mode, element = comboKey(section.elementBox, ''):match('^(%a+):(%a+)$')
+    if element then
+        filters.element, filters.weak = element, mode == 'weak'
+    end
+    filters.xpMin, filters.xpMax = readRange(section.xpMin, section.xpMax)
+    filters.goldMin, filters.goldMax = readRange(section.goldMin, section.goldMax)
+    filters.levelMin, filters.levelMax = readRange(section.levelMin, section.levelMax)
+    return filters
+end
+
+local function matchesFilter(monster, filters)
+    if (filters.show == 'tp' and monster.tp <= 0) or (filters.show == 'noBosses' and monster.boss == 1) then
         return false
     end
-    if filter == 'tp' then
-        return monster.tp > 0
-    elseif filter == 'tpGold2' then
-        return monster.tp > 0 and (monster.goldPerKill or 0) >= 2000
-    elseif filter == 'tpGold5' then
-        return monster.tp > 0 and (monster.goldPerKill or 0) >= 5000
-    elseif filter == 'xp' then
-        return monster.xp >= 15
-    elseif filter == 'loot' then
-        return monster.loot >= 15
-    elseif filter == 'both' then
-        return monster.xp >= 20 and monster.loot >= 20
-    elseif filter == 'jackpot' then
-        return monster.xp >= 35 or monster.loot >= 25
-    elseif filter == 'nerfed' then
-        return monster.xp < 10 or monster.loot < 10
+    if filters.search ~= '' and not monster.lname:find(filters.search, 1, true) then
+        return false
+    end
+    local rate = filters.rate
+    if (rate == 'xp' and monster.xp < 15) or (rate == 'loot' and monster.loot < 15)
+        or (rate == 'both' and (monster.xp < 20 or monster.loot < 20))
+        or (rate == 'jackpot' and monster.xp < 35 and monster.loot < 25)
+        or (rate == 'nerfed' and monster.xp >= 10 and monster.loot >= 10) then
+        return false
+    end
+    if filters.element then
+        -- an older server sends no elements: nothing to filter by
+        local taken = monster.taken and (monster.taken[filters.element] or 100)
+        if not taken or taken < 100 or (filters.weak and taken == 100) then
+            return false
+        end
+    end
+    if not inRange(monster.perKill, filters.xpMin, filters.xpMax)
+        or not inRange(monster.goldPerKill, filters.goldMin, filters.goldMax) then
+        return false
+    end
+    -- the level of a monster an older server does not send stays in
+    if monster.lvl and not inRange(monster.lvl, filters.levelMin, filters.levelMax) then
+        return false
     end
     return true
 end
@@ -417,6 +482,19 @@ local SORTERS = {
         local goldA, goldB = a.goldPerKill or -1, b.goldPerKill or -1
         if goldA ~= goldB then
             return goldA > goldB
+        end
+        return a.lname < b.lname
+    end,
+    xpPerHp = function(a, b)
+        if a.xpPerHp ~= b.xpPerHp then
+            return a.xpPerHp > b.xpPerHp
+        end
+        return a.lname < b.lname
+    end,
+    level = function(a, b)
+        local levelA, levelB = a.lvl or math.huge, b.lvl or math.huge
+        if levelA ~= levelB then
+            return levelA < levelB
         end
         return a.lname < b.lname
     end,
@@ -542,7 +620,7 @@ local function renderPage()
         local monster = filtered[i]
         local row = g_ui.createWidget(i % 2 == 0 and 'RateRowEven' or 'RateRow', list)
         row.rank:setText('#' .. i)
-        if i <= 3 and panel.sortBox:getCurrentOption().data ~= 'name' then
+        if i <= 3 and not NO_MEDALS[currentSort] then
             row.rank:setColor(MEDALS[i].text)
         end
         row.creature:setOutfit(outfitOf(monster))
@@ -552,12 +630,13 @@ local function renderPage()
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
         end
-        if monster.dmgMult > 1 then
-            row.info:setText(tr('Exp %s  -  HP %s  -  damage x%.1f  -  %d spawns', formatNumber(monster.exp),
-                formatNumber(math.floor(monster.hp * monster.hpMult)), monster.dmgMult, monster.spawns))
+        -- the health it has while this rate lasts; its damage is in the tooltip
+        if monster.lvl then
+            row.info:setText(tr('Lv %d  -  HP %s  -  %d spawns', monster.lvl, formatNumber(monster.hpNow), monster.spawns))
         else
-            row.info:setText(tr('Exp %s  -  HP %s  -  %d spawns', formatNumber(monster.exp), formatNumber(monster.hp), monster.spawns))
+            row.info:setText(tr('HP %s  -  %d spawns', formatNumber(monster.hpNow), monster.spawns))
         end
+        fillElementCells(row.elements, monster.taken)
         setBar(row.xpBar, monster.xp)
         setBar(row.lootBar, monster.loot, rates.lootMax, lootTone)
         row.perKill:setText(formatShort(monster.perKill) .. ' xp')
@@ -572,14 +651,14 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. tr('Gold: %s x %.1f = %s per kill (average, at the prices Gersao pays)',
                 formatNumber(monster.gold), monster.loot / 10, formatNumber(monster.goldPerKill))
         end
+        if monster.lvl then
+            tooltip = tooltip .. '\n' .. tr('Recommended level: %d', monster.lvl)
+        end
         if monster.dmgMult > 1 then
             tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
         end
         if monster.elements then
             tooltip = tooltip .. '\n' .. elementLines(monster.elements)
-            -- right after the name, on its line
-            row.elements:setMarginLeft(row.name:getTextSize().width + 12)
-            fillElementTags(row.elements, monster.elements)
         end
         row:setTooltip(tooltip)
         row.tp:setVisible(monster.tp > 0)
@@ -617,54 +696,69 @@ local function applyFilters()
     if not window then
         return
     end
-    local panel = window.ratesPanel
-    local search = panel.searchEdit:getText():lower():trim()
-    local filterOption = panel.filterBox:getCurrentOption()
-    local sortOption = panel.sortBox:getCurrentOption()
-    local filter = filterOption and filterOption.data or 'all'
-    local sortKey = sortOption and sortOption.data or 'combined'
-    local hideBosses = panel.bossBox:isChecked()
+    local section = window.ratesPanel.filterSection
+    local filters = readFilters(section)
+    currentSort = comboKey(section.sortBox, 'combined')
 
     filtered = {}
     for _, monster in ipairs(rates.monsters) do
-        if matchesFilter(monster, filter, search, hideBosses) then
+        if matchesFilter(monster, filters) then
             filtered[#filtered + 1] = monster
         end
     end
-    table.sort(filtered, SORTERS[sortKey] or SORTERS.combined)
+    table.sort(filtered, SORTERS[currentSort] or SORTERS.combined)
     page = 1
     renderPage()
 end
 
-local function renderHot()
-    if not window then
-        return
+local RANGE_BOXES = { 'xpMin', 'xpMax', 'goldMin', 'goldMax', 'levelMin', 'levelMax' }
+
+-- the panel's buttons, tooltips and the element icons of the list header
+local function setupFilterPanel()
+    local section = window.ratesPanel.filterSection
+    local hint = tr('A number: 6000, 6.000, 6k or 1,5kk. Empty: no limit.')
+    for _, id in ipairs(RANGE_BOXES) do
+        section[id]:setTooltip(hint)
     end
-    local hotPanel = window.ratesPanel.hotSection.hotPanel
-    hotPanel:destroyChildren()
-    local list = {}
-    for _, monster in ipairs(rates.monsters) do
-        if monster.boss ~= 1 and monster.exp > 0 then
-            list[#list + 1] = monster
+    section.xpLabel:setTooltip(tr('Experience per kill at this rate, before your own bonuses: the Per kill column.'))
+    section.goldLabel:setTooltip(tr('Gold per kill at this loot rate, at the prices Gersao pays: the Per kill column.'))
+    section.levelLabel:setTooltip(tr('The level the Hunt Tasks recommend for the monster.'))
+    section.rateBox:setTooltip(tr('Jackpot: XP 3.5x+ or loot 2.5x+.'))
+    section.elementBox:setTooltip(tr('Weak to: it takes more damage from the element. No resistance: it takes at least the normal damage.'))
+
+    section.myLevel.onClick = function()
+        local player = g_game.getLocalPlayer()
+        if not player then
+            return
+        end
+        local level = player:getLevel()
+        section.levelMin:setText(tostring(math.floor(level * MY_LEVEL[1])))
+        section.levelMax:setText(tostring(math.floor(level * MY_LEVEL[2])))
+        onFilterChanged()
+    end
+    section.myLevel.onHoverChange = function(widget, hovered)
+        local player = g_game.getLocalPlayer()
+        if hovered and player then
+            local level = player:getLevel()
+            widget:setTooltip(tr('Monsters for your level: %d to %d.', math.floor(level * MY_LEVEL[1]), math.floor(level * MY_LEVEL[2])))
         end
     end
-    table.sort(list, SORTERS.combined)
-    for i = 1, math.min(4, #list) do
-        local monster = list[i]
-        local card = g_ui.createWidget('HotCard', hotPanel)
-        card:setWidth(math.max(170, math.floor((hotPanel:getWidth() - 18) / 4)))
-        card.medal:setText('#' .. i)
-        card.medal:setColor((MEDALS[i] or MEDALS[3]).text)
-        card.creature:setOutfit(outfitOf(monster))
-        card.name:setText(monster.name)
-        card.xp:setText(tr('XP %s', multText(monster.xp)))
-        card.xp:setColor(xpTone(monster.xp))
-        card.loot:setText(tr('Loot %s', multText(monster.loot)))
-        card.loot:setColor(lootTone(monster.loot))
-        card.onClick = function()
-            window.ratesPanel.searchEdit:setText(monster.name)
+    section.clearButton.onClick = function()
+        section.searchEdit:setText('')
+        for _, id in ipairs(RANGE_BOXES) do
+            section[id]:setText('')
         end
-        card:setTooltip(tr('Click to find %s in the list', monster.name))
+        section.showBox:setCurrentIndex(1, true)
+        section.rateBox:setCurrentIndex(1, true)
+        section.elementBox:setCurrentIndex(1, true)
+        applyFilters()
+    end
+
+    -- the Cyclopedia's icon of each element over its column
+    local head = window.ratesPanel.rateHeader.elementHead
+    for _, key in ipairs(ELEMENT_COLUMNS) do
+        head[key].icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. key .. '-resist')
+        head[key]:setTooltip(tr('%s damage on the monster:\n+10 = it takes 10%% more\n-15 = it takes 15%% less\n%s = immune', tr(ELEMENTS[key][1]), IMMUNE_MARK))
     end
 end
 
@@ -943,8 +1037,13 @@ function handlers.rates(data)
         end
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
-        monster.elements = parseElements(monster.elements)
+        monster.elements, monster.taken = parseElements(monster.elements)
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
+        -- the Hunt Tasks' recommended level; nil with a server that does not send it
+        monster.lvl = tonumber(monster.lvl)
+        if monster.lvl and monster.lvl <= 0 then
+            monster.lvl = nil
+        end
         -- gold per kill: the server's average at the normal loot rate (what
         -- Gersao pays for the items, the coins at their worth) times this
         -- monster's loot rate; nil with a server that does not send it
@@ -959,6 +1058,8 @@ function handlers.rates(data)
             monster.hpMult = 1 + (rate - 1) * (tonumber(strength.hp) or 0) / 100
             monster.dmgMult = 1 + (rate - 1) * (tonumber(strength.dmg) or 0) / 100
         end
+        monster.hpNow = math.floor(monster.hp * monster.hpMult)
+        monster.xpPerHp = monster.perKill / math.max(1, monster.hpNow)
         monsters[#monsters + 1] = monster
     end
     rates.monsters = monsters
@@ -969,7 +1070,6 @@ function handlers.rates(data)
     labelAll()
     if window then
         updateFooter()
-        renderHot()
         applyFilters()
     end
     pointNewRates()
@@ -1262,8 +1362,12 @@ function init()
     window = g_ui.displayUI('huntboard')
     window:hide()
 
-    setupCombo(window.ratesPanel.filterBox, FILTERS)
-    setupCombo(window.ratesPanel.sortBox, SORTS)
+    local section = window.ratesPanel.filterSection
+    setupCombo(section.showBox, SHOWS)
+    setupCombo(section.rateBox, RATE_FILTERS)
+    setupCombo(section.elementBox, ELEMENT_FILTERS)
+    setupCombo(section.sortBox, SORTS)
+    setupFilterPanel()
     updateOnline()
 
     ProtocolGame.registerExtendedJSONOpcode(HUNT_OPCODE, onHuntOpcode)
