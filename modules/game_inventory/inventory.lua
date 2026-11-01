@@ -13,17 +13,26 @@ local function getInventoryUi()
     return inventoryController.ui.onPanel
 end
 
+-- the slot's panel and its toggler; nil on the minimized inventory (offPanel
+-- has no slots: logging out with it minimized raised an error every time)
+local function slotOf(name)
+    return function(ui)
+        local panel = ui and ui[name]
+        return panel, panel and panel[name]
+    end
+end
+
 local getSlotPanelBySlot = {
-    [InventorySlotHead] = function(ui) return ui.helmet, ui.helmet.helmet end,
-    [InventorySlotNeck] = function(ui) return ui.amulet, ui.amulet.amulet end,
-    [InventorySlotBack] = function(ui) return ui.backpack, ui.backpack.backpack end,
-    [InventorySlotBody] = function(ui) return ui.armor, ui.armor.armor end,
-    [InventorySlotRight] = function(ui) return ui.shield, ui.shield.shield end,
-    [InventorySlotLeft] = function(ui) return ui.sword, ui.sword.sword end,
-    [InventorySlotLeg] = function(ui) return ui.legs, ui.legs.legs end,
-    [InventorySlotFeet] = function(ui) return ui.boots, ui.boots.boots end,
-    [InventorySlotFinger] = function(ui) return ui.ring, ui.ring.ring end,
-    [InventorySlotAmmo] = function(ui) return ui.tools, ui.tools.tools end
+    [InventorySlotHead] = slotOf('helmet'),
+    [InventorySlotNeck] = slotOf('amulet'),
+    [InventorySlotBack] = slotOf('backpack'),
+    [InventorySlotBody] = slotOf('armor'),
+    [InventorySlotRight] = slotOf('shield'),
+    [InventorySlotLeft] = slotOf('sword'),
+    [InventorySlotLeg] = slotOf('legs'),
+    [InventorySlotFeet] = slotOf('boots'),
+    [InventorySlotFinger] = slotOf('ring'),
+    [InventorySlotAmmo] = slotOf('tools'),
 }
 
 local function isPlayerMonk()

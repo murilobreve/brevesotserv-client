@@ -1273,6 +1273,10 @@ function changeImagenHome(direction)
         end
     end
     local currentBanner = bannersHome[currentIndex]
+    -- a store with no banners: the arrows have nothing to show
+    if not currentBanner then
+        return
+    end
     local imagePath = currentBanner.image
     setImagenHttp(controllerShop.ui.HomePanel.HomeImagen, imagePath, false)
 end
@@ -1308,11 +1312,15 @@ end
 -- =============================================*/
 
 function transferPoints()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return
+    end
     destroyWindow(transferPointsWindow)
     transferPointsWindow = g_ui.displayUI('style/transferpoints')
     transferPointsWindow:show()
 
-    local playerBalance = g_game.getLocalPlayer():getResourceBalance(ResourceTypes.COIN_TRANSFERRABLE)
+    local playerBalance = player:getResourceBalance(ResourceTypes.COIN_TRANSFERRABLE)
     fixServerNoSend0xF2()
 
     local normalCoins, transferableCoins = getCoinsBalance()

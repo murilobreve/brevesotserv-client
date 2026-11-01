@@ -260,10 +260,16 @@ function showOwnRank()
 end
 
 function highscoreRequest(currentPage, typex)
-    local id = getVocation(highscoreController.ui.filters.vocationBox:getCurrentOption().text)
+    -- the filters are filled by the server's first answer: none yet, no request
+    local vocation = highscoreController.ui.filters.vocationBox:getCurrentOption()
+    local category = highscoreController.ui.filters.categoryBox:getCurrentOption()
+    if not vocation or not category then
+        return
+    end
+    local id = getVocation(vocation.text)
     id = (id == "All Vocations" and 0xFFFFFFFF or id)
 
-    local categoryId = getCategory(highscoreController.ui.filters.categoryBox:getCurrentOption().text)
+    local categoryId = getCategory(category.text)
 
     g_game.requestHighscore(typex, categoryId, id, serverSide.world, serverSide.worldType, serverSide.battlEye,
         currentPage, serverSide.totalInPages)

@@ -379,11 +379,24 @@ end
 
 local function onGameStart()
     if not g_settings.getBoolean('mythos_tutorial_done') then
-        -- after the panel rows and the journey window had their turn
-        startEvent = scheduleEvent(function()
+        -- after the panel rows and the journey window had their turn, and
+        -- only with no window in front: the first login opens the outfit
+        -- window, and the tour pointed at buttons hidden behind it
+        local function tryStart()
             startEvent = nil
+            if not g_game.isOnline() then
+                return
+            end
+            -- (the game screen itself is the top "window" when none is open)
+            local top = topWindow()
+            local gameScreen = modules.game_interface and modules.game_interface.getRootPanel and modules.game_interface.getRootPanel()
+            if top and top ~= gameScreen then
+                startEvent = scheduleEvent(tryStart, 1000)
+                return
+            end
             start()
-        end, 2500)
+        end
+        startEvent = scheduleEvent(tryStart, 2500)
     end
 end
 
