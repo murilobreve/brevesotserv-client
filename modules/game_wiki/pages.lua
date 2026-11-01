@@ -1,6 +1,8 @@
--- Mythos Wiki content. The numbers come from the server's rarity config
--- (data-otservbr-global/scripts/rarity/00_config.lua) and the engine's forge
--- stack formulas; keep them in sync when that file is rebalanced.
+-- Mythos Wiki content. The numbers of the rarity pages come from the
+-- server's rarity config (data-otservbr-global/scripts/rarity/00_config.lua)
+-- and the engine's forge stack formulas; keep them in sync when that file is
+-- rebalanced. Items, NPCs, spells, hunts and the Mythos systems come from the
+-- server itself (wiki_catalog.lua) and need no sync.
 --
 -- A page is a list of blocks; wiki.lua turns each block type into widgets:
 --   lead, p, h      text (lead is the larger intro paragraph)
@@ -12,6 +14,15 @@
 --   links           buttons to other pages
 --   monsterlist     every monster of the server, searchable (monsters.lua,
 --                   which also builds each monster's page)
+--   itemlist        the items of some categories, a tab each (items.lua,
+--                   which also builds each item's page)
+--   imbuementlist   every imbuement, its levels and materials (items.lua)
+--   npclist         every NPC on the map (npcs.lua, and each NPC's page)
+--   npcrows         a list of NPCs with where they stand (npcs.lua)
+--   spelllist       every spell, a tab per vocation (spells.lua)
+--   huntlist        every hunt of the Hunts TP by level (monsters.lua)
+--   ratesinfo, ascensaoinfo, tasksinfo, vipinfo
+--                   the Mythos systems from the server's config (systems.lua)
 
 -- this file runs again when the modules reload (changing the language does
 -- it): its tables are UTF-8 once more, so wiki.lua must convert them again
@@ -87,11 +98,15 @@ end
 
 WIKI_GROUPS = {
     { title = 'Monstros', pages = { 'monsters' } },
+    { title = 'Itens', pages = { 'weapons', 'equipment', 'supplies', 'loot', 'otheritems', 'imbuements' } },
+    { title = 'NPCs e quests', pages = { 'npcs', 'quests' } },
+    { title = 'Magias', pages = { 'spells' } },
+    { title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'ascensao', 'vip' } },
     { title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { title = 'Itens raros', pages = { 'items', 'grades', 'quality', 'pools' } },
     { title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
     { title = 'Loot', pages = { 'autoloot' } },
-    { title = 'Teleports', pages = { 'tp' } },
+    { title = 'Hunts e viagem', pages = { 'hunts', 'travel' } },
 }
 
 WIKI_PAGES = {}
@@ -103,6 +118,113 @@ WIKI_PAGES.monsters = {
         { 'lead', 'Todos os monstros do servidor, como na TibiaWiki: vida, experiência, elementos, habilidades, comportamento e loot de cada um. Os dados vêm direto do servidor.' },
         { 'p', 'Busque pelo nome aqui ou na busca da esquerda e clique no monstro para abrir a página dele.' },
         { 'monsterlist' },
+    },
+}
+
+-- ---------------------------------------------------------------- items
+
+local function itemPage(id, menu, title, lead)
+    return { menu = menu, title = title, blocks = { { 'lead', lead }, { 'itemlist', id } } }
+end
+
+WIKI_PAGES.weapons = itemPage('weapons', 'Armas', 'Armas', 'Todas as armas do servidor, com ataque, defesa, level e vocação. Clique numa arma para ver quem dropa, quem vende, quanto um NPC paga por ela e se pode vir rara.')
+WIKI_PAGES.equipment = itemPage('equipment', 'Equipamentos', 'Equipamentos', 'Capacetes, armaduras, calças, botas, escudos, spellbooks, aljavas, amuletos e anéis, com os atributos de cada um.')
+WIKI_PAGES.supplies = itemPage('supplies', 'Suprimentos', 'Poções, runas e comida', 'O que se gasta caçando: poções, runas e comida, com quem vende e o preço. A página de cada runa mostra a magia que a faz.')
+WIKI_PAGES.loot = itemPage('loot', 'Loot', 'Loot', 'Os itens que os monstros do nosso mundo dropam, com o valor que os NPCs pagam. "Valor" ordena pelo que dá mais dinheiro.')
+WIKI_PAGES.otheritems = itemPage('otheritems', 'Outros itens', 'Outros itens', 'Ferramentas, bolsas, fontes de luz, itens para domar montarias, imbuement scrolls, chaves e tokens que dá para conseguir aqui.')
+
+WIKI_PAGES.imbuements = {
+    menu = 'Imbuements',
+    title = 'Imbuements',
+    blocks = {
+        { 'lead', 'Imbuements dão bônus temporários a armas e equipamentos com slots de imbuement. Cada um tem três níveis (Basic, Intricate e Powerful), e cada nível pede materiais que os monstros dropam.' },
+        { 'p', 'A Morvena, em Ventera, vende todos os materiais e imbuement scrolls prontos, se você estiver com pressa. A página de cada material mostra quais monstros o dropam.' },
+        { 'imbuementlist' },
+    },
+}
+
+-- ---------------------------------------------------------------- NPCs and quests
+
+WIKI_PAGES.npcs = {
+    menu = 'Todos os NPCs',
+    title = 'NPCs',
+    blocks = {
+        { 'lead', 'Todos os NPCs do mapa: onde ficam, o que fazem e o que vendem e compram. Busque por nome, cidade ou pelo que procura ("poções", "runas", "banco", "addons").' },
+        { 'npclist' },
+    },
+}
+
+WIKI_PAGES.quests = {
+    menu = 'Quests',
+    title = 'Quests com NPCs',
+    blocks = {
+        { 'lead', 'As linhas de missões dos NPCs, na ordem em que se faz cada uma. Fale com o NPC e diga a palavra destacada na fala dele (mission, task...). Clique num NPC para ver onde ele fica.' },
+        { 'h', 'Trox Quest (10 missões)' },
+        { 'npcrows', { { '1ª missão', 'Lenado' }, { '2ª missão', 'Hamax' }, { '3ª missão', 'Amareth' }, { '4ª missão', 'Trutth' }, { '5ª missão', 'Embermane' },
+            { '6ª missão', 'Egon' }, { '7ª missão', 'Sirius Black' }, { '8ª missão', 'Hatuso' }, { '9ª missão', 'Marx' }, { '10ª missão', 'Rei Tiberius' },
+            { 'Ajuda', 'Bazith' }, { 'Ajuda', 'Fray' }, { 'Ajuda', 'Lais' } } },
+        { 'h', 'Brave Warriors (5 missões)' },
+        { 'npcrows', { { '1ª missão', 'Perseu' }, { '2ª missão', 'Saprohem' }, { '3ª missão', 'Barbosa' }, { '4ª missão', 'Lost Marcos' }, { '5ª missão', 'Dorbin' } } },
+        { 'h', 'Gladiators Missions (8 missões)' },
+        { 'npcrows', { { '1ª missão', 'Dundara' }, { '2ª missão', 'Shiryu' }, { '3ª missão', 'Gaara' }, { '4ª missão', 'Saski' }, { '5ª missão', 'Viggo' },
+            { '6ª missão', 'Helena' }, { '7ª missão', 'Anakin' }, { '8ª missão', 'Hue' } } },
+        { 'h', 'Outras missões' },
+        { 'npcrows', { { 'Demon Oak', 'Oldrak' }, { 'Fundadores', 'Meteor Furious' }, { 'Bem ou mal', 'Palimuth' }, { 'Bem ou mal', 'Yalaharian' },
+            { 'Pirate hat', 'Lissy' }, { 'Winged Helmet', 'Thandruil' }, { 'Permissão', 'Walter' }, { 'Bozo', 'Bozo' }, { 'Bellatrix', 'Bellatrix Lestrange' },
+            { 'Glooth Fairy', 'Flora' }, { 'Galaxy', 'Magnus' }, { 'Sala de prêmios', 'Floaten' } } },
+    },
+}
+
+-- ---------------------------------------------------------------- Mythos systems
+-- (systems.lua builds them from the server's config)
+
+WIKI_PAGES.rates = {
+    menu = 'Rates e experiência',
+    title = 'Rates do servidor',
+    blocks = {
+        { 'lead', 'A experiência, as skills e o magic level sobem em estágios: quanto mais alto o level, menor a rate. Os números abaixo vêm direto da configuração do servidor.' },
+        { 'ratesinfo' },
+        { 'links', { 'experience', 'huntboard' } },
+    },
+}
+
+WIKI_PAGES.hunttasks = {
+    menu = 'Hunt Tasks',
+    title = 'Hunt Tasks (Szuszkin)',
+    blocks = {
+        { 'lead', 'O Szuszkin, em Ventera, dá uma tarefa diária de caça e a Trilha do Caçador, uma sequência de monstros do mais fraco ao mais forte. As tarefas pagam experiência, Hunt Points e charm points; os pontos compram itens na loja dele.' },
+        { 'tasksinfo' },
+        { 'links', { 'hunts', 'npcs' } },
+    },
+}
+
+WIKI_PAGES.ascensao = {
+    menu = 'Ascensão',
+    title = 'Ascensão',
+    blocks = {
+        { 'lead', 'A Ascensão é a árvore de poder de cada vocação: três caminhos com cinco círculos cada, que melhoram as suas magias e liberam uma magia nova por caminho.' },
+        { 'ascensaoinfo' },
+        { 'links', { 'spells' } },
+    },
+}
+
+WIKI_PAGES.vip = {
+    menu = 'VIP',
+    title = 'Mythos VIP',
+    blocks = {
+        { 'lead', 'O Mythos VIP é um bônus mensal para a conta inteira, comprado com Mythos Coins.' },
+        { 'vipinfo' },
+    },
+}
+
+-- ---------------------------------------------------------------- spells
+
+WIKI_PAGES.spells = {
+    menu = 'Todas as magias',
+    title = 'Magias',
+    blocks = {
+        { 'lead', 'Todas as magias de cada vocação com os números deste servidor: level, mana, cooldown e como aprender. As magias da sua vocação são suas ao chegar no level; as da Ascensão e da Roda do Destino têm o próprio caminho.' },
+        { 'spelllist' },
     },
 }
 
@@ -581,50 +703,36 @@ WIKI_PAGES.autoloot = {
     },
 }
 
--- ---------------------------------------------------------------- teleports
--- one page per city, from teleports.lua (generated from the map)
+-- ---------------------------------------------------------------- hunts and travel
 
-local tpGroup = WIKI_GROUPS[#WIKI_GROUPS]
-local overviewRows = {}
-
-for _, entry in ipairs(WIKI_TELEPORTS) do
-    local id = 'tp_' .. entry.city:lower():gsub(' ', '_')
-    local total, low, high = 0, math.huge, 0
-    local blocks = {}
-    for _, room in ipairs(entry.rooms) do
-        total = total + room.teleports
-        for _, hunt in ipairs(room.hunts) do
-            low, high = math.min(low, hunt[2]), math.max(high, hunt[2])
-        end
-    end
-    if #entry.rooms == 1 then
-        table.insert(blocks, { 'lead', string.format('A sala de teleports de %s fica ao lado do templo, %s. São %d teleports, e a cela ao lado de cada um mostra o monstro da hunt.',
-            entry.city, entry.rooms[1].floor, total) })
-    else
-        table.insert(blocks, { 'lead', string.format('%s tem %d salas de teleports perto do templo, com %d teleports ao todo. A cela ao lado de cada teleport mostra o monstro da hunt.',
-            entry.city, #entry.rooms, total) })
-    end
-    for i, room in ipairs(entry.rooms) do
-        if #entry.rooms > 1 then
-            table.insert(blocks, { 'h', string.format('Sala %d, %s (%d teleports)', i, room.floor, room.teleports) })
-        end
-        table.insert(blocks, { 'hunts', room.hunts })
-    end
-    table.insert(blocks, { 'p', 'Nível sugerido é o mesmo que as hunt tasks usam. "Também tem" são os outros monstros mais comuns no caminho a partir de onde o teleport deixa você.' })
-    table.insert(blocks, { 'links', { 'tp', 'huntboard' } })
-    WIKI_PAGES[id] = { menu = entry.city, title = 'Teleports de ' .. entry.city, blocks = blocks }
-    table.insert(tpGroup.pages, id)
-    table.insert(overviewRows, { { entry.city, '#ffd27a' }, tostring(#entry.rooms), tostring(total), string.format('%d a %d', low, high), link = id })
-end
-
-WIKI_PAGES.tp = {
-    menu = 'Salas de teleport',
-    title = 'Salas de teleport',
+WIKI_PAGES.hunts = {
+    menu = 'Hunts por nível',
+    title = 'Hunts por nível',
     blocks = {
-        { 'lead', 'Toda cidade tem uma sala de teleports perto do templo. Cada teleport leva direto para uma hunt, e o monstro na cela ao lado do teleport mostra qual é.' },
-        { 'p', 'Clique numa cidade para ver todas as hunts dela, do nível mais baixo ao mais alto.' },
-        { 'table', widths = { 150, 70, 100, 150 }, head = { 'Cidade', 'Salas', 'Teleports', 'Nível sugerido' }, rows = overviewRows },
-        { 'p', 'Para quem está começando, Avante tem as hunts mais fracas (trolls, orcs, minotauros). Monstros com rate alta no Hunt Board valem mais XP e viram raros com mais frequência.' },
-        { 'links', { 'tp_avante', 'huntboard' } },
+        { 'lead', 'Todas as hunts que o Hunts TP do Hunt Board alcança, do nível mais baixo ao mais alto. O nível é o recomendado pelas Hunt Tasks para o monstro; "Perto de" é a cidade mais perto da hunt.' },
+        { 'p', '"Perto do meu level" mostra só as hunts de 55% a 110% do seu level, a mesma faixa que a tarefa diária usa. Clique num monstro para ver a página dele.' },
+        { 'huntlist' },
+        { 'links', { 'travel', 'huntboard' } },
+    },
+}
+
+WIKI_PAGES.travel = {
+    menu = 'Como se locomover',
+    title = 'Como se locomover',
+    blocks = {
+        { 'lead', 'Ventera é a cidade principal. Do templo dá para ir a qualquer hunt, cidade ou evento sem andar muito.' },
+        { 'h', 'No templo de Ventera' },
+        { 'table', widths = { 150, 396 }, rows = {
+            { { 'Teleportes', '#ffd27a' }, 'Leva ao prédio de teleports: a sala das hunts, o salão das Novas Hunts, a sala dos Iniciantes, os Eventos e, um andar abaixo, a sala das cidades.' },
+            { { 'Trainers', '#ffd27a' }, 'Leva à sala de treino, para treinar skills com armas de exercício.' },
+            { { 'Promotion', '#ffd27a' }, 'No andar de cima: o NPC Eremo vende a promoção da vocação.' },
+            { { 'Bank System', '#ffd27a' }, 'O banco (NPC Rokyn).' },
+            { { 'Vender Loot', '#ffd27a' }, 'O Gersao compra todo o loot pelo melhor preço.' },
+        } },
+        { 'h', 'Hunts TP' },
+        { 'p', 'Na janela do Hunt Board, o Hunts TP leva direto até a hunt de qualquer monstro que tem teleport de hunt, sem passar pelas salas. É de graça, tem 30 segundos de espera entre um teleport e outro e só funciona fora de luta: numa área protegida ou sem o sinal de batalha, nunca com PZ. A janela de Hunt Tasks usa o mesmo teleport para a tarefa diária e para a Trilha do Caçador.' },
+        { 'h', 'Cidades' },
+        { 'p', 'A sala das cidades, no prédio de teleports, tem teleports para Melrose, Cidade Real, Carlin, Basco, Namrah, Paw Port, Storvik, Torvena, Astier e Pinegarden, além do Castle. Nas cidades, o teleport "Voltar" leva de volta para Ventera.' },
+        { 'links', { 'hunts', 'npcs' } },
     },
 }
