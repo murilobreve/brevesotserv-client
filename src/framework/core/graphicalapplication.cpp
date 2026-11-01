@@ -136,12 +136,13 @@ void GraphicalApplication::terminate()
 void GraphicalApplication::mainLoop() {
     if (m_stopping) {
         emscripten_cancel_main_loop();
-        // The desktop runs this after its loop (main.cpp): the modules save
-        // their state as they unload and config.otml is written. The page
-        // reloads instead, so save first, then let IDBFS store the files
-        // before reloading (a reload cuts a write still in progress).
-        deinit();
-        g_configs.terminate();
+        // The page reloads instead of running the desktop's exit (main.cpp),
+        // which is what writes config.otml. The modules already keep their
+        // state there as it changes (and saved on g_app.onExit, just run),
+        // so write it now, then let IDBFS store the files before reloading:
+        // a reload cuts a write still in progress. (The full deinit() hangs
+        // here: its dispatcher shutdown never returns in the browser.)
+        g_configs.saveSettings();
         // clang-format off
         MAIN_THREAD_EM_ASM({
             window.mythosLeaving = true;
