@@ -1140,6 +1140,7 @@ locale = {
     ["Raises your club skill by this percent."] = "Aumenta a sua skill de club nessa porcentagem.",
     ["Raises your fist fighting skill by this percent."] = "Aumenta a sua skill de fist fighting nessa porcentagem.",
     ["Raises your sword, axe and club skills by this percent."] = "Aumenta as suas skills de sword, axe e club nessa porcentagem.",
+    ["Raises your sword, axe, club and fist fighting skills by this percent."] = "Aumenta as suas skills de sword, axe, club e porrada nessa porcentagem.",
     ["Raises your distance skill by this percent."] = "Aumenta a sua skill de distance nessa porcentagem.",
     ["More magic levels."] = "Magic levels a mais.",
     ["Raises your magic level by this percent of your base magic level: a 5 percent bonus on ML 100 makes it ML 105."] = "Aumenta o seu magic level nessa porcentagem do seu magic level base: 5 por cento a mais no ML 100 vira ML 105.",
