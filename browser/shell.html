@@ -586,6 +586,17 @@
         preRun: [
           function () {
             addRunDependency("syncfs");
+            // the settings (and the 270 MB game cache) live in this site's
+            // IndexedDB: ask the browser to keep it when the disk gets full
+            // instead of wiping it like a cache (Chrome and Edge decide on
+            // their own, Firefox may ask the player once)
+            try {
+              if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persisted().then(function (kept) {
+                  if (!kept) return navigator.storage.persist();
+                }).catch(function () {});
+              }
+            } catch (e) {}
             if (!FS.analyzePath("/user").exists) FS.mkdir("/user");
             FS.mount(IDBFS, { autoPersist: true }, "/user");
             FS.syncfs(true, function (err) {

@@ -26,6 +26,7 @@
 #include <framework/core/application.h>
 #include "browserwindow.h"
 #include <framework/core/eventdispatcher.h>
+#include <framework/core/configmanager.h>
 #include <framework/core/resourcemanager.h>
 #include <framework/util/crypt.h>
 #include "framework/core/graphicalapplication.h"
@@ -494,6 +495,16 @@ void BrowserWindow::handleKeyboardCallback(int eventType, const EmscriptenKeyboa
         else if (eventType == EMSCRIPTEN_EVENT_KEYUP)
             processKeyUp(keyCode);
     }
+}
+
+void BrowserWindow::handleVisibilityChange(bool hidden) {
+    m_visible = !hidden;
+    // A tab going to the background is often the last chance before it is
+    // closed or reloaded: the page never runs the client's exit, which is
+    // what saves the settings on the desktop. Write config.otml now (runs on
+    // the game thread, between frames); IDBFS (autoPersist) stores it.
+    if (hidden)
+        g_configs.saveSettings();
 }
 
 void BrowserWindow::handleFocusCallback(int eventType, const EmscriptenFocusEvent* event) {

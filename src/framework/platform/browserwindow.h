@@ -73,7 +73,7 @@ public:
     // a hidden tab is a minimized window: the game keeps talking to the
     // server but stops drawing, or the busy page gets frozen by the browser
     // (Chrome's energy saver) and the server logs the player out (no ping)
-    void handleVisibilityChange(bool hidden) { m_visible = !hidden; }
+    void handleVisibilityChange(bool hidden);
     void handleTouchCallback(int eventType, const EmscriptenTouchEvent* event);
     void updateTouchPosition(const EmscriptenTouchEvent* event);
     void processLongTouch(const EmscriptenTouchEvent* event);

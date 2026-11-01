@@ -44,6 +44,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
+#include <framework/core/configmanager.h>
 #include <framework/html/htmlmanager.h>
 #include <framework/platform/platformwindow.h>
 
@@ -135,7 +136,29 @@ void GraphicalApplication::terminate()
 void GraphicalApplication::mainLoop() {
     if (m_stopping) {
         emscripten_cancel_main_loop();
-        MAIN_THREAD_EM_ASM({ window.mythosLeaving = true; window.location.reload(); });
+        // The desktop runs this after its loop (main.cpp): the modules save
+        // their state as they unload and config.otml is written. The page
+        // reloads instead, so save first, then let IDBFS store the files
+        // before reloading (a reload cuts a write still in progress).
+        deinit();
+        g_configs.terminate();
+        // clang-format off
+        MAIN_THREAD_EM_ASM({
+            window.mythosLeaving = true;
+            var done = false;
+            var reload = function () {
+                if (done) return;
+                done = true;
+                window.location.reload();
+            };
+            setTimeout(reload, 3000);
+            try {
+                FS.syncfs(false, reload);
+            } catch (e) {
+                reload();
+            }
+        });
+        // clang-format on
         return;
     }
     mainPoll();

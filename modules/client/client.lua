@@ -4,6 +4,7 @@ local musicChannel = nil
 -- settings are only flushed on a clean exit by default; keep them on disk
 -- periodically and on logout so a crash or forced close loses nothing
 local AUTOSAVE_INTERVAL = 60 * 1000
+local BROWSER_AUTOSAVE_INTERVAL = 15 * 1000
 local autosaveEvent = nil
 
 local function hasStartupMusic()
@@ -91,9 +92,15 @@ function init()
     -- their own file the moment they change, and rewriting all of them (two
     -- per preset) every minute was disk work on the main thread for nothing.
     -- The logout and the close still save everything (saveClientData).
+    -- In the browser closing the tab or F5 never runs the exit: save more
+    -- often there (the file is small; IDBFS stores only what changed).
+    local interval = AUTOSAVE_INTERVAL
+    if g_platform.isBrowser and g_platform.isBrowser() then
+        interval = BROWSER_AUTOSAVE_INTERVAL
+    end
     autosaveEvent = cycleEvent(function()
         g_settings.save()
-    end, AUTOSAVE_INTERVAL)
+    end, interval)
 end
 
 function terminate()
