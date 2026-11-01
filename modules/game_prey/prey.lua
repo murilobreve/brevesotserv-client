@@ -1353,7 +1353,9 @@ updateRaceSelectionDisplay = function(slot)
             elseif scale > 100 then
                 scale = 100
             end
-            creatureWidget:setCreatureSize(size)
+            -- its own size in pixels (`size` was never defined: nil made it 0
+            -- and the preview collapsed)
+            creatureWidget:setCreatureSize(math.min(targetSize, 255))
             creatureWidget:setOutfit(entry.outfit)
             creatureWidget:setVisible(true)
             if placeholder then

@@ -194,5 +194,5 @@ Info "sha256: $sha256"
 if ($PastaSimbolos -ne "") { Info "simbolos: $PastaSimbolos (guarde: serve para ler os crashes desta versao)" }
 Write-Host ""
 Write-Host "Suba o $ZipNome na pagina de downloads do site."
-Write-Host "Mande o sha256 acima junto com o link novo, para ele aparecer no site."
+Write-Host "O sha256 do site e o que a publicacao mostra no fim (ela poe o versao.json no zip, e o zip muda)."
 
