@@ -34,9 +34,15 @@ $exe = @(Get-ChildItem -Path $Pasta -File -Filter "*.exe" | Where-Object { $_.Na
 if ($exe.Count -eq 0) { Write-Host "ERRO: nao achei o Mythos*.exe em $Pasta" -ForegroundColor Red; exit 1 }
 $exe = $exe[0].Name
 
-$versao = "1"
 $infoPath = Join-Path $Pasta "versao.json"
-if (Test-Path $infoPath) { $versao = [string]([System.IO.File]::ReadAllText($infoPath) | ConvertFrom-Json).versao }
+# sem o versao.json o client instalado nao sabe a sua versao e desliga as
+# atualizacoes automaticas para sempre: a publicacao e quem o grava
+if (-not (Test-Path $infoPath)) {
+    Write-Host "ERRO: falta o versao.json em $Pasta." -ForegroundColor Red
+    Write-Host "Publique a atualizacao primeiro (responda S em 'Publicar' no compilar-cliente.bat), depois rode o montar-instalador.bat." -ForegroundColor Red
+    exit 1
+}
+$versao = [string]([System.IO.File]::ReadAllText($infoPath) | ConvertFrom-Json).versao
 
 if ($Canal -eq "directx") {
     $saida = "Mythos-Setup"
@@ -167,6 +173,10 @@ try {
             } finally {
                 $zip.Dispose()
             }
+            # o zip mudou: a impressao digital do site tambem
+            $shaZip = (Get-FileHash -Path $zipLocal -Algorithm SHA256).Hash.ToLower()
+            Set-Content -Path "$zipLocal.sha256.txt" -Value "$shaZip  $zipNome" -Encoding ascii
+            Info "sha256 do $zipNome (este vai para o site): $shaZip"
         }
         $enviar += @{ Arquivo = $zipLocal; Nome = $zipNome }
     }

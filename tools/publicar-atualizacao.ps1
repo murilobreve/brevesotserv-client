@@ -140,6 +140,10 @@ if (Test-Path $zip) {
         if ($velha) { $velha.Delete() }
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($arquivoZip, (Join-Path $Pasta "versao.json"), $entrada) | Out-Null
     } finally { $arquivoZip.Dispose() }
+    # o zip mudou: a impressao digital do site tambem (a do empacotar ficou velha)
+    $shaZip = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+    Set-Content -Path "$zip.sha256.txt" -Value "$shaZip  $(Split-Path -Leaf $zip)" -Encoding ascii
+    Info "sha256 do zip (este vai para o site): $shaZip"
 }
 
 if (-not $mudou) {
