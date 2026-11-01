@@ -234,6 +234,64 @@ ItemCardBonus < UIWidget
       width: 0
       phantom: true
 
+// a bonus whose line does not fit beside its bar: the line gets the whole
+// width (and wraps if it must) and the bar with the percentage goes under
+// it, where the other rows have theirs (itemcard.lua sets the height)
+ItemCardBonusLong < UIWidget
+  height: 31
+  phantom: true
+  focusable: false
+
+  UIWidget
+    id: gem
+    size: 7 7
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-top: 4
+    image-source: /images/ui/item_rarity_gem
+    phantom: true
+
+  Label
+    id: text
+    anchors.left: gem.right
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-left: 6
+    font: verdana-11px-antialised
+    color: #f3ead9
+    text-wrap: true
+    phantom: true
+
+  Label
+    id: percent
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: 30
+    font: verdana-11px-antialised
+    color: #a39cbc
+    text-align: right
+    phantom: true
+
+  UIWidget
+    id: track
+    anchors.right: percent.left
+    anchors.verticalCenter: percent.verticalCenter
+    margin-right: 5
+    size: 52 5
+    background-color: #0b0914
+    border-width: 1
+    border-color: #2f2656
+    phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin: 1
+      width: 0
+      phantom: true
+
 // PERFECT: the site's pearl-gold ribbon
 ItemCardPerfect < Label
   font: Verdana Bold-10px
