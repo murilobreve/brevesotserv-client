@@ -248,12 +248,45 @@ local function fillHeader(widget, data, gradeColor)
     end
 end
 
+-- what a bonus row holds beside its text (ItemCardBonus in itemcard.otui):
+-- the gem and its margin, the text's margin, the bar and the percentage
+local BONUS_GEM_ROOM = 7 + 6
+local BONUS_BAR_ROOM = 6 + 52 + 5 + 30
+local BONUS_LINE_HEIGHT = 13
+
+-- a bonus line that does not fit beside its bar takes a row of its own, and
+-- the bar goes under it: lines like "+89% Energy Resist Pierce" or "+21% Exevo
+-- Gran Mas Flam Damage" were cut short
+local function bonusRow(widget, text, hasBar)
+    local width = widget:getWidth() - widget:getPaddingLeft() - widget:getPaddingRight()
+    local probe = g_ui.createWidget('ItemCardBonus', widget)
+    probe.text:setText(text)
+    local textWidth = probe.text:getTextSize().width
+    if not hasBar then
+        -- no bar: the line takes the whole row
+        probe.text:removeAnchor(AnchorRight)
+        probe.text:addAnchor(AnchorRight, 'parent', AnchorRight)
+        probe.text:setMarginRight(0)
+        if textWidth <= width - BONUS_GEM_ROOM then
+            return probe
+        end
+    elseif textWidth <= width - BONUS_GEM_ROOM - BONUS_BAR_ROOM then
+        return probe
+    end
+    probe:destroy()
+    local row = g_ui.createWidget('ItemCardBonusLong', widget)
+    row.text:setText(text)
+    local lines = math.max(1, math.ceil(textWidth / math.max(1, width - BONUS_GEM_ROOM - 4)))
+    row.text:setHeight(lines * BONUS_LINE_HEIGHT + 1)
+    row:setHeight(lines * BONUS_LINE_HEIGHT + (hasBar and 18 or 3))
+    return row
+end
+
 local function fillBonuses(widget, rarity)
     addSection(widget, t('Rarity bonuses'))
     for _, bonus in ipairs(rarity.bonuses or {}) do
-        local row = g_ui.createWidget('ItemCardBonus', widget)
+        local row = bonusRow(widget, bonus.text or '', bonus.quality ~= nil)
         local color = bonus.color or nil
-        row.text:setText(bonus.text or '')
         row.text:setColor(color or INK)
         row.gem:setImageColor(color or PLAIN_BAR)
         if bonus.quality then
@@ -269,11 +302,12 @@ local function fillBonuses(widget, rarity)
             local ribbon = g_ui.createWidget('ItemCardPerfect', row)
             ribbon:setId('perfect')
             ribbon:setText(t('PERFECT'))
+            -- on the bar's line (the second one of a long row)
             ribbon:addAnchor(AnchorRight, 'parent', AnchorRight)
-            ribbon:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+            ribbon:addAnchor(AnchorVerticalCenter, 'percent', AnchorVerticalCenter)
             row.track:breakAnchors()
             row.track:addAnchor(AnchorRight, 'perfect', AnchorLeft)
-            row.track:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+            row.track:addAnchor(AnchorVerticalCenter, 'percent', AnchorVerticalCenter)
             row.track:setMarginRight(5)
         end
     end
