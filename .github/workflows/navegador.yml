@@ -119,6 +119,16 @@ jobs:
           echo "$GITHUB_SHA" > out/versao.txt
           ls -la out
 
+      # a test build keeps its files for two days, to try it out
+      - name: Keep the test build
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: navegador-teste
+          path: out/
+          retention-days: 2
+          compression-level: 0
+
       # only main goes to the players: a run started by hand on another
       # branch (Actions > Navegador > Run workflow) just tests that it builds
       - name: Publish to the navegador release
