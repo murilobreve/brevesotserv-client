@@ -1860,6 +1860,14 @@ local function onGameStart()
     if not featureButton and modules.game_brevespanel then
         featureButton = modules.game_brevespanel.addFeature('bonus', toggle)
     end
+    -- the Rarity XP balance for the Mythos bar: the server sends it at login,
+    -- but not when the game starts on a character still online (a page
+    -- reloaded, a dropped connection), so ask for it too
+    scheduleEvent(function()
+        if g_game.isOnline() then
+            send({ action = 'xp' })
+        end
+    end, 1500)
 end
 
 local function onGameEnd()
