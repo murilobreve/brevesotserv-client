@@ -438,13 +438,14 @@ end
 
 -- ---------------------------------------------------------------- triggers
 
--- the hunts teleport of a temple: its name says hunts
+-- the hunts teleport of a temple: its name says hunts (or Teleportes, the
+-- one into the teleport building with the hunts room)
 local function nearHuntsPortal(pos)
     local labels = modules.game_tplabels and modules.game_tplabels.getLabels and modules.game_tplabels.getLabels()
     for _, label in ipairs(labels or {}) do
         local p = label.pos
         if p and p.z == pos.z and math.abs(p.x - pos.x) <= PORTAL_RANGE and math.abs(p.y - pos.y) <= PORTAL_RANGE
-            and tostring(label.text or ''):lower():find('hunt', 1, true) then
+            and (tostring(label.text or ''):lower():find('hunt', 1, true) or tostring(label.text or ''):lower():find('teleport', 1, true)) then
             return true
         end
     end
