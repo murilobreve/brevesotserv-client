@@ -394,14 +394,36 @@ function ActionBarController:onGameStart()
     hotkeyItemList = {}
     spellGroupPressed = {}
     spellGroupCooldownCache = {}
-    -- Mythos: the vocation's own hotkey set; the vocation can come a moment
-    -- after the game starts
-    if not useVocationHotkeySet() then
-        ActionBarController:scheduleEvent(function()
-            if useVocationHotkeySet() then
-                selectHotkeySet(ApiJson.getCurrentHotkeySetName())
+    -- Mythos: each character comes back on the hotkey set it played with
+    -- last (or one named after it), whatever another character or the
+    -- Options left in use. A character with neither goes on its vocation's
+    -- set, which needs the vocation: on the first login after the client
+    -- opens (after every update) it comes a while after the game starts, so
+    -- it is looked for until it is there, not once
+    local characterName = g_game.getCharacterName()
+    local ownSet = ApiJson.getCharacterHotkeySet(characterName)
+    if ownSet then
+        ApiJson.setCurrentHotkeySetName(ownSet)
+    elseif useVocationHotkeySet() then
+        if ApiJson.rememberCharacterHotkeySet(characterName, ApiJson.getCurrentHotkeySetName()) then
+            ApiJson.scheduleSave()
+        end
+    else
+        local tries = 0
+        ActionBarController:cycleEvent(function()
+            tries = tries + 1
+            if not g_game.isOnline() then
+                return false
             end
-        end, 1000, "vocation_hotkey_set")
+            if useVocationHotkeySet() then
+                -- the bars again, and the set remembered for the character
+                selectHotkeySet(ApiJson.getCurrentHotkeySetName())
+                return false
+            end
+            if tries >= 120 then
+                return false
+            end
+        end, 250, "vocation_hotkey_set")
     end
     for i = 1, #actionBars do
         setupActionBar(i)
@@ -711,6 +733,11 @@ function selectHotkeySet(name)
 
     if clearHotkeyCache then
         clearHotkeyCache()
+    end
+
+    -- the set of this character from now on (its next logins)
+    if g_game.isOnline() then
+        ApiJson.rememberCharacterHotkeySet(g_game.getCharacterName(), name)
     end
 
     ApiJson.saveData()
