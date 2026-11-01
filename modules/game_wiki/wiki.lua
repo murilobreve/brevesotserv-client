@@ -42,25 +42,64 @@ local function T(text, ...)
     return string.format(latin1(text), ...)
 end
 
--- for monsters.lua (pages built from what the server sends)
-WIKI_TEXT = { T = T, latin1 = latin1, plain = plain }
+-- 12639 -> "12.639"
+local function num(n)
+    local digits = tostring(math.floor(math.abs(tonumber(n) or 0)))
+    local out = digits:reverse():gsub('(%d%d%d)', '%1.'):reverse():gsub('^%.', '')
+    return ((tonumber(n) or 0) < 0 and '-' or '') .. out
+end
+
+local function titleCase(text)
+    return (tostring(text or ''):gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end))
+end
+
+-- for monsters.lua, items.lua, npcs.lua and spells.lua (pages built from
+-- what the server sends)
+WIKI_TEXT = { T = T, latin1 = latin1, plain = plain, num = num, titleCase = titleCase }
+
+-- the wiki's server answers (extended opcode 134, registered by monsters.lua):
+-- action -> function(data)
+WIKI_HANDLERS = {}
+
+function WIKI_REQUEST(data)
+    local protocol = g_game.getProtocolGame()
+    if protocol then
+        protocol:sendExtendedJSONOpcode(134, data)
+    end
+end
 
 -- ---------------------------------------------------------------- helpers
 
--- a page of pages.lua, or a monster page ("m:<name>", monsters.lua)
+-- a page of pages.lua, or one built from the server's data: a monster
+-- ("m:<name>", monsters.lua), an item ("i:<id>", items.lua), an NPC
+-- ("n:<name>", npcs.lua) or a spell ("s:<name>", spells.lua)
 local function pageOf(id)
     if type(id) ~= 'string' then
         return nil
     end
-    if id:sub(1, 2) == 'm:' then
+    local prefix = id:sub(1, 2)
+    if prefix == 'm:' then
         return WikiMonsters.page(id)
+    elseif prefix == 'i:' then
+        return WikiItems.page(id)
+    elseif prefix == 'n:' then
+        return WikiNpcs.page(id)
+    elseif prefix == 's:' then
+        return WikiSpells.page(id)
     end
     return WIKI_PAGES[id]
 end
 
 local function groupOf(id)
-    if id:sub(1, 2) == 'm:' then
+    local prefix = id:sub(1, 2)
+    if prefix == 'm:' then
         id = 'monsters'
+    elseif prefix == 'i:' then
+        id = WikiItems.listPageOf(id)
+    elseif prefix == 'n:' then
+        id = 'npcs'
+    elseif prefix == 's:' then
+        id = 'spells'
     end
     for _, group in ipairs(WIKI_GROUPS) do
         for _, pageId in ipairs(group.pages) do
@@ -183,30 +222,6 @@ function builders.table(parent, block)
     end
 end
 
--- the hunts of one teleport room: monster, recommended level, what else lives there
-function builders.hunts(parent, block)
-    local tbl = g_ui.createWidget('WikiTable', parent)
-    local head = g_ui.createWidget('WikiHuntHead', tbl)
-    head.c1:setText('Hunt')
-    head.c2:setText(T('Nível'))
-    head.c3:setText(T('Também tem'))
-    for i, hunt in ipairs(block[2]) do
-        local row = g_ui.createWidget(i % 2 == 0 and 'WikiHuntRowEven' or 'WikiHuntRow', tbl)
-        local look = hunt[5]
-        if look and look.type and look.type > 0 then
-            row.creature:setOutfit(look)
-        end
-        row.name:setText(hunt[1])
-        if hunt[4] > 1 then
-            row.count:setText(T('%d teleports', hunt[4]))
-        else
-            row.name:setMarginTop(12)
-        end
-        row.level:setText(tostring(hunt[2]))
-        row.also:setText(hunt[3] ~= '' and hunt[3] or '-')
-    end
-end
-
 function builders.tierstrip(parent)
     local strip = g_ui.createWidget('WikiStrip', parent)
     for _, key in ipairs(WIKI_TIER_ORDER) do
@@ -292,7 +307,8 @@ end
 local function buildTopics()
     window.topics:destroyChildren()
     topicButtons = {}
-    -- monsters whose name matches the search, above the pages
+    -- monsters, items, NPCs and spells whose name matches the search, above
+    -- the pages
     window.topics.monsterHits = g_ui.createWidget('WikiMonsterHits', window.topics)
     for _, group in ipairs(WIKI_GROUPS) do
         local label = g_ui.createWidget('WikiGroupLabel', window.topics)
@@ -357,6 +373,14 @@ function isOpen(id)
     return window ~= nil and current == id
 end
 
+-- draw the open page again if its id starts with `prefix` (a list it uses
+-- arrived: monster looks on an item page, the spells)
+function refreshCurrent(prefix)
+    if window and current and current:sub(1, #prefix) == prefix then
+        refresh(current)
+    end
+end
+
 function back()
     local id = table.remove(history)
     if id and window then
@@ -382,21 +406,42 @@ function toggle()
     end
 end
 
+-- what the search box finds in the server's lists: { title, hits = { { text, page id } } }
+local function searchSections(text)
+    local sections = {}
+    local function add(title, hits)
+        if #hits > 0 then
+            table.insert(sections, { title = title, hits = hits })
+        end
+    end
+    local monsters = {}
+    for _, name in ipairs(WikiMonsters.search(text, 10)) do
+        table.insert(monsters, { name, 'm:' .. name })
+    end
+    add(T('Monstros'), monsters)
+    add(T('Itens'), WikiItems.search(text, 12))
+    add(T('NPCs'), WikiNpcs.search(text, 8))
+    add(T('Magias'), WikiSpells.search(text, 8))
+    return sections
+end
+
 local function showMonsterHits(text)
     local box = window.topics.monsterHits
     box:destroyChildren()
-    local names = WikiMonsters.search(text, 12)
-    if #names == 0 then
+    local sections = searchSections(text)
+    if #sections == 0 then
         box:setVisible(false)
         return false
     end
     box:setVisible(true)
-    g_ui.createWidget('WikiGroupLabel', box):setText(T('Monstros'))
-    for _, name in ipairs(names) do
-        local button = g_ui.createWidget('WikiTopic', box)
-        button:setText(name)
-        button:setChecked(current == 'm:' .. name)
-        button.onClick = function() show('m:' .. name) end
+    for _, section in ipairs(sections) do
+        g_ui.createWidget('WikiGroupLabel', box):setText(section.title)
+        for _, hit in ipairs(section.hits) do
+            local button = g_ui.createWidget('WikiTopic', box)
+            button:setText(hit[1])
+            button:setChecked(current == hit[2])
+            button.onClick = function() show(hit[2]) end
+        end
     end
     return true
 end
@@ -424,7 +469,8 @@ function onSearch(text)
     window.noResults:setVisible(not any and not monsters)
 end
 
--- the monster list arrived while something was typed in the search box
+-- a list arrived (monsters, items, NPCs, spells) while something was typed
+-- in the search box
 function searchAgain()
     if window then
         onSearch(window.searchEdit:getText())
@@ -448,6 +494,10 @@ end
 local function onGameEnd()
     hide()
     WikiMonsters.reset()
+    WikiItems.reset()
+    WikiNpcs.reset()
+    WikiSpells.reset()
+    WikiSystems.reset()
 end
 
 function init()
@@ -459,6 +509,10 @@ function init()
         WIKI_CONVERTED = true
     end
     WikiMonsters.init()
+    WikiItems.reset()
+    WikiNpcs.reset()
+    WikiSpells.reset()
+    WikiSystems.reset()
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     if g_game.isOnline() then
         onGameStart()

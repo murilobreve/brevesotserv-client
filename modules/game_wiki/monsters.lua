@@ -11,6 +11,7 @@ local LIST_LIMIT = 60
 WikiMonsters = {}
 
 local list -- { { name, boss, health, experience, class, stars, look, words }, ... }
+local lookIndex -- lower name -> look, built from the list when first needed
 local listAsked -- g_clock.millis() of the last request for the list
 local pages = {} -- lower name -> server data
 local asked = {} -- lower name -> g_clock.millis() of the last request for that page
@@ -200,8 +201,26 @@ local function onList(monsters)
         end
     end
     table.sort(list, function(a, b) return a.words < b.words end)
+    lookIndex = nil
     refresh('monsters')
     searchAgain()
+    -- the monsters that drop an item get their look
+    refreshCurrent('i:')
+end
+
+-- the look of a monster of the list, by name (nil until the list comes)
+function WikiMonsters.lookOf(name)
+    askList()
+    if not list then
+        return nil
+    end
+    if not lookIndex then
+        lookIndex = {}
+        for _, row in ipairs(list) do
+            lookIndex[row.name:lower()] = row.look
+        end
+    end
+    return lookIndex[tostring(name):lower()]
 end
 
 -- ---------------------------------------------------------------- one monster
@@ -361,9 +380,41 @@ local function monsterBlocks(d)
         table.insert(blocks, { 'voices', table.concat(voices, '   ') })
     end
 
-    if d.bestiary and (d.bestiary.locations or '') ~= '' then
-        table.insert(blocks, { 'h', T('Locais') })
-        table.insert(blocks, { 'p', L(d.bestiary.locations) })
+    -- where to hunt it on our map (the bestiary's "locations" are Tibia's)
+    table.insert(blocks, { 'h', T('Onde caçar') })
+    if type(d.hunts) == 'table' and #d.hunts > 0 then
+        -- one line per town: "perto de Ventera: 3 hunts, com 82, 179 e 340 spawns"
+        local towns, order = {}, {}
+        for _, hunt in ipairs(d.hunts) do
+            local town = L(hunt[1])
+            if not towns[town] then
+                towns[town] = {}
+                table.insert(order, town)
+            end
+            if (tonumber(hunt[2]) or 0) > 0 then
+                table.insert(towns[town], num(hunt[2]))
+            end
+        end
+        local places = {}
+        for _, town in ipairs(order) do
+            local counts = towns[town]
+            local spawns = #counts > 1 and (table.concat(counts, ', ', 1, #counts - 1) .. T(' e ') .. counts[#counts]) or counts[1]
+            local hunts = 0
+            for _, hunt in ipairs(d.hunts) do
+                if L(hunt[1]) == town then
+                    hunts = hunts + 1
+                end
+            end
+            local text = hunts > 1 and T('perto de %s: %d hunts', town, hunts) or T('perto de %s', town)
+            if spawns then
+                text = text .. (hunts > 1 and T(', com %s spawns', spawns) or T(' (%s spawns)', spawns))
+            end
+            table.insert(places, text)
+        end
+        table.insert(blocks, { 'p', T('O Hunts TP do Hunt Board leva direto até %s %s.', #d.hunts == 1 and T('a hunt') or T('as hunts'), table.concat(places, '; ')) })
+        table.insert(blocks, { 'links', { 'hunts', 'travel' } })
+    else
+        table.insert(blocks, { 'p', T('Nenhum teleport de hunt leva até este monstro.') })
     end
 
     if d.xpRate then
@@ -541,7 +592,8 @@ function WIKI_BUILDERS.loot(parent, block)
         cell.name:setText(name)
         local percent = (tonumber(item.chance) or 0) / 1000
         cell.chance:setText((percent >= 1 and decimal(percent, 2) or decimal(percent, 3)) .. '%')
-        cell:setTooltip(name .. ' - ' .. cell.chance:getText())
+        cell:setTooltip(T('%s - %s. Clique para abrir o item.', name, cell.chance:getText()))
+        cell.onClick = function() show('i:' .. item.id) end
     end
 end
 
@@ -556,6 +608,76 @@ function WIKI_BUILDERS.monsterlinks(parent, block)
         button:setText(name)
         button.onClick = function() show('m:' .. name) end
     end
+end
+
+-- ---------------------------------------------------------------- hunts by level
+
+local hunts -- { { name, level, experience, towns, count, look }, ... }
+local huntsAsked
+local huntFilter = { text = '', near = false }
+-- the daily task's window: hunts from 55% to 110% of the player's level
+local NEAR = { 0.55, 1.1 }
+
+local function askHunts()
+    if not hunts and (not huntsAsked or g_clock.millis() - huntsAsked > ASK_AGAIN) then
+        huntsAsked = g_clock.millis()
+        request({ action = 'hunts' })
+    end
+end
+
+local function fillHunts(box)
+    box.table:destroyChildren()
+    box.tools.near:setChecked(huntFilter.near)
+    if not hunts then
+        box.tools.count:setText(T('Carregando...'))
+        return
+    end
+    local head = g_ui.createWidget('WikiHuntHead', box.table)
+    head.c1:setText(T('Monstro'))
+    head.c2:setText(T('Nível'))
+    head.c3:setText(T('Perto de'))
+    local player = g_game.getLocalPlayer()
+    local level = player and player:getLevel() or 0
+    local text = WIKI_TEXT.plain(huntFilter.text:trim())
+    local count = 0
+    for _, hunt in ipairs(hunts) do
+        local near = level > 0 and hunt.level >= level * NEAR[1] and hunt.level <= level * NEAR[2]
+        if (text == '' or hunt.words:find(text, 1, true)) and (not huntFilter.near or near) then
+            count = count + 1
+            local row = g_ui.createWidget(count % 2 == 0 and 'WikiHuntRowEven' or 'WikiHuntRow', box.table)
+            if hunt.look.type > 0 then
+                row.creature:setOutfit(hunt.look)
+            end
+            row.name:setText(hunt.name)
+            if hunt.count > 1 then
+                row.count:setText(T('%d hunts', hunt.count))
+            else
+                row.name:setMarginTop(12)
+            end
+            row.level:setText(tostring(hunt.level))
+            row.also:setText(hunt.towns ~= '' and hunt.towns or '-')
+            row:setTooltip(T('%s XP. Clique para abrir o monstro.', num(hunt.experience)))
+            row.onClick = function() show('m:' .. hunt.name) end
+        end
+    end
+    box.tools.count:setText(count == 1 and T('1 hunt') or T('%d hunts', count))
+end
+
+function WIKI_BUILDERS.huntlist(parent)
+    askHunts()
+    local box = g_ui.createWidget('WikiHuntList', parent)
+    box.tools.search:setText(huntFilter.text)
+    box.tools.search.onTextChange = function(_, text)
+        huntFilter.text = text
+        fillHunts(box)
+    end
+    box.tools.near:setText(T('Perto do meu level'))
+    box.tools.near:setTooltip(T('Só as hunts de 55%% a 110%% do seu level, a mesma faixa da tarefa diária.'))
+    box.tools.near.onClick = function()
+        huntFilter.near = not huntFilter.near
+        fillHunts(box)
+    end
+    fillHunts(box)
 end
 
 -- ---------------------------------------------------------------- search box
@@ -580,8 +702,38 @@ end
 
 -- ---------------------------------------------------------------- module
 
+local function onHunts(data)
+    hunts = {}
+    for _, row in ipairs(data.hunts or {}) do
+        if type(row) == 'table' and type(row[1]) == 'string' then
+            local towns = {}
+            for _, town in ipairs(type(row[4]) == 'table' and row[4] or {}) do
+                table.insert(towns, L(town))
+            end
+            local name = L(row[1])
+            table.insert(hunts, {
+                name = name, level = tonumber(row[2]) or 0, experience = tonumber(row[3]) or 0,
+                towns = table.concat(towns, ', '), count = tonumber(row[5]) or 1,
+                look = { type = row[6] or 0, head = row[7] or 0, body = row[8] or 0, legs = row[9] or 0, feet = row[10] or 0, addons = row[11] or 0 },
+                words = WIKI_TEXT.plain(name .. ' ' .. table.concat(towns, ' ')),
+            })
+        end
+    end
+    refresh('hunts')
+end
+
 local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
+        return
+    end
+    if data.action == 'hunts' then
+        onHunts(data)
+        return
+    end
+    -- the items, NPCs and spells of the wiki (items.lua, npcs.lua, spells.lua)
+    local handler = type(data.action) == 'string' and WIKI_HANDLERS[data.action]
+    if handler then
+        handler(data)
         return
     end
     if data.action == 'list' then
@@ -600,7 +752,9 @@ local function onOpcode(protocol, opcode, data)
 end
 
 function WikiMonsters.reset()
-    list, listAsked, pages, asked = nil, nil, {}, {}
+    list, listAsked, pages, asked, lookIndex = nil, nil, {}, {}, nil
+    hunts, huntsAsked = nil, nil
+    huntFilter = { text = '', near = false }
 end
 
 function WikiMonsters.init()
