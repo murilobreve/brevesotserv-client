@@ -13,17 +13,16 @@
 -- online, as a browser page reloaded with F5 does, runs no onLogin on the
 -- server, and without the words no aim was sent); the client answers
 -- with the spells it has art for (ART) and the server then sends their
--- moments to draw (hook.lua, palm.lua, arrow.lua, judgement.lua, wall.lua,
--- orb.lua, seed.lua, shard.lua, crack.lua, step.lua, leap.lua, beam.lua,
--- spear.lua, kick.lua, and the Translocacao's transloc.lua) instead of the
--- Tibia effects. All have the art v2: layers the engine animates by the
--- designer's curves (layers.lua). The Meteoro is left to the Tibia effects
--- the server sends (a Tibia spell, in Tibia's art, and light to draw).
+-- moments to draw (hook.lua, meteor.lua, palm.lua, arrow.lua,
+-- judgement.lua, wall.lua, orb.lua, seed.lua, shard.lua, crack.lua, step.lua,
+-- leap.lua, beam.lua, spear.lua, kick.lua, and the Translocacao's
+-- transloc.lua) instead of the Tibia effects. All have the art v2: layers
+-- the engine animates by the designer's curves (layers.lua).
 -- The same way it draws the boss spells of the risen monsters (rare.lua,
 -- fx "rare_<tier>", scripts/rarity/spells.lua).
 
 local OPCODE = 131
-local ART = { 'hook', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick', 'transloc' }
+local ART = { 'hook', 'meteor', 'palm', 'arrow', 'judgement', 'wall', 'orb', 'seed', 'shard', 'crack', 'step', 'leap', 'beam', 'spear', 'kick', 'transloc' }
 for _, fx in ipairs(rareArtNames()) do
     table.insert(ART, fx)
 end
@@ -128,6 +127,8 @@ local function onOpcode(protocol, opcode, data)
     end
     if data.fx == 'hook' then
         onHookArt(data)
+    elseif data.fx == 'meteor' then
+        onMeteorArt(data)
     elseif data.fx == 'palm' then
         onPalmArt(data)
     elseif data.fx == 'arrow' then
@@ -175,6 +176,7 @@ end
 
 function clearArt()
     clearHookArt()
+    clearMeteorArt()
     clearPalmArt()
     clearArrowArt()
     clearJudgementArt()
@@ -212,6 +214,7 @@ end
 
 function init()
     registerHookArt()
+    registerMeteorArt()
     registerPalmArt()
     registerArrowArt()
     registerJudgementArt()
@@ -249,6 +252,7 @@ function terminate()
     disconnect(g_game, { onGameStart = warmUp, onGameEnd = clearArt })
     removeEvent(warmUpEvent)
     unregisterHookArt()
+    unregisterMeteorArt()
     unregisterPalmArt()
     unregisterArrowArt()
     unregisterJudgementArt()
