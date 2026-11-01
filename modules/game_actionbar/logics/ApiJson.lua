@@ -1041,6 +1041,13 @@ function ApiJson.renameHotkeySet(oldName, newName)
         end
     end
 
+    -- the characters that played on it follow the new name
+    for character, setName in pairs(hotkeyOptions.characterSets or {}) do
+        if setName == oldName then
+            hotkeyOptions.characterSets[character] = newName
+        end
+    end
+
     local currentName = options.currentHotkeySetName or hotkeyOptions.currentHotkeySetName
     if currentName == oldName then
         hotkeyOptions.currentHotkeySetName = newName
@@ -1070,6 +1077,13 @@ function ApiJson.removeHotkeySet(name)
 
     local hotkeyOptions = array.hotkeyOptions or {}
     array.hotkeyOptions = hotkeyOptions
+
+    -- the characters that played on it choose again on their next login
+    for character, setName in pairs(hotkeyOptions.characterSets or {}) do
+        if setName == name then
+            hotkeyOptions.characterSets[character] = nil
+        end
+    end
 
     local hotkeySets = hotkeyOptions.hotkeySets or options.hotkeySets or {}
     hotkeyOptions.hotkeySets = hotkeySets
@@ -1121,6 +1135,53 @@ end
 
 -- Mythos: per-vocation hotkey sets (logics/VocationTemplates.lua)
 local VOCATION_SET_NAMES = { Sorcerer = true, Druid = true, Paladin = true, Knight = true, Monk = true }
+
+-- Mythos: the hotkey set each character played with last
+-- (hotkeyOptions.characterSets, saved with the hotkeys). It comes back on
+-- that character's login whatever set another character, or the Options,
+-- left in use. Then a set named after the character; nil for a character
+-- with neither (it goes on its vocation's set).
+function ApiJson.getCharacterHotkeySet(characterName)
+    if not characterName or characterName == "" then
+        return nil
+    end
+    ApiJson.bootstrap()
+    local array = ensureState().array
+    local hotkeyOptions = array and array.hotkeyOptions
+    local sets = hotkeyOptions and hotkeyOptions.hotkeySets
+    if not sets then
+        return nil
+    end
+    local remembered = hotkeyOptions.characterSets and hotkeyOptions.characterSets[characterName]
+    if remembered and sets[remembered] then
+        return remembered
+    end
+    if sets[characterName] then
+        return characterName
+    end
+    return nil
+end
+
+--- Remembers `setName` as the set of `characterName`; true when it changed
+--- (the caller saves)
+function ApiJson.rememberCharacterHotkeySet(characterName, setName)
+    if not characterName or characterName == "" or not setName or setName == "" then
+        return false
+    end
+    ApiJson.bootstrap()
+    local array = ensureState().array
+    if not array then
+        return false
+    end
+    array.hotkeyOptions = array.hotkeyOptions or {}
+    local characterSets = array.hotkeyOptions.characterSets or {}
+    array.hotkeyOptions.characterSets = characterSets
+    if characterSets[characterName] == setName then
+        return false
+    end
+    characterSets[characterName] = setName
+    return true
+end
 
 local function sameSetting(a, b)
     if type(a) ~= 'table' or type(b) ~= 'table' then

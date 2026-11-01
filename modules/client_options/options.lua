@@ -221,7 +221,11 @@ local function setupComboBox()
     listKeybindsPanel.onOptionChange = function(comboBox, option)
         setOption('listKeybindsPanel', option)
     end
-    panels.keybindsPanel.presets.list:setCurrentOption(Keybind.currentPreset)
+    -- shown only (no signal): picking it would also put the action bar on
+    -- the set of that name before anyone logs in, and the character logging
+    -- in would find another character's hotkeys (game_actionbar puts each
+    -- character on its own set)
+    panels.keybindsPanel.presets.list:setCurrentOption(Keybind.currentPreset, true)
 end
 
 local function setup()
