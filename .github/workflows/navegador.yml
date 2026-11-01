@@ -25,7 +25,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: navegador
+  # a test build on a branch does not cancel the build of main
+  group: navegador-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -116,7 +117,10 @@ jobs:
           echo "$GITHUB_SHA" > out/versao.txt
           ls -la out
 
+      # only main goes to the players: a run started by hand on another
+      # branch (Actions > Navegador > Run workflow) just tests that it builds
       - name: Publish to the navegador release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
