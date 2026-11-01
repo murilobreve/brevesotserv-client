@@ -6,17 +6,22 @@
 -- pages in pages.lua; this file adds the block types it needs.
 
 local OPCODE = 134
-local LIST_LIMIT = 60
+local PAGE_SIZE = 40 -- creatures per page of the list
 
 WikiMonsters = {}
 
-local list -- { { name, boss, health, experience, class, stars, look, words }, ... }
+local list -- { { name, boss, health, experience, class, stars, look, words, here, elements, loot, gold, hunts }, ... }
 local lookIndex -- lower name -> look, built from the list when first needed
+local rowIndex -- lower name -> row, built from the list when first needed
+local classes -- { { class, count } } of the creatures of our world
 local listAsked -- g_clock.millis() of the last request for the list
 local pages = {} -- lower name -> server data
 local asked = {} -- lower name -> g_clock.millis() of the last request for that page
 local ASK_AGAIN = 2500 -- ms without an answer before asking again
-local filter = { text = '', view = 'all' }
+-- the creature list's filters, kept while the window is open:
+-- scope: 'here' (our world), 'boss' (bosses with a lever here) or 'all'
+local filter = { text = '', loot = '', scope = 'here', class = '', weak = '', tp = false, sort = 'name', desc = false, page = 1 }
+local lootIds, lootIdsText -- the item ids whose name has the loot filter's text
 
 local ELEMENTS = {
     physical = { '#b8bec6', 'Físico' },
@@ -145,67 +150,244 @@ end
 
 -- ---------------------------------------------------------------- list
 
+local ELEMENT_ICON = '/game_cyclopedia/images/bestiary/icons/monster-icon-%s-resist'
+-- the element filter of the list: "fraco a ..."
+local WEAK = {
+    { '', 'Qualquer fraqueza' }, { 'fire', 'Fraco a fogo' }, { 'ice', 'Fraco a gelo' }, { 'earth', 'Fraco a terra' },
+    { 'energy', 'Fraco a energia' }, { 'holy', 'Fraco a sagrado' }, { 'death', 'Fraco a morte' }, { 'physical', 'Fraco a físico' },
+}
+-- the weaknesses shown in a row, in this order
+local WEAK_ORDER = { 'physical', 'fire', 'ice', 'earth', 'energy', 'holy', 'death' }
+
+-- column -> { value of a row, biggest first }
+local SORTS = {
+    name = { function(row) return row.words end, false },
+    health = { function(row) return row.health end, true },
+    experience = { function(row) return row.experience end, true },
+    gold = { function(row) return row.gold end, true },
+    chance = { function(row) return row.hit and row.hit.chance or 0 end, true },
+}
+
+local function chanceText(chance)
+    local percent = (tonumber(chance) or 0) / 1000
+    return (percent >= 1 and decimal(percent, 2) or decimal(percent, 3)) .. '%'
+end
+
+-- the loot item of a row whose name matched, with the best chance
+local function lootHit(row)
+    local best
+    local loot = row.loot
+    for i = 1, #loot - 2, 3 do
+        local id = loot[i]
+        if lootIds[id] and (not best or loot[i + 1] > best.chance) then
+            best = { id = id, chance = loot[i + 1], max = loot[i + 2] }
+        end
+    end
+    return best
+end
+
 local function matches()
     local text = WIKI_TEXT.plain(filter.text:trim())
+    local lootText = WIKI_TEXT.plain(filter.loot:trim())
+    local byLoot = #lootText >= 2 and WikiItems.ready()
+    if byLoot and lootIdsText ~= lootText then
+        lootIds, lootIdsText = WikiItems.idsMatching(lootText), lootText
+    end
     local found = {}
     for _, row in ipairs(list or {}) do
-        if (text == '' or row.words:find(text, 1, true))
-            and (filter.view ~= 'boss' or row.boss)
-            and (filter.view ~= 'bestiary' or row.class ~= '') then
+        row.hit = nil
+        local ok = text == '' or row.words:find(text, 1, true) ~= nil
+        if ok and filter.scope == 'here' then
+            ok = row.here
+        elseif ok and filter.scope == 'boss' then
+            ok = row.boss and row.here
+        end
+        if ok and filter.class ~= '' then
+            ok = row.class == filter.class
+        end
+        if ok and filter.weak ~= '' then
+            ok = (row.elements[filter.weak] or 100) > 100
+        end
+        if ok and filter.tp then
+            ok = row.hunts > 0
+        end
+        if ok and byLoot then
+            row.hit = lootHit(row)
+            ok = row.hit ~= nil
+        end
+        if ok then
             table.insert(found, row)
         end
     end
-    return found
+    local key = (SORTS[filter.sort] or SORTS.name)[1]
+    table.sort(found, function(a, b)
+        local va, vb = key(a), key(b)
+        if va ~= vb then
+            if filter.desc then
+                return va > vb
+            end
+            return va < vb
+        end
+        return a.words < b.words
+    end)
+    return found, byLoot
+end
+
+local function setSort(sort)
+    if filter.sort == sort then
+        filter.desc = not filter.desc
+    else
+        filter.sort = sort
+        filter.desc = SORTS[sort][2]
+    end
+    filter.page = 1
+end
+
+-- the weaknesses of a row as bestiary icons, the biggest first
+local function fillWeak(box, row)
+    box:destroyChildren()
+    local weak = {}
+    for _, key in ipairs(WEAK_ORDER) do
+        local taken = row.elements[key]
+        if taken and taken > 100 then
+            table.insert(weak, { key = key, taken = taken })
+        end
+    end
+    table.sort(weak, function(a, b) return a.taken > b.taken end)
+    local tips = {}
+    for i, entry in ipairs(weak) do
+        if i <= 3 then
+            local icon = g_ui.createWidget('WikiWeakIcon', box)
+            icon:setImageSource(string.format(ELEMENT_ICON, entry.key))
+        end
+        table.insert(tips, T('%s %d%%', L(ELEMENTS[entry.key][2]), entry.taken))
+    end
+    if #weak > 0 then
+        box:setTooltip(T('Fraco a: %s', table.concat(tips, ', ')))
+    else
+        box:setTooltip(T('Sem fraqueza a elemento'))
+    end
 end
 
 local function fillList(box)
     box.rows:destroyChildren()
-    for _, tab in ipairs({ box.tools.tabAll, box.tools.tabBestiary, box.tools.tabBoss }) do
-        tab:setChecked(tab.view == filter.view)
+    for _, tab in ipairs({ box.scope.here, box.scope.boss, box.scope.all }) do
+        tab:setChecked(tab.scope == filter.scope)
     end
+    box.scope.tp:setChecked(filter.tp)
+    for _, cell in ipairs(box.head:getChildren()) do
+        if cell.sort then
+            local active = cell.sort == filter.sort
+            cell:setText(cell.label .. (active and (filter.desc and ' v' or ' ^') or ''))
+            cell:setColor(active and '#f3dcae' or '#b4afc3')
+        end
+    end
+    box.head.chance:setVisible(WIKI_TEXT.plain(filter.loot:trim()):len() >= 2)
     if not list then
         box.tools.count:setText(T('Carregando...'))
+        box.pager:setVisible(false)
         return
     end
-    local found = matches()
-    for i = 1, math.min(#found, LIST_LIMIT) do
+    local found, byLoot = matches()
+    local pages = math.max(1, math.ceil(#found / PAGE_SIZE))
+    filter.page = math.max(1, math.min(filter.page, pages))
+    local first = (filter.page - 1) * PAGE_SIZE + 1
+    for i = first, math.min(#found, first + PAGE_SIZE - 1) do
         local row = found[i]
-        local line = g_ui.createWidget(i % 2 == 0 and 'WikiMonsterRowEven' or 'WikiMonsterRow', box.rows)
+        local line = g_ui.createWidget(i % 2 == 0 and 'WikiCreatureRowEven' or 'WikiCreatureRow', box.rows)
         setLook(line.creature, line.item, row.look)
-        line.name:setText(row.name .. (row.boss and '  BOSS' or ''))
-        local info = row.class ~= '' and T('%s, %s', row.class, DIFFICULTY[row.stars] or '') or (row.boss and T('Boss') or T('Sem bestiário'))
-        line.info:setText(L(info))
-        line.xp:setText(T('%s XP', num(row.experience)))
-        line.hp:setText(T('%s de vida', num(row.health)))
+        line.name:setText(row.name)
+        if row.boss then
+            line.name:setColor('#ff9a1f')
+        end
+        if row.hit then
+            local itemName = WikiItems.nameOf(row.hit.id) or T('Item')
+            local count = row.hit.max > 1 and (row.hit.max .. 'x ') or ''
+            line.info:setText(T('%s%s  %s', count, itemName, chanceText(row.hit.chance)))
+            line.info:setColor(WARM)
+            line.lootItem:setItemId(row.hit.id)
+            line.lootItem:setVisible(true)
+        else
+            local info
+            if not row.here then
+                info = row.boss and T('Boss, fora do nosso mundo') or T('Fora do nosso mundo')
+            elseif row.boss then
+                info = T('Boss com alavanca')
+            else
+                info = row.class ~= '' and T('%s, %s', row.class, L(DIFFICULTY[row.stars] or '')) or ''
+            end
+            line.info:setText(info)
+        end
+        line.hp:setText(num(row.health))
+        line.xp:setText(num(row.experience))
+        if row.gold > 0 then
+            line.gold:setText(num(row.gold))
+        else
+            line.gold:setText('-')
+            line.gold:setColor(DIM)
+        end
+        if row.here then
+            fillWeak(line.weak, row)
+        end
+        if row.hunts > 0 then
+            line.tp:setVisible(true)
+            line.tp:setTooltip(row.hunts == 1 and T('O Hunts TP leva até a hunt dele') or T('O Hunts TP leva até %d hunts dele', row.hunts))
+        end
         line.onClick = function() show('m:' .. row.name) end
     end
-    box.tools.count:setText(#found == 1 and T('1 monstro') or T('%s monstros', num(#found)))
+    local count = #found == 1 and T('1 criatura') or T('%s criaturas', num(#found))
+    box.tools.count:setText(count)
+    box.pager:setVisible(pages > 1)
+    box.pager.label:setText(T('Página %d de %d', filter.page, pages))
+    box.pager.prev:setEnabled(filter.page > 1)
+    box.pager.next:setEnabled(filter.page < pages)
+    local note
     if #found == 0 then
-        box.note:setText(T('Nenhum monstro com esse filtro.'))
-    elseif #found > LIST_LIMIT then
-        box.note:setText(T('Mostrando %d de %s. Busque pelo nome para achar os outros.', LIST_LIMIT, num(#found)))
+        note = byLoot and T('Nenhuma criatura dropa um item com esse nome.') or T('Nenhuma criatura com esses filtros.')
+    elseif WIKI_TEXT.plain(filter.loot:trim()):len() >= 2 and not byLoot then
+        note = T('Carregando os itens...')
     end
-    box.note:setVisible(#found == 0 or #found > LIST_LIMIT)
+    box.note:setText(note or '')
+    box.note:setVisible(note ~= nil)
 end
 
 local function onList(monsters)
     list = {}
+    local classCount = {}
     for _, row in ipairs(monsters or {}) do
         if type(row) == 'table' and type(row[1]) == 'string' then
             local name = L(row[1])
-            table.insert(list, {
-                name = name, boss = row[2] == 1, health = row[3] or 0, experience = row[4] or 0,
-                class = L(row[5] or ''), stars = row[6] or 0, look = lookOf(row),
+            local entry = {
+                name = name, boss = row[2] == 1, health = tonumber(row[3]) or 0, experience = tonumber(row[4]) or 0,
+                class = L(row[5] or ''), stars = tonumber(row[6]) or 0, look = lookOf(row),
                 words = WIKI_TEXT.plain(name),
-            })
+                here = row[14] == 1, elements = {}, loot = type(row[16]) == 'table' and row[16] or {},
+                gold = tonumber(row[17]) or 0, hunts = tonumber(row[18]) or 0,
+            }
+            if type(row[15]) == 'string' then
+                for key, value in row[15]:gmatch('(%a+):(%d+)') do
+                    entry.elements[key] = tonumber(value)
+                end
+            end
+            if entry.here and entry.class ~= '' then
+                classCount[entry.class] = (classCount[entry.class] or 0) + 1
+            end
+            table.insert(list, entry)
         end
     end
     table.sort(list, function(a, b) return a.words < b.words end)
-    lookIndex = nil
+    classes = {}
+    for class, count in pairs(classCount) do
+        table.insert(classes, { class, count })
+    end
+    table.sort(classes, function(a, b) return a[1] < b[1] end)
+    lookIndex, rowIndex = nil, nil
     refresh('monsters')
     searchAgain()
     -- the monsters that drop an item get their look
     refreshCurrent('i:')
+    -- a monster page shows its gold per kill
+    refreshCurrent('m:')
 end
 
 -- the look of a monster of the list, by name (nil until the list comes)
@@ -221,6 +403,29 @@ function WikiMonsters.lookOf(name)
         end
     end
     return lookIndex[tostring(name):lower()]
+end
+
+-- the creature list with only the creatures that drop the item, the best
+-- chance first (the "compare" button of an item page)
+function WikiMonsters.showDroppers(itemName)
+    filter.text, filter.loot = '', tostring(itemName or '')
+    filter.scope, filter.class, filter.weak, filter.tp = 'here', '', '', false
+    filter.sort, filter.desc, filter.page = 'chance', true, 1
+    show('monsters')
+end
+
+-- the list's row of a monster, by name (nil until the list comes)
+function WikiMonsters.rowOf(name)
+    if not list then
+        return nil
+    end
+    if not rowIndex then
+        rowIndex = {}
+        for _, row in ipairs(list) do
+            rowIndex[row.name:lower()] = row
+        end
+    end
+    return rowIndex[tostring(name):lower()]
 end
 
 -- ---------------------------------------------------------------- one monster
@@ -458,6 +663,9 @@ end
 function WikiMonsters.page(id)
     local name = id:sub(3)
     local key = name:lower()
+    -- the loot's prices and the gold per kill come with the two lists
+    askList()
+    WikiItems.ready()
     local data = pages[key]
     if data == nil and (not asked[key] or g_clock.millis() - asked[key] > ASK_AGAIN) then
         askMonster(name)
@@ -478,20 +686,94 @@ end
 
 function WIKI_BUILDERS.monsterlist(parent)
     askList()
-    local box = g_ui.createWidget('WikiMonsterList', parent)
+    WikiItems.ready()
+    local box = g_ui.createWidget('WikiCreatureTable', parent)
     local tools = box.tools
     tools.search:setText(filter.text)
     tools.search.onTextChange = function(_, text)
         filter.text = text
+        filter.page = 1
         fillList(box)
     end
-    for _, tab in ipairs({ { tools.tabAll, 'all', 'Todos' }, { tools.tabBestiary, 'bestiary', 'Bestiário' }, { tools.tabBoss, 'boss', 'Bosses' } }) do
-        tab[1].view = tab[2]
-        tab[1]:setText(T(tab[3]))
-        tab[1].onClick = function()
-            filter.view = tab[2]
+    tools.loot:setText(filter.loot)
+    tools.loot.onTextChange = function(_, text)
+        local was = WIKI_TEXT.plain(filter.loot:trim()):len() >= 2
+        filter.loot = text
+        local now = WIKI_TEXT.plain(text:trim()):len() >= 2
+        -- by the item's chance while a loot filter is on
+        if now and not was and filter.sort == 'name' then
+            filter.sort, filter.desc = 'chance', true
+        elseif was and not now and filter.sort == 'chance' then
+            filter.sort, filter.desc = 'name', false
+        end
+        filter.page = 1
+        fillList(box)
+    end
+
+    local scope = box.scope
+    for _, entry in ipairs({ { scope.here, 'here', 'Nosso mundo', 'As criaturas que vivem no nosso mapa e os bosses com alavanca' },
+        { scope.boss, 'boss', 'Bosses', 'Os bosses que têm alavanca no nosso mapa' },
+        { scope.all, 'all', 'Todas', 'Todas as criaturas do jogo, até as que não existem no nosso mapa' } }) do
+        entry[1].scope = entry[2]
+        entry[1]:setText(T(entry[3]))
+        entry[1]:setTooltip(T(entry[4]))
+        entry[1].onClick = function()
+            filter.scope = entry[2]
+            filter.page = 1
             fillList(box)
         end
+    end
+    scope.tp:setText(T('Com TP'))
+    scope.tp:setTooltip(T('Só as que o Hunts TP do Hunt Board leva até a hunt'))
+    scope.tp.onClick = function()
+        filter.tp = not filter.tp
+        filter.page = 1
+        fillList(box)
+    end
+
+    local classBox = scope.class
+    classBox:addOption(T('Todas as classes'), '')
+    for _, entry in ipairs(classes or {}) do
+        classBox:addOption(T('%s (%d)', entry[1], entry[2]), entry[1])
+    end
+    classBox:setCurrentOptionByData(filter.class, true)
+    classBox.onOptionChange = function(_, _, data)
+        filter.class = data or ''
+        filter.page = 1
+        fillList(box)
+    end
+    local weakBox = scope.weak
+    for _, entry in ipairs(WEAK) do
+        weakBox:addOption(T(entry[2]), entry[1])
+    end
+    weakBox:setCurrentOptionByData(filter.weak, true)
+    weakBox.onOptionChange = function(_, _, data)
+        filter.weak = data or ''
+        filter.page = 1
+        fillList(box)
+    end
+
+    for _, entry in ipairs({ { box.head.name, 'name', 'Criatura' }, { box.head.hp, 'health', 'Vida' }, { box.head.xp, 'experience', 'XP' },
+        { box.head.gold, 'gold', 'Gold/kill' }, { box.head.chance, 'chance', 'Chance' } }) do
+        entry[1].sort = entry[2]
+        entry[1].label = T(entry[3])
+        entry[1].onClick = function()
+            setSort(entry[2])
+            fillList(box)
+        end
+    end
+    box.head.gold:setTooltip(T('O que uma kill rende em média vendendo o loot ao Gersao, na taxa de loot do servidor (sem o bônus do Hunt Board)'))
+    box.head.weak:setText(T('Fraco a'))
+
+    box.pager.prev.onClick = function()
+        filter.page = filter.page - 1
+        fillList(box)
+        scrollTop()
+    end
+    box.pager.next.onClick = function()
+        filter.page = filter.page + 1
+        fillList(box)
+        scrollTop()
     end
     fillList(box)
 end
@@ -546,6 +828,14 @@ function WIKI_BUILDERS.monsterhead(parent, block)
     else
         table.insert(right, T('{Sem bestiário, #9789b3}'))
     end
+    -- what a kill is worth (the list's number, the Hunt Board's)
+    local row = WikiMonsters.rowOf(d.name)
+    if row and row.gold > 0 then
+        table.insert(right, string.format('%s {%s gold, #e2c35a}', T('Loot médio:'), num(row.gold)))
+        if d.lootRate and d.lootRate ~= 10 then
+            table.insert(right, T('{%s gold com o loot de agora (x%s), #8fdc5e}', num(math.floor(row.gold * d.lootRate / 10)), decimal(d.lootRate / 10, 1)))
+        end
+    end
     head.right:setColoredText(table.concat(right, '\n'))
     local height = math.max(head.left:getHeight(), head.right:getHeight()) + 24
     head:setHeight(math.max(100, height))
@@ -591,8 +881,15 @@ function WIKI_BUILDERS.loot(parent, block)
         local name = count .. L(titleCase(item.name or ''))
         cell.name:setText(name)
         local percent = (tonumber(item.chance) or 0) / 1000
-        cell.chance:setText((percent >= 1 and decimal(percent, 2) or decimal(percent, 3)) .. '%')
-        cell:setTooltip(T('%s - %s. Clique para abrir o item.', name, cell.chance:getText()))
+        local chance = (percent >= 1 and decimal(percent, 2) or decimal(percent, 3)) .. '%'
+        local value = WikiItems.valueOf(tonumber(item.id) or 0)
+        if value > 0 then
+            cell.chance:setText(T('%s   NPC: %s', chance, num(value)))
+            cell:setTooltip(T('%s - %s. Um NPC paga %s gold. Clique para abrir o item.', name, chance, num(value)))
+        else
+            cell.chance:setText(chance)
+            cell:setTooltip(T('%s - %s. Clique para abrir o item.', name, chance))
+        end
         cell.onClick = function() show('i:' .. item.id) end
     end
 end

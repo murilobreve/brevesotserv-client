@@ -21,6 +21,7 @@
 --   npcrows         a list of NPCs with where they stand (npcs.lua)
 --   spelllist       every spell, a tab per vocation (spells.lua)
 --   huntlist        every hunt of the Hunts TP by level (monsters.lua)
+--   cards           big links with a picture, for the home pages
 --   ratesinfo, ascensaoinfo, tasksinfo, vipinfo
 --                   the Mythos systems from the server's config (systems.lua)
 
@@ -96,27 +97,81 @@ local function gradeRow(label, color, weights)
     return row
 end
 
+-- the wiki has two halves, a tab each: what is Tibia's (creatures, items,
+-- NPCs, spells: TibiaWiki's ground) and what only Mythos has
+WIKI_SECTIONS = {
+    { key = 'tibia', title = 'Wiki do Tibia', tab = 'Tibia', home = 'home' },
+    { key = 'mythos', title = 'Wiki do Mythos', tab = 'Mythos', home = 'mythos' },
+}
+
 WIKI_GROUPS = {
-    { title = 'Monstros', pages = { 'monsters' } },
-    { title = 'Itens', pages = { 'weapons', 'equipment', 'supplies', 'loot', 'otheritems', 'imbuements' } },
-    { title = 'NPCs e quests', pages = { 'npcs', 'quests' } },
-    { title = 'Magias', pages = { 'spells' } },
-    { title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'ascensao', 'vip' } },
-    { title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
-    { title = 'Itens raros', pages = { 'items', 'grades', 'quality', 'pools' } },
-    { title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
-    { title = 'Loot', pages = { 'autoloot' } },
-    { title = 'Hunts e viagem', pages = { 'hunts', 'travel' } },
+    { section = 'tibia', title = 'Início', pages = { 'home' } },
+    { section = 'tibia', title = 'Criaturas', pages = { 'monsters' } },
+    { section = 'tibia', title = 'Itens', pages = { 'weapons', 'equipment', 'supplies', 'loot', 'otheritems', 'imbuements' } },
+    { section = 'tibia', title = 'NPCs e quests', pages = { 'npcs', 'quests' } },
+    { section = 'tibia', title = 'Magias', pages = { 'spells' } },
+    { section = 'tibia', title = 'Hunts e viagem', pages = { 'hunts', 'travel' } },
+    { section = 'mythos', title = 'Início', pages = { 'mythos' } },
+    { section = 'mythos', title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
+    { section = 'mythos', title = 'Itens raros', pages = { 'items', 'grades', 'quality', 'pools' } },
+    { section = 'mythos', title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
+    { section = 'mythos', title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'ascensao', 'vip' } },
+    { section = 'mythos', title = 'Loot', pages = { 'autoloot' } },
 }
 
 WIKI_PAGES = {}
 
-WIKI_PAGES.monsters = {
-    menu = 'Todos os monstros',
-    title = 'Monstros',
+-- ---------------------------------------------------------------- home pages
+
+WIKI_PAGES.home = {
+    menu = 'Página inicial',
+    title = 'Wiki do Tibia',
     blocks = {
-        { 'lead', 'Todos os monstros do servidor, como na TibiaWiki: vida, experiência, elementos, habilidades, comportamento e loot de cada um. Os dados vêm direto do servidor.' },
-        { 'p', 'Busque pelo nome aqui ou na busca da esquerda e clique no monstro para abrir a página dele.' },
+        { 'lead', 'As criaturas, os itens, os NPCs e as magias do nosso mundo, como na TibiaWiki, com os números direto do servidor: vida, XP, elementos, loot com as chances, quem dropa cada item e quanto um NPC paga por ele.' },
+        { 'cards', {
+            { page = 'monsters', title = 'Criaturas', text = 'Filtre por classe, fraqueza e pelo item que dropa.', outfit = 34 },
+            { page = 'weapons', title = 'Armas', text = 'Ataque, defesa, level e vocação de cada arma.', item = 3288 },
+            { page = 'equipment', title = 'Equipamentos', text = 'Capacetes, armaduras, calças, botas, escudos, anéis e amuletos.', item = 3381 },
+            { page = 'supplies', title = 'Poções, runas e comida', text = 'Quem vende, por quanto e a magia de cada runa.', item = 239 },
+            { page = 'loot', title = 'Loot', text = 'Os itens que os monstros dropam e quanto os NPCs pagam.', item = 3043 },
+            { page = 'imbuements', title = 'Imbuements', text = 'Os três níveis de cada um, efeitos e materiais.', item = 3061 },
+            { page = 'npcs', title = 'NPCs', text = 'Onde ficam e o que compram e vendem.', outfit = 128, colors = { 78, 69, 58, 76 } },
+            { page = 'quests', title = 'Quests', text = 'As linhas de quests com NPCs e o que dão.', item = 2854 },
+            { page = 'spells', title = 'Magias', text = 'Por vocação, com o cooldown real e como aprender.', item = 3155 },
+            { page = 'hunts', title = 'Hunts', text = 'As hunts do Hunts TP por level, perto do seu.', outfit = 129, colors = { 95, 116, 121, 115 } },
+        } },
+        { 'h', 'Quem dropa um item?' },
+        { 'p', 'Na lista de criaturas, escreva o nome do item em "Dropa o item": aparecem só as criaturas que o dropam, da maior chance para a menor, com a chance de cada uma. A página de cada item também mostra quem o dropa e quais NPCs compram e vendem.' },
+        { 'links', { 'monsters', 'loot' } },
+    },
+}
+
+WIKI_PAGES.mythos = {
+    menu = 'Página inicial',
+    title = 'Wiki do Mythos',
+    blocks = {
+        { 'lead', 'O que só o Mythos tem: monstros raros que voltam mais fortes, itens raros com bônus sorteados, o Hunt Board, as Hunt Tasks, a Ascensão e o VIP.' },
+        { 'tierstrip' },
+        { 'cards', {
+            { page = 'tiers', title = 'Monstros raros', text = 'Pale, Ashen, Obsidian e Lord of Death: mais vida, XP e loot.', tier = 'obsidian' },
+            { page = 'items', title = 'Itens raros', text = 'De Communis a Mythicus, com 1 a 5 bônus sorteados.', item = 3288, shader = 'Rarity - Legendary' },
+            { page = 'affixes', title = 'Bônus', text = 'Cada bônus, quanto rola e como eles somam.', item = 3296, shader = 'Rarity - Mythic' },
+            { page = 'huntboard', title = 'Hunt Board', text = 'Rates de XP e loot de cada monstro, sorteadas a cada 2 horas.', outfit = 121 },
+            { page = 'hunttasks', title = 'Hunt Tasks', text = 'A task diária, a Trilha do Caçador e os Hunt Points.', item = 3043 },
+            { page = 'ascensao', title = 'Ascensão', text = 'Os caminhos de cada vocação e seus skillshots.', item = 3155 },
+            { page = 'rates', title = 'Rates e experiência', text = 'As rates do servidor e o que as aumenta.', item = 239 },
+            { page = 'vip', title = 'VIP', text = 'O que o VIP dá e como conseguir.', item = 3381 },
+            { page = 'autoloot', title = 'Autoloot', text = 'Como o loot vai sozinho para a sua bolsa.', item = 2854 },
+        } },
+    },
+}
+
+WIKI_PAGES.monsters = {
+    menu = 'Todas as criaturas',
+    title = 'Criaturas',
+    blocks = {
+        { 'lead', 'As criaturas do nosso mundo, como na TibiaWiki: vida, experiência, elementos, habilidades, comportamento e loot de cada uma, direto do servidor.' },
+        { 'p', 'Filtre pelo nome, pelo item que ela dropa, pela classe do bestiário ou pela fraqueza, e clique no título de uma coluna para ordenar. "Gold/kill" é quanto uma kill rende em média vendendo o loot.' },
         { 'monsterlist' },
     },
 }

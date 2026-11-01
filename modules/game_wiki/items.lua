@@ -336,6 +336,7 @@ local function itemBlocks(d)
         any = true
         table.insert(blocks, { 'p', T('Dropado por (%d):', #d.drops) })
         table.insert(blocks, { 'dropgrid', d.drops })
+        table.insert(blocks, { 'droppers', d.name })
     end
     if #(d.sells or {}) > 0 then
         any = true
@@ -515,6 +516,46 @@ function WIKI_BUILDERS.dropgrid(parent, block)
     end
 end
 
+-- ---------------------------------------------------------------- for the creature list
+
+-- true once the item list came (asks for it the first time)
+function WikiItems.ready()
+    askList()
+    return list ~= nil
+end
+
+function WikiItems.nameOf(id)
+    local row = byId[id]
+    return row and row.name or nil
+end
+
+-- what an NPC pays for it, 0 when none buys it
+function WikiItems.valueOf(id)
+    local row = byId[id]
+    return row and row.value or 0
+end
+
+-- the ids of the items whose name has the text (already plain): id -> true
+function WikiItems.idsMatching(text)
+    local ids = {}
+    for _, row in ipairs(list or {}) do
+        if row.words:find(text, 1, true) then
+            ids[row.id] = true
+        end
+    end
+    return ids
+end
+
+-- the button that opens the creature list filtered by this item
+function WIKI_BUILDERS.droppers(parent, block)
+    local links = g_ui.createWidget('WikiLinks', parent)
+    local button = g_ui.createWidget('WikiLinkButton', links)
+    button:setText(T('Comparar na lista de criaturas'))
+    button:setWidth(210)
+    button:setTooltip(T('A lista de criaturas só com as que dropam este item, com vida, XP, gold por kill e fraquezas de cada uma'))
+    button.onClick = function() WikiMonsters.showDroppers(L(block[2] or '')) end
+end
+
 -- ---------------------------------------------------------------- search box
 
 -- items whose name has the text: { { name, page id }, ... }
@@ -555,6 +596,9 @@ WIKI_HANDLERS.items = function(data)
     for page in pairs(WIKI_ITEM_GROUPS) do
         refresh(page)
     end
+    -- the creature list's loot filter and prices need the names
+    refresh('monsters')
+    refreshCurrent('m:')
     searchAgain()
 end
 
