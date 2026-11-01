@@ -5,6 +5,7 @@ local window
 local current
 local history = {}
 local topicButtons = {}
+local section = 'tibia' -- the half of the wiki on the menu (WIKI_SECTIONS)
 
 local BAND_BAR = 158
 
@@ -302,6 +303,38 @@ function builders.links(parent, block)
     end
 end
 
+-- big links with a picture: { page, title, text, outfit | item (+ shader) | tier }
+function builders.cards(parent, block)
+    local grid = g_ui.createWidget('WikiCards', parent)
+    for _, card in ipairs(block[2]) do
+        if WIKI_PAGES[card.page] then
+            local widget = g_ui.createWidget('WikiCard', grid)
+            widget.title:setText(card.title or WIKI_PAGES[card.page].menu)
+            widget.text:setText(card.text or '')
+            if card.tier and WIKI_TIERS[card.tier] then
+                widget.creature:setVisible(true)
+                previewCreature(widget.creature, WIKI_TIERS[card.tier])
+            elseif card.outfit then
+                widget.creature:setVisible(true)
+                widget.creature:setOutfit({ type = card.outfit, head = card.colors and card.colors[1] or 0, body = card.colors and card.colors[2] or 0,
+                    legs = card.colors and card.colors[3] or 0, feet = card.colors and card.colors[4] or 0 })
+                local creature = widget.creature:getCreature()
+                if creature then
+                    creature:setDirection(Directions.South)
+                end
+            elseif card.item then
+                widget.item:setVisible(true)
+                widget.item:setItemId(card.item)
+                local item = widget.item:getItem()
+                if item and card.shader then
+                    item:setShader(card.shader)
+                end
+            end
+            widget.onClick = function() show(card.page) end
+        end
+    end
+end
+
 -- ---------------------------------------------------------------- window
 
 local function buildTopics()
@@ -310,6 +343,7 @@ local function buildTopics()
     -- monsters, items, NPCs and spells whose name matches the search, above
     -- the pages
     window.topics.monsterHits = g_ui.createWidget('WikiMonsterHits', window.topics)
+    -- every group of both halves; the menu shows one half (applyTopics)
     for _, group in ipairs(WIKI_GROUPS) do
         local label = g_ui.createWidget('WikiGroupLabel', window.topics)
         label:setText(group.title)
@@ -320,7 +354,48 @@ local function buildTopics()
             button.onClick = function() show(id) end
             button.words = pageWords(WIKI_PAGES[id])
             button.label = label
+            button.section = group.section or 'tibia'
             topicButtons[id] = button
+        end
+    end
+end
+
+-- the menu: the pages of the open half, or with a search the pages of both
+-- halves that have the text; true when any page is shown
+local function applyTopics(text)
+    local shownLabels, any = {}, false
+    for _, button in pairs(topicButtons) do
+        local match
+        if text == '' then
+            match = button.section == section
+        else
+            match = button.words:find(text, 1, true) ~= nil
+        end
+        button:setVisible(match)
+        if match then
+            -- by the group's table: a widget is not the same key every time
+            shownLabels[button.label.group] = true
+            any = true
+        end
+    end
+    for _, child in ipairs(window.topics:getChildren()) do
+        if child.group then
+            child:setVisible(shownLabels[child.group] == true)
+        end
+    end
+    return any
+end
+
+local function sectionOf(id)
+    local group = groupOf(id)
+    return group and group.section or 'tibia'
+end
+
+local function updateSectionTabs()
+    for _, entry in ipairs(WIKI_SECTIONS) do
+        local tab = window['section_' .. entry.key]
+        if tab then
+            tab:setChecked(entry.key == section)
         end
     end
 end
@@ -328,6 +403,12 @@ end
 local function render(id)
     local page = pageOf(id)
     local group = groupOf(id)
+    local half = sectionOf(id)
+    if half ~= section then
+        section = half
+        applyTopics(plain(window.searchEdit:getText():trim()))
+    end
+    updateSectionTabs()
     window.group:setText(group and group.title or '')
     window.title:setText(page.title)
     window.page:destroyChildren()
@@ -345,10 +426,19 @@ local function render(id)
 end
 
 function show(id)
-    id = pageOf(id) and id or current or 'tiers'
+    id = pageOf(id) and id or current or 'home'
     if not window then
         window = g_ui.displayUI('wiki')
+        for _, entry in ipairs(WIKI_SECTIONS) do
+            local tab = window['section_' .. entry.key]
+            if tab then
+                tab:setText(entry.tab)
+                tab:setTooltip(entry.title)
+                tab.onClick = function() showSection(entry.key) end
+            end
+        end
         buildTopics()
+        applyTopics('')
     end
     if current and current ~= id then
         table.insert(history, current)
@@ -371,6 +461,27 @@ end
 
 function isOpen(id)
     return window ~= nil and current == id
+end
+
+-- a half of the wiki: its home page
+function showSection(key)
+    for _, entry in ipairs(WIKI_SECTIONS) do
+        if entry.key == key then
+            section = key
+            if window then
+                applyTopics(plain(window.searchEdit:getText():trim()))
+            end
+            show(entry.home)
+            return
+        end
+    end
+end
+
+-- the open page back to its top (the creature list's pages)
+function scrollTop()
+    if window then
+        window.pageScroll:setValue(0)
+    end
 end
 
 -- draw the open page again if its id starts with `prefix` (a list it uses
@@ -452,20 +563,7 @@ function onSearch(text)
     end
     text = plain(text:trim())
     local monsters = showMonsterHits(text)
-    local visibleGroups, any = {}, false
-    for _, button in pairs(topicButtons) do
-        local match = text == '' or button.words:find(text, 1, true) ~= nil
-        button:setVisible(match)
-        if match then
-            visibleGroups[button.label.group.title] = true
-            any = true
-        end
-    end
-    for _, child in ipairs(window.topics:getChildren()) do
-        if child.group then
-            child:setVisible(visibleGroups[child.group.title] == true)
-        end
-    end
+    local any = applyTopics(text)
     window.noResults:setVisible(not any and not monsters)
 end
 
@@ -506,6 +604,7 @@ function init()
         convertAll(WIKI_TIERS)
         convertAll(WIKI_GROUPS)
         convertAll(WIKI_PAGES)
+        convertAll(WIKI_SECTIONS)
         WIKI_CONVERTED = true
     end
     WikiMonsters.init()
