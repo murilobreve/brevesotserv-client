@@ -158,7 +158,7 @@ WIKI_PAGES.mythos = {
             { page = 'affixes', title = 'Bônus', text = 'Cada bônus, quanto rola e como eles somam.', item = 3296, shader = 'Rarity - Mythic' },
             { page = 'huntboard', title = 'Hunt Board', text = 'Rates de XP e loot de cada monstro, sorteadas a cada 2 horas.', outfit = 121 },
             { page = 'hunttasks', title = 'Hunt Tasks', text = 'A task diária, a Trilha do Caçador e os Hunt Points.', item = 3043 },
-            { page = 'bosses', title = 'Bosses e Provas', text = 'Mais de 100 bosses pela janela Bosses e as Provas de Vocação.', outfit = 12 },
+            { page = 'bosses', title = 'Bosses', text = 'Mais de 100 bosses pela janela Bosses, que podem surgir raros.', outfit = 12 },
             { page = 'ascensao', title = 'Ascensão', text = 'Os caminhos de cada vocação e seus skillshots.', item = 3155 },
             { page = 'rates', title = 'Rates e experiência', text = 'As rates do servidor e o que as aumenta.', item = 239 },
             { page = 'vip', title = 'VIP', text = 'O que o VIP dá e como conseguir.', item = 3381 },
@@ -265,8 +265,8 @@ WIKI_PAGES.ascensao = {
 }
 
 WIKI_PAGES.bosses = {
-    menu = 'Bosses e Provas',
-    title = 'Bosses e Provas de Vocação',
+    menu = 'Bosses',
+    title = 'Bosses',
     blocks = {
         { 'lead', 'A janela Bosses (barra Mythos) leva você e o seu time até a sala da alavanca de mais de 100 bosses: os das quests do mapa oficial, os das raids e os old school, como Demodras, Orshabaal, Morgaroth e Ferumbras.' },
         { 'h', 'Como funciona' },
@@ -274,23 +274,23 @@ WIKI_PAGES.bosses = {
         { 'table', widths = { 150, 370 }, head = { 'Regra', 'Como é' },
           rows = {
               { 'Nível', 'Cada boss pede um nível de todo o time. Nos bosses das arenas novas é o nível em que um time de 2 ou 3 mata o boss com folga' },
-              { 'Espera', '4 horas entre duas lutas contra o mesmo boss; 20 horas nas Provas de Vocação' },
+              { 'Espera', '4 horas entre duas lutas contra o mesmo boss das arenas novas; nos outros, a espera do mapa oficial. A janela mostra a de cada boss' },
               { 'Tempo', '20 minutos para matar o boss; depois a arena esvazia' },
               { 'Time', 'De 1 a 5 jogadores, nos pisos marcados' },
           } },
         { 'p', 'A janela mostra o que impede a luta antes de você ir: o nível, a sua espera, a de alguém da sua party ou um time que já está lutando.' },
         { 'h', 'Loot nas reward bags' },
         { 'p', 'O loot dos bosses vai para reward bags de quem lutou, conforme o dano e a cura de cada um. Elas ficam no baú de recompensas (Reward Chest) dos templos.' },
-        { 'h', 'Provas de Vocação' },
-        { 'p', 'Quatro arenas da mesma janela, cada uma com um guardião e os monstros dele. Quem estiver vivo na arena quando o guardião morre ganha um item da própria vocação, uma vez por personagem em cada prova. Depois disso a prova ainda vale pela experiência e pelo loot.' },
-        { 'table', widths = { 60, 150, 310 }, head = { 'Nível', 'Guardião', 'Prêmio' },
+        { 'h', 'Bosses raros' },
+        { 'p', 'Quando o time entra na arena, o boss pode surgir Pale, Ashen, Obsidian ou Lord of Death, como os monstros raros: com o nome (Pale Demodras), a cor, a aura, a caveira e as magias marcadas no chão do tier. Fica mais forte, e a reward bag de cada um que lutou ganha mais loot, mais gold, itens raros e Rarity XP.' },
+        { 'table', widths = { 105, 55, 55, 55, 250 }, head = { 'Tier', 'Chance', 'Vida', 'Dano', 'Em cada reward bag' },
           rows = {
-              { '100', 'Gravelord Oshuran', 'Royal Draken Mail, Elite Draken Helmet, Royal Scale Robe ou Merudri Scale Mail' },
-              { '200', 'Mr. Punish', 'Ornate Chestplate, Gnome Armor, Thundermind ou Frostmind Raiment, Ice Robe' },
-              { '300', 'Bragrumol', 'Arma Falcon da vocação' },
-              { '400', 'Tazhadur', 'Arma Soul da vocação' },
+              { 'Pale', '20%', '+50%', '+15%', '1 rolagem extra de loot, gold x2, 75% de 1 item raro' },
+              { 'Ashen', '10%', '+80%', '+25%', '1 rolagem extra, gold x3, 1 item raro e 20% de outro' },
+              { 'Obsidian', '5%', '+120%', '+35%', '2 rolagens extras, gold x4, 1 item raro e 50% de outro' },
+              { 'Lord of Death', '1%', '+170%', '+50%', '3 rolagens extras, gold x5, 3 itens raros' },
           } },
-        { 'p', 'Nas armas, o knight ganha a da sua melhor skill (espada, machado ou clava) e o paladin ganha besta se estiver usando uma. Como toda recompensa de quest, o item pode sair raro. As provas também aparecem na janela Quests, junto das cavernas.' },
+        { 'p', 'A chance vale por luta, e um VIP no time aumenta todas. As rolagens extras multiplicam a chance de cada item do loot do boss (até 50% por rolagem; itens abaixo de 0,3% não sobem). O item raro é uma peça do loot da bag que vira rara, ou uma peça comum quando a bag não tem equipamento. As magias do tier batem conforme o nível da alavanca. O boss raro não renasce, não mata os monstros em volta, e morrer para ele não traz a maldição do Lord of Death.' },
     },
 }
 
@@ -334,7 +334,7 @@ WIKI_PAGES.tiers = {
         { 'p', 'Ouro multiplica o ouro que o monstro dá normalmente: um Dragon Lord Obsidian deixa uns 4.600 de ouro em vez de uns 90. Ele vem em crystal e platinum coins.' },
         { 'p', 'O monstro que volta com tier não pertence a nenhum spawn: se ficar 5 minutos sem nenhum jogador a até 10 sqm, ele some.' },
         { 'h', 'Regras' },
-        { 'p', 'A chance é a mesma para qualquer monstro comum. Um monstro raro que morre não volta de novo: matar um Pale não deixa um Ashen ou outro Pale mais provável. Bosses, summons e monstros de treino nunca voltam.' },
+        { 'p', 'A chance é a mesma para qualquer monstro comum. Um monstro raro que morre não volta de novo: matar um Pale não deixa um Ashen ou outro Pale mais provável. Bosses, summons e monstros de treino nunca voltam; os bosses da janela Bosses podem surgir já raros quando o time entra na arena (veja Bosses).' },
         { 'p', 'Só os monstros raros dão itens raros. Um monstro comum nunca dá.' },
         { 'p', 'Cada monstro raro lança a sua magia: o chão marca a área uns 3 segundos antes e o mapa fica na cor dele (azul gelado no Pale, brasa no Ashen, roxo escuro no Obsidian, escuro no Lord of Death). Saia da área marcada.' },
         { 'p', 'Todo o loot de um monstro raro vai para uma Loot Bag dentro do corpo. A bag não sai do corpo, só os itens de dentro.' },
