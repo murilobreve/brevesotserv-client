@@ -71,6 +71,9 @@ end
 local function send(data)
     local protocol = g_game.getProtocolGame()
     if protocol then
+        -- this client shows the quest chest in its window (chest.otui); the
+        -- server gives the others the Tibia window
+        data.chest = 1
         protocol:sendExtendedJSONOpcode(QUEST_OPCODE, data)
     end
 end
