@@ -1141,6 +1141,7 @@ locale = {
     ["Found by %s, it stayed in the corpse"] = "Achado por %s, ficou no corpo",
     ["Looted by %s"] = "Saqueado por %s",
     ["In the corpse, ready to loot"] = "No corpo, disponível para saque",
+    ["In your reward bag, at the Reward Chest"] = "Na sua reward bag, no baú de recompensas",
     ["No room or capacity: it stayed in the corpse"] = "Sem espaço ou capacidade: ficou no corpo",
     ["A Mythicus find"] = "Um achado Mythicus",
     ["%s found %s"] = "%s encontrou %s",

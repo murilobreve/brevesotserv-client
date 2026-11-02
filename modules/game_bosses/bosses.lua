@@ -215,6 +215,18 @@ local function setStat(stat, key, value, color)
     stat.value:setColor(color or '#e6e0f2')
 end
 
+-- the chances that the boss comes out rare when the team goes in (the
+-- server's state.rare, scripts/rarity/boss_tiers.lua): "Pale 20%, Ashen 10%..."
+local function rareChances()
+    local parts = {}
+    for _, tier in ipairs(state and state.rare or {}) do
+        local chance = tonumber(tier.chance) or 0
+        local text = chance == math.floor(chance) and string.format('%d', chance) or string.format('%.1f', chance):gsub('%.', ',')
+        parts[#parts + 1] = string.format('%s %s%%', tier.name, text)
+    end
+    return #parts > 0 and table.concat(parts, ', ') or nil
+end
+
 -- the lines of the card that change by the second: the player's wait, the
 -- arena, and what would stop the lever
 local function renderWaits(boss)
@@ -290,7 +302,14 @@ local function updateStatuses()
         renderWaits(boss)
     end
     if window then
-        window.summary:setText(tr('%d bosses, %d prontos para você. Cada um na sala da alavanca do mapa oficial.', #state.bosses, ready))
+        local rare = rareChances()
+        if rare then
+            window.summary:setText(tr('%d bosses, %d prontos para você. Boss raro ao entrar: %s.', #state.bosses, ready, rare))
+            window.summary:setTooltip(tr('Quando o time entra na arena, o boss pode surgir raro: mais vida e mais dano, e cada reward bag ganha mais loot, mais gold e itens raros. Um VIP no time aumenta a chance.'))
+        else
+            window.summary:setText(tr('%d bosses, %d prontos para você. Cada um na sala da alavanca do mapa oficial.', #state.bosses, ready))
+            window.summary:removeTooltip()
+        end
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then

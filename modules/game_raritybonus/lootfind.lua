@@ -401,6 +401,8 @@ local DESTINATIONS = {
     pouch = 'In your loot pouch',
     corpse = 'In the corpse, ready to loot',
     full = 'No room or capacity: it stayed in the corpse',
+    -- a rare boss's item, in the player's own reward bag (scripts/rarity/boss_tiers.lua)
+    reward = 'In your reward bag, at the Reward Chest',
 }
 -- the same find on a party member's card
 local PARTY_DESTINATIONS = {
