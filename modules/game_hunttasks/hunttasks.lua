@@ -11,7 +11,7 @@ local sectionButtons = {} -- tasks / trail / shop rows in the Mythos panel
 local SECTION_ROWS = { tasks = 'tasks', trail = 'trail', shop = 'taskshop' }
 local SECTIONS = {
     tasks = { title = 'Task diária', intro = 'A task do dia e a etapa atual da trilha' },
-    trail = { title = 'Trilha do Caçador', intro = 'As 70 etapas, da mais fraca à mais forte' },
+    trail = { title = 'Trilha do Caçador', intro = 'Todas as etapas, da mais fraca à mais forte' },
     shop = { title = 'Loja de Tasks', intro = 'O que os Hunt Points compram' },
 }
 local tickEvent
