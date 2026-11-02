@@ -166,6 +166,18 @@ MythosWindow
       creature-size: 100
       phantom: true
 
+    // the boss's page in the Wiki (loot, health, damage), by the portrait
+    MythosButton
+      id: wiki
+      anchors.left: portrait.right
+      anchors.bottom: portrait.bottom
+      margin-left: 8
+      width: 48
+      height: 22
+      !text: tr('Wiki')
+      !tooltip: tr('O loot, a vida e o dano do boss na Wiki')
+      @onClick: modules.game_bosses.openWiki()
+
     Label
       id: name
       anchors.top: portrait.bottom
@@ -239,16 +251,6 @@ MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
 
-    // how it goes, or what would stop the lever (bosses.lua: renderWaits)
-    BrevesNote
-      id: note
-      anchors.top: prev.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      margin-top: 10
-      text-auto-resize: false
-      height: 70
-
     MythosPrimaryButton
       id: go
       anchors.bottom: parent.bottom
@@ -257,6 +259,18 @@ MythosWindow
       height: 28
       !text: tr('Ir para a sala do boss')
       @onClick: modules.game_bosses.goSelected()
+
+    // how it goes, or what would stop the lever (bosses.lua: renderWaits);
+    // all the room down to the buttons
+    BrevesNote
+      id: note
+      anchors.top: room.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: go.top
+      margin-top: 10
+      margin-bottom: 6
+      text-auto-resize: false
 
   Label
     id: message

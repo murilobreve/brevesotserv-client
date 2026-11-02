@@ -367,6 +367,15 @@ function goSelected()
     send({ action = 'go', name = selectedName })
 end
 
+-- the boss's page in the Wiki: loot, health, damage, weaknesses
+function openWiki()
+    local wiki = modules.game_wiki
+    if not selectedName or not wiki or not wiki.show then
+        return
+    end
+    wiki.show('m:' .. selectedName)
+end
+
 -- ---------------------------------------------------------------- server
 
 local handlers = {}
