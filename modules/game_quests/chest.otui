@@ -1,0 +1,144 @@
+// a reward of the quest chest: its picture, name, level and main stats; the
+// chosen one takes the halo violet (quests.lua: showChest)
+QuestChestCard < UIWidget
+  size: 150 196
+  focusable: true
+  background-color: #0f0a19
+  border-width: 1
+  border-color: #514553
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover !focus:
+    background-color: #1b1428
+    border-color: #8a7aa8
+
+  $focus:
+    background-color: #2a1f45
+    border-color: #b296f5
+
+  // the item on a lit plate
+  UIWidget
+    id: plate
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 12
+    size: 84 84
+    background-color: #ffffff0a
+    border-width: 1
+    border-color: #ffffff14
+    phantom: true
+
+  UIItem
+    id: item
+    anchors.centerIn: plate
+    size: 64 64
+    virtual: true
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: plate.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    margin-left: 6
+    margin-right: 6
+    height: 28
+    text-align: top
+    text-wrap: true
+    font: Verdana Bold-11px
+    color: #f3f0fa
+    phantom: true
+
+  Label
+    id: level
+    anchors.top: name.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 1
+    height: 14
+    text-align: center
+    font: verdana-11px-antialised
+    color: #b296f5
+    phantom: true
+
+  Label
+    id: stats
+    anchors.top: level.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin: 4 6 6 6
+    text-align: top
+    text-wrap: true
+    font: verdana-11px-antialised
+    color: #cbc0e0
+    phantom: true
+
+MythosWindow
+  id: questChestWindow
+  size: 520 340
+  @onEscape: modules.game_quests.closeChest()
+
+  Label
+    id: subtitle
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 16
+    text-align: center
+    font: verdana-11px-antialised
+    color: #cbc0e0
+
+  // no card chosen until the player clicks one
+  UIWidget
+    id: rewards
+    anchors.top: subtitle.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 10
+    size: 150 196
+    phantom: true
+    auto-focus: none
+    layout:
+      type: grid
+      cell-size: 150 196
+      cell-spacing: 10
+      flow: true
+
+  Label
+    id: hint
+    anchors.top: rewards.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 14
+    text-align: center
+    font: verdana-11px-antialised
+    color: #8f86a3
+
+  Label
+    id: result
+    anchors.left: parent.left
+    anchors.right: pickButton.left
+    anchors.verticalCenter: pickButton.verticalCenter
+    margin-right: 8
+    height: 16
+    font: verdana-11px-antialised
+    color: #ff7a6b
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    !text: tr('Close')
+    @onClick: modules.game_quests.closeChest()
+
+  MythosPrimaryButton
+    id: pickButton
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    width: 110
+    !text: tr('Take')
+    @onClick: modules.game_quests.pickChosen()

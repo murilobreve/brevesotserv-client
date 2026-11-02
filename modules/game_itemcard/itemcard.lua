@@ -479,6 +479,21 @@ local function show(data, mode, anchor)
     return true
 end
 
+-- the card of an item that is not in the player's hands (a quest reward to
+-- pick, game_quests): `data` as the server builds it (ItemCard.build), next
+-- to `anchor`; hide() takes it off
+function showFor(data, anchor)
+    if type(data) ~= 'table' or not anchor then
+        return false
+    end
+    return show(data, 'hover', anchor)
+end
+
+-- a label of the card in the player's language ("Attack" -> "Ataque")
+function translate(text)
+    return t(text)
+end
+
 local function lookDuration(data)
     local rows = #(data.stats or {}) + #(data.lines or {})
     if data.rarity then
