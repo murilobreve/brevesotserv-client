@@ -6,6 +6,8 @@
 -- of the player's vocation and a button that takes him to the entrance (from
 -- a protection zone or out of combat, at the quest's level). Opened from the
 -- Mythos bar (Hunts section).
+-- At the chest, the rewards to pick from come as cards with their pictures
+-- (chest.otui).
 -- Talks to the server through extended opcode QUEST_OPCODE with JSON payloads.
 
 local QUEST_OPCODE = 141
@@ -390,9 +392,185 @@ function goSelected()
     send({ action = 'go', key = quest.key })
 end
 
+-- ---------------------------------------------------------------- the chest
+
+-- the reward chest at the end of a quest: the rewards of the player's
+-- vocation, each a card with its picture; he picks one (chest.otui)
+local chestWindow
+local chestOffer -- the last "chest" from the server
+local chosenId
+local CARD_W, CARD_H, CARD_GAP, CARDS_PER_ROW = 150, 196, 10, 4
+
+-- the first stats of a reward's card (game_itemcard), in the player's
+-- language, a line each: a list ("fire -10%, earth +10%") shows its first
+-- part (the whole card is on the mouse)
+local function statsOf(card)
+    local itemcard = modules.game_itemcard
+    local lines = {}
+    for index, stat in ipairs(card and card.stats or {}) do
+        if index > 3 then
+            break
+        end
+        local label = itemcard and itemcard.translate and itemcard.translate(stat.label) or stat.label
+        local value = stat.value or ''
+        local first = value:match('^([^,]+),')
+        if first then
+            value = first .. '...'
+        end
+        lines[#lines + 1] = value ~= '' and (label .. ' ' .. value) or label
+    end
+    return table.concat(lines, '\n')
+end
+
+-- the whole card of a reward, beside the chest window (not over the others)
+local function showItemCard(reward)
+    local itemcard = modules.game_itemcard
+    if reward.card and chestWindow and itemcard and itemcard.showFor then
+        itemcard.showFor(reward.card, chestWindow)
+    end
+end
+
+-- the reward under the mouse (by where the mouse is: a click changes the
+-- hover states for a moment)
+local shownReward
+local function rewardUnderMouse()
+    if not chestWindow or not chestOffer then
+        return nil
+    end
+    local mouse = g_window.getMousePosition()
+    for index, child in ipairs(chestWindow.rewards:getChildren()) do
+        if child:containsPoint(mouse) then
+            return chestOffer.rewards[index]
+        end
+    end
+    return nil
+end
+
+-- the card of the reward under the mouse, or none; `again` shows it even if
+-- it was shown (a click takes it off)
+local function refreshItemCard(again)
+    local reward = rewardUnderMouse()
+    if not reward then
+        if shownReward then
+            local itemcard = modules.game_itemcard
+            if itemcard and itemcard.hide then
+                itemcard.hide()
+            end
+        end
+        shownReward = nil
+    elseif again or reward ~= shownReward then
+        shownReward = reward
+        showItemCard(reward)
+    end
+end
+
+local function hideItemCard()
+    local itemcard = modules.game_itemcard
+    if itemcard and itemcard.hide then
+        itemcard.hide()
+    end
+end
+
+function closeChest()
+    if chestWindow then
+        hideItemCard()
+        chestWindow:destroy()
+        chestWindow = nil
+    end
+    chestOffer, chosenId, shownReward = nil, nil, nil
+end
+
+local function choose(id)
+    chosenId = id
+    if chestWindow then
+        chestWindow.pickButton:setEnabled(id ~= nil)
+        chestWindow.result:setText('')
+    end
+end
+
+function pickChosen()
+    if not chestOffer or not chosenId or not chestWindow then
+        return
+    end
+    -- until the server answers
+    chestWindow.pickButton:setEnabled(false)
+    send({ action = 'pick', key = chestOffer.key, id = chosenId })
+end
+
+local function showChest(data)
+    closeChest()
+    chestOffer = data
+    chestWindow = g_ui.displayUI('chest')
+    chestWindow:setText(nameOf(data))
+    chestWindow.subtitle:setText(tr('Pick your reward: one per character.'))
+    chestWindow.hint:setText(tr('Rest the mouse on an item to see all of it. A double click takes it.'))
+    local rewards = data.rewards or {}
+    local perRow = math.max(1, math.min(#rewards, CARDS_PER_ROW))
+    local rowsOf = math.max(1, math.ceil(#rewards / perRow))
+    chestWindow.rewards:setSize({
+        width = perRow * CARD_W + (perRow - 1) * CARD_GAP,
+        height = rowsOf * CARD_H + (rowsOf - 1) * CARD_GAP,
+    })
+    for _, reward in ipairs(rewards) do
+        local card = g_ui.createWidget('QuestChestCard', chestWindow.rewards)
+        card.item:setItemId(reward.id)
+        card.name:setText((reward.name:gsub('^%l', string.upper)))
+        card.level:setText((reward.level or 0) > 0 and tr('Level %d', reward.level) or tr('Any level'))
+        card.stats:setText(statsOf(reward.card))
+        card.onFocusChange = function(widget, focused)
+            if focused then
+                choose(reward.id)
+            end
+        end
+        -- the click took the card off: back while the mouse stays on it
+        card.onMouseRelease = function()
+            scheduleEvent(function()
+                refreshItemCard(true)
+            end, 40)
+            return false
+        end
+        card.onDoubleClick = function()
+            choose(reward.id)
+            pickChosen()
+            return true
+        end
+        -- all of it, as a look shows it
+        card.onHoverChange = function()
+            scheduleEvent(function()
+                refreshItemCard(false)
+            end, 40)
+        end
+    end
+    -- room for the title, the cards, the hint and the buttons
+    chestWindow:setSize({
+        width = math.max(420, chestWindow.rewards:getWidth() + 32),
+        height = chestWindow.rewards:getHeight() + 136,
+    })
+    choose(nil)
+    chestWindow:raise()
+    chestWindow:focus()
+end
+
 -- ---------------------------------------------------------------- server
 
 local handlers = {}
+
+function handlers.chest(data)
+    showChest(data)
+end
+
+function handlers.chestResult(data)
+    if not chestWindow then
+        return
+    end
+    if data.ok then
+        closeChest()
+        showMessage(data.text, true)
+    else
+        chestWindow.result:setText(data.text or '')
+        chestWindow.pickButton:setEnabled(chosenId ~= nil)
+    end
+end
 
 function handlers.state(data)
     state = data
@@ -479,6 +657,7 @@ end
 
 local function onGameEnd()
     hide()
+    closeChest()
     state = nil
     selectedKey = nil
     rows = {}
@@ -515,6 +694,7 @@ function init()
 end
 
 function terminate()
+    closeChest()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     disconnect(LocalPlayer, { onLevelChange = onLevelChange })
     ProtocolGame.unregisterExtendedJSONOpcode(QUEST_OPCODE)
