@@ -285,12 +285,12 @@ WIKI_PAGES.bosses = {
         { 'p', 'Quatro arenas da mesma janela, cada uma com um guardião e os monstros dele. Quem estiver vivo na arena quando o guardião morre ganha um item da própria vocação, uma vez por personagem em cada prova. Depois disso a prova ainda vale pela experiência e pelo loot.' },
         { 'table', widths = { 60, 150, 310 }, head = { 'Nível', 'Guardião', 'Prêmio' },
           rows = {
-              { '100', 'Gravelord Oshuran', 'Armadura da vocação: Royal Draken Mail, Master Archer\'s Armor, Robe of the Underworld, Royal Scale Robe ou Merudri Scale Mail' },
-              { '200', 'Mr. Punish', 'Arma of Destruction da vocação' },
+              { '100', 'Gravelord Oshuran', 'Royal Draken Mail, Elite Draken Helmet, Royal Scale Robe ou Merudri Scale Mail' },
+              { '200', 'Mr. Punish', 'Ornate Chestplate, Gnome Armor, Thundermind ou Frostmind Raiment, Ice Robe' },
               { '300', 'Bragrumol', 'Arma Falcon da vocação' },
               { '400', 'Tazhadur', 'Arma Soul da vocação' },
           } },
-        { 'p', 'O knight ganha a arma da sua melhor skill (espada, machado ou clava) e o paladin ganha besta se estiver usando uma. Como toda recompensa de quest, o item pode sair raro.' },
+        { 'p', 'Nas armas, o knight ganha a da sua melhor skill (espada, machado ou clava) e o paladin ganha besta se estiver usando uma. Como toda recompensa de quest, o item pode sair raro. As provas também aparecem na janela Quests, junto das cavernas.' },
     },
 }
 
