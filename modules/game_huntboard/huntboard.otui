@@ -43,13 +43,13 @@ MultBar < UIWidget
 // change in damage the monster takes (huntboard.lua fills them), under the
 // element's icon in the list header (ElementHead)
 ElementCell < Label
-  width: 26
+  width: 24
   text-align: center
   font: verdana-11px-monochrome
   phantom: true
 
 ElementCells < Panel
-  width: 182
+  width: 168
   phantom: true
   layout:
     type: horizontalBox
@@ -70,7 +70,12 @@ ElementCells < Panel
     id: ice
 
 ElementHeadCell < UIWidget
-  width: 26
+  width: 24
+  border-color: #6b5a8e
+  change-cursor-image: true
+  cursor: pointer
+  $hover:
+    background-color: #ffffff12
 
   UIWidget
     id: icon
@@ -79,7 +84,7 @@ ElementHeadCell < UIWidget
     phantom: true
 
 ElementHead < Panel
-  width: 182
+  width: 168
   layout:
     type: horizontalBox
 
@@ -128,75 +133,69 @@ RateRow < BrevesRow
     margin-right: 6
     size: 54 24
 
+  // a column per number, each one off the row's right edge only (anchors
+  // between siblings that wait on each other crash the browser client); the
+  // list header's titles sit 4 px further (the list's and the row's padding)
   MultBar
     id: lootBar
-    // off the TP button, not off perKill: perKill and goldKill sit on the
-    // bars' centres, and anchors that go both ways crash the browser client
-    // (8 + 84 of the labels, then 10 of room)
-    anchors.right: tp.left
-    anchors.bottom: parent.bottom
-    margin-right: 102
-    margin-bottom: 4
-    width: 100
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 68
+    width: 56
 
   MultBar
     id: xpBar
-    // the same as lootBar
-    anchors.right: tp.left
-    anchors.top: parent.top
-    margin-right: 102
-    margin-top: 4
-    width: 100
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 130
+    width: 56
 
-  UIWidget
-    id: xpIcon
-    anchors.right: xpBar.left
-    anchors.verticalCenter: xpBar.verticalCenter
-    margin-right: 4
-    size: 15 15
-    image-source: /images/game/prey/prey_xp
+  Label
+    id: goldKill
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 192
+    width: 62
+    text-align: right
+    color: #e2a443
     phantom: true
 
-  UIWidget
-    id: lootIcon
-    anchors.right: lootBar.left
-    anchors.verticalCenter: lootBar.verticalCenter
-    margin-right: 4
-    size: 15 15
-    image-source: /images/game/prey/prey_loot
-    phantom: true
-
-  // what a kill gives, each beside its own rate: experience by the XP bar,
-  // gold (the average loot at Gersao's prices) by the loot bar
   Label
     id: perKill
-    anchors.right: tp.left
-    anchors.verticalCenter: xpBar.verticalCenter
-    margin-right: 8
-    width: 84
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 258
+    width: 62
     text-align: right
     color: #cbc0e0
     phantom: true
 
   Label
-    id: goldKill
-    anchors.right: tp.left
-    anchors.verticalCenter: lootBar.verticalCenter
-    margin-right: 8
-    width: 84
+    id: health
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 324
+    width: 60
     text-align: right
-    color: #e2a443
+    color: #cbc0e0
     phantom: true
 
-  // the elements, 10 px off the rate icons: 6 + 54 (TP) + 102 + 100 (bars)
-  // + 4 + 15 (icons) + 10; the list header's ElementHead sits 4 px further
-  // (the list's and the row's padding)
+  Label
+    id: level
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 388
+    width: 36
+    text-align: center
+    color: #e6e0f2
+    phantom: true
+
   ElementCells
     id: elements
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.right: parent.right
-    margin-right: 291
+    margin-right: 430
 
   Label
     id: name
@@ -220,6 +219,18 @@ RateRow < BrevesRow
     font: verdana-11px-monochrome
     color: #9789b3
     phantom: true
+
+// a column title of the list: a click sorts by it, a second one reverses
+HuntSortHead < UIButton
+  anchors.top: parent.top
+  anchors.bottom: parent.bottom
+  font: verdana-11px-monochrome
+  color: #9789b3
+  text-align: right
+  change-cursor-image: true
+  cursor: pointer
+  $hover:
+    color: #f3dcae
 
 RateRowEven < RateRow
   background-color: #ffffff07
@@ -341,7 +352,7 @@ BoardColumn < BrevesSection
 MythosWindow
   id: huntBoardWindow
   !text: tr('Hunt Board')
-  size: 820 630
+  size: 900 630
   @onEscape: modules.game_huntboard.hide()
 
   HuntTab
@@ -571,40 +582,68 @@ MythosWindow
       anchors.left: parent.left
       anchors.right: rateScroll.left
       margin-top: 6
-      !text: tr('Monster')
 
-      Label
-        id: legend
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        margin-right: 30
-        text-auto-resize: true
-        color: #9789b3
-        !text: tr('TP')
+      // over the rows' columns: the row's margins + 4 (the list's and the
+      // row's padding)
+      HuntSortHead
+        id: sortName
+        anchors.left: parent.left
+        margin-left: 88
+        width: 150
+        text-align: left
 
-      Label
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        margin-right: 72
-        text-auto-resize: true
-        color: #9789b3
-        !text: tr('Per kill')
-
-      Label
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        margin-right: 166
-        text-auto-resize: true
-        color: #9789b3
-        !text: tr('XP and loot rate')
-
-      // over the rows' ElementCells: 291 + the list's and the row's padding
       ElementHead
         id: elementHead
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        margin-right: 295
+        margin-right: 434
+
+      HuntSortHead
+        id: sortLevel
+        anchors.right: parent.right
+        margin-right: 392
+        width: 36
+        text-align: center
+
+      HuntSortHead
+        id: sortHp
+        anchors.right: parent.right
+        margin-right: 328
+        width: 60
+
+      HuntSortHead
+        id: sortXpKill
+        anchors.right: parent.right
+        margin-right: 262
+        width: 62
+
+      HuntSortHead
+        id: sortGoldKill
+        anchors.right: parent.right
+        margin-right: 196
+        width: 62
+
+      HuntSortHead
+        id: sortXpRate
+        anchors.right: parent.right
+        margin-right: 134
+        width: 56
+        text-align: center
+
+      HuntSortHead
+        id: sortLootRate
+        anchors.right: parent.right
+        margin-right: 72
+        width: 56
+        text-align: center
+
+      HuntSortHead
+        id: sortTp
+        anchors.right: parent.right
+        margin-right: 10
+        width: 54
+        text-align: center
 
     HuntList
       id: rateList
