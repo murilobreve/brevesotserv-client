@@ -921,6 +921,60 @@ function refreshContainerPages(container)
     end
 end
 
+-- the reward chest (where the reward bags are opened) and its reward bags
+local REWARD_CHEST_ID = 19250
+local REWARD_BAG_ID = 19202
+
+local function isRewardContainer(container)
+    local item = container:getContainerItem()
+    local id = item and item:getId()
+    return id == REWARD_CHEST_ID or id == REWARD_BAG_ID
+end
+
+-- the reward chest nearest to the player on the map: the server's Collect
+-- names the chest by its place
+local function findRewardChest()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return nil
+    end
+    local pos = player:getPosition()
+    local best, bestDistance
+    for dx = -7, 7 do
+        for dy = -5, 5 do
+            local tile = g_map.getTile({ x = pos.x + dx, y = pos.y + dy, z = pos.z })
+            for _, item in ipairs(tile and tile:getItems() or {}) do
+                local distance = math.max(math.abs(dx), math.abs(dy))
+                if item:getId() == REWARD_CHEST_ID and (not best or distance < bestDistance) then
+                    best, bestDistance = item, distance
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- "Pegar tudo": the reward chest's Collect (Canary's parseRewardChestCollect,
+-- client opcode 0xFF): every item of every reward bag goes to the loot
+-- containers, as the quick loot, up to the server's rewardChestMaxCollectItems
+function collectRewards()
+    local protocol = g_game.getProtocolGame()
+    local chest = findRewardChest()
+    if not protocol or not chest then
+        modules.game_textmessage.displayFailureMessage(tr('Stand by the reward chest to collect your rewards.'))
+        return
+    end
+    local pos = chest:getPosition()
+    local msg = OutputMessage.create()
+    msg:addU8(0xFF)
+    msg:addU16(pos.x)
+    msg:addU16(pos.y)
+    msg:addU8(pos.z)
+    msg:addU16(chest:getId())
+    msg:addU8(chest:getStackPos())
+    protocol:send(msg)
+end
+
 function onContainerOpen(container, previousContainer)
     local containerWindow
     if previousContainer then
@@ -1062,14 +1116,24 @@ function onContainerOpen(container, previousContainer)
     container.window = containerWindow
     container.itemsPanel = containerPanel
 
-    toggleContainerPages(containerWindow, container:hasPages())
+    -- the reward chest and its bags show the "Pegar tudo" button where the
+    -- pages go
+    local reward = isRewardContainer(container)
+    local footer = container:hasPages() or reward
+    toggleContainerPages(containerWindow, footer)
     refreshContainerPages(container)
+    local collectButton = containerWindow:recursiveGetChildById('collectButton')
+    if collectButton then
+        collectButton:setVisible(reward)
+        collectButton.onClick = collectRewards
+    end
+    containerWindow:recursiveGetChildById('pageLabel'):setVisible(not reward)
 
     local layout = containerPanel:getLayout()
     local cellSize = layout:getCellSize()
     local step = cellSize.height + layout:getCellSpacing()
     local numLines = math.max(layout:getNumLines(), 1)
-    local chromeHeight = container:hasPages() and 55 or 31
+    local chromeHeight = footer and 55 or 31
     containerWindow:setContentMinimumHeight(cellSize.height)
 
     local resizeBorder = containerWindow:getChildById('bottomResizeBorder')

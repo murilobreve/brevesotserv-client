@@ -95,6 +95,16 @@ ContainerWindow < MiniWindow
       margin-left: -8
       text-auto-resize: true
 
+    // the reward chest and its bags (containers.lua: collectRewards)
+    Button
+      id: collectButton
+      anchors.top: parent.top
+      anchors.horizontalCenter: parent.horizontalCenter
+      size: 96 18
+      visible: false
+      !text: tr('Collect all')
+      !tooltip: tr('Every item of every reward bag goes to your loot containers, as the quick loot (up to 200 at a time).')
+
     PageButton
       id: prevPageButton
       anchors.top: parent.top
