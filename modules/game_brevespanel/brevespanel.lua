@@ -20,7 +20,7 @@ local FEATURES = {
       news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
     { id = 'trail', group = 'tasks', label = "Hunter's Trail", short = 'Trail', icon = 'trail',
       tip = 'Go hunt: free teleport to the monster.',
-      news = '70 monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
+      news = 'The hunt monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
     { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'rates',
