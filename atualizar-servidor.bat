@@ -29,7 +29,9 @@ goto :fim
 
 :semchave
 echo Este PC ainda nao tem a chave que entra na VPS: %CHAVE%
-echo Se o dono do servidor vai te autorizar, crie a sua agora.
+echo Se o dono do servidor te mandou a chave dele, o arquivo baiak, feche e
+echo arraste esse arquivo para cima do instalar-chave.bat.
+echo Se ele vai autorizar uma chave sua, crie a sua agora.
 choice /c SN /m "Criar a chave"
 if errorlevel 2 goto :fim
 where ssh-keygen >nul 2>&1

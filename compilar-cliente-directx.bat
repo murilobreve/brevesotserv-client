@@ -1,28 +1,35 @@
 @echo off
-rem Mythos - versao DirectX (teste). Sincroniza com a branch de teste,
-rem compila o client desenhando com Direct3D 11 (via ANGLE) e empacota em
-rem dist\Mythos DirectX\, sem mexer no client normal.
-rem Pode abrir com dois cliques ou de qualquer cmd: o ambiente do Visual
-rem Studio e carregado aqui mesmo.
+rem Mythos - versao DirectX, a que o site da aos jogadores. Sincroniza com a
+rem branch de teste (ou com o main), compila o client desenhando com Direct3D
+rem 11 (via ANGLE) e empacota em dist\Mythos DirectX\, sem mexer no client
+rem normal. Pode abrir com dois cliques ou de qualquer cmd: o ambiente do
+rem Visual Studio e carregado aqui mesmo.
 rem   compilar-cliente-directx.bat         sincroniza, compila e empacota
 rem   compilar-cliente-directx.bat limpo   apaga a configuracao do CMake antes
+rem   compilar-cliente-directx.bat main    do main em vez da branch de teste
+rem                                        (o atualizar-jogadores.bat usa)
 setlocal
 
 rem roda uma copia de si mesmo a partir da pasta temporaria: assim o git
 rem pode trocar de branch e substituir este .bat sem quebrar o cmd
 if /i not "%~1"=="--rodando" (
     copy /y "%~f0" "%TEMP%\baiak-directx.bat" >nul
-    call "%TEMP%\baiak-directx.bat" --rodando "%~dp0." %1
+    call "%TEMP%\baiak-directx.bat" --rodando "%~dp0." %1 %2
     exit /b
 )
 cd /d "%~2"
-set "OPCAO=%~3"
 set "PASTA=%CD%"
+set "BRANCH=claude/funny-maxwell-kpy7sn"
+set "LIMPO="
+if /i "%~3"=="main" set "BRANCH=main"
+if /i "%~4"=="main" set "BRANCH=main"
+if /i "%~3"=="limpo" set "LIMPO=1"
+if /i "%~4"=="limpo" set "LIMPO=1"
 
 if not defined VCPKG_ROOT set "VCPKG_ROOT=C:\vcpkg"
 
-echo == sincronizando com a branch de teste claude/funny-maxwell-kpy7sn
-git fetch origin claude/funny-maxwell-kpy7sn
+echo == sincronizando com %BRANCH%
+git fetch origin %BRANCH%
 if errorlevel 1 goto :falhou
 rem uma copia solta deste .bat (baixada a parte) travaria a troca de branch
 git ls-files --error-unmatch compilar-cliente-directx.bat >nul 2>&1
@@ -30,9 +37,9 @@ if errorlevel 1 if exist compilar-cliente-directx.bat del compilar-cliente-direc
 rem uma copia deste .bat baixada por cima da do git (mandada pelo chat, por
 rem exemplo) travaria a troca de branch: volta para a do git, que e a mesma
 git checkout -- compilar-cliente.bat compilar-cliente-directx.bat >nul 2>&1
-git checkout claude/funny-maxwell-kpy7sn
+git checkout %BRANCH%
 if errorlevel 1 goto :falhou
-git pull --ff-only origin claude/funny-maxwell-kpy7sn
+git pull --ff-only origin %BRANCH%
 if errorlevel 1 (
     echo A pasta tem mudancas locais que nao estao no GitHub.
     goto :falhou
@@ -56,7 +63,7 @@ echo == carregando o ambiente do Visual Studio
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 goto :falhou
 
-if /i "%OPCAO%"=="limpo" (
+if defined LIMPO (
     echo == apagando a configuracao antiga
     if exist "build\windows-release-directx\CMakeCache.txt" del "build\windows-release-directx\CMakeCache.txt"
 )
@@ -95,7 +102,7 @@ if errorlevel 1 goto :falhou
 
 echo.
 echo Pronto. O client DirectX esta em dist\Mythos DirectX\
-echo Para voltar ao client normal, rode o compilar-cliente.bat (ele volta para o main).
+if not "%BRANCH%"=="main" echo Para voltar ao client normal, rode o compilar-cliente.bat (ele volta para o main).
 pause
 exit /b 0
 
