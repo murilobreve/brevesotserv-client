@@ -39,6 +39,8 @@ local SORTS = {
     { key = 'level', label = 'Lowest recommended level' },
     { key = 'spawns', label = 'Most spawns' },
     { key = 'exp', label = 'Base experience' },
+    { key = 'hp', label = 'Most health' },
+    { key = 'tp', label = 'Most hunts with TP' },
     { key = 'name', label = 'Name' },
 }
 -- sorts whose first rows get no medal colour
@@ -67,6 +69,7 @@ local currentPeriod = 'hour'
 local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 30, slot = -1 }
 local filtered = {}
 local currentSort = 'combined'
+local sortDesc = true -- the biggest first; a second click on a column title reverses it
 local page = 1
 local boards = {}
 local timeOffset = 0 -- server time - local time
@@ -453,67 +456,103 @@ local function matchesFilter(monster, filters)
     return true
 end
 
-local SORTERS = {
-    combined = function(a, b)
-        if a.xp + a.loot ~= b.xp + b.loot then
-            return a.xp + a.loot > b.xp + b.loot
-        end
-        return a.perKill > b.perKill
-    end,
-    xp = function(a, b)
-        if a.xp ~= b.xp then
-            return a.xp > b.xp
-        end
-        return a.perKill > b.perKill
-    end,
-    loot = function(a, b)
-        if a.loot ~= b.loot then
-            return a.loot > b.loot
-        end
-        return a.exp > b.exp
-    end,
-    perKill = function(a, b)
-        if a.perKill ~= b.perKill then
-            return a.perKill > b.perKill
-        end
-        return a.lname < b.lname
-    end,
-    gold = function(a, b)
-        local goldA, goldB = a.goldPerKill or -1, b.goldPerKill or -1
-        if goldA ~= goldB then
-            return goldA > goldB
-        end
-        return a.lname < b.lname
-    end,
-    xpPerHp = function(a, b)
-        if a.xpPerHp ~= b.xpPerHp then
-            return a.xpPerHp > b.xpPerHp
-        end
-        return a.lname < b.lname
-    end,
-    level = function(a, b)
-        local levelA, levelB = a.lvl or math.huge, b.lvl or math.huge
-        if levelA ~= levelB then
-            return levelA < levelB
-        end
-        return a.lname < b.lname
-    end,
-    spawns = function(a, b)
-        if a.spawns ~= b.spawns then
-            return a.spawns > b.spawns
-        end
-        return a.lname < b.lname
-    end,
-    exp = function(a, b)
-        if a.exp ~= b.exp then
-            return a.exp > b.exp
-        end
-        return a.lname < b.lname
-    end,
-    name = function(a, b)
-        return a.lname < b.lname
-    end,
+-- Every column of the list sorts (a click on its title, a second one
+-- reverses it) and the panel's sort list holds the same keys.
+-- key -> { a monster's value, biggest first by default, tie-break (biggest first) }
+local SORT_SPECS = {
+    combined = { function(m) return m.xp + m.loot end, true, function(m) return m.perKill end },
+    xp = { function(m) return m.xp end, true, function(m) return m.perKill end },
+    loot = { function(m) return m.loot end, true, function(m) return m.goldPerKill or 0 end },
+    perKill = { function(m) return m.perKill end, true },
+    gold = { function(m) return m.goldPerKill end, true },
+    xpPerHp = { function(m) return m.xpPerHp end, true },
+    level = { function(m) return m.lvl end, false },
+    hp = { function(m) return m.hpNow end, true },
+    spawns = { function(m) return m.spawns end, true },
+    exp = { function(m) return m.exp end, true },
+    name = { function(m) return m.lname end, false },
+    tp = { function(m) return m.tp > 0 and (m.tpHunts and #m.tpHunts or 1) or 0 end, true },
 }
+-- an element's column: the damage the monster takes from it, the weakest first
+for _, key in ipairs(ELEMENT_COLUMNS) do
+    SORT_SPECS['el:' .. key] = { function(m) return m.taken and (m.taken[key] or 100) end, true }
+    SORTS[#SORTS + 1] = { key = 'el:' .. key, label = 'Weakest to ' .. key }
+end
+
+local function sorterOf(key, desc)
+    local spec = SORT_SPECS[key] or SORT_SPECS.combined
+    local value, tie = spec[1], spec[3]
+    return function(a, b)
+        local va, vb = value(a), value(b)
+        if va ~= vb then
+            -- a number an older server does not send: always last
+            if va == nil then
+                return false
+            elseif vb == nil then
+                return true
+            end
+            if desc then
+                return va > vb
+            end
+            return va < vb
+        end
+        if tie then
+            local ta, tb = tie(a), tie(b)
+            if ta ~= tb then
+                return ta > tb
+            end
+        end
+        return a.lname < b.lname
+    end
+end
+
+-- the column titles that sort: { widget id, sort key, title, what it is }
+local SORT_HEADS = {
+    { 'sortName', 'name', 'Monster', 'Name of the monster.' },
+    { 'sortLevel', 'level', 'Lvl', 'The level the Hunt Tasks recommend for the monster.' },
+    { 'sortHp', 'hp', 'HP', 'Its health while this rate lasts.' },
+    { 'sortXpKill', 'perKill', 'XP/kill', 'Experience per kill at this rate, before your own bonuses.' },
+    { 'sortGoldKill', 'gold', 'Gold/kill', 'Gold per kill at this loot rate, at the prices Gersao pays.' },
+    { 'sortXpRate', 'xp', 'XP rate', 'The experience rate of this roll.' },
+    { 'sortLootRate', 'loot', 'Loot rate', 'The loot rate of this roll.' },
+    { 'sortTp', 'tp', 'TP', 'The monsters with a hunt teleport first.' },
+}
+
+-- the titles show which column sorts and which way
+local function updateSortHeads()
+    if not window then
+        return
+    end
+    local head = window.ratesPanel.rateHeader
+    for _, entry in ipairs(SORT_HEADS) do
+        local widget = head[entry[1]]
+        if widget then
+            local active = entry[2] == currentSort
+            widget:setText(tr(entry[3]) .. (active and (sortDesc and ' v' or ' ^') or ''))
+            widget:setColor(active and '#f3dcae' or '#9789b3')
+        end
+    end
+    for _, key in ipairs(ELEMENT_COLUMNS) do
+        local cell = head.elementHead[key]
+        local active = currentSort == 'el:' .. key
+        cell:setBackgroundColor(active and '#ffffff26' or '#00000000')
+        cell:setBorderWidth(active and 1 or 0)
+    end
+end
+
+-- a column picked: again on the same one reverses it
+local function setSort(key, toggle)
+    if toggle and key == currentSort then
+        sortDesc = not sortDesc
+    else
+        currentSort = SORT_SPECS[key] and key or 'combined'
+        sortDesc = SORT_SPECS[currentSort][2]
+    end
+    local box = window and window.ratesPanel.filterSection.sortBox
+    if box then
+        box:setCurrentOptionByData(currentSort, true)
+    end
+end
 
 -- the buttons show the wait between two hunt teleports (30 s), and how
 -- many hunts a monster with more than one has
@@ -620,7 +659,7 @@ local function renderPage()
         local monster = filtered[i]
         local row = g_ui.createWidget(i % 2 == 0 and 'RateRowEven' or 'RateRow', list)
         row.rank:setText('#' .. i)
-        if i <= 3 and not NO_MEDALS[currentSort] then
+        if i <= 3 and sortDesc and not NO_MEDALS[currentSort] then
             row.rank:setColor(MEDALS[i].text)
         end
         row.creature:setOutfit(outfitOf(monster))
@@ -630,21 +669,18 @@ local function renderPage()
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
         end
-        -- the health it has while this rate lasts; its damage is in the tooltip
-        if monster.lvl then
-            row.info:setText(tr('Lv %d  -  HP %s  -  %d spawns', monster.lvl, formatNumber(monster.hpNow), monster.spawns))
-        else
-            row.info:setText(tr('HP %s  -  %d spawns', formatNumber(monster.hpNow), monster.spawns))
-        end
+        row.info:setText(tr('%d spawns', monster.spawns))
         fillElementCells(row.elements, monster.taken)
+        -- a column each: level, health (while this rate lasts), XP and gold
+        -- per kill, the XP and loot rates
+        row.level:setText(monster.lvl and tostring(monster.lvl) or '-')
+        row.health:setText(formatShort(monster.hpNow))
+        row.health:setColor(monster.hpMult > 1 and '#ef9a62' or '#cbc0e0')
+        row.perKill:setText(formatShort(monster.perKill))
+        row.perKill:setColor(xpTone(monster.xp))
+        row.goldKill:setText(monster.goldPerKill and formatShort(monster.goldPerKill) or '-')
         setBar(row.xpBar, monster.xp)
         setBar(row.lootBar, monster.loot, rates.lootMax, lootTone)
-        row.perKill:setText(formatShort(monster.perKill) .. ' xp')
-        row.perKill:setColor(xpTone(monster.xp))
-        row.goldKill:setVisible(monster.goldPerKill ~= nil)
-        if monster.goldPerKill then
-            row.goldKill:setText(formatShort(monster.goldPerKill) .. ' gold')
-        end
         local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
             formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
         if monster.goldPerKill then
@@ -698,7 +734,6 @@ local function applyFilters()
     end
     local section = window.ratesPanel.filterSection
     local filters = readFilters(section)
-    currentSort = comboKey(section.sortBox, 'combined')
 
     filtered = {}
     for _, monster in ipairs(rates.monsters) do
@@ -706,8 +741,9 @@ local function applyFilters()
             filtered[#filtered + 1] = monster
         end
     end
-    table.sort(filtered, SORTERS[currentSort] or SORTERS.combined)
+    table.sort(filtered, sorterOf(currentSort, sortDesc))
     page = 1
+    updateSortHeads()
     renderPage()
 end
 
@@ -720,8 +756,8 @@ local function setupFilterPanel()
     for _, id in ipairs(RANGE_BOXES) do
         section[id]:setTooltip(hint)
     end
-    section.xpLabel:setTooltip(tr('Experience per kill at this rate, before your own bonuses: the Per kill column.'))
-    section.goldLabel:setTooltip(tr('Gold per kill at this loot rate, at the prices Gersao pays: the Per kill column.'))
+    section.xpLabel:setTooltip(tr('Experience per kill at this rate, before your own bonuses: the XP/kill column.'))
+    section.goldLabel:setTooltip(tr('Gold per kill at this loot rate, at the prices Gersao pays: the Gold/kill column.'))
     section.levelLabel:setTooltip(tr('The level the Hunt Tasks recommend for the monster.'))
     section.rateBox:setTooltip(tr('Jackpot: XP 3.5x+ or loot 2.5x+.'))
     section.elementBox:setTooltip(tr('Weak to: it takes more damage from the element. No resistance: it takes at least the normal damage.'))
@@ -754,12 +790,31 @@ local function setupFilterPanel()
         applyFilters()
     end
 
-    -- the Cyclopedia's icon of each element over its column
+    -- the Cyclopedia's icon of each element over its column; a click sorts
+    -- by it, the weakest first
+    local sortHint = tr('Click to sort, click again to reverse.')
     local head = window.ratesPanel.rateHeader.elementHead
     for _, key in ipairs(ELEMENT_COLUMNS) do
         head[key].icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. key .. '-resist')
-        head[key]:setTooltip(tr('%s damage on the monster:\n+10 = it takes 10%% more\n-15 = it takes 15%% less\n%s = immune', tr(ELEMENTS[key][1]), IMMUNE_MARK))
+        head[key]:setTooltip(tr('%s damage on the monster:\n+10 = it takes 10%% more\n-15 = it takes 15%% less\n%s = immune', tr(ELEMENTS[key][1]), IMMUNE_MARK) .. '\n' .. sortHint)
+        head[key].onClick = function()
+            setSort('el:' .. key, true)
+            applyFilters()
+        end
     end
+    -- every other column title sorts too
+    local titles = window.ratesPanel.rateHeader
+    for _, entry in ipairs(SORT_HEADS) do
+        local widget = titles[entry[1]]
+        if widget then
+            widget:setTooltip(tr(entry[4]) .. '\n' .. sortHint)
+            widget.onClick = function()
+                setSort(entry[2], true)
+                applyFilters()
+            end
+        end
+    end
+    updateSortHeads()
 end
 
 -- ---------------------------------------------------------------- leaderboard tab
@@ -1367,6 +1422,11 @@ function init()
     setupCombo(section.rateBox, RATE_FILTERS)
     setupCombo(section.elementBox, ELEMENT_FILTERS)
     setupCombo(section.sortBox, SORTS)
+    -- the panel's sort list and the column titles sort the same way
+    section.sortBox.onOptionChange = function(_, _, key)
+        setSort(key or 'combined', false)
+        applyFilters()
+    end
     setupFilterPanel()
     updateOnline()
 
