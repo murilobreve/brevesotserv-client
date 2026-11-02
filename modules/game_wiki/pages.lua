@@ -280,7 +280,7 @@ WIKI_PAGES.bosses = {
           } },
         { 'p', 'A janela mostra o que impede a luta antes de você ir: o nível, a sua espera, a de alguém da sua party ou um time que já está lutando.' },
         { 'h', 'Loot nas reward bags' },
-        { 'p', 'O loot dos bosses vai para reward bags de quem lutou, conforme o dano e a cura de cada um. Elas ficam no baú de recompensas (Reward Chest) dos templos.' },
+        { 'p', 'O loot dos bosses vai para reward bags de quem lutou, conforme o dano e a cura de cada um. Elas ficam no baú de recompensas (Reward Chest) dos templos. No baú, o botão Pegar tudo leva os itens de todas as bags para os seus containers de loot, como o quick loot, até 200 por vez.' },
         { 'h', 'Bosses raros' },
         { 'p', 'Quando o time entra na arena, o boss pode surgir Pale, Ashen, Obsidian ou Lord of Death, como os monstros raros: com o nome (Pale Demodras), a cor, a aura, a caveira e as magias marcadas no chão do tier. Fica mais forte, e a reward bag de cada um que lutou ganha mais loot, mais gold, itens raros e Rarity XP.' },
         { 'table', widths = { 105, 55, 55, 55, 250 }, head = { 'Tier', 'Chance', 'Vida', 'Dano', 'Em cada reward bag' },
