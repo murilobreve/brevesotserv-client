@@ -215,8 +215,12 @@ function controllerNpcTrader:onTradeListRendered()
                 -- Potion, then the Health Potion, Buy: a Great Health Potion
                 -- came, at its price). The row with the focus is the one Buy
                 -- and Sell act on.
-                child.onFocusChange = function(widget, focused)
-                    if not focused then
+                -- Only the player's own press or key counts: when the list
+                -- changes after a sale, a row that leaves hands the focus to
+                -- another one, and that used to make an unowned row the
+                -- chosen one (Sell then did nothing).
+                child.onFocusChange = function(widget, focused, reason)
+                    if not focused or (reason ~= MouseFocusReason and reason ~= KeyboardFocusReason) then
                         return
                     end
                     local rowItem = self:getRowItem(widget)
@@ -578,6 +582,18 @@ function controllerNpcTrader:filterTradeList(searchText)
     local lowerSearch = searchText:lower()
     local filteredItems = {}
 
+    -- where the chosen row stood before the list changes (after a sale the
+    -- next row takes its place)
+    local previousIndex
+    if self.selectedItem and self.currentList then
+        for index, item in ipairs(self.currentList) do
+            if item == self.selectedItem then
+                previousIndex = index
+                break
+            end
+        end
+    end
+
     for _, item in ipairs(self.allTradeItems) do
         local includeItem = true
         if searchText ~= "" and not item.name:lower():find(lowerSearch, 1, true) then
@@ -637,15 +653,25 @@ function controllerNpcTrader:filterTradeList(searchText)
                 end
             end
         end
-        -- When selling, don't keep a selection that has nothing left to sell:
-        -- advance to the top of the re-sorted list (highest remaining stock) so
-        -- spamming Sell drains each stack and moves on to the next sellable item.
+        -- When selling, a row with nothing left to sell gives its place to the
+        -- row that comes up into it, so pressing Sell again goes on down the
+        -- list. It used to jump back to the top, and the next Sell sold the
+        -- item up there, one the player may have meant to keep.
+        local pick
         if found and self.tradeMode == controllerNpcTrader.SELL and self.selectedItem
                 and self:getSellQuantity(self.selectedItem.ptr) <= 0 then
             found = false
+            local equippedCounts = self:getEquippedCounts()
+            for index = math.min(previousIndex or 1, #self.tradeItems), 1, -1 do
+                local item = self.tradeItems[index]
+                if item and self:getSellQuantity(item.ptr, equippedCounts) > 0 then
+                    pick = item
+                    break
+                end
+            end
         end
         if not found then
-            self:selectTradeItem(self.tradeItems[1])
+            self:selectTradeItem(pick or self.tradeItems[1])
         end
     else
         self.selectedItem = nil
@@ -655,7 +681,8 @@ end
 
 -- asked to sell the loot pouch itself, the server sells everything the NPC
 -- buys from every bag the player carries; equipped, rarity, tiered and imbued
--- items, tools and the supplies the NPC sells stay
+-- items, tools and the stackable supplies the NPC sells (potions, runes,
+-- ammunition, food) stay
 local LOOT_POUCH_ID = 23721
 
 function controllerNpcTrader:sellLoot()
@@ -680,7 +707,7 @@ function controllerNpcTrader:confirmSellLoot()
         self:sellLoot()
     end
     self.sellLootBox = displayGeneralBox(tr('Sell all'),
-        tr('Sell everything in your bags that this NPC buys?\nEquipped items, rarity items, tools and the supplies this NPC sells are kept.'),
+        tr('Sell everything in your bags that this NPC buys?\nEquipped items, rarity items, tools and the potions, runes, ammunition and food this NPC sells are kept.'),
         { { text = tr('Yes'), callback = yes }, { text = tr('No'), callback = close } }, yes, close)
 end
 
