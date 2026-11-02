@@ -115,7 +115,7 @@ WIKI_GROUPS = {
     { section = 'mythos', title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { section = 'mythos', title = 'Itens raros', pages = { 'items', 'grades', 'quality', 'pools' } },
     { section = 'mythos', title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
-    { section = 'mythos', title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'ascensao', 'vip' } },
+    { section = 'mythos', title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'bosses', 'ascensao', 'vip' } },
     { section = 'mythos', title = 'Loot', pages = { 'autoloot' } },
 }
 
@@ -158,6 +158,7 @@ WIKI_PAGES.mythos = {
             { page = 'affixes', title = 'Bônus', text = 'Cada bônus, quanto rola e como eles somam.', item = 3296, shader = 'Rarity - Mythic' },
             { page = 'huntboard', title = 'Hunt Board', text = 'Rates de XP e loot de cada monstro, sorteadas a cada 2 horas.', outfit = 121 },
             { page = 'hunttasks', title = 'Hunt Tasks', text = 'A task diária, a Trilha do Caçador e os Hunt Points.', item = 3043 },
+            { page = 'bosses', title = 'Bosses e Provas', text = 'Mais de 100 bosses pela janela Bosses e as Provas de Vocação.', outfit = 12 },
             { page = 'ascensao', title = 'Ascensão', text = 'Os caminhos de cada vocação e seus skillshots.', item = 3155 },
             { page = 'rates', title = 'Rates e experiência', text = 'As rates do servidor e o que as aumenta.', item = 239 },
             { page = 'vip', title = 'VIP', text = 'O que o VIP dá e como conseguir.', item = 3381 },
@@ -260,6 +261,36 @@ WIKI_PAGES.ascensao = {
         { 'lead', 'A Ascensão é a árvore de poder de cada vocação: três caminhos com cinco círculos cada, que melhoram as suas magias e liberam uma magia nova por caminho.' },
         { 'ascensaoinfo' },
         { 'links', { 'spells' } },
+    },
+}
+
+WIKI_PAGES.bosses = {
+    menu = 'Bosses e Provas',
+    title = 'Bosses e Provas de Vocação',
+    blocks = {
+        { 'lead', 'A janela Bosses (barra Mythos) leva você e o seu time até a sala da alavanca de mais de 100 bosses: os das quests do mapa oficial, os das raids e os old school, como Demodras, Orshabaal, Morgaroth e Ferumbras.' },
+        { 'h', 'Como funciona' },
+        { 'p', 'De uma área protegida, ou fora de combate, escolha o boss e vá para a sala dele. O time fica nos pisos marcados e alguém puxa a alavanca: todos entram na arena e o boss aparece. Quando ele morre, abre um portal de volta para o templo onde vocês entraram.' },
+        { 'table', widths = { 150, 370 }, head = { 'Regra', 'Como é' },
+          rows = {
+              { 'Nível', 'Cada boss pede um nível de todo o time. Nos bosses das arenas novas é o nível em que um time de 2 ou 3 mata o boss com folga' },
+              { 'Espera', '4 horas entre duas lutas contra o mesmo boss; 20 horas nas Provas de Vocação' },
+              { 'Tempo', '20 minutos para matar o boss; depois a arena esvazia' },
+              { 'Time', 'De 1 a 5 jogadores, nos pisos marcados' },
+          } },
+        { 'p', 'A janela mostra o que impede a luta antes de você ir: o nível, a sua espera, a de alguém da sua party ou um time que já está lutando.' },
+        { 'h', 'Loot nas reward bags' },
+        { 'p', 'O loot dos bosses vai para reward bags de quem lutou, conforme o dano e a cura de cada um. Elas ficam no baú de recompensas (Reward Chest) dos templos.' },
+        { 'h', 'Provas de Vocação' },
+        { 'p', 'Quatro arenas da mesma janela, cada uma com um guardião e os monstros dele. Quem estiver vivo na arena quando o guardião morre ganha um item da própria vocação, uma vez por personagem em cada prova. Depois disso a prova ainda vale pela experiência e pelo loot.' },
+        { 'table', widths = { 60, 150, 310 }, head = { 'Nível', 'Guardião', 'Prêmio' },
+          rows = {
+              { '100', 'Gravelord Oshuran', 'Royal Draken Mail, Elite Draken Helmet, Royal Scale Robe ou Merudri Scale Mail' },
+              { '200', 'Mr. Punish', 'Ornate Chestplate, Gnome Armor, Thundermind ou Frostmind Raiment, Ice Robe' },
+              { '300', 'Bragrumol', 'Arma Falcon da vocação' },
+              { '400', 'Tazhadur', 'Arma Soul da vocação' },
+          } },
+        { 'p', 'Nas armas, o knight ganha a da sua melhor skill (espada, machado ou clava) e o paladin ganha besta se estiver usando uma. Como toda recompensa de quest, o item pode sair raro. As provas também aparecem na janela Quests, junto das cavernas.' },
     },
 }
 
@@ -745,6 +776,7 @@ WIKI_PAGES.autoloot = {
               { '4', 'A backpack principal, se "Usar a backpack principal se faltar bag" estiver marcado' },
           } },
         { 'p', 'Se nenhuma dessas existir, o item fica no corpo. Bags e backpacks que caem no loot não entram na loot pouch: vão para a bag da categoria ou para a backpack principal. Itens da Store vão para a Store Inbox.' },
+        { 'p', 'Só o auto loot e o "Pegar loot do corpo" põem itens na loot pouch. Arrastar um item para dentro dela não funciona, mas tirar itens de lá funciona normal.' },
         { 'h', 'Quando precisa clicar no corpo' },
         { 'p', 'Clique com o botão direito no corpo e escolha "Pegar loot do corpo". O servidor anda até o corpo e pega de novo tudo que está com Pegar marcado. Use depois de liberar espaço ou peso, ou quando o corpo estava longe ou atrás de alguma coisa.' },
         { 'p', '"Pegar loot do corpo" segue a mesma lista, então um item desmarcado continua no corpo. Para levar um item desmarcado, escolha "Abrir" e arraste o item para a sua bag.' },
