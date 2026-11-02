@@ -43,3 +43,9 @@ cabeça, os ecos e o rastro seguem os passos), o rastro e o feixe esticados
 `scripts/ascensao/06_sorcerer.lua`). As prévias estáticas da janela
 (`modules/game_ascensao/images/previas/`) são as do designer, com o nome da
 magia.
+
+O Meteoro saiu da arte v2: o dono do servidor quis uma magia com a cara do
+Tibia e leve para a placa de vídeo. O servidor o desenha com os efeitos do
+próprio Tibia (fumaça vermelha na área 3x3, a rocha grande caindo com bolas
+de fogo, a explosão da Great Fireball e as chamas no chão) e a prévia da
+janela da Ascensão é um quadro desses sprites.
