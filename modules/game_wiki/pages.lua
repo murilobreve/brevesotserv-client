@@ -745,6 +745,7 @@ WIKI_PAGES.autoloot = {
               { '4', 'A backpack principal, se "Usar a backpack principal se faltar bag" estiver marcado' },
           } },
         { 'p', 'Se nenhuma dessas existir, o item fica no corpo. Bags e backpacks que caem no loot não entram na loot pouch: vão para a bag da categoria ou para a backpack principal. Itens da Store vão para a Store Inbox.' },
+        { 'p', 'Só o auto loot e o "Pegar loot do corpo" põem itens na loot pouch. Arrastar um item para dentro dela não funciona, mas tirar itens de lá funciona normal.' },
         { 'h', 'Quando precisa clicar no corpo' },
         { 'p', 'Clique com o botão direito no corpo e escolha "Pegar loot do corpo". O servidor anda até o corpo e pega de novo tudo que está com Pegar marcado. Use depois de liberar espaço ou peso, ou quando o corpo estava longe ou atrás de alguma coisa.' },
         { 'p', '"Pegar loot do corpo" segue a mesma lista, então um item desmarcado continua no corpo. Para levar um item desmarcado, escolha "Abrir" e arraste o item para a sua bag.' },
