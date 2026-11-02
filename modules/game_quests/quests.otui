@@ -17,7 +17,7 @@ QuestRow < BrevesRow
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 8
-    width: 84
+    width: 68
     text-align: right
     font: verdana-11px-antialised
     phantom: true
@@ -89,7 +89,7 @@ QuestMonster < UIWidget
     color: #9789b3
     phantom: true
 
-// a reward the player may pick at the chest
+// a reward the player may pick at the chest, or one of a prize (with how many)
 QuestReward < BrevesCell
   size: 38 38
 
@@ -98,6 +98,17 @@ QuestReward < BrevesCell
     anchors.centerIn: parent
     size: 32 32
     virtual: true
+    phantom: true
+
+  Label
+    id: count
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin-right: 2
+    margin-bottom: 1
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #f3dcae
     phantom: true
 
 // one line of the card: what on the left, how much on the right
@@ -134,7 +145,7 @@ QuestTab < BrevesTab
 
 MythosWindow
   id: questsWindow
-  size: 760 600
+  size: 760 640
   @onEscape: modules.game_quests.hide()
 
   QuestTab
@@ -288,17 +299,35 @@ MythosWindow
         cell-spacing: 4
         flow: true
 
+    // what a prize gives beside its items: gold, Rarity XP
+    Label
+      id: prizeText
+      anchors.top: rewards.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 3
+      height: 14
+      font: verdana-11px-antialised
+      color: #f3dcae
+
     QuestStat
       id: steps
-      anchors.top: rewards.bottom
+      anchors.top: prizeText.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 2
 
+    // more of the strongest monster around the chest (challenge quests)
+    QuestStat
+      id: guards
+      anchors.top: steps.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+
     // how it goes, or why the player cannot go yet (quests.lua: renderCard)
     BrevesNote
       id: note
-      anchors.top: steps.bottom
+      anchors.top: guards.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.bottom: go.top

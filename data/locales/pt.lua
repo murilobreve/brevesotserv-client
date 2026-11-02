@@ -1382,10 +1382,16 @@ locale = {
     ["From a protection zone, or out of combat, the button takes you to the entrance of the cave. The chest is at its far end; the Voltar portals take you back to the temple."] = "De uma área protegida, ou fora de combate, o botão leva você à entrada da caverna. O baú fica no fim dela; os portais Voltar levam de volta ao templo.",
     ["Go to the quest"] = "Ir para a quest",
     ["%d quests, %d for you to do. Each one is a cave of the official map with a chest at its far end."] = "%d quests, %d para você fazer. Cada uma é uma caverna do mapa oficial com um baú no fim.",
-    ["Level %d  -  %d monsters"] = "Level %d  -  %d monstros",
+    ["Level %d - %d monsters"] = "Level %d - %d monstros",
     ["Search quest, monster or item"] = "Buscar quest, monstro ou item",
     ["Caves with a reward chest at the end."] = "Cavernas com um baú de recompensa no fim.",
-    ["Quests of level 50 to 250: caves of the official map with their own monsters and a chest at the far end. Each one gives an item of your vocation, once per character."] = "Quests de level 50 a 250: cavernas do mapa oficial com monstros próprios e um baú no fim. Cada uma dá um item da sua vocação, uma vez por personagem.",
+    ["Quests of level 50 to 1000: caves of the official map with their own monsters and a chest at the far end, once per character. Up to level 250, an item of your vocation; from level 150, challenges with guards at the chest and a prize for every vocation."] = "Quests de level 50 a 1000: cavernas do mapa oficial com monstros próprios e um baú no fim, uma vez por personagem. Até o level 250, um item da sua vocação; a partir do 150, desafios com guardas no baú e um prêmio para qualquer vocação.",
+    ["Level %d challenge"] = "Desafio de level %d",
+    ["Reward: all of this, for every vocation"] = "Recompensa: tudo isto, para qualquer vocação",
+    ["+ %s gold in the bank"] = "+ %s de gold no banco",
+    ["+ %d Rarity XP"] = "+ %d Rarity XP",
+    ["Guarding the chest"] = "Guardando o baú",
+    ["Level %d - %d monsters - challenge"] = "Level %d - %d monstros - desafio",
   }
 }
 
