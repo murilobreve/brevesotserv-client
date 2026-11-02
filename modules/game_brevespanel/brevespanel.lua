@@ -34,7 +34,7 @@ local FEATURES = {
       news = 'The bosses of the official quests, each in its own lever room: pick one, go there with your team and pull the lever. The list shows your wait for each.' },
     { id = 'quests', group = 'hunt', label = 'Quests', icon = 'quests',
       tip = 'Caves with a reward chest at the end.',
-      news = 'Quests of level 50 to 250: caves of the official map with their own monsters and a chest at the far end. Each one gives an item of your vocation, once per character.' },
+      news = 'Quests of level 50 to 1000: caves of the official map with their own monsters and a chest at the far end, once per character. Up to level 250, an item of your vocation; from level 150, challenges with guards at the chest and a prize for every vocation.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',

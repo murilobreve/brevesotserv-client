@@ -106,6 +106,21 @@ local function statusOf(quest)
     return tr('To do'), '#e0c060'
 end
 
+-- the monsters of a quest, the strongest first
+local function strongestFirst(quest)
+    local list = {}
+    for _, monster in ipairs(quest.monsters or {}) do
+        list[#list + 1] = monster
+    end
+    table.sort(list, function(a, b)
+        if (a.experience or 0) ~= (b.experience or 0) then
+            return (a.experience or 0) > (b.experience or 0)
+        end
+        return a.name < b.name
+    end)
+    return list
+end
+
 local function findQuest(key)
     for _, quest in ipairs(state and state.quests or {}) do
         if quest.key == key then
@@ -142,6 +157,9 @@ local function shown(quest)
             end
             for _, reward in ipairs(quest.rewards or {}) do
                 names[#names + 1] = reward.name
+            end
+            for _, item in ipairs(quest.prize and quest.prize.items or {}) do
+                names[#names + 1] = item.name
             end
             return names
         end)(), ' ')):lower()
@@ -186,12 +204,12 @@ local function renderCard()
     end
     card:setText(tr('Quest'))
     card.name:setText(nameOf(quest))
-    card.level:setText(tr('Level %d quest', quest.level))
+    card.level:setText(quest.prize and tr('Level %d challenge', quest.level) or tr('Level %d quest', quest.level))
     card.text:setText(textOf(quest))
 
     card.monsters:destroyChildren()
     local count = 0
-    for index, monster in ipairs(quest.monsters or {}) do
+    for index, monster in ipairs(strongestFirst(quest)) do
         if index > 3 then
             break
         end
@@ -204,25 +222,59 @@ local function renderCard()
     -- as tall as its lines (34 each, 4 between), so the note below has room
     card.monsters:setHeight(math.max(1, count) * 38 - 4)
 
-    local rewards = rewardsFor(quest)
-    card.rewardsTitle:setText(tr('Reward: pick one at the chest'))
     card.rewards:destroyChildren()
-    for _, reward in ipairs(rewards) do
-        local cell = g_ui.createWidget('QuestReward', card.rewards)
-        cell.item:setItemId(reward.id)
-        local name = reward.name:gsub('^%l', string.upper)
-        cell:setTooltip(reward.level > 0 and tr('%s (level %d)', name, reward.level) or name)
+    local cells = 0
+    local extras = {}
+    if quest.prize then
+        -- a challenge: the same prize for every vocation, all of it
+        card.rewardsTitle:setText(tr('Reward: all of this, for every vocation'))
+        for _, item in ipairs(quest.prize.items or {}) do
+            local cell = g_ui.createWidget('QuestReward', card.rewards)
+            cell.item:setItemId(item.id)
+            cell.count:setText(item.count > 1 and tostring(item.count) or '')
+            cell:setTooltip(string.format('%dx %s', item.count, (item.name:gsub('^%l', string.upper))))
+            cells = cells + 1
+        end
+        if (quest.prize.gold or 0) > 0 then
+            extras[#extras + 1] = tr('+ %s gold in the bank', formatNumber(quest.prize.gold))
+        end
+        if (quest.prize.rarityXp or 0) > 0 then
+            extras[#extras + 1] = tr('+ %d Rarity XP', quest.prize.rarityXp)
+        end
+    else
+        card.rewardsTitle:setText(tr('Reward: pick one at the chest'))
+        for _, reward in ipairs(rewardsFor(quest)) do
+            local cell = g_ui.createWidget('QuestReward', card.rewards)
+            cell.item:setItemId(reward.id)
+            cell.count:setText('')
+            local name = reward.name:gsub('^%l', string.upper)
+            cell:setTooltip(reward.level > 0 and tr('%s (level %d)', name, reward.level) or name)
+            cells = cells + 1
+        end
     end
     -- as many lines of 38 px cells (4 between) as the rewards need
     local perLine = math.max(1, math.floor((card.rewards:getWidth() + 4) / 42))
-    local lines = math.max(1, math.ceil(#rewards / perLine))
+    local lines = math.max(1, math.ceil(cells / perLine))
     card.rewards:setHeight(lines * 42 - 4)
+    -- the gold and the Rarity XP of a prize, under its items
+    card.prizeText:setText(table.concat(extras, '   '))
+    card.prizeText:setHeight(#extras > 0 and 14 or 0)
+    card.prizeText:setMarginTop(#extras > 0 and 3 or 0)
 
     if quest.steps and quest.steps > 0 then
         setStat(card.steps, tr('Way to the chest'), tr('about %d steps', quest.steps))
         card.steps:setVisible(true)
     else
         card.steps:setVisible(false)
+    end
+    -- the guards of a challenge's chest
+    if quest.guards and (quest.guards.count or 0) > 0 then
+        setStat(card.guards, tr('Guarding the chest'), string.format('%d x %s', quest.guards.count, quest.guards.name), '#ffb36b')
+        card.guards:setVisible(true)
+        card.guards:setHeight(20)
+    else
+        card.guards:setVisible(false)
+        card.guards:setHeight(0)
     end
 
     if quest.done then
@@ -281,18 +333,17 @@ function refreshList()
         if shown(quest) then
             index = index + 1
             local row = g_ui.createWidget(index % 2 == 0 and 'QuestRowEven' or 'QuestRow', list)
-            local main = quest.monsters and quest.monsters[1]
+            local main = strongestFirst(quest)[1]
             if main then
                 row.creature:setOutfit(outfitOf(main.outfit))
             end
             row.name:setText(nameOf(quest))
-            row.info:setText(tr('Level %d  -  %d monsters', quest.level, (function()
-                local total = 0
-                for _, monster in ipairs(quest.monsters or {}) do
-                    total = total + (monster.count or 0)
-                end
-                return total
-            end)()))
+            local total = 0
+            for _, monster in ipairs(quest.monsters or {}) do
+                total = total + (monster.count or 0)
+            end
+            row.info:setText(quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
+                or tr('Level %d - %d monsters', quest.level, total))
             row.onFocusChange = function(widget, focused)
                 if focused then
                     selectQuest(quest.key)
