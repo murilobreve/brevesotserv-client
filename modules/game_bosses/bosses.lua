@@ -227,6 +227,73 @@ local function rareChances()
     return #parts > 0 and table.concat(parts, ', ') or nil
 end
 
+-- the rare boss table (the server's state.rare: BossTiers.chances): for each
+-- tier its chance when the team goes in, the rarity items of each reward bag
+-- and the odds of each grade (gamelib's RarityOdds)
+local TIER_COLORS = { pale = '#c9d6e3', ashen = '#9aa0a8', obsidian = '#9b7bff', deathlord = '#e04848' }
+
+-- 75 -> "75% de 1 item", 120 -> "1 item + 20% de outro", 300 -> "3 itens"
+local function itemsText(items)
+    items = tonumber(items) or 0
+    local whole, rest = math.floor(items / 100), items % 100
+    if whole == 0 then
+        return tr('%s de 1 item', RarityOdds.percent(rest))
+    end
+    local text = whole == 1 and tr('1 item') or tr('%d itens', whole)
+    if rest > 0 then
+        text = text .. ' ' .. tr('+ %s de outro', RarityOdds.percent(rest))
+    end
+    return text
+end
+
+local function renderRare()
+    local section = window.rare
+    local tiers = state and state.rare or {}
+    local usable = #tiers > 0 and RarityOdds ~= nil and type(tiers[1].grades) == 'table'
+    section:setVisible(usable)
+    section:setHeight(usable and (30 + 18 * (#tiers + 1)) or 0)
+    section:setMarginBottom(usable and 8 or 0)
+    section.rows:destroyChildren()
+    if not usable then
+        return
+    end
+    section:setText(tr('Boss raro: a chance ao entrar, os itens raros de cada reward bag e o grau de cada item'))
+    local head = g_ui.createWidget('BossRareRow', section.rows)
+    head.tier:setText(tr('Tier'))
+    head.chance:setText(tr('Ao entrar'))
+    head.items:setText(tr('Itens raros na bag'))
+    head.items:setTooltip(tr('Um bônus de Rarity Find aumenta esta chance.'))
+    for _, cell in ipairs({ head.tier, head.chance, head.items }) do
+        cell:setColor('#9789b3')
+    end
+    for index, grade in ipairs(tiers[1].grades) do
+        local cell = head['grade' .. index]
+        local look = ItemsDatabase.itemRarity[grade.key]
+        if cell then
+            cell:setText(look and look.label or grade.name)
+            cell:setColor(look and look.color or '#e6e0f2')
+        end
+    end
+    for index, tier in ipairs(tiers) do
+        local row = g_ui.createWidget('BossRareRow', section.rows)
+        if index % 2 == 1 then
+            row:setBackgroundColor('#ffffff07')
+        end
+        row.tier:setText(tier.name)
+        row.tier:setColor(TIER_COLORS[tier.key] or '#e6e0f2')
+        row.chance:setText(RarityOdds.percent(tier.chance))
+        row.items:setText(itemsText(tier.items))
+        for g, grade in ipairs(tier.grades or {}) do
+            local cell = row['grade' .. g]
+            local look = ItemsDatabase.itemRarity[grade.key]
+            if cell then
+                cell:setText(RarityOdds.percent(grade.chance))
+                cell:setColor(look and look.color or '#d1ccd9')
+            end
+        end
+    end
+end
+
 -- the lines of the card that change by the second: the player's wait, the
 -- arena, and what would stop the lever
 local function renderWaits(boss)
@@ -302,6 +369,7 @@ local function updateStatuses()
         renderWaits(boss)
     end
     if window then
+        renderRare()
         local rare = rareChances()
         if rare then
             window.summary:setText(tr('%d bosses, %d prontos para você. Boss raro ao entrar: %s.', #state.bosses, ready, rare))

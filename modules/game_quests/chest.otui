@@ -117,6 +117,41 @@ MythosWindow
     font: verdana-11px-antialised
     color: #8f86a3
 
+  // the odds that the reward comes out a rarity item (quests.lua: showChest)
+  Label
+    id: rarityTitle
+    anchors.top: hint.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 10
+    height: 14
+    text-align: center
+    font: verdana-11px-antialised
+    color: #cbc0e0
+
+  UIRarityBar
+    id: rarityBar
+    anchors.top: rarityTitle.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 3
+    height: 8
+    padding: 1
+    background-color: #3b3449
+    border-width: 1
+    border-color: #514553
+
+  Label
+    id: rarityText
+    anchors.top: rarityBar.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 3
+    height: 28
+    text-align: center
+    font: verdana-11px-antialised
+    color: #b4afc3
+
   Label
     id: result
     anchors.left: parent.left
