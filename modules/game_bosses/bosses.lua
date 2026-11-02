@@ -235,16 +235,8 @@ local function renderWaits(boss)
     end
     local warnings = warningsOf(boss)
     if #warnings > 0 then
-        local text = table.concat(warnings, '\n')
-        if boss.reward then
-            text = text .. '\n\n' .. boss.reward
-        end
-        card.note:setText(text)
+        card.note:setText(table.concat(warnings, '\n'))
         card.note:setColor('#ffb36b')
-    elseif boss.reward then
-        -- a vocation trial: what this player gets from it (already Latin-1)
-        card.note:setText(boss.reward)
-        card.note:setColor('#e8c66a')
     else
         card.note:setText(tr('De uma área protegida, ou fora de combate, você vai à sala da alavanca. Puxe com o time nos pisos marcados; quando o boss morre, abre um portal de volta.'))
         card.note:setColor('#b4afc3')
