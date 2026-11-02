@@ -1,0 +1,332 @@
+// a quest of the list: its main monster, name, level and the player's state
+QuestRow < BrevesRow
+  height: 42
+  padding: 2
+
+  UICreature
+    id: creature
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    size: 36 36
+    creature-size: 36
+    phantom: true
+
+  Label
+    id: status
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    width: 84
+    text-align: right
+    font: verdana-11px-antialised
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: creature.right
+    anchors.right: status.left
+    margin-top: 6
+    margin-left: 8
+    height: 14
+    color: #e9e6f0
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 3
+    height: 14
+    font: verdana-11px-monochrome
+    color: #9789b3
+    phantom: true
+
+QuestRowEven < QuestRow
+  background-color: #ffffff07
+
+// a monster of the cave: portrait, name, how many and its experience
+QuestMonster < UIWidget
+  height: 34
+  phantom: true
+
+  BrevesCell
+    id: cell
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    size: 34 34
+    phantom: true
+
+  UICreature
+    id: creature
+    anchors.centerIn: cell
+    size: 32 32
+    creature-size: 32
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: cell.top
+    anchors.left: cell.right
+    anchors.right: parent.right
+    margin-top: 3
+    margin-left: 8
+    height: 14
+    font: verdana-11px-antialised
+    color: #e6e0f2
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: name.right
+    margin-top: 1
+    height: 14
+    font: verdana-11px-antialised
+    color: #9789b3
+    phantom: true
+
+// a reward the player may pick at the chest
+QuestReward < BrevesCell
+  size: 38 38
+
+  UIItem
+    id: item
+    anchors.centerIn: parent
+    size: 32 32
+    virtual: true
+    phantom: true
+
+// one line of the card: what on the left, how much on the right
+QuestStat < UIWidget
+  height: 20
+  phantom: true
+
+  Label
+    id: key
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #9789b3
+    phantom: true
+
+  Label
+    id: value
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #e6e0f2
+    phantom: true
+
+QuestHeading < Label
+  height: 16
+  font: verdana-11px-antialised
+  color: #cbc0e0
+
+QuestTab < BrevesTab
+  size: 96 24
+  anchors.top: parent.top
+
+MythosWindow
+  id: questsWindow
+  size: 760 600
+  @onEscape: modules.game_quests.hide()
+
+  QuestTab
+    id: allTab
+    anchors.left: parent.left
+    !text: tr('All quests')
+    @onClick: modules.game_quests.setFilter('all')
+
+  QuestTab
+    id: openTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('To do')
+    @onClick: modules.game_quests.setFilter('open')
+
+  QuestTab
+    id: doneTab
+    anchors.left: prev.right
+    margin-left: 4
+    !text: tr('Completed')
+    @onClick: modules.game_quests.setFilter('done')
+
+  MythosTextEdit
+    id: search
+    anchors.right: parent.right
+    anchors.verticalCenter: allTab.verticalCenter
+    width: 210
+    !placeholder: tr('Search quest, monster or item')
+    @onTextChange: modules.game_quests.refreshList()
+
+  MythosSeparator
+    id: topSep
+    anchors.top: allTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  Label
+    id: summary
+    anchors.top: topSep.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 6
+    height: 16
+    font: verdana-11px-antialised
+    color: #cbc0e0
+
+  BrevesList
+    id: list
+    anchors.top: summary.bottom
+    anchors.left: parent.left
+    anchors.bottom: message.top
+    margin-top: 4
+    margin-bottom: 6
+    width: 350
+    focusable: false
+    vertical-scrollbar: scroll
+
+  MythosScrollBar
+    id: scroll
+    anchors.top: list.top
+    anchors.bottom: list.bottom
+    anchors.left: list.right
+    step: 42
+    pixel-scroll: true
+
+  BrevesSection
+    id: card
+    anchors.top: list.top
+    anchors.left: scroll.right
+    anchors.right: parent.right
+    anchors.bottom: list.bottom
+    margin-left: 10
+    padding: 30 12 12 12
+
+    Label
+      id: name
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 18
+      text-align: center
+      font: Verdana Bold-11px
+      color: #f3f0fa
+
+    Label
+      id: level
+      anchors.top: name.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      height: 14
+      text-align: center
+      font: verdana-11px-antialised
+      color: #b296f5
+
+    BrevesNote
+      id: text
+      anchors.top: level.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 8
+      text-auto-resize: false
+      height: 44
+
+    MythosSeparator
+      id: cardSep
+      anchors.top: text.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+
+    QuestHeading
+      id: monstersTitle
+      anchors.top: cardSep.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+      !text: tr('Monsters of the cave')
+
+    UIWidget
+      id: monsters
+      anchors.top: monstersTitle.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      height: 110
+      phantom: true
+      layout:
+        type: verticalBox
+        spacing: 4
+
+    QuestHeading
+      id: rewardsTitle
+      anchors.top: monsters.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+
+    UIWidget
+      id: rewards
+      anchors.top: rewardsTitle.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      height: 80
+      phantom: true
+      layout:
+        type: grid
+        cell-size: 38 38
+        cell-spacing: 4
+        flow: true
+
+    QuestStat
+      id: steps
+      anchors.top: rewards.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+
+    // how it goes, or why the player cannot go yet (quests.lua: renderCard)
+    BrevesNote
+      id: note
+      anchors.top: steps.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: go.top
+      margin-top: 4
+      margin-bottom: 6
+      text-auto-resize: false
+
+    MythosPrimaryButton
+      id: go
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 28
+      !text: tr('Go to the quest')
+      @onClick: modules.game_quests.goSelected()
+
+  Label
+    id: message
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 8
+    height: 16
+    font: verdana-11px-antialised
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    !text: tr('Close')
+    @onClick: modules.game_quests.hide()
