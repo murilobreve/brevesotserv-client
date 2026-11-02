@@ -173,6 +173,18 @@ local function updateTeleportButton(button, which, available)
     end
 end
 
+-- "A, B e C": the relatives whose kills also count for a task (the server's
+-- `also`, HuntTaskConfig.species)
+local function alsoText(also)
+    if type(also) ~= 'table' or #also == 0 then
+        return nil
+    end
+    if #also == 1 then
+        return also[1]
+    end
+    return table.concat(also, ', ', 1, #also - 1) .. ' e ' .. also[#also]
+end
+
 local function renderDaily()
     local card = window.tasksPanel.dailyCard
     local daily = state.daily
@@ -216,9 +228,11 @@ local function renderDaily()
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
     card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms))
-    card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
+    local dailyAlso = alsoText(daily.also)
+    card.extra:setText(dailyAlso and tr('Mate %d %s (valem também: %s). Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster, dailyAlso)
+        or tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
     local cost = state.rerollCost or 0
-    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar monstro (grátis)'))
+    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar (grátis)'))
     card.action.onClick = function()
         if cost > 0 then
             closeRerollBox()
@@ -273,7 +287,9 @@ local function renderTrailCard()
         end
         card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms))
         local following = steps[trail.index + 1]
-        card.extra:setText(following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!'))
+        local upcoming = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
+        local stepAlso = alsoText(step.also)
+        card.extra:setText(stepAlso and (tr('Valem também: %s.', stepAlso) .. ' ' .. upcoming) or upcoming)
         updateTeleportButton(card.action2, 'trail', state.teleportTrail)
     end
     card.action:setText(tr('Ver trilha completa'))

@@ -111,7 +111,8 @@ TaskCard < BrevesSection
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 2
-    height: 30
+    // three lines: a task's monster with the relatives that count for it
+    height: 44
     text-wrap: true
     font: verdana-11px-monochrome
     color: #9789b3
