@@ -31,3 +31,8 @@ Any change touching client-assets auto-installation must preserve the runtime co
    - Explicitly state tested install paths and expected runtime load behavior.
 
 Reference: `docs/client-assets-auto-install.md`
+
+## Per-Kill Hot Paths
+
+- An area spell that kills many monsters brings, in one frame, a text message, experience, capacity and inventory counts per corpse. Handlers of those signals (`g_game.onTextMessage`, `LocalPlayer` experience/level/capacity, `g_game.updateInventoryItems`, extended opcodes sent on kills or level ups) must not redo a whole window or list each time: update once on the next frame (`scheduleEvent(fn, 1)` behind a pending flag, as `game_skills`, the stats bar and `game_actionbar` do), or only when the window is visible (`game_ascensao`).
+- Validate in the browser client: 30 monsters killed together with a normal character, `g_stats` per packet type before and after; the frame of the kills must not grow with what the change adds.

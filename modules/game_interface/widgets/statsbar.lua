@@ -399,6 +399,19 @@ function StatsBar.reloadCurrentStatsBarQuickInfo_state(localPlayer, now, old)
     end)
 end
 
+-- the experience of an area spell's kills comes many times in one frame:
+-- the bar shows the last value once, on the next frame
+local deepInfoEvent
+function StatsBar.reloadCurrentStatsBarDeepInfoSoon()
+    if deepInfoEvent then
+        return
+    end
+    deepInfoEvent = scheduleEvent(function()
+        deepInfoEvent = nil
+        StatsBar.reloadCurrentStatsBarDeepInfo()
+    end, 1)
+end
+
 function StatsBar.reloadCurrentStatsBarDeepInfo()
     local player = g_game.getLocalPlayer()
     if not player then
@@ -741,8 +754,8 @@ function StatsBar.init()
     end
 
     statsBarDeepInfo = {
-        onExperienceChange = StatsBar.reloadCurrentStatsBarDeepInfo,
-        onLevelChange = StatsBar.reloadCurrentStatsBarDeepInfo,
+        onExperienceChange = StatsBar.reloadCurrentStatsBarDeepInfoSoon,
+        onLevelChange = StatsBar.reloadCurrentStatsBarDeepInfoSoon,
         onHealthChange = StatsBar.reloadCurrentStatsBarQuickInfo,
         onManaChange = StatsBar.reloadCurrentStatsBarQuickInfo,
         onManaShieldChange = StatsBar.reloadCurrentStatsBarQuickInfo,
