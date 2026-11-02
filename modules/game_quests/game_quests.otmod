@@ -1,0 +1,9 @@
+Module
+  name: game_quests
+  description: Quests - the quest caves of the server, their monsters, rewards and the way there
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ quests ]
+  @onLoad: init()
+  @onUnload: terminate()

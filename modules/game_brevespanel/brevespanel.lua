@@ -9,7 +9,7 @@
 -- button, which they use like the old toolbar button (setOn, setTooltip).
 -- point() puts a callout over a row (NEW RATES over Teleports).
 
-local NEWS_VERSION = 11
+local NEWS_VERSION = 12
 
 -- rows are shown in this order, whatever order the modules load in
 local FEATURES = {
@@ -32,6 +32,9 @@ local FEATURES = {
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
     { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses',
       news = 'The bosses of the official quests, each in its own lever room: pick one, go there with your team and pull the lever. The list shows your wait for each.' },
+    { id = 'quests', group = 'hunt', label = 'Quests', icon = 'quests',
+      tip = 'Caves with a reward chest at the end.',
+      news = 'Quests of level 50 to 250: caves of the official map with their own monsters and a chest at the far end. Each one gives an item of your vocation, once per character.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
@@ -85,7 +88,7 @@ local density = FULL
 -- when the bar is short of room the rows give up their names one at a time,
 -- the least needed first and the task rows last (resize); each one keeps its
 -- icon and its state (ON / OFF, points, minutes), its name in the tooltip
-local COLLAPSE_ORDER = { 'fullscreen', 'wiki', 'messages', 'board', 'bosses', 'ascensao', 'bonus', 'loot', 'rarity', 'healbot', 'rates', 'taskshop', 'trail', 'tasks' }
+local COLLAPSE_ORDER = { 'fullscreen', 'wiki', 'messages', 'board', 'quests', 'bosses', 'ascensao', 'bonus', 'loot', 'rarity', 'healbot', 'rates', 'taskshop', 'trail', 'tasks' }
 local levels = {} -- row id -> its own density in this layout (else `density`)
 local tiny = false -- the sections show their icon without their title
 local vipHidden = false -- the VIP button left out: the last step (resize)
