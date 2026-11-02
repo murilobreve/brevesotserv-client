@@ -70,14 +70,49 @@ local function setupUIButtons()
     end
 end
 
+-- an area spell's kills change the experience (and the level percent with
+-- it) and the capacity many times in one frame: the window shows the last
+-- values once, on the next frame
+local refreshEvent
+local refreshKeys = {}
+local function refreshSoon(key)
+    refreshKeys[key] = true
+    if refreshEvent then
+        return
+    end
+    refreshEvent = scheduleEvent(function()
+        refreshEvent = nil
+        local keys = refreshKeys
+        refreshKeys = {}
+        local player = g_game.getLocalPlayer()
+        if not player or not g_game.isOnline() then
+            return
+        end
+        if keys.experience then
+            onExperienceChange(player, player:getExperience()) -- the level too
+        elseif keys.level then
+            onLevelChange(player, player:getLevel(), player:getLevelPercent())
+        end
+        if keys.capacity then
+            onFreeCapacityChange(player, player:getFreeCapacity())
+        end
+    end, 1)
+end
+
 function skillController:onInit()
     skillController:registerEvents(LocalPlayer, {
-        onExperienceChange = onExperienceChange,
-        onLevelChange = onLevelChange,
+        onExperienceChange = function()
+            refreshSoon('experience')
+        end,
+        onLevelChange = function()
+            refreshSoon('level')
+        end,
         onHealthChange = onHealthChange,
         onManaChange = onManaChange,
         onSoulChange = onSoulChange,
-        onFreeCapacityChange = onFreeCapacityChange,
+        onFreeCapacityChange = function()
+            refreshSoon('capacity')
+        end,
         onTotalCapacityChange = onTotalCapacityChange,
         onBaseCapacityChange = onBaseCapacityChange,
         onStaminaChange = onStaminaChange,

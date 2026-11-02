@@ -709,12 +709,25 @@ function onMultiUseCooldown(multiUseCooldown)
     end
 end
 
+-- the server sends the inventory's counts after every item that comes in,
+-- and the auto loot of an area spell's corpses brings dozens in a moment:
+-- the hotkeys' items are counted again once, on the next frame
+local inventoryEvent
 function updateInventoryItems(_)
-    for _, widgetList in pairs(cachedItemWidget) do
-        for _, widget in pairs(widgetList) do
-            updateButtonState(widget)
-        end
+    if inventoryEvent then
+        return
     end
+    inventoryEvent = scheduleEvent(function()
+        inventoryEvent = nil
+        if not g_game.isOnline() then
+            return
+        end
+        for _, widgetList in pairs(cachedItemWidget) do
+            for _, widget in pairs(widgetList) do
+                updateButtonState(widget)
+            end
+        end
+    end, 1)
 end
 
 --- Updates visible widgets externally

@@ -266,6 +266,8 @@ function show()
     if not window then
         return
     end
+    -- the last state the server sent, until the new one comes
+    refresh()
     window:show()
     window:raise()
     window:focus()
@@ -312,7 +314,12 @@ local function onOpcode(protocol, opcode, data)
             window:raise()
             window:focus()
         end
-        refresh()
+        -- a hidden window is drawn when it shows: a level up sends the state
+        -- again, and drawing every path of a closed window was a hitch in
+        -- the middle of a hunt
+        if window and window:isVisible() then
+            refresh()
+        end
     elseif data.action == 'message' and window then
         window.message:setText(data.text or '')
         window.message:setColor(data.ok and '#b6e3a6' or '#f0a0a0')
