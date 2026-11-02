@@ -67,6 +67,13 @@ if errorlevel 1 goto :falhou
 
 echo == compilando (pode demorar)
 cmake --build --preset windows-release-directx
+rem sem memoria, erro C1060 do compilador: de novo com 2 tarefas por vez.
+rem O que ja compilou fica pronto, so falta o resto.
+if errorlevel 1 (
+    echo.
+    echo == faltou memoria? compilando o resto com 2 tarefas por vez
+    cmake --build --preset windows-release-directx -j 2
+)
 if errorlevel 1 goto :falhou
 
 echo == empacotando
