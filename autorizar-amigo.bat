@@ -25,16 +25,17 @@ set "PUB=%~1"
 if not defined PUB set /p "PUB=Arraste aqui o arquivo .pub do amigo e aperte Enter: "
 if not defined PUB goto :fim
 set "PUB=%PUB:"=%"
-if not exist "%PUB%" (
-    echo ERRO: arquivo nao encontrado: %PUB%
-    goto :fim
-)
+rem (no echo of the file name inside a block: "baiak (1).pub" would close it)
+if exist "%PUB%" goto :temArquivo
+echo ERRO: arquivo nao encontrado: %PUB%
+goto :fim
+:temArquivo
 findstr /c:"PRIVATE" "%PUB%" >nul
-if not errorlevel 1 (
-    echo ERRO: esse e o arquivo PRIVADO da chave. Peca ao amigo o baiak.pub,
-    echo a parte publica, e diga a ele para nao mandar o outro para ninguem.
-    goto :fim
-)
+if errorlevel 1 goto :publica
+echo ERRO: esse e o arquivo PRIVADO da chave. Peca ao amigo o baiak.pub,
+echo a parte publica, e diga a ele para nao mandar o outro para ninguem.
+goto :fim
+:publica
 set "TIPO="
 set "BLOB="
 for /f "usebackq tokens=1,2" %%a in ("%PUB%") do if not defined TIPO (
@@ -51,10 +52,10 @@ set "NOME="
 set /p "NOME=Nome do amigo, so letras e numeros: "
 if not defined NOME goto :fim
 echo %NOME%| findstr /r /x "[A-Za-z0-9_]*" >nul
-if errorlevel 1 (
-    echo ERRO: use so letras, numeros ou _ no nome.
-    goto :fim
-)
+if not errorlevel 1 goto :nomeOk
+echo ERRO: use so letras, numeros ou _ no nome.
+goto :fim
+:nomeOk
 
 rem the line goes by stdin: no quotes to escape on the way. "restrict"
 rem takes away the shell and forwarding; whatever the friend asks, sshd
@@ -95,10 +96,10 @@ if not defined NOME (
     goto :fim
 )
 echo %NOME%| findstr /r /x "[A-Za-z0-9_]*" >nul
-if errorlevel 1 (
-    echo ERRO: nome invalido: %NOME%
-    goto :fim
-)
+if not errorlevel 1 goto :removerOk
+echo ERRO: nome invalido: %NOME%
+goto :fim
+:removerOk
 ssh -i "%CHAVE%" %VPS% "if grep -q ' mythos-amigo-%NOME%$' %AK%; then sed -i '/ mythos-amigo-%NOME%$/d' %AK% && echo 'acesso de %NOME% removido'; else echo '%NOME% nao estava autorizado'; fi"
 
 :fim
