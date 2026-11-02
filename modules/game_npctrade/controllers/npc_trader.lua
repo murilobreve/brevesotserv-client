@@ -209,6 +209,21 @@ function controllerNpcTrader:onTradeListRendered()
                     -- to a different item since this handler was bound.
                     self:onTradeItemMouseRelease(self:getRowItem(widget), widget, mousePos, mouseButton)
                 end
+                -- The focus is what shows a row as chosen, and any press takes
+                -- it: a right click for Look or Inspect too, which used to
+                -- leave Buy on the row chosen before (Inspect the Great Health
+                -- Potion, then the Health Potion, Buy: a Great Health Potion
+                -- came, at its price). The row with the focus is the one Buy
+                -- and Sell act on.
+                child.onFocusChange = function(widget, focused)
+                    if not focused then
+                        return
+                    end
+                    local rowItem = self:getRowItem(widget)
+                    if rowItem and rowItem ~= self.selectedItem then
+                        self:selectTradeItem(rowItem)
+                    end
+                end
             end
         end
         if self.shouldFocusFirst then
