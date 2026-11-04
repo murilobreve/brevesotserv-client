@@ -216,10 +216,11 @@ local function renderDaily()
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
     card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms))
-    -- the other variations of its species count too (Minotaur Mage for Minotaur)
+    -- a species task: its name is the species' ("Iks") and these are the
+    -- monsters of its hunt that count ("Iks Chuka, Iks Pututu e Iks Aucar")
     if daily.variants and daily.variants ~= '' then
-        card.extra:setText(tr('Mate %d %s. Contam também: %s.', daily.need, daily.monster, daily.variants))
-        card.name:setTooltip(tr('Contam também: %s.', daily.variants))
+        card.extra:setText(tr('Mate %d %s. Valem: %s.', daily.need, daily.monster, daily.variants))
+        card.name:setTooltip(tr('Valem: %s.', daily.variants))
     else
         card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
         card.name:setTooltip('')
@@ -263,7 +264,7 @@ local function renderTrailCard()
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
         card.name:setText(step.name or '?')
-        card.name:setTooltip(step.variants and step.variants ~= '' and tr('Contam também: %s.', step.variants) or '')
+        card.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
         card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
         setBar(card.bar, trail.kills, step.need, '#9b7bff')
@@ -281,7 +282,11 @@ local function renderTrailCard()
         end
         card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms))
         local following = steps[trail.index + 1]
-        card.extra:setText(following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!'))
+        local after = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
+        if step.variants and step.variants ~= '' then
+            after = tr('Valem: %s.', step.variants) .. ' ' .. after
+        end
+        card.extra:setText(after)
         updateTeleportButton(card.action2, 'trail', state.teleportTrail)
     end
     card.action:setText(tr('Ver trilha completa'))
@@ -348,7 +353,7 @@ local function renderTrailList()
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
             row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
-            row.name:setTooltip(step.variants and step.variants ~= '' and tr('Contam também: %s.', step.variants) or '')
+            row.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
             row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
                 .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or ''))
         end
