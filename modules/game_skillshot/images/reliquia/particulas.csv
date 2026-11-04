@@ -1,0 +1,7 @@
+momento;imagem;quantidade;atraso_ms;vida_ms;velocidade_sqm_s;espalhamento_graus;subida_sqm_s;gravidade_sqm_s2;tamanho;gira;luz
+acerto;pena_1;2;30;1200;0.9;360;0.5;0.6;0.6;1;1
+acerto;pena_2;2;30;1200;0.9;360;0.5;0.6;0.6;1;1
+acerto;pena_3;2;30;1200;0.9;360;0.5;0.6;0.6;1;1
+impacto;pena_1;4;60;1800;0.7;360;-0.2;0.15;0.7;1;1
+impacto;pena_2;4;60;1800;0.7;360;-0.2;0.15;0.7;1;1
+impacto;pena_3;4;60;1800;0.7;360;-0.2;0.15;0.7;1;1
