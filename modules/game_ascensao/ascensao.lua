@@ -323,6 +323,9 @@ local function onOpcode(protocol, opcode, data)
     elseif data.action == 'message' and window then
         window.message:setText(data.text or '')
         window.message:setColor(data.ok and '#b6e3a6' or '#f0a0a0')
+    elseif data.action == 'status' then
+        -- a relic's state: its icon beside hunger and battle (status.lua)
+        onStatus(data)
     end
 end
 
@@ -336,6 +339,7 @@ end
 local function onGameEnd()
     hide()
     state = nil
+    clearStatus()
 end
 
 function init()
@@ -353,6 +357,7 @@ end
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
+    clearStatus()
     closeConfirm()
     if window then
         window:destroy()
