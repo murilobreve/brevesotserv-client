@@ -3,6 +3,6 @@ Module
   description: Ascensao - the talent tree that teaches the aimed spells
   author: Mythos
   sandboxed: true
-  scripts: [ ascensao ]
+  scripts: [ status, ascensao ]
   @onLoad: init()
   @onUnload: terminate()
