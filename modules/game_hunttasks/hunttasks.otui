@@ -28,6 +28,17 @@ TaskBar < UIWidget
     color: #ffffff
     phantom: true
 
+// one monster of a species task, its name on hover
+TaskSpeciesCell < BrevesCell
+  size: 36 36
+
+  UICreature
+    id: creature
+    anchors.centerIn: parent
+    size: 34 34
+    creature-size: 34
+    phantom: true
+
 // the title sits in the section strip, above the padding
 TaskCard < BrevesSection
   padding: 22 8 8 8
@@ -115,6 +126,19 @@ TaskCard < BrevesSection
     text-wrap: true
     font: verdana-11px-monochrome
     color: #9789b3
+
+  // a species task: every monster that counts, side by side
+  Panel
+    id: species
+    anchors.top: extra.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    height: 36
+    visible: false
+    layout:
+      type: horizontalBox
+      spacing: 4
 
   MythosPrimaryButton
     id: action
