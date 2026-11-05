@@ -109,6 +109,32 @@ local function rewardText(experience, pointsText, charms)
     return tr('Recompensa: +%s de experiência e %s.', formatNumber(experience), pointsText)
 end
 
+-- a name too long for its label (a task of three monsters, "Many Faces /
+-- Mirror Image / Distorted Phantom") in a smaller font, so it shows whole
+local SMALLER_FONTS = { 'Verdana-10px-antialiased', 'Verdana-9px-antialiased' }
+
+local function fitText(label, text)
+    label.fullFont = label.fullFont or label:getFont()
+    label:setFont(label.fullFont)
+    label:setText(text)
+    local width = label:getWidth()
+    if width <= 0 then
+        -- not laid out yet (the window just opened): once it is
+        scheduleEvent(function()
+            if not label:isDestroyed() and label:getText() == text and label:getWidth() > 0 then
+                fitText(label, text)
+            end
+        end, 50)
+        return
+    end
+    for _, font in ipairs(SMALLER_FONTS) do
+        if label:getTextSize().width <= width then
+            break
+        end
+        label:setFont(font)
+    end
+end
+
 local function setBar(bar, value, total, color)
     total = math.max(1, total or 1)
     value = math.max(0, math.min(value or 0, total))
@@ -203,7 +229,7 @@ local function renderDaily()
 
     if not daily then
         card.creature:setVisible(false)
-        card.name:setText(tr('Nenhuma task hoje ainda'))
+        fitText(card.name, tr('Nenhuma task hoje ainda'))
         card.info:setText(tr('Um monstro do seu level com hunt na sala de teleporte de uma cidade.'))
         card.badge:setText('')
         card.bar:setVisible(false)
@@ -218,7 +244,7 @@ local function renderDaily()
 
     card.creature:setVisible(true)
     card.creature:setOutfit(outfitOf(daily.outfit))
-    card.name:setText(daily.monster)
+    fitText(card.name, daily.monster)
     card.info:setText(levelAndRooms(daily.level, daily.rooms))
     card.badge:setText(daily.hot and tr('Em alta no Hunt Board: pontos dobrados!') or '')
     card.bar:setVisible(true)
@@ -273,7 +299,7 @@ local function renderTrailCard()
     card.title:setText(tr('Trilha do Caçador'))
     if trail.finished then
         card.creature:setVisible(false)
-        card.name:setText(tr('Trilha completa!'))
+        fitText(card.name, tr('Trilha completa!'))
         card.info:setText(tr('Você venceu os %d monstros da trilha.', #steps))
         card.badge:setText('')
         card.bar:setVisible(true)
@@ -285,7 +311,7 @@ local function renderTrailCard()
         card.title:setText(tr('Trilha do Caçador, etapa %d de %d', trail.index, #steps))
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
-        card.name:setText(step.name or '?')
+        fitText(card.name, step.name or '?')
         card.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
         card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
@@ -296,7 +322,8 @@ local function renderTrailCard()
         else
             local every = math.max(1, trail.milestoneEvery or 5)
             local nextMilestone = math.ceil(trail.index / every) * every
-            card.badge:setText(tr('Próximo marco: etapa %d', nextMilestone))
+            -- none after the last step
+            card.badge:setText(nextMilestone <= #steps and tr('Próximo marco: etapa %d', nextMilestone) or '')
             card.badge:setColor('#8a8a8a')
         end
         if step.milestone then
@@ -374,7 +401,7 @@ local function renderTrailList()
             row:setId('step' .. i)
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
-            row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
+            fitText(row.name, step.milestone and (step.name .. '  (marco)') or step.name)
             row.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
             row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
                 .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or ''))
