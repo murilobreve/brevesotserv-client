@@ -9,6 +9,11 @@ local state = {
 }
 
 local DEFAULT_SETTINGS_FILE = "/settings/clientoptions.json"
+-- Mythos: a copy of every save, read in its place if the file is ever left
+-- half-written (a client closed while writing it): one of the two is always
+-- whole, and the player's hotkeys never go back to the defaults
+local BACKUP_SETTINGS_FILE = "/settings/clientoptions.backup.json"
+local BROKEN_SETTINGS_FILE = "/settings/clientoptions.broken.json"
 local DEFAULT_OPTIONS_FILE = "/modules/game_actionbar/json/cipsoft-default-options-minimal.json"
 
 local SAVED_TOP_LEVEL_KEYS = {
@@ -555,6 +560,7 @@ function ApiJson.saveData()
     end
 
     g_resources.writeFileContents(DEFAULT_SETTINGS_FILE, result)
+    g_resources.writeFileContents(BACKUP_SETTINGS_FILE, result)
 end
 
 function ApiJson.createDefaultSettings()
@@ -584,7 +590,18 @@ function ApiJson.bootstrap()
 
     if not state.array then
         if not ApiJson.loadData(DEFAULT_SETTINGS_FILE) then
-            ApiJson.createDefaultSettings()
+            -- Mythos: a file that is there but can't be read is never
+            -- replaced by the defaults: its copy comes back instead
+            if ApiJson.loadData(BACKUP_SETTINGS_FILE) then
+                g_logger.warning("[ActionBar] clientoptions.json could not be read: its copy was used")
+                ApiJson.saveData()
+            else
+                if g_resources.fileExists(DEFAULT_SETTINGS_FILE) then
+                    -- neither reads: the broken file is kept aside
+                    g_resources.writeFileContents(BROKEN_SETTINGS_FILE, g_resources.readFileContents(DEFAULT_SETTINGS_FILE))
+                end
+                ApiJson.createDefaultSettings()
+            end
         end
     end
 

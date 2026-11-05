@@ -238,6 +238,11 @@ local function load()
     end
 end
 
+-- the choices go to disk a moment after each change, not only when the
+-- client closes: closed any other way (or by the restart of an update), the
+-- bot still comes back exactly as it was, every box as it was left
+local diskEvent
+
 local function save()
     if not cfg or characterKey() == '' then
         return
@@ -245,6 +250,12 @@ local function save()
     local all = g_settings.getNode('healbot') or {}
     all[characterKey()] = toNode(cfg)
     g_settings.setNode('healbot', all)
+    if not diskEvent then
+        diskEvent = scheduleEvent(function()
+            diskEvent = nil
+            g_settings.save()
+        end, 1000)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -712,6 +723,11 @@ function terminate()
     disconnect(LocalPlayer, { onVocationChange = onVocationChange })
     disconnect(Creature, { onShieldChange = onShieldChange })
     save()
+    -- the client writes the settings itself as it closes
+    if diskEvent then
+        removeEvent(diskEvent)
+        diskEvent = nil
+    end
     HealEngine.terminate()
     if countEvent then
         removeEvent(countEvent)

@@ -35,18 +35,26 @@ bool Config::load(const std::string& file)
 {
     m_fileName = file;
 
-    if (!g_resources.fileExists(file))
-        return false;
+    // Mythos: the copy of the last save (Config::save) stands in for a file
+    // left broken, a client closed while writing it; read as empty, it was
+    // saved over at exit and every setting in it was lost
+    const std::string backup = file + ".bak";
+    for (const std::string& path : { file, backup }) {
+        if (!g_resources.fileExists(path))
+            continue;
 
-    try {
-        if (const auto& confsDoc = OTMLDocument::parse(file); confsDoc)
-            m_confsDoc = confsDoc;
-
-        return true;
-    } catch (const stdext::exception& e) {
-        g_logger.error("Unable to parse configuration file '{}': ", e.what());
-        return false;
+        try {
+            if (const auto& confsDoc = OTMLDocument::parse(path); confsDoc) {
+                m_confsDoc = confsDoc;
+                if (path != file)
+                    g_logger.warning("Configuration file '{}' could not be read, using its copy '{}'", file, path);
+                return true;
+            }
+        } catch (const stdext::exception& e) {
+            g_logger.error("Unable to parse configuration file '{}': {}", path, e.what());
+        }
     }
+    return false;
 }
 
 bool Config::unload()
@@ -63,7 +71,12 @@ bool Config::save()
 {
     if (m_fileName.length() == 0)
         return false;
-    return m_confsDoc->save(m_fileName);
+    if (!m_confsDoc->save(m_fileName))
+        return false;
+    // Mythos: and a copy, read in its place if the file is ever left
+    // half-written (Config::load): one of the two is always whole
+    m_confsDoc->save(m_fileName + ".bak");
+    return true;
 }
 
 void Config::clear()

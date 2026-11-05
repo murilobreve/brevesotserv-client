@@ -169,6 +169,14 @@ void Application::terminate()
 
     m_terminated = true;
 
+#ifndef __EMSCRIPTEN__
+    // restart(): every file is written and closed by now
+    if (m_restartPending) {
+        m_restartPending = false;
+        g_platform.spawnProcess(m_restartBinary, m_startupArgs);
+    }
+#endif
+
     signal(SIGTERM, SIG_DFL);
     signal(SIGINT, SIG_DFL);
 }
@@ -214,7 +222,17 @@ void Application::close()
 void Application::restart()
 {
     g_lua.callGlobalField<bool>("g_app", "onRestart");
+#ifdef __EMSCRIPTEN__
     g_platform.spawnProcess(g_resources.getBinaryPath(), m_startupArgs);
+#else
+    // Mythos: the new client starts in terminate(), once this one has saved
+    // its settings and closed its files. Started here, it read config.otml
+    // and the hotkeys while this one was still writing them (the restart
+    // after an update), and a half-written file came back as an empty one:
+    // the hotkeys and the heal bot were lost
+    m_restartPending = true;
+    m_restartBinary = g_resources.getBinaryPath();
+#endif
     exit();
 }
 
