@@ -173,12 +173,33 @@ local function updateTeleportButton(button, which, available)
     end
 end
 
+-- the monsters of a species task side by side under its text (its own
+-- first), each with its name on hover; nothing for a task of one monster
+local function showSpecies(card, counted)
+    local panel = card.species
+    if not panel then
+        return
+    end
+    panel:destroyChildren()
+    if type(counted) ~= 'table' or #counted == 0 then
+        panel:setVisible(false)
+        return
+    end
+    for _, monster in ipairs(counted) do
+        local cell = g_ui.createWidget('TaskSpeciesCell', panel)
+        cell.creature:setOutfit(outfitOf(monster.outfit))
+        cell:setTooltip(monster.name or '')
+    end
+    panel:setVisible(true)
+end
+
 local function renderDaily()
     local card = window.tasksPanel.dailyCard
     local daily = state.daily
     card.title:setText(tr('Task diária'))
     card.action2:setVisible(false)
     card.action:setEnabled(true)
+    showSpecies(card, daily and not daily.done and daily.counted)
 
     if not daily then
         card.creature:setVisible(false)
@@ -248,6 +269,7 @@ local function renderTrailCard()
     local trail = state.trail
     local steps = trail.steps or {}
     card.action2:setVisible(false)
+    showSpecies(card, not trail.finished and (steps[trail.index] or {}).counted)
     card.title:setText(tr('Trilha do Caçador'))
     if trail.finished then
         card.creature:setVisible(false)
