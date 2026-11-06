@@ -80,7 +80,28 @@ local function hidePreview()
     end
 end
 
-local function showPreview(anchor, skill, label)
+-- `text` broken into lines of at most `width` px in `label`'s font, by whole
+-- words. The engine's own wrap reads the Latin-1 accents as UTF-8 (the "ã"
+-- of "botão" swallows the space after it) and breaks the lines wrong
+local function wrapLines(label, text, width)
+    local lines, line = {}, ''
+    for word in text:gmatch('%S+') do
+        local candidate = line == '' and word or (line .. ' ' .. word)
+        label:setText(candidate)
+        if line ~= '' and label:getTextSize().width > width then
+            lines[#lines + 1] = line
+            line = word
+        else
+            line = candidate
+        end
+    end
+    if line ~= '' then
+        lines[#lines + 1] = line
+    end
+    return table.concat(lines, '\n')
+end
+
+local function showPreview(anchor, skill, label, use)
     hidePreview()
     local path = IMAGES .. 'previas/' .. skill
     if not g_resources.fileExists(path .. '.png') then
@@ -89,6 +110,17 @@ local function showPreview(anchor, skill, label)
     preview = g_ui.createWidget('AscensaoPreview', rootWidget)
     preview.title:setText(label)
     preview.movie:setImageSource(path)
+    -- how to cast it (the server's Ascensao.spellUse), under the picture,
+    -- broken into lines here (wrapLines)
+    if (use or '') ~= '' then
+        local label = preview.use
+        local width = preview:getWidth() - 24
+        label:setText(wrapLines(label, 'Como usar: ' .. use, width))
+        local height = label:getTextSize().height
+        label:setWidth(width)
+        label:setHeight(height)
+        preview:setHeight(preview:getHeight() + height + 6)
+    end
     local pos = anchor:getPosition()
     local x = math.min(pos.x, rootWidget:getWidth() - preview:getWidth() - 4)
     local y = pos.y + anchor:getHeight() + 4
@@ -153,7 +185,7 @@ local function drawPath(path)
         setLocked(widget.seal.icon, owned == 0)
         widget.previewArea.onHoverChange = function(self, hovered)
             if hovered then
-                showPreview(self, skill, path.skillshot .. '  -  ' .. path.words)
+                showPreview(self, skill, path.skillshot .. '  -  ' .. path.words, path.use)
             else
                 hidePreview()
             end

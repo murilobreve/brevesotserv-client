@@ -238,6 +238,16 @@ AscensaoPreview < UIWidget
     image-fixed-ratio: true
     phantom: true
 
+  // how to cast it (empty: no lines)
+  Label
+    id: use
+    anchors.top: movie.bottom
+    anchors.left: parent.left
+    margin-top: 6
+    color: #d8c89a
+    height: 0
+    phantom: true
+
 MythosWindow
   id: ascensaoWindow
   size: 900 740

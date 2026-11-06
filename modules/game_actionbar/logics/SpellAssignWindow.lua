@@ -354,6 +354,37 @@ local function showDetails(row)
         note:setText('')
         note:setHeight(0)
     end
+    -- how to cast it (the Ascensão's spells): the details and the window
+    -- grow by its lines
+    -- (broken into lines here: the engine's wrap reads the Latin-1 accents
+    -- as UTF-8 and breaks the lines wrong)
+    local use = details.useText
+    local extra = 0
+    if (info.use or '') ~= '' then
+        local width = details:getWidth() - 14
+        local lines, line = {}, ''
+        for word in (tr('How to use:') .. ' ' .. info.use):gmatch('%S+') do
+            local candidate = line == '' and word or (line .. ' ' .. word)
+            use:setText(candidate)
+            if line ~= '' and use:getTextSize().width > width then
+                lines[#lines + 1] = line
+                line = word
+            else
+                line = candidate
+            end
+        end
+        lines[#lines + 1] = line
+        use:setText(table.concat(lines, '\n'))
+        use:setHeight(use:getTextSize().height)
+        extra = use:getHeight() + 4
+    else
+        use:setText('')
+        use:setHeight(0)
+    end
+    window.baseHeight = window.baseHeight or window:getHeight()
+    details.baseHeight = details.baseHeight or details:getHeight()
+    details:setHeight(details.baseHeight + extra)
+    window:setHeight(window.baseHeight + extra)
     local box = details.statusBox
     box.status:setText(text)
     box.status:setColor(style.color)
