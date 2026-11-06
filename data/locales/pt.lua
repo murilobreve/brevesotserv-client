@@ -26,6 +26,7 @@ locale = {
     ["Spell kind: Great Beams"] = "Grandes raios",
     ["Spell kind: Virtue"] = "Virtude",
     ["aimed with the mouse"] = "mira com o mouse",
+    ["How to use:"] = "Como usar:",
     ["needs a target"] = "precisa de alvo",
     ["target or ahead"] = "alvo ou à frente",
     ["ahead of you"] = "à frente",
