@@ -152,9 +152,15 @@ function WIKI_BUILDERS.ascensaoinfo(parent)
         local skillshot = path.skillshot or {}
         if (skillshot.words or '') ~= '' then
             table.insert(rows, { { T('Magia do caminho'), WARM }, { T('%s (%s), liberada no 1º círculo', L(skillshot.label), L(skillshot.words)), PURPLE }, link = 's:' .. L(skillshot.name) })
+            if (skillshot.use or '') ~= '' then
+                table.insert(rows, { { T('Como usar'), WARM }, L(skillshot.use) })
+            end
         end
         for i, circle in ipairs(path.circles or {}) do
             table.insert(rows, { { T('%dº  %s', i, L(circle.name)), WARM }, L(circle.desc), link = (circle.spell or '') ~= '' and ('s:' .. L(circle.spell)) or nil })
+            if (circle.use or '') ~= '' then
+                table.insert(rows, { { T('Como usar'), WARM }, L(circle.use) })
+            end
         end
         tableOf(parent, { 170, 376 }, nil, rows)
     end

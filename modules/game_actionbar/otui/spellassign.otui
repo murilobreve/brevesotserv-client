@@ -267,10 +267,21 @@ SpellAssignWindow < MainWindow
       height: 0
       color: #8fd08f
 
+    // how to cast it (the Ascensão's spells, from the server); the panel
+    // and the window grow by its lines
+    Label
+      id: useText
+      anchors.top: cdrNote.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      height: 0
+      color: #d8c89a
+
     // the state of the spell: a coloured box with a bar on its left
     UIWidget
       id: statusBox
-      anchors.top: cdrNote.bottom
+      anchors.top: useText.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 6
