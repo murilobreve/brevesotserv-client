@@ -1,0 +1,9 @@
+Module
+  name: game_mythos_paperdolls
+  description: Equipment drawn on the outfit (Dragon Scale set on the male Citizen)
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ mythospaperdolls ]
+  @onLoad: init()
+  @onUnload: terminate()
