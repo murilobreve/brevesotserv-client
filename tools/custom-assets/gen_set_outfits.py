@@ -28,7 +28,8 @@ OUT = os.environ.get('SET_OUTFITS_OUT') or os.path.join(os.path.dirname(os.path.
 # item: for pieces of different sets) or 'mask' (only the pixels the outfit
 # colours paint), or 'faithful': each part with its own item's colours, its
 # gems with the item's accent colours, the item's texture over the armour,
-# and a closed helmet over the face (eyes as the dark visor slit).
+# a closed helmet over the face (eyes as the dark visor slit), and the
+# helmet item's own picture drawn on the head.
 # Items are in the order helmet, armour, legs, boots; the last field says
 # whether the helmet is closed.
 BASE = (1288, 1289)
@@ -243,11 +244,54 @@ def faithful(a, masked, look, items, closed):
     return out
 
 
+HELMET_HEIGHT = 17  # the helmet's height on the head, in pixels
+
+
+def helmet_back(icon):
+    """the helmet seen from behind: its visor and face opening filled with the shell"""
+    a = np.array(icon).astype(float)
+    on = a[..., 3] > 0
+    L = lum(a[..., :3])
+    shell = on & (L > np.percentile(L[on], 35))
+    edge = on & ~(np.roll(on, 1, 0) & np.roll(on, -1, 0) & np.roll(on, 1, 1) & np.roll(on, -1, 1))
+    fill = on & ~shell & ~edge
+    a[fill, :3] = a[shell][:, :3].mean(0) * 0.8
+    return Image.fromarray(a.astype(np.uint8))
+
+
+def put_helmets(out, part, iid):
+    """the helmet item's own picture on the head of every frame: front from
+    the south, its back from the north, narrower from the sides"""
+    icon = r.item(iid).convert('RGBA')
+    icon = icon.crop(icon.getbbox())
+    back = helmet_back(icon)
+    for fy in range(out.shape[0] // 64):
+        d = fy % 4  # North, East, South, West
+        for fx in range(out.shape[1] // 64):
+            y0, x0 = fy * 64, fx * 64
+            ys, xs = np.nonzero(part[y0:y0 + 64, x0:x0 + 64] == 1)
+            if len(ys) < 4:
+                continue
+            top = ys.min()
+            xs = xs[ys < top + 10]  # the head: the top rows of the hood
+            pic = back if d == 0 else icon
+            h = HELMET_HEIGHT
+            w = max(1, int(round(h * pic.width / pic.height * (0.8 if d in (1, 3) else 1))))
+            pic = pic.resize((w, h), Image.NEAREST)
+            if d == 3:
+                pic = pic.transpose(Image.FLIP_LEFT_RIGHT)
+            tile = Image.fromarray(out[y0:y0 + 64, x0:x0 + 64].astype(np.uint8))
+            tile.alpha_composite(pic, (int(round((xs.min() + xs.max()) / 2 - w / 2)), int(top) - 1))
+            out[y0:y0 + 64, x0:x0 + 64] = np.array(tile)
+    return out
+
+
 for name, looks, addons, colors, items, how, *rest in SETS:
     if how == 'faithful':
         for look in looks:
             a, masked = frames(look, addons, colors)
             out = faithful(a, masked, look, items, rest and rest[0])
+            out = put_helmets(out, body_parts(a, head_mask(look)), items[0])
             Image.fromarray(out.astype(np.uint8)).save(os.path.join(OUT, '%s_%d.png' % (name, look)))
             print('wrote', name, look)
         continue
