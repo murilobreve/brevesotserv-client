@@ -18,7 +18,7 @@ ASSETS, SERVER_TOOLS = sys.argv[1], sys.argv[2]
 sys.path.insert(0, SERVER_TOOLS)
 import render_sprites as rs  # noqa: E402
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art', 'set_outfits')
+OUT = os.environ.get('SET_OUTFITS_OUT') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art', 'set_outfits')
 # Every set is drawn on the same base, Dragon Slayer without addons
 # (male 1288, female 1289), so the sets only change the armour's colours.
 # name, base looktypes (male, female), addons drawn, base colours, items,
@@ -26,15 +26,19 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art', 'set_outfi
 # for a green set), 'all' (all the armour, the skin kept), 'parts' (each part
 # of the body, helmet, armour, legs and boots, with the colours of its own
 # item: for pieces of different sets) or 'mask' (only the pixels the outfit
-# colours paint). Items are in the order helmet, armour, legs, boots.
+# colours paint), or 'faithful': each part with its own item's colours, its
+# gems with the item's accent colours, the item's texture over the armour,
+# and a closed helmet over the face (eyes as the dark visor slit).
+# Items are in the order helmet, armour, legs, boots; the last field says
+# whether the helmet is closed.
 BASE = (1288, 1289)
 SETS = [
-    ('dragon_scale', BASE, 0, (82, 82, 82, 82), (3400, 3386, 3363, 10201), 'hue'),
-    ('golden', BASE, 0, (82, 82, 82, 82), (3365, 3360, 3364, 3555), 'all'),
+    ('dragon_scale', BASE, 0, (82, 82, 82, 82), (3400, 3386, 3363, 10201), 'faithful', True),
+    ('golden', BASE, 0, (82, 82, 82, 82), (3365, 3360, 3364, 3555), 'faithful', True),
     # Elite Draken Helmet, Royal Draken Mail, Zaoan Legs, Draken Boots
-    ('draken', BASE, 0, (82, 82, 82, 82), (11689, 11686, 10387, 4033), 'parts'),
+    ('draken', BASE, 0, (82, 82, 82, 82), (11689, 11686, 10387, 4033), 'faithful', False),
     # pieces of different sets: Demon Helmet, Magic Plate Armor, Golden Legs, Boots of Haste
-    ('sortido', BASE, 0, (82, 82, 82, 82), (3387, 3366, 3364, 3079), 'parts'),
+    ('sortido', BASE, 0, (82, 82, 82, 82), (3387, 3366, 3364, 3079), 'faithful', True),
 ]
 
 r = rs.Renderer(ASSETS)
@@ -147,7 +151,106 @@ def palettes(items):
     return main[np.argsort(lum(main))], accent[np.argsort(lum(accent))]
 
 
-for name, looks, addons, colors, items, how in SETS:
+def item_look(iid):
+    """an item's colours: the main material (sorted dark to light), its
+    accents (gems, trims: another hue than the material), and the texture
+    (brightness minus its local average) with where the item is drawn"""
+    a = np.array(r.item(iid).convert('RGBA')).astype(float)
+    on = a[..., 3] > 0
+    rgb = a[..., :3]
+    L = lum(rgb)
+    h = hsv(rgb)
+    ok = on & (L > 30)
+    sat = ok & (h[..., 1] > 0.25)
+    if sat.sum() > ok.sum() * 0.3:
+        # the material's hue: the most common hue among the coloured pixels
+        hist, edges = np.histogram(h[sat][:, 0], bins=24, range=(0, 1))
+        hue = (edges[hist.argmax()] + edges[hist.argmax() + 1]) / 2
+        dist = np.minimum(abs(h[..., 0] - hue), 1 - abs(h[..., 0] - hue))
+        accent = ok & (h[..., 1] > 0.4) & (dist > 0.1)
+    else:  # grey metal: the accents are the coloured bits
+        accent = ok & (h[..., 1] > 0.4)
+    main = rgb[ok & ~accent]
+    acc = rgb[accent]
+    pad = np.pad(np.where(on, L, 0), 1, mode='edge')
+    cnt = np.pad(on.astype(float), 1)
+    box = sum(np.roll(np.roll(pad, dy, 0), dx, 1) for dy in (-1, 0, 1) for dx in (-1, 0, 1))[1:-1, 1:-1]
+    num = sum(np.roll(np.roll(cnt, dy, 0), dx, 1) for dy in (-1, 0, 1) for dx in (-1, 0, 1))[1:-1, 1:-1]
+    detail = np.where(on, L - box / np.maximum(num, 1), 0)
+    ys, xs = np.nonzero(on)
+    detail = detail[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    return main[np.argsort(lum(main))], acc[np.argsort(lum(acc))] if len(acc) else acc, detail
+
+
+def grow(mask, n):
+    out = mask.copy()
+    for _ in range(n):
+        g = out.copy()
+        g[1:] |= out[:-1]; g[:-1] |= out[1:]; g[:, 1:] |= out[:, :-1]; g[:, :-1] |= out[:, 1:]
+        out = g
+    return out
+
+
+def faithful(a, masked, look, items, closed):
+    out = a.copy()
+    on = a[..., 3] > 0
+    rgb = a[..., :3]
+    h = hsv(rgb)
+    L = lum(rgb)
+    dark = on & (h[..., 2] < 0.14)
+    skin = on & ~masked & (h[..., 0] > 0.02) & (h[..., 0] < 0.11) & (h[..., 1] > 0.15) & (h[..., 1] < 0.6) & (h[..., 2] > 0.55)
+    gem = on & ~dark & ~skin & ((h[..., 0] < 0.15) | (h[..., 0] > 0.9)) & (h[..., 1] > 0.6)
+    part = body_parts(a, head_mask(look))
+    if closed:
+        # the face under a closed helmet: helmet, its darkest pixels the visor slit
+        face = skin & grow(part == 1, 3) & ~grow(part >= 3, 1)
+        part[face] = 1
+        skin = skin & ~face
+    for k, iid in enumerate(items):
+        main, acc, detail = item_look(iid)
+        mine = on & ~dark & ~skin & (part == k + 1)
+        if not mine.any():
+            continue
+        # the item's texture over the armour, the same spot of the item on the
+        # same spot of the part in every frame
+        tex = np.zeros(L.shape)
+        dh, dw = detail.shape
+        for fy in range(a.shape[0] // 64):
+            for fx in range(a.shape[1] // 64):
+                y0, x0 = fy * 64, fx * 64
+                sub = mine[y0:y0 + 64, x0:x0 + 64]
+                if not sub.any():
+                    continue
+                ys, xs = np.nonzero(sub)
+                ty = (ys - ys.min()) % dh
+                tx = (xs - xs.min()) % dw
+                tex[y0 + ys, x0 + xs] = detail[ty, tx]
+        armour = mine & ~gem
+        # an item with a lot of a second colour (Royal Draken Mail: gold and
+        # red) keeps both on the armour, by brightness
+        both = len(acc) > 0.25 * (len(acc) + len(main))
+        material = np.concatenate([main, acc]) if both else main
+        material = material[np.argsort(lum(material))]
+        out[armour, :3] = match(L[armour] + tex[armour] * 0.8, material)
+        g = mine & gem
+        if g.any():
+            out[g, :3] = match(L[g], acc if len(acc) else main[len(main) // 2:])
+        if closed and k == 0:
+            face = mine & grow(skin | (part == 1), 0) & (h[..., 0] > 0.02) & (h[..., 0] < 0.11) & ~masked
+            slit = face & (L < np.percentile(L[face], 40) if face.any() else face)
+            # the visor in the item's accent (the Demon Helmet's gold T), or dark
+            out[slit, :3] = acc[len(acc) // 2] if len(acc) > 8 else main[0] * 0.45
+    return out
+
+
+for name, looks, addons, colors, items, how, *rest in SETS:
+    if how == 'faithful':
+        for look in looks:
+            a, masked = frames(look, addons, colors)
+            out = faithful(a, masked, look, items, rest and rest[0])
+            Image.fromarray(out.astype(np.uint8)).save(os.path.join(OUT, '%s_%d.png' % (name, look)))
+            print('wrote', name, look)
+        continue
     main, accent = palettes(items)
     if how == 'hue':  # the green of the scales without the gems' orange
         h = hsv(main)
