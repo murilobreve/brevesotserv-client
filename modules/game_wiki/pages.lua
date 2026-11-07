@@ -492,7 +492,7 @@ WIKI_PAGES.quality = {
         { 'p', 'Metade vem do armor, da defesa ou do ataque do item (com o dano de elemento), comparado com os melhores do mesmo tipo: capacetes, armaduras, calças, botas, escudos e armas de uma e de duas mãos, cada um com os seus. 35% vêm do level exigido (level 400 conta tudo) e 15% dos slots de imbuement (dois contam tudo).' },
         { 'p', 'Wands, rods, armas de distância, anéis e amuletos não têm um valor desses no item, então usam o level (85%) e os slots (15%).' },
         { 'h', 'Quanto os bônus crescem' },
-        { 'p', 'Dano, cura, leech, resistências, skills, magic level, vida e mana máximas e o dano de magia do elemento crescem até 3 vezes: x(1 + 2 x qualidade). Critical Hit Chance, Physical Resist, o Attack das armas de distância, Speed, Cleave, Splinter, Long Shot, Frenzy, Onslaught, Momentum, Amplification, Ally Healing e Physical Reflect crescem até 2 vezes. Attack Speed, Cooldown Reduction e Dodge Chance não mudam.' },
+        { 'p', 'Dano, cura, leech, resistências, skills, magic level, vida e mana máximas e o dano de magia do elemento crescem até 3 vezes: x(1 + 2 x qualidade). Critical Hit Chance, Physical Resist, o Attack das armas de distância, Speed, Cleave, Splinter, Long Shot, Frenzy, Onslaught, Momentum, Ally Healing e Physical Reflect crescem até 2 vezes. Attack Speed, Cooldown Reduction e Dodge Chance não mudam.' },
         { 'p', 'Armor, Defense e o Attack das armas corpo a corpo são uma parte do valor do próprio item: Armor de 10% a 80% do armor do item, Defense de 8% a 60% da defesa e Attack de 8% a 50% do ataque com o elemento. Uma leather armor ganha de +1 a +3 de armor; uma falcon plate, de +2 a +14.' },
         { 'table', widths = { 200, 100, 120 }, head = { 'Item', 'Qualidade', 'Bônus até' },
           rows = {
@@ -580,7 +580,6 @@ WIKI_PAGES.pools = {
         poolTable({
             { 'Armor', '10% a 80%', 'do armor da bota' }, { 'Speed', '5 a 50', '' }, { 'Resistência', '2% a 30%', 'pode vir duas' },
             { 'Healing Received', '5% a 30%', '' }, { 'Max Health', '2% a 15%', '' }, { 'Dodge Chance', '1% a 6%', '' },
-            { 'Amplification', '5% a 35%', '' },
         }),
         { 'h', 'Anéis e amuletos' },
         { 'p', 'Só os que não têm carga nem tempo de uso.' },
@@ -588,7 +587,7 @@ WIKI_PAGES.pools = {
             { 'Max Health', '2% a 12%', '' }, { 'Resistência', '2% a 20%', 'pode vir duas' },
             { 'Transcendence', '1% a 2%', '' }, { 'Frenzy', '1% a 3%', 'por monstro morto, até 5' },
             { 'Momentum', '2% a 12%', '' }, { 'Onslaught', '1% a 4%', 'golpe fatal, +60% de dano' },
-            { 'Amplification', '5% a 25%', '' }, { 'Critical Hit Damage', '2% a 25%', '' },
+            { 'Critical Hit Damage', '2% a 25%', '' },
             { 'Attack Spell Damage', '3% a 15%', '' }, { 'Life Leech', '1% a 6%', '' }, { 'Mana Leech', '1% a 10%', '' },
             { 'Healing Received', '5% a 20%', '' }, { 'Dodge Chance', '1% a 4%', '' },
         }),
@@ -664,7 +663,6 @@ WIKI_PAGES.affixes = {
             { 'Onslaught', 'Chance de um golpe ou magia de ataque ser Fatal: 60% de dano a mais. Vem de armas, wands e rods (forja tier 10: 9%).', '9%' },
             { 'Momentum', 'Em combate, a cada 2 s, chance de tirar 2 s de todos os cooldowns. Vem de capacetes (forja tier 10: 24%).', '24%' },
             { 'Transcendence', 'Em combate, a cada 2 s, chance de virar o avatar da vocação por 7 s: 15% menos dano recebido e todo golpe crítico. Vem de calças, anéis e amuletos (forja tier 10: 2,35%).', '4%' },
-            { 'Amplification', 'Deixa Onslaught, Momentum e Transcendence (da forja ou de raros) e a Ruse da forja mais prováveis nessa porcentagem. Vem de botas (forja tier 10: 57%).', '50%' },
         }),
         { 'h', 'Resistências e a cor da gema' },
         { 'table', widths = { 120, 120 }, head = { 'Elemento', 'Nome no item' },
