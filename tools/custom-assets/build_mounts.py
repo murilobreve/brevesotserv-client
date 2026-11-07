@@ -281,7 +281,8 @@ for first in range(0, len(small), 144):
 old_catalog = []
 if os.path.exists(os.path.join(CLIENT_DIR, 'catalog-content.json')):
     old_catalog = json.load(open(os.path.join(CLIENT_DIR, 'catalog-content.json')))
-kept_sheets = [e for e in old_catalog if e.get('type') == 'sprite' and e['file'].startswith('sprites-effects-')]
+# and the paperdolls (add_paperdolls.py) too
+kept_sheets = [e for e in old_catalog if e.get('type') == 'sprite' and e['file'].startswith(('sprites-effects-', 'sprites-paperdolls-'))]
 old_custom = A.Appearances()
 if os.path.exists(os.path.join(CLIENT_DIR, 'appearances-custom.dat')):
     old_custom.ParseFromString(open(os.path.join(CLIENT_DIR, 'appearances-custom.dat'), 'rb').read())
@@ -332,12 +333,13 @@ for size, entries in sorted(by_size.items()):
 custom = A.Appearances()
 custom.effect.extend(old_custom.effect)
 custom.outfit.extend(outfits)
+custom.outfit.extend(o for o in old_custom.outfit if 3000 <= o.id < 3100)  # paperdolls
 custom.object.extend(objects)
 dat_name = 'appearances-custom.dat'
 
 os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
-    if f.startswith('sprites-') and not f.startswith('sprites-effects-'):
+    if f.startswith('sprites-') and not f.startswith(('sprites-effects-', 'sprites-paperdolls-')):
         os.remove(os.path.join(CLIENT_DIR, f))
 for name, cip, _first, _last, _t in sized_sheets:
     with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
