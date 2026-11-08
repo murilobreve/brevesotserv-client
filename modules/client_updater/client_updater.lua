@@ -167,9 +167,45 @@ local function renderStatus()
   end
 end
 
+-- safe start (init.lua): the last start crashed while loading the modules,
+-- so only the client modules and this updater are loaded. A new version
+-- installs by itself (and restarts); otherwise the player chooses.
+local safeBox
+local function showSafeBox()
+  if not MYTHOS_SAFE_START or safeBox or status == 'updating' or status == 'checking' then
+    log('safe box skipped: ' .. tostring(status) .. ' ' .. tostring(MYTHOS_SAFE_START))
+    return
+  end
+  log('safe start: showing the choice')
+  local eg = enterGame()
+  if eg then
+    eg.hide()
+  end
+  local function tryAgain()
+    g_app.restart()
+  end
+  safeBox = displayGeneralBox(txt('Mythos', 'Mythos'),
+    txt('O Mythos fechou sozinho da última vez que abriu, por isso desta vez abriu só o atualizador.\n\n'
+      .. 'Ainda não há uma versão nova com a correção. Avise a equipe e tente de novo mais tarde.',
+      'Mythos closed by itself the last time it opened, so this time it opened only the updater.\n\n'
+      .. 'There is no new version with a fix yet. Tell the team and try again later.'),
+    {
+      { text = txt('Abrir o jogo mesmo assim', 'Open the game anyway'), callback = tryAgain },
+      { text = txt('Procurar de novo', 'Check again'), callback = function()
+        safeBox:destroy()
+        safeBox = nil
+        Updater.check(true)
+      end },
+      { text = txt('Sair', 'Quit'), callback = function() g_app.exit() end },
+    }, tryAgain, function() g_app.exit() end)
+end
+
 local function setStatus(newStatus)
   status = newStatus
   renderStatus()
+  if MYTHOS_SAFE_START and (newStatus == 'uptodate' or newStatus == 'error' or newStatus == 'available') then
+    showSafeBox()
+  end
 end
 
 local function remindInGame()
@@ -238,7 +274,7 @@ local function giveUp(message)
   downloads = {}
   setStatus(remoteVersion and remoteVersion > localInfo.versao and 'available' or 'error')
   local eg = enterGame()
-  if eg and not g_game.isOnline() then
+  if eg and not g_game.isOnline() and not MYTHOS_SAFE_START then
     eg.show()
   end
   if message then
@@ -577,7 +613,19 @@ end
 function Updater.init()
   localInfo = readLocalInfo()
   if not localInfo then
+    -- a client run from the source tree has no updater: just offer the choice
+    if MYTHOS_SAFE_START then
+      status = 'error'
+      scheduleEvent(showSafeBox, 100)
+    end
     return
+  end
+  if MYTHOS_SAFE_START then
+    log('safe start: looking for a version that fixes the crash')
+    local eg = enterGame()
+    if eg then
+      eg.hide()
+    end
   end
   -- the leftovers (*.old, *.part) of the last update; only in a client the
   -- updater manages: the walk deletes those names in every folder below
