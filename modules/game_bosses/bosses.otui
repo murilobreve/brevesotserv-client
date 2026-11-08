@@ -983,7 +983,8 @@ MythosWindow
         MythosButton
           id: wiki
           anchors.left: parent.left
-          anchors.verticalCenter: go.verticalCenter
+          anchors.bottom: parent.bottom
+          margin-bottom: 5
           size: 90 26
           @onClick: modules.game_bosses.openWiki()
 
