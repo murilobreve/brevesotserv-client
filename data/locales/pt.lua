@@ -1534,6 +1534,10 @@ locale = {
     ["It stays %s, as it was. Spent: %s gold and %d Rarity XP."] = "Continua %s, como estava. Gasto: %s gold e %d Rarity XP.",
     ["Ascend  -  %s gold + %d XP"] = "Ascender  -  %s gold + %d XP",
     ["In your character: %s of %s"] = "No seu personagem: %s de %s",
+    ["YOUR BONUSES"] = "SEUS BÔNUS",
+    ["At the limit: more of it adds nothing."] = "No limite: mais disso não soma nada.",
+    ["Limit: %s"] = "Limite: %s",
+    ["%d at the limit"] = "%d no limite",
   }
 }
 
