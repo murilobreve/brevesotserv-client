@@ -458,6 +458,15 @@ BossWheel < UIWidget
     creature-size: 96
     phantom: true
 
+  // a quest reward's roulette shows the item instead of a boss
+  UIItem
+    id: item
+    anchors.centerIn: parent
+    size: 64 64
+    virtual: true
+    phantom: true
+    visible: false
+
   UIWidget
     id: needle
     anchors.centerIn: parent
