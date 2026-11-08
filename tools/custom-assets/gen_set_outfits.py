@@ -55,7 +55,8 @@ SETS = [
     ('leather', BASE, 0, (82, 82, 82, 82), (3355, 17846, 3559, 3552), 'faithful', False),
     ('studded', BASE, 0, (82, 82, 82, 82), (3376, 3378, 3362, 3552), 'faithful', False),
     ('chain', BASE, 0, (82, 82, 82, 82), (3352, 3358, 3558, 3552), 'faithful', False),
-    ('brass', BASE, 0, (82, 82, 82, 82), (3354, 3359, 3372, 3552), 'faithful', False),
+    # the Brass Helmet is a cone straw hat: the same from every side, so its own picture is drawn on the head
+    ('brass', BASE, 0, (82, 82, 82, 82), (3354, 3359, 3372, 3552), 'faithful', False, True),
     ('dwarven', BASE, 0, (82, 82, 82, 82), (3396, 3397, 3398, 3554), 'faithful', False),
     ('gnome', BASE, 0, (82, 82, 82, 82), (27647, 27648, 27649, 3554), 'faithful', True),
     ('lion', BASE, 0, (82, 82, 82, 82), (34156, 34157, 3557, 3554), 'faithful', True),
@@ -276,6 +277,30 @@ def faithful(a, masked, look, items, closed):
     return out
 
 
+HAT_WIDTH, HAT_DROP = 20, 6  # a hat helmet's width and how far its brim sits below the top of the head
+
+
+def put_hat(out, part, iid):
+    """a round hat (the same from every side): the helmet item's picture on
+    the head of every frame"""
+    icon = r.item(iid).convert('RGBA')
+    icon = icon.crop(icon.getbbox())
+    h = max(1, int(round(HAT_WIDTH * icon.height / icon.width)))
+    pic = icon.resize((HAT_WIDTH, h), Image.NEAREST)
+    for fy in range(out.shape[0] // 64):
+        for fx in range(out.shape[1] // 64):
+            y0, x0 = fy * 64, fx * 64
+            ys, xs = np.nonzero(part[y0:y0 + 64, x0:x0 + 64] == 1)
+            if len(ys) < 4:
+                continue
+            top = ys.min()
+            xs = xs[ys < top + 8]
+            tile = Image.fromarray(out[y0:y0 + 64, x0:x0 + 64].astype(np.uint8))
+            tile.alpha_composite(pic, (int(round((xs.min() + xs.max()) / 2 - HAT_WIDTH / 2)), int(top + HAT_DROP - h)))
+            out[y0:y0 + 64, x0:x0 + 64] = np.array(tile)
+    return out
+
+
 for name, looks, addons, colors, items, how, *rest in SETS:
     if ONLY and name not in ONLY:
         continue
@@ -283,6 +308,8 @@ for name, looks, addons, colors, items, how, *rest in SETS:
         for look in looks:
             a, masked = frames(look, addons, colors)
             out = faithful(a, masked, look, items, rest and rest[0])
+            if len(rest) > 1 and rest[1]:
+                out = put_hat(out, body_parts(a, head_mask(look)), items[0])
             Image.fromarray(out.astype(np.uint8)).save(os.path.join(OUT, '%s_%d.png' % (name, look)))
             print('wrote', name, look)
         continue
