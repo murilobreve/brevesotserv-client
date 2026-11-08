@@ -597,13 +597,9 @@ local function fillRow(row, boss)
         row.filled = true
         row.frame.creature:setOutfit(outfitOf(boss.outfit))
         row.name:setText(boss.name)
-        local tail = tr(' · %s XP · %s vida', shortNumber(boss.experience), shortNumber(boss.health))
-        local quest = boss.quest or ''
-        local room = 42 - #tail
-        if #quest > room then
-            quest = quest:sub(1, math.max(4, room - 2)):gsub('%s+$', '') .. '...'
-        end
-        row.info:setText(quest .. tail)
+        -- the level the lever asks, then the numbers; the quest is in the detail
+        local level = (boss.level or 0) > 0 and tr('Nv %d', boss.level) or tr('Nv livre')
+        row.info:setText(tr('%s · %s XP · %s vida', level, shortNumber(boss.experience), shortNumber(boss.health)))
         row.star.onClick = function()
             favorites[boss.name] = not favorites[boss.name] or nil
             saveFavorites()
