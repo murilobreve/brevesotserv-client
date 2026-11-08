@@ -196,4 +196,24 @@ local function loadModules()
     -- g_modules.enableAutoReload()
 end
 
-loadModules()
+-- A start that crashes while the modules load (a broken window, say) would
+-- crash on every start, and the updater, which loads last, could never fetch
+-- the fixed version. So a mark is written before the load and erased after
+-- it: if the mark is still there, the last start died loading, and this one
+-- loads only the client modules and the updater, which installs the next
+-- version (or offers to try the full start again).
+local BOOT_MARK = '/mythos_boot_incomplete.txt'
+local lastStartDied = false
+pcall(function() lastStartDied = g_resources.fileExists(BOOT_MARK) end)
+if lastStartDied then
+    pcall(g_resources.deleteFile, BOOT_MARK)
+    g_logger.warning('the last start crashed while loading the modules: safe start (client modules and updater only)')
+    MYTHOS_SAFE_START = true
+    g_modules.autoLoadModules(499)
+    g_modules.ensureModuleLoaded('client')
+    g_modules.ensureModuleLoaded('client_updater')
+else
+    pcall(g_resources.writeFileContents, BOOT_MARK, os.date('%Y-%m-%d %H:%M:%S'))
+    loadModules()
+    pcall(g_resources.deleteFile, BOOT_MARK)
+end
