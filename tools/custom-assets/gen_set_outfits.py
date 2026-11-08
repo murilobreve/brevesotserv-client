@@ -55,7 +55,7 @@ SETS = [
     ('leather', BASE, 0, (82, 82, 82, 82), (3355, 17846, 3559, 3552), 'faithful', False),
     ('studded', BASE, 0, (82, 82, 82, 82), (3376, 3378, 3362, 3552), 'faithful', False),
     ('chain', BASE, 0, (82, 82, 82, 82), (3352, 3358, 3558, 3552), 'faithful', False),
-    # the Brass Helmet is a cone straw hat: the same from every side, so its own picture is drawn on the head
+    # the Brass Helmet is a cone straw hat: drawn as a hat sprite on the head (the same from every side)
     ('brass', BASE, 0, (82, 82, 82, 82), (3354, 3359, 3372, 3552), 'faithful', False, True),
     ('dwarven', BASE, 0, (82, 82, 82, 82), (3396, 3397, 3398, 3554), 'faithful', False),
     ('gnome', BASE, 0, (82, 82, 82, 82), (27647, 27648, 27649, 3554), 'faithful', True),
@@ -277,26 +277,59 @@ def faithful(a, masked, look, items, closed):
     return out
 
 
-HAT_WIDTH, HAT_DROP = 20, 6  # a hat helmet's width and how far its brim sits below the top of the head
+HAT_DROP = 7  # how far a hat's brim sits below the top of the head
 
 
-def put_hat(out, part, iid):
-    """a round hat (the same from every side): the helmet item's picture on
-    the head of every frame"""
-    icon = r.item(iid).convert('RGBA')
-    icon = icon.crop(icon.getbbox())
-    h = max(1, int(round(HAT_WIDTH * icon.height / icon.width)))
-    pic = icon.resize((HAT_WIDTH, h), Image.NEAREST)
+def straw_hat(iid, width=19, brim=5, cone=8, cone_width=9):
+    """a cone straw hat drawn as pixel art in the item's colours: a flat brim,
+    a cone to the tip, light from the top left, straw rings, a dark outline"""
+    main, _, _ = item_look(iid)
+
+    def colour(t):  # 0 dark .. 1 light
+        return np.append(main[int(np.clip(t, 0, 1) * (len(main) - 1))], 255)
+    a = np.zeros((cone + brim, width, 4))
+    cx = (width - 1) / 2
+    for y in range(brim):
+        for x in range(width):
+            dx, dy = (x - cx) / (width / 2), (y - (brim - 1) / 2) / (brim / 2)
+            if dx * dx + dy * dy <= 1:
+                a[cone + y, x] = colour(0.75 - 0.35 * y / (brim - 1) - 0.25 * (x - cx) / width)
+    for y in range(cone):
+        half = cone_width / 2 * (y + 1) / cone
+        for x in range(width):
+            if abs(x - cx) <= half:
+                a[y, x] = colour(0.95 - 0.5 * (x - cx + half) / max(1, 2 * half) - 0.1 * y / cone)
+    for y in range(1, cone, 3):
+        a[y, :, :3] = np.where(a[y, :, 3:] > 0, a[y, :, :3] * 0.85, a[y, :, :3])
+    out = np.zeros((a.shape[0] + 2, width + 2, 4))
+    out[1:-1, 1:-1] = a
+    on = out[..., 3] > 0
+    edge = ~on & (np.roll(on, 1, 0) | np.roll(on, -1, 0) | np.roll(on, 1, 1) | np.roll(on, -1, 1))
+    out[edge] = np.append(main[0] * 0.45, 255)
+    return Image.fromarray(out.astype(np.uint8))
+
+
+def put_hat(out, a, part, iid):
+    """a round hat (the same from every side) on the head of every frame; the
+    hood under it becomes dark hair"""
+    pic = straw_hat(iid)
+    w, h = pic.size
     for fy in range(out.shape[0] // 64):
         for fx in range(out.shape[1] // 64):
             y0, x0 = fy * 64, fx * 64
-            ys, xs = np.nonzero(part[y0:y0 + 64, x0:x0 + 64] == 1)
+            head = part[y0:y0 + 64, x0:x0 + 64] == 1
+            ys, xs = np.nonzero(head)
             if len(ys) < 4:
                 continue
             top = ys.min()
-            xs = xs[ys < top + 8]
-            tile = Image.fromarray(out[y0:y0 + 64, x0:x0 + 64].astype(np.uint8))
-            tile.alpha_composite(pic, (int(round((xs.min() + xs.max()) / 2 - HAT_WIDTH / 2)), int(top + HAT_DROP - h)))
+            near = ys < top + 8
+            cx = (xs[near].min() + xs[near].max()) / 2
+            t = out[y0:y0 + 64, x0:x0 + 64]
+            L = lum(a[y0:y0 + 64, x0:x0 + 64, :3])
+            hair = head & (L > 25)
+            t[hair, :3] = np.stack([L[hair] * 0.45 + 20, L[hair] * 0.3 + 12, L[hair] * 0.18 + 6], -1)
+            tile = Image.fromarray(t.astype(np.uint8))
+            tile.alpha_composite(pic, (int(round(cx - w / 2)), int(top + HAT_DROP - h)))
             out[y0:y0 + 64, x0:x0 + 64] = np.array(tile)
     return out
 
@@ -309,7 +342,7 @@ for name, looks, addons, colors, items, how, *rest in SETS:
             a, masked = frames(look, addons, colors)
             out = faithful(a, masked, look, items, rest and rest[0])
             if len(rest) > 1 and rest[1]:
-                out = put_hat(out, body_parts(a, head_mask(look)), items[0])
+                out = put_hat(out, a, body_parts(a, head_mask(look)), items[0])
             Image.fromarray(out.astype(np.uint8)).save(os.path.join(OUT, '%s_%d.png' % (name, look)))
             print('wrote', name, look)
         continue
