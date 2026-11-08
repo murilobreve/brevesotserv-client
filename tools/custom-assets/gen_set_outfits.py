@@ -39,6 +39,17 @@ SETS = [
     ('draken', BASE, 0, (82, 82, 82, 82), (11689, 11686, 10387, 4033), 'faithful', False),
     # pieces of different sets: Demon Helmet, Magic Plate Armor, Golden Legs, Boots of Haste
     ('sortido', BASE, 0, (82, 82, 82, 82), (3387, 3366, 3364, 3079), 'faithful', True),
+    # the classic sets (Steel Boots where the set has no boots)
+    ('demon', BASE, 0, (82, 82, 82, 82), (3387, 3388, 3389, 3554), 'faithful', True),
+    ('crown', BASE, 0, (82, 82, 82, 82), (3385, 3381, 3382, 3554), 'faithful', False),
+    ('magma', BASE, 0, (82, 82, 82, 82), (827, 826, 821, 818), 'faithful', False),
+    ('lightning', BASE, 0, (82, 82, 82, 82), (828, 825, 822, 820), 'faithful', False),
+    ('terra', BASE, 0, (82, 82, 82, 82), (830, 811, 812, 813), 'faithful', False),
+    ('glacier', BASE, 0, (82, 82, 82, 82), (829, 824, 823, 819), 'faithful', True),
+    ('prismatic', BASE, 0, (82, 82, 82, 82), (16109, 16110, 16111, 16112), 'faithful', True),
+    ('zaoan', BASE, 0, (82, 82, 82, 82), (10385, 10384, 10387, 10386), 'faithful', False),
+    ('falcon', BASE, 0, (82, 82, 82, 82), (28715, 28719, 28720, 3554), 'faithful', False),
+    ('plate', BASE, 0, (82, 82, 82, 82), (3351, 3357, 3557, 3554), 'faithful', True),
 ]
 
 r = rs.Renderer(ASSETS)
