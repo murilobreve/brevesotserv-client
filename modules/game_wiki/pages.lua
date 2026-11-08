@@ -51,30 +51,30 @@ WIKI_GRADES = {
 WIKI_TIERS = {
     pale = {
         name = 'Pale', color = '#c9d6e3', shader = 'Rarity - Pale', outfit = 34, monster = 'Dragon',
-        chance = '0,75%', hp = 'x1,75', attack = 'x1,93', defense = 'x1', xp = 'x3,85',
-        loot = 'x3', rolls = '+1', gold = 'x10', affix = '0,75 por morte', skull = 'Branca',
+        chance = '1,2%', hp = 'x1,75', attack = 'x1,93', defense = 'x1', xp = 'x3,85',
+        loot = 'x3', rolls = '+1', gold = 'x10', affix = '0,45 por morte', skull = 'Branca',
         grades = { 66, 28, 5.2, 0.75, 0.05 },
         arrival = '"You sense something pale stirring..." e um brilho azul no corpo.',
     },
     ashen = {
         name = 'Ashen', color = '#9aa0a8', shader = 'Rarity - Ashen', outfit = 55, monster = 'Behemoth',
-        chance = '0,5%', hp = 'x2,15', attack = 'x2,37', defense = 'x1', xp = 'x4,73',
-        loot = 'x6', rolls = '+1', gold = 'x30', affix = '1,2 por morte', skull = 'Vermelha',
+        chance = '0,8%', hp = 'x2,15', attack = 'x2,37', defense = 'x1', xp = 'x4,73',
+        loot = 'x6', rolls = '+1', gold = 'x30', affix = '0,72 por morte', skull = 'Vermelha',
         grades = { 50, 33, 12.5, 3.9, 0.6 },
         arrival = 'Fogo no chão, fumaça em volta e "*the ground scorches*".',
     },
     obsidian = {
         name = 'Obsidian', color = '#9b7bff', shader = 'Rarity - Obsidian', outfit = 121, monster = 'Hydra',
-        chance = '0,25%', hp = 'x2,65', attack = 'x2,92', defense = 'x1', xp = 'x5,83',
-        loot = 'x12', rolls = '+2', gold = 'x50', affix = '1,5 por morte', skull = 'Preta',
+        chance = '0,4%', hp = 'x2,65', attack = 'x2,92', defense = 'x1', xp = 'x5,83',
+        loot = 'x12', rolls = '+2', gold = 'x50', affix = '0,9 por morte', skull = 'Preta',
         grades = { 33, 32, 23, 8, 4 },
         arrival = 'Explosões, anéis de morte e "IT HAS ARRIVED!".',
     },
     deathlord = {
         name = 'Lord of Death', color = '#e04848', shader = 'Rarity - Lord of Death', outfit = 25, monster = 'Minotaur',
         effect = 20,
-        chance = '0,1%', hp = 'x3,30', attack = 'x3,63', defense = 'x1', xp = 'x7,26',
-        loot = 'x20', rolls = '+3', gold = 'x50', affix = '3 por morte', skull = 'Preta',
+        chance = '0,16%', hp = 'x3,30', attack = 'x3,63', defense = 'x1', xp = 'x7,26',
+        loot = 'x20', rolls = '+3', gold = 'x50', affix = '1,8 por morte', skull = 'Preta',
         grades = { 20, 20, 20, 28, 12 },
         arrival = 'A luz some, o pentagrama preto aparece e tudo em volta morre.',
     },
@@ -324,10 +324,10 @@ WIKI_PAGES.tiers = {
         { 'table', widths = { 110, 64, 58, 58, 52, 52, 58 },
           head = { 'Tier', 'Chance', 'Vida', 'Ataque', 'XP', 'Loot', 'Ouro' },
           rows = {
-              { { 'Pale', '#c9d6e3' }, '0,75%', 'x1,75', 'x1,93', 'x3,85', 'x3', 'x10' },
-              { { 'Ashen', '#9aa0a8' }, '0,5%', 'x2,15', 'x2,37', 'x4,73', 'x6', 'x30' },
-              { { 'Obsidian', '#9b7bff' }, '0,25%', 'x2,65', 'x2,92', 'x5,83', 'x12', 'x50' },
-              { { 'Lord of Death', '#e04848' }, '0,1%', 'x3,30', 'x3,63', 'x7,26', 'x20', 'x50' },
+              { { 'Pale', '#c9d6e3' }, '1,2%', 'x1,75', 'x1,93', 'x3,85', 'x3', 'x10' },
+              { { 'Ashen', '#9aa0a8' }, '0,8%', 'x2,15', 'x2,37', 'x4,73', 'x6', 'x30' },
+              { { 'Obsidian', '#9b7bff' }, '0,4%', 'x2,65', 'x2,92', 'x5,83', 'x12', 'x50' },
+              { { 'Lord of Death', '#e04848' }, '0,16%', 'x3,30', 'x3,63', 'x7,26', 'x20', 'x50' },
           } },
         { 'p', 'Na Hunt Task (diária e Trilha do Caçador), um monstro raro conta como várias mortes, pela XP dele: Pale 3, Ashen 4, Obsidian 5 e Lord of Death 7.' },
         { 'p', 'Um monstro raro tem mais vida e bate mais forte (as colunas Vida e Ataque), mas armadura e defesa são as do monstro normal, então o seu dano entra inteiro.' },
@@ -360,32 +360,32 @@ local function tierPage(key, menu, extra)
 end
 
 WIKI_PAGES.pale = tierPage('pale', 'Pale', {
-    { 'p', 'A camada mais comum: 0,75% das mortes (1 em 133). Tem 1,75 vez a vida, bate quase o dobro, dá quase 4 vezes a XP e o triplo de loot. Três vezes em cada quatro, ele deixa um item raro.' },
+    { 'p', 'A camada mais comum: 1,2% das mortes (1 em 83). Tem 1,75 vez a vida, bate quase o dobro, dá quase 4 vezes a XP e o triplo de loot. Em 45% das vezes ele deixa um item raro.' },
     { 'p', 'Ele tem caveira branca e uma cor fria, quase sem saturação.' },
     { 'links', { 'tiers', 'ashen' } },
 })
 
 WIKI_PAGES.ashen = tierPage('ashen', 'Ashen', {
-    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,5% das mortes (1 em 200), com caveira vermelha e fumaça em volta.' },
-    { 'p', 'O loot é 6 vezes maior. Ele sempre deixa um item raro, e 20% das vezes deixa dois.' },
+    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,8% das mortes (1 em 125), com caveira vermelha e fumaça em volta.' },
+    { 'p', 'O loot é 6 vezes maior. Em 72% das vezes ele deixa um item raro.' },
     { 'links', { 'pale', 'obsidian' } },
 })
 
 WIKI_PAGES.obsidian = tierPage('obsidian', 'Obsidian', {
-    { 'p', 'Roxo e azul, com caveira preta. Aparece em 0,25% das mortes (1 em 400).' },
-    { 'p', 'Ele sempre deixa um item raro, e metade das vezes deixa dois. O corpo tem 2 rolagens extras de loot. Um terço dos raros já sai Praeclarus ou melhor.' },
+    { 'p', 'Roxo e azul, com caveira preta. Aparece em 0,4% das mortes (1 em 250).' },
+    { 'p', 'Em 90% das vezes ele deixa um item raro. O corpo tem 2 rolagens extras de loot. Um terço dos raros já sai Praeclarus ou melhor.' },
     { 'links', { 'ashen', 'deathlord' } },
 })
 
 WIKI_PAGES.deathlord = tierPage('deathlord', 'Lord of Death', {
-    { 'p', 'O monstro mais raro do jogo: 1 em 1000 mortes. Deixa três itens raros, e 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
+    { 'p', 'O monstro mais raro do jogo: 1 em 625 mortes. Deixa um item raro sempre e, em 80% das vezes, um segundo; 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
     { 'h', 'Quando ele chega' },
     { 'p', 'Todo outro monstro a até 6 sqm, no mesmo andar, morre na hora. Eles não dão loot nem XP e voltam pelo respawn normal. Bosses e summons de jogadores não morrem.' },
     { 'h', 'Se ele matar você' },
     { 'note', 'Em 70% das mortes, nem bless nem amulet of loss protegem. Você perde o backpack e todo container que estiver usando, e cada outro item equipado tem 30% de chance de cair no corpo.' },
     { 'p', 'Vale quando ele dá o último golpe ou quando foi quem mais causou dano. Nos outros 30% das vezes a morte segue a regra normal de bless e AOL.' },
     { 'h', 'O prêmio' },
-    { 'p', 'Os três itens podem sair de qualquer grau, mas 40% deles saem Legendarius ou Mythicus, mesmo de monstro fraco. Se o monstro não tiver equipamento na lista de loot dele (um rato, por exemplo), o corpo recebe equipamentos comuns sorteados, já raros.' },
+    { 'p', 'Os itens raros podem sair de qualquer grau, mas 40% deles saem Legendarius ou Mythicus, mesmo de monstro fraco. Se o monstro não tiver equipamento na lista de loot dele (um rato, por exemplo), o corpo recebe equipamentos comuns sorteados, já raros.' },
     { 'links', { 'obsidian', 'grades' } },
 })
 
@@ -399,11 +399,11 @@ WIKI_PAGES.huntboard = {
         { 'table', widths = { 80, 90, 70, 70, 80, 100 },
           head = { 'Rate', 'Multiplicador', 'Pale', 'Ashen', 'Obsidian', 'Lord of Death' },
           rows = {
-              { '1x', 'x1', '0,75%', '0,5%', '0,25%', '0,1%' },
-              { '2x', 'x1,17', '0,88%', '0,58%', '0,29%', '0,12%' },
-              { '3x', 'x1,33', '1%', '0,67%', '0,33%', '0,13%' },
-              { '4x', 'x1,5', '1,13%', '0,75%', '0,38%', '0,15%' },
-              { { '5x', '#ffd27a' }, { 'x1,67', '#ffd27a' }, '1,25%', '0,83%', '0,42%', '0,17%' },
+              { '1x', 'x1', '1,2%', '0,8%', '0,4%', '0,16%' },
+              { '2x', 'x1,17', '1,4%', '0,93%', '0,47%', '0,19%' },
+              { '3x', 'x1,33', '1,6%', '1,07%', '0,53%', '0,21%' },
+              { '4x', 'x1,5', '1,8%', '1,2%', '0,6%', '0,24%' },
+              { { '5x', '#ffd27a' }, { 'x1,67', '#ffd27a' }, '2%', '1,33%', '0,67%', '0,27%' },
           } },
         { 'h', 'Loot' },
         { 'p', 'O loot tem o seu próprio sorteio, separado da XP: de 1x a 3x. Um monstro pode estar com XP alta e loot normal, ou o contrário. Nenhum monstro fica abaixo de 1x: um terço fica em 1x, outro terço perto de 1,5x, e o resto vai ficando mais raro até 3x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
@@ -425,10 +425,10 @@ WIKI_PAGES.items = {
           head = { 'Origem', 'Itens raros por morte' },
           rows = {
               { 'Monstro comum', 'Nunca: itens raros só caem de monstros raros' },
-              { { 'Pale', '#c9d6e3' }, '0,75 (75% de chance de um)' },
-              { { 'Ashen', '#9aa0a8' }, '1,2 (um sempre, 20% de chance de outro)' },
-              { { 'Obsidian', '#9b7bff' }, '1,5 (um sempre, 50% de chance de outro)' },
-              { { 'Lord of Death', '#e04848' }, '3' },
+              { { 'Pale', '#c9d6e3' }, '0,45 (45% de chance de um)' },
+              { { 'Ashen', '#9aa0a8' }, '0,72 (72% de chance de um)' },
+              { { 'Obsidian', '#9b7bff' }, '0,9 (90% de chance de um)' },
+              { { 'Lord of Death', '#e04848' }, '1,8 (um sempre, 80% de chance de outro)' },
               { 'Recompensa de quest', '25% de chance' },
           } },
         { 'p', 'Monstros raros sempre pagam: se não houver equipamento no corpo, um equipamento da lista de loot do próprio monstro é escolhido.' },
