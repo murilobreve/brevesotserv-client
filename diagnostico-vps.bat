@@ -15,7 +15,7 @@ if not exist "%CHAVE%" (
 )
 
 echo == coletando, aguarde...
-ssh -i "%CHAVE%" %VPS% "cd /opt/brevesot; echo '== CPU'; grep -m1 'model name' /proc/cpuinfo; echo -n 'avx2: '; grep -o -m1 avx2 /proc/cpuinfo || echo NAO; nproc; echo; echo '== binario'; ls -la canary; git log -1 --oneline; md5sum canary; echo; echo '== servico'; systemctl --no-pager status canary | head -12; echo; echo '== log do servidor (ultimas 40 linhas)'; journalctl -u canary -n 40 --no-pager; echo; echo '== portas do jogo (7171 login, 7172 jogo)'; ss -ltnp | grep -E ':717[12] ' || echo 'NENHUMA PORTA ABERTA'; echo; echo '== memoria'; free -m; echo; echo '== MariaDB'; systemctl --no-pager status mariadb | head -5" > "%SAIDA%" 2>&1
+ssh -i "%CHAVE%" %VPS% "cd /opt/brevesot; echo '== CPU'; grep -m1 'model name' /proc/cpuinfo; echo -n 'avx2: '; grep -o -m1 avx2 /proc/cpuinfo || echo NAO; nproc; echo; echo '== binario'; ls -la canary; git log -1 --oneline; md5sum canary; echo; echo '== servico'; systemctl --no-pager status canary | head -12; echo; echo '== log do servidor (ultimas 40 linhas)'; journalctl -u canary -n 40 --no-pager; echo; echo '== portas do jogo (7171 login, 7172 jogo)'; ss -ltnp | grep -E ':717[12] ' || echo 'NENHUMA PORTA ABERTA'; echo; echo '== memoria'; free -m; echo; echo '== carga e processos'; uptime; top -bn1 | head -15; echo; echo '== lag e erros do servidor (ultima hora)'; journalctl -u canary --since '-60min' --no-pager | grep -E 'Lag|rror|took' | tail -80; echo; echo '== MariaDB'; systemctl --no-pager status mariadb | head -5" > "%SAIDA%" 2>&1
 
 type "%SAIDA%"
 echo.

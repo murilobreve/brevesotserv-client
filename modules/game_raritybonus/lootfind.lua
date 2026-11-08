@@ -401,6 +401,8 @@ local DESTINATIONS = {
     pouch = 'In your loot pouch',
     corpse = 'In the corpse, ready to loot',
     full = 'No room or capacity: it stayed in the corpse',
+    -- the backpack was full: the server put it in the Store inbox
+    inbox = 'Backpack full: sent to your Store inbox',
     -- a rare boss's item, in the player's own reward bag (scripts/rarity/boss_tiers.lua)
     reward = 'In your reward bag, at the Reward Chest',
 }
@@ -409,6 +411,7 @@ local PARTY_DESTINATIONS = {
     backpack = 'Found by %s, in their backpack',
     corpse = 'Found by %s, in the corpse to loot',
     full = 'Found by %s, it stayed in the corpse',
+    inbox = 'Found by %s, sent to their Store inbox',
 }
 
 local function destinationText(state, finder, taker)

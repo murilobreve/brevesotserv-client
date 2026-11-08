@@ -184,20 +184,25 @@ local function showSafeBox()
   local function tryAgain()
     g_app.restart()
   end
+  local buttons = {
+    { text = txt('Abrir o jogo mesmo assim', 'Open the game anyway'), callback = tryAgain },
+  }
+  -- with no version info (a client run from the source tree) there is
+  -- nothing to look for: the box would close on a blank screen
+  if localInfo then
+    buttons[#buttons + 1] = { text = txt('Procurar de novo', 'Check again'), callback = function()
+      safeBox:destroy()
+      safeBox = nil
+      Updater.check(true)
+    end }
+  end
+  buttons[#buttons + 1] = { text = txt('Sair', 'Quit'), callback = function() g_app.exit() end }
   safeBox = displayGeneralBox(txt('Mythos', 'Mythos'),
     txt('O Mythos fechou sozinho da última vez que abriu, por isso desta vez abriu só o atualizador.\n\n'
       .. 'Ainda não há uma versão nova com a correção. Avise a equipe e tente de novo mais tarde.',
       'Mythos closed by itself the last time it opened, so this time it opened only the updater.\n\n'
       .. 'There is no new version with a fix yet. Tell the team and try again later.'),
-    {
-      { text = txt('Abrir o jogo mesmo assim', 'Open the game anyway'), callback = tryAgain },
-      { text = txt('Procurar de novo', 'Check again'), callback = function()
-        safeBox:destroy()
-        safeBox = nil
-        Updater.check(true)
-      end },
-      { text = txt('Sair', 'Quit'), callback = function() g_app.exit() end },
-    }, tryAgain, function() g_app.exit() end)
+    buttons, tryAgain, function() g_app.exit() end)
 end
 
 local function setStatus(newStatus)

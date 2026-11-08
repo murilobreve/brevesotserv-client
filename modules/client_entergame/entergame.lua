@@ -341,6 +341,11 @@ function EnterGame.showServerList()
 end
 
 function EnterGame.firstShow()
+    -- a safe start (init.lua) has no game modules: the updater's box owns
+    -- the screen, and an autologin would enter the world with no interface
+    if MYTHOS_SAFE_START then
+        return
+    end
     EnterGame.show()
 
     local host = g_settings.get('host')
@@ -588,8 +593,9 @@ function EnterGame.show()
         return
     end
 
-    -- the updater window owns the screen while a new version downloads
-    if Updater and Updater.isUpdating and Updater.isUpdating() then
+    -- the updater window owns the screen while a new version downloads, and
+    -- in a safe start (no game modules)
+    if MYTHOS_SAFE_START or (Updater and Updater.isUpdating and Updater.isUpdating()) then
         return
     end
 
