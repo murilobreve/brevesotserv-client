@@ -273,7 +273,7 @@ local function renderDaily()
         card.name:setTooltip('')
     end
     local cost = state.rerollCost or 0
-    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar monstro (grátis)'))
+    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar (grátis)'))
     card.action.onClick = function()
         if cost > 0 then
             closeRerollBox()

@@ -130,9 +130,15 @@ local function destroyWindows(windows)
     return nil
 end
 
+-- when the player last used the reward wall (opened it, claimed): a server
+-- message box right after that is about the wall, which hides itself while
+-- it asks for a claim
+local lastWallUse = 0
+
 -- Claims the chosen reward: free at a shrine; from the button it costs one
 -- Instant Reward Access, asked first, or says there is none
 local function confirmClaim()
+    lastWallUse = os.time()
     if bonusShrine == OPEN_WINDOWS.SHRINE then
         -- Canary expects 0 = shrine on the collect packet
         g_game.requestGetRewardDaily(0, actualUsed)
@@ -339,13 +345,31 @@ local function onDailyReward(data)
     checkRewards(data)
 end
 
+local function wallInUse()
+    if rewardWallController.ui and rewardWallController.ui:isVisible() then
+        return true
+    end
+    if windowsPickWindow and not windowsPickWindow:isDestroyed() and windowsPickWindow:isVisible() then
+        return true
+    end
+    return os.time() - lastWallUse <= 5
+end
+
+-- Every message box of the server comes this way (0xED): the reward wall's,
+-- and the imbuing shrine's, the forge's, the stash's and the prey's. It is
+-- listened to all game long (it used to be only after the wall was opened,
+-- so those boxes never showed before that); the wall's title, and the way
+-- back to the wall on "ok", only for a box about the wall.
 local function onServerError(code, error)
+    local fromWall = wallInUse()
     generalBox = destroyWindows(generalBox)
     local cancelCallback = function()
         generalBox = destroyWindows(generalBox)
-        rewardWallController.ui:show()
-        rewardWallController.ui:raise()
-        rewardWallController.ui:focus()
+        if fromWall and rewardWallController.ui then
+            rewardWallController.ui:show()
+            rewardWallController.ui:raise()
+            rewardWallController.ui:focus()
+        end
     end
 
     local standardButtons = {{
@@ -353,19 +377,8 @@ local function onServerError(code, error)
         callback = cancelCallback
     }}
 
-    generalBox = displayGeneralBox3(rewardWallController.ui:getText(), error, standardButtons)
-end
-
-local function connectOnServerError()
-    connect(g_game, {
-        onServerError = onServerError
-    })
-end
-
-local function disconnectOnServerError()
-    disconnect(g_game, {
-        onServerError = onServerError
-    })
+    local title = fromWall and rewardWallController.ui and rewardWallController.ui:getText() or tr('Aviso')
+    generalBox = displayGeneralBox3(title, error, standardButtons)
 end
 
 -- The server sends the moment (unix time) the streak expires, not seconds:
@@ -475,7 +488,7 @@ function show()
     if ButtonRewardWall then
         ButtonRewardWall:setOn(true)
     end
-    connectOnServerError()
+    lastWallUse = os.time()
     premiumStatusWindwos(g_game.getLocalPlayer():isPremium())
 end
 
@@ -486,9 +499,6 @@ function hide(bool)
     rewardWallController.ui:hide()
     if ButtonRewardWall then
         ButtonRewardWall:setOn(false)
-    end
-    if bool then
-        disconnectOnServerError()
     end
 end
 
@@ -534,7 +544,9 @@ function rewardWallController:onInit()
         onOpenRewardWall = onOpenRewardWall,
         onDailyReward = onDailyReward,
         onRewardHistory = onRewardHistory,
-        onRestingAreaState = onRestingAreaState
+        onRestingAreaState = onRestingAreaState,
+        -- the server's message boxes, the whole game (see onServerError)
+        onServerError = onServerError
         -- onDailyRewardCollectionState
     })
     fixCssIncompatibility()
