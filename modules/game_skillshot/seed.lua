@@ -121,12 +121,14 @@ function handlers.hit(data)
     art.play('raizes_crescendo', creature, { moment = 'prende', shift = grow })
     art.play('raizes_presas', creature, { keys = heldKeys(grow + GROW_MS, grow + ms) })
     art.play('raizes_soltando', creature, { moment = 'solta', shift = grow + ms })
-    -- the poison's bubbles where it is, once a second
+    -- the poison's bubbles where it is, once a second, while it lives: one
+    -- killed while held is still found by its id, with no position (the
+    -- bubble after its death closed the Windows client)
     for tick = 1, POISON_TICKS do
         table.insert(events, scheduleEvent(function()
-            local still = g_map.getCreatureById(id)
-            if still then
-                art.particles('veneno', still:getPosition())
+            local at = layerCreaturePosition(id)
+            if at then
+                art.particles('veneno', at)
             end
         end, wait + tick * 1000))
     end

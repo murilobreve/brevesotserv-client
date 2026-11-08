@@ -36,3 +36,9 @@ Reference: `docs/client-assets-auto-install.md`
 
 - An area spell that kills many monsters brings, in one frame, a text message, experience, capacity and inventory counts per corpse. Handlers of those signals (`g_game.onTextMessage`, `LocalPlayer` experience/level/capacity, `g_game.updateInventoryItems`, extended opcodes sent on kills or level ups) must not redo a whole window or list each time: update once on the next frame (`scheduleEvent(fn, 1)` behind a pending flag, as `game_skills`, the stats bar and `game_actionbar` do), or only when the window is visible (`game_ascensao`).
 - Validate in the browser client: 30 monsters killed together with a normal character, `g_stats` per packet type before and after; the frame of the kills must not grow with what the change adds.
+
+## Dead Creatures in Deferred Code
+
+- A creature looked up by id after the moment it was sent (a scheduled event, an art's tick, a `later` callback) may have died: `g_map.getCreatureById` still finds it, `isDead()` is true and `getPosition()` is nil. Never hand that nil to the engine (`g_map.getTile`, `art.particles`, `art.play`): use `layerCreaturePosition(id)` in `game_skillshot`, or check `isDead()` and the position first.
+- A C++ function that throws inside a call from Lua is raised as a Lua error after its catch block (`LuaInterface::luaCppFunctionCallback`, `lua_dofile`, `lua_loadfile`, `loadFiles`); raising it inside the catch closed the Windows client (LuaJIT unwinds with SEH). Keep any new `lua_error` out of catch blocks.
+- Validate in the browser client: root a monster with Raízes Errantes (`exori tera vis`) and kill it while it is held; no "Lua exception" may follow in the log.

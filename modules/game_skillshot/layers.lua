@@ -259,7 +259,7 @@ function newLayerSet(base, path, label)
             return
         end
         local at = player:getPosition()
-        if at.z == position.z and math.max(math.abs(at.x - position.x), math.abs(at.y - position.y)) <= TREMOR_REACH then
+        if at and position and at.z == position.z and math.max(math.abs(at.x - position.x), math.abs(at.y - position.y)) <= TREMOR_REACH then
             mapPanel:shake(tremor.strength, tremor.ms)
         end
     end
@@ -348,7 +348,8 @@ function newLayerSet(base, path, label)
     function set.particles(moment, position, opts)
         opts = opts or {}
         local thrown = {}
-        local tile = g_map.getTile(position)
+        -- (nil: where a creature that died was; see layerCreaturePosition)
+        local tile = position and g_map.getTile(position)
         if not tile then
             return thrown
         end
@@ -554,6 +555,18 @@ function layerLight(hex)
         return math.floor(tonumber(v, 16) / 51 + 0.5)
     end
     return level(r) * 36 + level(g) * 6 + level(b)
+end
+
+-- where a creature the art follows is now, nil once it died or left the
+-- map. g_map.getCreatureById still finds a dead creature for a while, and
+-- its getPosition is nil: a nil position handed to the engine (getTile)
+-- throws inside the call, and the Windows client closed on it
+function layerCreaturePosition(id)
+    local creature = id and g_map.getCreatureById(id)
+    if not creature or (creature.isDead and creature:isDead()) then
+        return nil
+    end
+    return creature:getPosition()
 end
 
 -- the way from one sqm to another, degrees clockwise from east
