@@ -608,6 +608,11 @@ local function fillRow(row, boss)
                 addEvent(refreshList)
             end
         end
+        -- two quick clicks on the star are two toggles, not the row's
+        -- double click (that one takes the player to the boss)
+        row.star.onDoubleClick = function()
+            return true
+        end
     end
     paintDot(row.status, boss)
     local fav = favorites[boss.name] and true or false
@@ -1090,6 +1095,15 @@ local function onGameEnd()
     selectedName = nil
     rows, lootCache = {}, {}
     itemQuery, itemFound = '', nil
+    if searchEvent then
+        removeEvent(searchEvent)
+        searchEvent = nil
+    end
+    if window then
+        -- (with no state, the change of text redraws nothing)
+        window.pages.hall.filters.search:setText('')
+        window.pages.hall.filters.itemSearch:setText('')
+    end
     if roulette then
         roulette:hide()
     end
