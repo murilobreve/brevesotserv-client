@@ -1,452 +1,25 @@
--- Rarity Bonuses: every rarity item the player wears with its bonuses, and
--- the total of each bonus with the items it comes from. The numbers come from
--- the server (scripts/rarity/bonus_window.lua, extended opcode 123), which
--- adds them up the same way the bonuses are applied.
+-- Rarity: the extended opcode 123 (scripts/rarity/bonus_window.lua and the
+-- loot / revive senders), the Rarity XP shop and the rare monster's revival.
+-- The window itself, the Forja de Raridade, is forge.lua / forge.otui.
 
 local OPCODE = 123
-local FRAME_SIZE = 34
-local LINE = 14
 
-local GRADES = {
-    uncommon  = { label = 'Communis',    color = '#63c08a', frame = 1 },
-    rare      = { label = 'Rarus',       color = '#4f8fe8', frame = 2 },
-    epic      = { label = 'Praeclarus',  color = '#af78ea', frame = 3 },
-    legendary = { label = 'Legendarius', color = '#e2a443', frame = 4 },
-    mythic    = { label = 'Mythicus',    color = '#e8e4ff', frame = 5 },
-}
-
-local window
 local featureButton
 local refreshEvent
-local confirmBox
-local rarityXp = 0
-local gold = 0 -- backpack + bank, for the gold prices (lock, upgrade)
-local locks = {} -- slot id -> affix key kept on that item's next reroll
-local upgradeAsked -- { entry }: an upgrade sent, its answer plays on the reel
--- a reroll or upgrade sent: if no answer comes in this long, the roulette
--- stops waiting (expectAnswer)
-local ANSWER_TIMEOUT = 8000
-local answerEvent
-local expectAnswer
-
-local function send(data)
-    local protocol = g_game.getProtocolGame()
-    if protocol then
-        protocol:sendExtendedJSONOpcode(OPCODE, data)
-    end
-end
-
--- 12 -> "12", 14.4 -> "14.4"
-local function number(value)
-    value = tonumber(value) or 0
-    if math.floor(value) == value then
-        return tostring(math.floor(value))
-    end
-    return string.format('%.1f', value)
-end
-
--- 2450 -> "2.4k": the buttons are small
-local function formatCost(cost)
-    cost = tonumber(cost) or 0
-    if cost >= 10000 then
-        return string.format('%dk', math.floor(cost / 1000))
-    elseif cost >= 1000 then
-        return string.format('%.1fk', math.floor(cost / 100) / 10)
-    end
-    return tostring(cost)
-end
-
--- the bank's gold next to the Rarity XP, with a coin; a server that does
--- not send it apart shows the backpack and bank together
-local function showBank(data)
-    if not window or not window.bankBox then
-        return
-    end
-    local bank = tonumber(data.bank)
-    local backpack = tonumber(data.backpack)
-    local amount = bank or gold
-    window.bankBox:setText(formatMoney(math.floor(amount), '.'))
-    window.bankBox.icon:setImageSource('/images/game/cyclopedia/icons/icon-goldcoin')
-    local tooltip = bank and backpack
-        and tr('Bank: %s gold\nBackpack: %s gold\nThe gold prices (Keep, Raise) are paid from the backpack and the bank.', formatMoney(bank, '.'), formatMoney(backpack, '.'))
-        or tr('Your gold, backpack and bank.')
-    window.bankLabel:setTooltip(tooltip)
-    window.bankBox:setTooltip(tooltip)
-end
-
--- 25000000 -> "25kk", 3500000 -> "3.5kk", 800000 -> "800k"
-local function formatGold(value)
-    value = tonumber(value) or 0
-    if value >= 1000000 then
-        local kk = value / 1000000
-        return (math.floor(kk) == kk and string.format('%dkk', kk) or string.format('%.1fkk', math.floor(kk * 10) / 10))
-    elseif value >= 1000 then
-        return string.format('%dk', math.floor(value / 1000))
-    end
-    return tostring(value)
-end
-
-local function bonusText(bonus)
-    local text = string.format('+%s%s %s', number(bonus.value), bonus.unit or '', bonus.label)
-    if bonus.range then
-        text = text .. string.format(' (%d sqm)', bonus.range)
-    end
-    return text
-end
-
--- what a bonus does: the server's sentence (desc, with descArgs), translated;
--- nil when the server sent none
--- a tooltip in lines of about `width` letters: the client draws it as it
--- comes, and one long line runs off the screen
-local function wrapTip(text, width)
-    width = width or 56
-    local paragraphs = {}
-    for paragraph in (text .. '\n'):gmatch('(.-)\n') do
-        local lines, line = {}, ''
-        for word in paragraph:gmatch('%S+') do
-            if line ~= '' and #line + 1 + #word > width then
-                table.insert(lines, line)
-                line = word
-            else
-                line = line == '' and word or (line .. ' ' .. word)
-            end
-        end
-        table.insert(lines, line)
-        table.insert(paragraphs, table.concat(lines, '\n'))
-    end
-    return table.concat(paragraphs, '\n')
-end
-
-local function describe(entry)
-    if type(entry) ~= 'table' or type(entry.desc) ~= 'string' or entry.desc == '' then
-        return nil
-    end
-    local args = type(entry.descArgs) == 'table' and entry.descArgs or {}
-    return wrapTip(tr(entry.desc, unpack(args)))
-end
-
--- the totals carry each bonus's sentence; the items' bonus lines look it up
-local bonusDescs = {}
-
-local function titleCase(text)
-    return (text:gsub("(%a)([%w']*)", function(first, rest) return first:upper() .. rest end))
-end
-
-local function confirm(title, message, callback)
-    if confirmBox then
-        confirmBox:destroy()
-    end
-    local function close()
-        if confirmBox then
-            confirmBox:destroy()
-            confirmBox = nil
-        end
-    end
-    confirmBox = displayGeneralBox(title, message, {
-        { text = tr('Yes'), callback = function() close(); callback() end },
-        { text = tr('No'), callback = close },
-        anchor = AnchorHorizontalCenter,
-    }, function() close(); callback() end, close)
-end
-
--- an item's Reroll button follows the balance: off, saying why, while the
--- Rarity XP doesn't pay for it
-local function setRerollState(row)
-    local entry = row.entry
-    local grade = GRADES[entry.rarity] or GRADES.uncommon
-    local cost = entry.rerollCost or 0
-    local lockGold = locks[entry.slotId] and (entry.lockCost or 0) or 0
-    row.rerollItemButton:setTooltip(tr('Reroll the whole item at %s: how many bonuses (up to %d), which ones and their values are rolled again. The item, its grade and its finder stay. (%d Rarity XP)', grade.label, entry.maxBonuses or 0, cost))
-    row.rerollItemButton:setEnabled(cost > 0 and rarityXp >= cost and gold >= lockGold)
-    if cost > 0 and rarityXp < cost then
-        row.rerollItemButton:setTooltip(tr('You need %d Rarity XP and have %d. Buy more in the Store (Rarity) or kill Pale, Ashen, Obsidian and Lord of Death monsters.', cost, rarityXp))
-    elseif lockGold > gold then
-        row.rerollItemButton:setTooltip(tr('Keeping a bonus costs %s gold and you have %s.', formatGold(lockGold), formatGold(gold)))
-    end
-    -- one grade up: gold and Rarity XP, with a chance
-    local up = entry.upgrade
-    row.upgradeItemButton:setVisible(up ~= nil)
-    row.upgradeCost:setVisible(up ~= nil)
-    if up then
-        row.upgradeItemButton:setText(tr('%s %d%%', up.label, up.chance))
-        row.upgradeItemButton:setEnabled(gold >= up.gold and rarityXp >= up.xp)
-        -- the price under the button, so it is seen before clicking
-        row.upgradeCost:setText(tr('%s gold + %s XP', formatGold(up.gold), formatCost(up.xp)))
-        row.upgradeCost:setColor((gold >= up.gold and rarityXp >= up.xp) and '#c9b88a' or '#c46a5a')
-        row.upgradeItemButton:setTooltip(tr('Raise to %s: %s gold and %d Rarity XP, %d%% chance. On success the item rolls again at %s; on a failure it stays as it is and the price is spent.', up.label, formatGold(up.gold), up.xp, up.chance, up.label))
-        -- off: say what is missing
-        if rarityXp < up.xp then
-            row.upgradeItemButton:setTooltip(tr('Raising to %s needs %d Rarity XP and you have %d.', up.label, up.xp, rarityXp))
-        elseif gold < up.gold then
-            row.upgradeItemButton:setTooltip(tr('Raising to %s costs %s gold and you have %s.', up.label, formatGold(up.gold), formatGold(gold)))
-        end
-    end
-end
-
-local lastItems
-local lastFinderPercent = 0 -- how much more the finder gets (the server says)
 local xpShop -- the Rarity XP packs and the balances (buyRarityXp)
 local shopWindow
 local fillShop
 
-function fillItems(items)
-    lastItems = items
-    local list = window.itemsSection.itemsList
-    list:destroyChildren()
-    window.itemsSection.itemsEmpty:setVisible(#items == 0)
-    for index, entry in ipairs(items) do
-        local row = g_ui.createWidget(index % 2 == 0 and 'BonusItemRowEven' or 'BonusItemRow', list)
-        local grade = GRADES[entry.rarity] or GRADES.uncommon
-        row.frame:setImageClip(string.format('%d 0 %d %d', grade.frame * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE))
-        local item = Item.create(entry.itemId, 1)
-        if entry.shader and entry.shader ~= '' then
-            item:setShader(entry.shader)
-        end
-        row.frame.item:setItem(item)
-        if ItemsDatabase and ItemsDatabase.setFrameGems then
-            ItemsDatabase.setFrameGems(row.frame, entry.tags or {})
-        end
-        row.name:setText(titleCase(entry.name or ''))
-        row.name:setColor(grade.color)
-        -- who found it: the finder gets more of every bonus
-        local finderPercent = lastFinderPercent or 0
-        if entry.finder then
-            row.finder:setText(finderPercent > 0 and tr('Found by you  +%d%%', finderPercent) or tr('Found by you'))
-            row.finder:setColor('#7fd35a')
-            row.finderInfo:setTooltip(wrapTip(tr('Whoever finds an item gets +%d%% on all its bonuses while wearing it. The numbers here already include it.', finderPercent)))
-        else
-            row.finder:setText(tr('Not found by you'))
-            row.finder:setColor('#8f84a8')
-            row.finderInfo:setTooltip(wrapTip(tr('Only whoever finds an item gets +%d%% on its bonuses. You did not find this one, so its numbers are the plain ones.', finderPercent)))
-        end
-        row.finderInfo:setVisible(finderPercent > 0)
-        local count = 0
-        local lockable = (entry.lockCost or 0) > 0
-        -- a kept bonus the item no longer has (rerolled elsewhere) is dropped
-        local kept = false
-        for _, bonus in ipairs(entry.bonuses or {}) do
-            kept = kept or bonus.key == locks[entry.slotId]
-        end
-        if not kept then
-            locks[entry.slotId] = nil
-        end
-        for _, bonus in ipairs(entry.bonuses or {}) do
-            count = count + 1
-            local line = g_ui.createWidget('BonusLine', row.bonuses)
-            line.text:setText(bonusText(bonus))
-            local desc = describe(bonusDescs[bonus.key])
-            line.info:setVisible(desc ~= nil)
-            if desc then
-                line.info:setTooltip(desc)
-            end
-            -- near its top: the roulette's colour (from the server)
-            if bonus.color and bonus.color ~= '' then
-                line.text:setColor(bonus.color)
-            end
-            -- "Keep": this bonus stays, with its value, on the next reroll (gold)
-            line.keep:setVisible(lockable)
-            if not lockable then
-                line.info:setMarginRight(6 - line.keep:getWidth())
-            else
-                local locked = locks[entry.slotId] == bonus.key
-                line.keep:setOn(locked)
-                line.keep:setText(locked and tr('Kept') or tr('Keep'))
-                line.keep:setTooltip(locked and tr('Kept: the next reroll keeps this bonus with its value and rolls only the others. Click to let it go.')
-                    or tr('Keep this bonus with its value on the next reroll: only the others are rolled again, as many as there are now. %s gold, on top of the Rarity XP. One bonus per item.', formatGold(entry.lockCost)))
-                -- the whole line lights up, so a kept bonus is never missed
-                if locked then
-                    line:setBackgroundColor('#e0c06024')
-                    line:setBorderWidth(1)
-                    line:setBorderColor('#e0c06070')
-                end
-                line.keep.onClick = function()
-                    local name = titleCase(entry.name or '')
-                    if locks[entry.slotId] == bonus.key then
-                        locks[entry.slotId] = nil
-                        window.status:setText(tr('%s is no longer kept: the next reroll of %s rolls every bonus again.', bonusText(bonus), name))
-                        window.status:setColor('#ab9fc6')
-                    else
-                        locks[entry.slotId] = bonus.key
-                        window.status:setText(tr('%s kept on %s: the next reroll keeps it with this value and rolls only the others, for %s gold on top of the Rarity XP.', bonusText(bonus), name, formatGold(entry.lockCost)))
-                        window.status:setColor('#e0c060')
-                    end
-                    fillItems(lastItems or {})
-                end
-            end
-        end
-        local cost = entry.rerollCost or 0
-        local lockKey = locks[entry.slotId]
-        -- the price says what it is paid in: Rarity XP, and gold for a kept bonus
-        row.rerollItemButton:setText(lockKey and tr('%s XP + %s gold', formatCost(cost), formatGold(entry.lockCost)) or tr('Reroll %s XP', formatCost(cost)))
-        row.rerollItemButton:setIcon(lockKey and '/game_raritybonus/images/lock_on' or '/game_raritybonus/images/reroll')
-        row.entry = entry
-        setRerollState(row)
-        row.rerollItemButton.onClick = function()
-            local lines, keptText = {}, nil
-            for _, bonus in ipairs(entry.bonuses or {}) do
-                if bonus.key == lockKey then
-                    keptText = bonusText(bonus)
-                else
-                    table.insert(lines, bonusText(bonus))
-                end
-            end
-            local text
-            if keptText then
-                text = tr('Reroll %s for %d Rarity XP and %s gold?\n\nKept, with its value: %s\n\nLost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, formatGold(entry.lockCost), keptText, table.concat(lines, '\n'))
-            else
-                text = tr('Reroll %s for %d Rarity XP?\n\nEvery bonus it has now is lost:\n%s\n\nThe new ones can be better or worse, and there is no way back.', titleCase(entry.name or ''), cost, table.concat(lines, '\n'))
-            end
-            confirm(tr('Reroll item'), text, function()
-                send({ action = 'rerollItem', slot = entry.slotId, lock = lockKey })
-                expectAnswer()
-            end)
-        end
-        row.upgradeItemButton.onClick = function()
-            local up = entry.upgrade
-            if not up then
-                return
-            end
-            confirm(tr('Raise the grade'), tr('Raise %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid even if it fails.\nChance: %d%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. On a failure it stays exactly as it is.', titleCase(entry.name or ''), up.label, formatGold(up.gold), up.xp, up.chance, up.label), function()
-                upgradeAsked = { entry = entry }
-                send({ action = 'upgradeItem', slot = entry.slotId })
-                expectAnswer()
-            end)
-        end
-        local linesHeight = count * 20
-        row.bonuses:setHeight(linesHeight)
-        -- the upgrade's price line under the two buttons needs a little more
-        row:setHeight(math.max(entry.upgrade and 60 or 48, 3 + 15 + 15 + 3 + linesHeight + 6))
-    end
-end
-
--- How the Roulette works, on hover: the (i) of each column title over the
--- items, and the (i) of the totals' title
-local COLUMN_TITLES = {
-    { id = 'bonusesTitle', title = 'Bonuses', tip = 'The colour says if the rolled value was good: green is common, blue is good, purple is very good, orange is near the maximum and gold is perfect. The (i) of each bonus says what it does.' },
-    { id = 'keepTitle', title = 'Keep', tip = 'Locks one bonus with its value: the next Reroll keeps it and rolls only the others, as many as the item has now (so it needs two or more bonuses). It costs gold on top of the Rarity XP, one bonus per item.' },
-    { id = 'rerollTitle', title = 'Reroll', tip = 'Rolls the whole item again with Rarity XP: how many bonuses, which ones and their values. It can come out better or worse, and there is no way back.\n\nFewer bonuses come stronger: a single bonus gets all the strength. The item, its grade and who found it stay.' },
-    { id = 'raiseTitle', title = 'Raise', tip = 'Raises the item one grade for gold and Rarity XP, with the chance shown on the button. On a success it rolls new, stronger bonuses at the new grade; on a failure it stays as it was and the cost is spent.' },
-}
-
-local function fillTitles()
-    local header = window.itemsSection.itemsHeader
-    for _, column in ipairs(COLUMN_TITLES) do
-        local widget = header[column.id]
-        widget.title:setText(tr(column.title))
-        widget.info:setTooltip(wrapTip(tr(column.tip)))
-    end
-    -- the totals' (i) right after their centred title
-    local section = window.totalsSection
-    section.titleInfo:setTooltip(wrapTip(tr('MAX is the most a bonus can reach, all your items together. The bar shows how much you have of it; the green check means it is at the MAX, and more of it on another item adds nothing.\n\nThe bar, the name and the MAX go from a muted to a bright green as the total gets closer to the MAX.')))
-    section.titleInfo:setMarginLeft(math.floor(section:getTextSize().width / 2) + 14)
-end
-
--- how close a total is to its MAX, in one green: muted at 0, bright at the
--- limit. The bar, the name and the MAX share it, so the colour reads as the
--- bonus's progress (the quality colours stay on the items on the left)
-local PROGRESS_FROM = { 0x4b, 0x72, 0x55 }
-local PROGRESS_TO = { 0x8e, 0xf2, 0x5a }
-local PLAIN_TOTAL_COLOR = '#7fd35a' -- a total with no limit (on each item)
-
-local function progressColor(share)
-    share = math.max(0, math.min(1, share or 0))
-    local rgb = {}
-    for i = 1, 3 do
-        rgb[i] = math.floor(PROGRESS_FROM[i] + (PROGRESS_TO[i] - PROGRESS_FROM[i]) * share + 0.5)
-    end
-    return string.format('#%02x%02x%02x', rgb[1], rgb[2], rgb[3])
-end
-
-local function fillTotals(totals, items)
-    local list = window.totalsSection.totalsList
-    list:destroyChildren()
-    for index, entry in ipairs(totals) do
-        local row = g_ui.createWidget(index % 2 == 0 and 'BonusTotalRowEven' or 'BonusTotalRow', list)
-        -- bonus names stay as the items and the wiki write them
-        row.label:setText(entry.label)
-        local desc = describe(entry)
-        row.info:setVisible(desc ~= nil)
-        if desc then
-            row.info:setTooltip(desc)
-        end
-        -- a bonus with a limit shows the limit here (MAX) and the total on its
-        -- bar below; one without, its total
-        local cap = (not entry.perItem) and tonumber(entry.cap) or nil
-        if cap and cap <= 0 then
-            cap = nil
-        end
-        local total = '+' .. number(entry.total) .. (entry.unit or '')
-        if entry.perItem then
-            total = total .. ' ' .. tr('(on each item)')
-        end
-        local share = cap and math.min(1, (tonumber(entry.total) or 0) / cap) or nil
-        local color = share and progressColor(share) or nil
-        row.label:setColor(color or '#e6e0f2')
-        row.total:setText(cap and tr('MAX: %s', number(cap) .. (entry.unit or '')) or total)
-        row.total:setColor(color or PLAIN_TOTAL_COLOR)
-        if entry.capped then
-            row.total:setTooltip(tr('This bonus is at its limit: more of it on other items adds nothing.'))
-        end
-        -- the bar from 0 to the limit, the total at its end; full, a green check
-        local meter = row.meter
-        local meterHeight = 0
-        if cap then
-            local full = entry.capped or share >= 1
-            meter:show()
-            meter.low:setText('0' .. (entry.unit or ''))
-            meter.high:setText(number(entry.total) .. (entry.unit or ''))
-            meter.high:setVisible(not full)
-            meter.check:setVisible(full)
-            meter.bar.fill:setBackgroundColor(color)
-            meter:setTooltip(full and tr('At the limit') or tr('%s of %s', number(entry.total) .. (entry.unit or ''), number(cap) .. (entry.unit or '')))
-            meterHeight = 4 + meter:getHeight()
-            -- the bar's width is known once the row is laid out
-            scheduleEvent(function()
-                if not meter:isDestroyed() then
-                    local inner = meter.bar:getWidth() - 2
-                    meter.bar.fill:setWidth(math.max(share > 0 and 1 or 0, math.floor(inner * share)))
-                end
-            end, 1)
-        else
-            meter:hide()
-            meter:setHeight(0)
-            meter:setMarginTop(0)
-        end
-        local lines = {}
-        for _, source in ipairs(entry.sources or {}) do
-            table.insert(lines, string.format('  %s: +%s%s', titleCase(source.name or ''), number(source.value), entry.unit or ''))
-        end
-        if entry.combined then
-            table.insert(lines, '  ' .. tr('combined, not added up'))
-        end
-        row.sources:setText(table.concat(lines, '\n'))
-        row.sources:setHeight(#lines * LINE)
-        row:setHeight(3 + 14 + meterHeight + 3 + #lines * LINE + 5)
-    end
-end
+local send = function(request) Forge.send(request) end
+local confirm = function(title, message, callback) Forge.confirm(title, message, callback) end
 
 function showXpBadge(xp)
     if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
         -- the row sits under the Rarity title: a short name leaves room for the badge
-        modules.game_brevespanel.setFeatureLabel('bonus', tr('Roulette'), '#dfdfdf')
+        modules.game_brevespanel.setFeatureLabel('bonus', tr('Forge'), '#dfdfdf')
         modules.game_brevespanel.setFeatureState('bonus', tr('%d XP', xp), '#e0c060')
     end
 end
-
--- a new balance (Store pack, tier kill) while the window is open: the label
--- and the Reroll buttons follow it without asking the server again
-local function updateXp()
-    window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
-    for _, row in ipairs(window.itemsSection.itemsList:getChildren()) do
-        if row.entry then
-            setRerollState(row)
-        end
-    end
-end
-
-local applyBonuses
-local rouletteTakes
-local updateRouletteXp
 
 -- A rare monster rising from its corpse (art and motion: the design kit
 -- "Renascimento, quatro presencas"). Each tier is a material coming alive: a
@@ -683,905 +256,67 @@ local function showRevive(data)
     frame()
 end
 
+
 local function onOpcode(protocol, opcode, data)
-    if type(data) == 'table' and data.action == 'drop' then
+    if type(data) ~= 'table' then
+        return
+    end
+    local action = data.action
+    if action == 'drop' then
         showLootDrop(data)
-        return
-    end
-    if type(data) == 'table' and data.action == 'dropgone' then
+    elseif action == 'dropgone' then
         removeLootDrop(data)
-        return
-    end
-    if type(data) == 'table' and data.action == 'dropmove' then
+    elseif action == 'dropmove' then
         moveLootDrop(data)
-        return
-    end
-    if type(data) == 'table' and data.action == 'find' then
+    elseif action == 'find' then
         showLootCard(data)
-        return
-    end
-    if type(data) == 'table' and data.action == 'banner' then
+    elseif action == 'banner' then
         showLootBanner(data)
-        return
-    end
-    if type(data) == 'table' and data.action == 'revive' then
+    elseif action == 'revive' then
         showRevive(data)
-        return
-    end
-    -- the balance, after every change: shown on the Rarity Bonuses row; past
-    -- a multiple of 50 a notice offers the window without opening it
-    if type(data) == 'table' and data.action == 'xp' then
-        rarityXp = tonumber(data.xp) or rarityXp
-        showXpBadge(rarityXp)
-        if window and window:isVisible() then
-            updateXp()
+    elseif action == 'xp' then
+        -- the balance, after every change: shown on the Mythos bar; past a
+        -- multiple of 50 a notice offers the window without opening it
+        local xp = tonumber(data.xp) or 0
+        showXpBadge(xp)
+        Forge.onXp(xp)
+        if shopWindow and shopWindow:isVisible() then
+            fillShop()
         end
-        updateRouletteXp()
+        local window = Forge.window()
         if data.ready and not (window and window:isVisible()) and modules.game_brevespanel then
             modules.game_brevespanel.notify('bonus',
-                tr('You have %d Rarity XP! Use it to reroll your rarity items.', tonumber(data.xp) or 0),
+                tr('You have %d Rarity XP! Use it to reforge your rarity items.', xp),
                 tr('Open'))
         end
-        return
-    end
-    if type(data) ~= 'table' or data.action ~= 'bonuses' or not window then
-        return
-    end
-    if answerEvent and type(data.result) == 'table' then
-        removeEvent(answerEvent)
-        answerEvent = nil
-    end
-    -- a reroll plays the roulette first; the list below only shows the new
-    -- bonuses once the reels stop
-    if rouletteTakes(data) then
-        return
-    end
-    applyBonuses(data)
-end
-
-applyBonuses = function(data)
-    rarityXp = tonumber(data.rarityXp) or 0
-    gold = tonumber(data.gold) or gold
-    showXpBadge(rarityXp)
-    window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
-    window.xpLabel:setTooltip(tr('Earned by killing Pale, Ashen, Obsidian and Lord of Death monsters: the stronger the monster and its tier, the more you get. Spend it here to reroll the items you wear; items of a higher grade or level cost more.'))
-    showBank(data)
-    -- automatic refreshes (equipment changed) carry no message: keep the
-    -- answer to the last reroll on screen
-    local message = data.message
-    local result = data.result
-    if type(result) == 'table' then
-        if result.code == 'rerolled' then
-            message = tr('%s rerolled: %s. (-%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), tonumber(result.cost) or 0)
-            if result.perfect then
-                message = message .. ' ' .. tr('Perfect roll!')
-            end
-        elseif result.code == 'xp' then
-            message = tr('You need %d Rarity XP and have %d. Kill Pale, Ashen, Obsidian and Lord of Death monsters to earn more.', tonumber(result.cost) or 0, tonumber(result.balance) or 0)
-        elseif result.code == 'gone' then
-            message = tr('That item is no longer equipped.')
-        elseif result.code == 'gold' then
-            message = tr('You need %s gold in your backpack and bank.', formatGold(result.gold))
-        elseif result.code == 'cannot' or result.code == 'busy' then
-            -- fixed sentences from the server, translated here
-            message = tr(data.message or '')
-        elseif result.code == 'bought' then
-            message = result.currency == 'coins' and tr('+%d Rarity XP! (-%d Mythos Coins)', tonumber(result.xp) or 0, tonumber(result.price) or 0)
-                or tr('+%d Rarity XP! (-%d Hunt Points)', tonumber(result.xp) or 0, tonumber(result.price) or 0)
-        elseif result.code == 'coins' then
-            message = tr('This pack costs %d Mythos Coins and you have %d.', tonumber(result.price) or 0, tonumber(result.have) or 0)
-        elseif result.code == 'points' then
-            message = tr('This pack costs %d Hunt Points and you have %d.', tonumber(result.price) or 0, tonumber(result.have) or 0)
-        elseif result.code == 'pack' then
-            message = tr('This pack is not sold any more.')
-        elseif result.code == 'upgradeFailed' then
-            message = tr('The upgrade to %s failed (%d%% chance): %s stays as it was. (-%s gold, -%d Rarity XP)', result.to or '', tonumber(result.chance) or 0, titleCase(result.name or ''), formatGold(result.gold), tonumber(result.xp) or 0)
-        end
-        if result.code == 'rerolled' and result.upgrade then
-            message = tr('Upgrade! %s: %s. (-%s gold, -%d Rarity XP)', titleCase(result.name or ''), table.concat(result.bonuses or {}, ', '), formatGold(result.gold), tonumber(result.cost) or 0)
-        elseif result.code == 'rerolled' and (tonumber(result.gold) or 0) > 0 then
-            message = message .. ' ' .. tr('(-%s gold to keep a bonus)', formatGold(result.gold))
-        end
-    end
-    if message then
-        window.status:setText(message)
-        window.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
-    end
-    bonusDescs = {}
-    for _, entry in ipairs(data.totals or {}) do
-        bonusDescs[entry.key or ''] = entry
-    end
-    lastFinderPercent = tonumber(data.finderPercent) or lastFinderPercent
-    xpShop = type(data.shop) == 'table' and data.shop or xpShop
-    if shopWindow and shopWindow:isVisible() then
-        fillShop()
-        -- the shop says how the purchase went, where it was made
-        local code = type(result) == 'table' and result.code
-        if code == 'bought' or code == 'coins' or code == 'points' or code == 'pack' then
-            shopWindow.status:setText(message or '')
-            shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
-        end
-    end
-    fillItems(data.items or {})
-    fillTotals(data.totals or {}, data.items or {})
-    fillTitles()
-    if not window:isVisible() then
-        window:show()
-        window:raise()
-        window:focus()
-        if featureButton then
-            featureButton:setOn(true)
-        end
-    end
-end
-
-
--- ---------------------------------------------------------------------------
--- Rarity Roulette, opened like a CS case: one strip per bonus the grade
--- allows. Each strip is a long row of cards (bonuses this item could roll,
--- painted in their quality colour, so the player sees what was possible)
--- that races under a gold marker, slows down and stops on the server's
--- result. Strips stop one by one, each a bit later. Strips the item didn't
--- get stop on an empty card (the number of bonuses is rolled too).
--- The server rolls at once; this is only the show.
--- ---------------------------------------------------------------------------
-
-local roulette
-local spin -- { result, rows, current, count, assumed, bump, finished, waiting, onDone, pending, event }
--- raising the grade on the reel (below): { entry, data, success, chance,
--- from, to, row, line, startsAt, event, finished, waiting, next, pending }
-local upgrade
-local setUpgradeAgain
--- One reel, like a slot machine: the bonuses roll from the bottom to the
--- top, each one centred and on its own line, so it can be read as it goes
--- by. The slots roll one at a time; the result lands on the middle line and
--- goes to the list below the reel.
-local LINE = 34 -- height of a reel line
-local WIN_INDEX = 12 -- the result is the 12th line: 10 lines go by
-local LINES_AFTER = 2 -- lines under the result, so the reel never runs dry
-local SPIN_TIME = 4600 -- ms per slot
-local SPEED_UP = 0.18 -- share of the spin spent speeding up
-local PAUSE = 900 -- ms between one slot stopping and the next starting
-local BUMP_TIME = 700 -- ms the bonuses take to grow at an empty slot
-local FADE = 0.3 -- how much the reel dims at full speed
-local ACTIVE_COLOR = '#e0c060' -- the slot rolling now
-local REEL_TOP = 2 -- the strip's margin when its first line is at the top
--- ms between reel updates: under one frame even at 165 Hz, so every frame
--- shows a fresh position (16 ms skipped or doubled frames, a stutter)
-local FRAME_MS = 6
-
-local QUALITY_COLORS = {
-    { 0.9, '#e2a443' }, -- near the top
-    { 0.7, '#a679e6' },
-    { 0.45, '#4f8fe8' },
-    { 0.2, '#63c08a' },
-    { 0, '#b8b8b8' },
-}
-
-local function qualityColor(quality, perfect)
-    if perfect then
-        return '#ffe7a6'
-    end
-    for _, entry in ipairs(QUALITY_COLORS) do
-        if (quality or 0) >= entry[1] then
-            return entry[2]
-        end
-    end
-    return '#b8b8b8'
-end
-
--- a bonus the item could have rolled: mostly low and middle values, now and
--- then one near the top, like the odds really are
-local function randomLine(pool)
-    if not pool or #pool == 0 then
-        return '???', '#b8b8b8'
-    end
-    local entry = pool[math.random(#pool)]
-    local min, max = tonumber(entry.min) or 1, tonumber(entry.max) or 1
-    local quality = math.random() ^ 1.7
-    local value = min + math.floor(quality * math.max(0, max - min) + 0.5)
-    return string.format('+%d%s %s', value, entry.unit or '', entry.label or ''), qualityColor(quality)
-end
-
-local function rouletteVisible()
-    return roulette and roulette:isVisible()
-end
-
-local function setAgainButton()
-    if upgrade then
-        setUpgradeAgain()
-        return
-    end
-    if not spin or not spin.result then
-        return
-    end
-    -- an upgrade is not spun again: the item is rerolled from the list
-    roulette.againButton:setVisible(not spin.result.upgrade)
-    local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
-    local lockGold = spin.result.lock and (tonumber(spin.result.nextGold) or 0) or 0
-    roulette.againButton:setText(lockGold > 0 and tr('Spin again (%d XP + %s gold)', cost, formatGold(lockGold)) or tr('Spin again (%d XP)', cost))
-    roulette.againButton:setEnabled(spin.finished and not spin.waiting and rarityXp >= cost and gold >= lockGold)
-    -- the balance only once the reel stops: it is updated with the result
-    roulette.xp:setText(spin.finished and tr('Rarity XP: %d', rarityXp) or '')
-end
-
--- a new balance while the roulette is open: "spin again" follows it
-updateRouletteXp = function()
-    if rouletteVisible() then
-        setAgainButton()
-    end
-end
-
--- Where the reel is (0 to 1) and how fast it goes (1 = average speed) at
--- time p of a spin: speed rises in a straight line for SPEED_UP of the time,
--- then falls away as (1 - t)^2, a long slow end.
-local CURVE_AREA = SPEED_UP / 2 + (1 - SPEED_UP) / 3
-local function spinCurve(p)
-    if p <= 0 then
-        return 0, 0
-    elseif p >= 1 then
-        return 1, 0
-    elseif p < SPEED_UP then
-        return (p * p / (2 * SPEED_UP)) / CURVE_AREA, (p / SPEED_UP) / CURVE_AREA
-    end
-    local rest = (1 - p) / (1 - SPEED_UP)
-    local position = SPEED_UP / 2 + (1 - SPEED_UP) / 3 * (1 - rest ^ 3)
-    return position / CURVE_AREA, rest * rest / CURVE_AREA
-end
-
--- "12%", "2.5%", "0.35%": enough digits to tell rare rolls apart
-local function formatChance(chance)
-    local percent = chance * 100
-    if percent >= 10 then
-        return string.format('%d%%', math.floor(percent + 0.5))
-    elseif percent >= 1 then
-        return string.format('%.1f%%', percent)
-    elseif percent >= 0.01 then
-        return string.format('%.2f%%', percent)
-    end
-    return '<0.01%'
-end
-
--- once every slot stopped: each bonus's range on the item and the odds of
--- rolling its value or better (sent by the server with the roll)
-local function showOdds()
-    for _, row in ipairs(spin.rows or {}) do
-        local entry = row.entry
-        local widget = row.result
-        if entry and entry.min and entry.max and entry.chance and widget and not widget:isDestroyed() then
-            widget.odds:setText(tr('%d to %d, %s', entry.min, entry.max, entry.perfect and tr('perfect') or tr('top %s', formatChance(entry.chance))))
-            widget.odds:setColor(qualityColor(entry.quality, entry.perfect))
-        end
-    end
-end
-
-local function finishSpin()
-    if not spin or spin.finished then
-        return
-    end
-    spin.finished = true
-    if spin.event then
-        removeEvent(spin.event)
-        spin.event = nil
-    end
-    local result = spin.result or {}
-    local rolled = result.rolled or {}
-    local best = 0
-    for _, entry in ipairs(rolled) do
-        best = math.max(best, entry.perfect and 2 or (entry.quality or 0))
-    end
-    local summary
-    if result.perfect then
-        summary = tr('PERFECT ROLL!')
-    elseif best >= 0.9 then
-        summary = tr('Jackpot! A bonus near the top.')
-    elseif best >= 0.7 then
-        summary = tr('Great roll!')
-    elseif #rolled == 1 then
-        summary = tr('Just one bonus, all the power in it.')
-    else
-        summary = tr('%d bonuses.', #rolled)
-    end
-    roulette.status:setText(summary)
-    roulette.status:setColor(result.perfect and '#ffe7a6' or qualityColor(best))
-    showOdds()
-    roulette.closeButton:setText(tr('Close'))
-    if spin.onDone then
-        local done = spin.onDone
-        spin.onDone = nil
-        done()
-    end
-    if spin.pending then
-        local pending = spin.pending
-        spin.pending = nil
-        applyBonuses(pending)
-    end
-    setAgainButton()
-end
-
--- The value of a rolled bonus while the item may still have `assumed`
--- bonuses: the server sends steps for its real count (steps[1]) and every
--- count above it, since the fewer bonuses an item has, the stronger each one.
--- Returns the step and whether it is the real one.
-local function stepFor(entry, assumed)
-    local steps = entry.steps
-    if type(steps) ~= 'table' or #steps == 0 then
-        return nil
-    end
-    local index = math.max(1, math.min(#steps, assumed - spin.count + 1))
-    return steps[index], index == 1
-end
-
-local function bonusText(entry, value, final)
-    local text = string.format('+%d%s %s', value, entry.unit or '', entry.label or '')
-    if final and entry.perfect then
-        text = text .. '  ' .. tr('PERFECT')
-    end
-    return text
-end
-
--- text and colour of a slot's bonus with `assumed` bonuses; nil text for an
--- empty slot. Also remembers the value shown.
-local function slotLook(row, assumed)
-    local entry = row.entry
-    if not entry then
-        return nil
-    end
-    local step, final = stepFor(entry, assumed)
-    if not step then
-        -- a server without steps: the final value straight away
-        row.shown = nil
-        local text = entry.perfect and (entry.text .. '  ' .. tr('PERFECT')) or entry.text
-        return text, qualityColor(entry.quality, entry.perfect)
-    end
-    row.shown = step.value
-    return bonusText(entry, step.value, final), qualityColor(step.quality, final and entry.perfect)
-end
-
-local function paintLine(line, text, color)
-    line.text:setText(text or tr('no bonus'))
-    line.text:setColor(text and color or '#5a5a5a')
-end
-
--- a slot's line in the list under the reel
-local function paintResult(row, text, color)
-    local widget = row.result
-    widget:setOpacity(1)
-    -- (i): what the bonus does, once it is out
-    local desc = text and describe(row.entry)
-    widget.info:setVisible(desc ~= nil)
-    if desc then
-        widget.info:setTooltip(desc)
-    end
-    widget.text:setText(text or tr('no bonus'))
-    widget.text:setColor(text and color or '#5a5a5a')
-    widget:setBorderColor(text and color or '#2a2a2a')
-    widget:setBackgroundColor(text and (color .. '22') or '#0b0b0bee')
-    -- the locked bonus stays gold, whatever repaints it (skip, grow)
-    if row.kept then
-        widget:setBorderColor('#e0c060')
-        widget:setBackgroundColor('#e0c06026')
-    end
-end
-
--- an empty slot: one bonus fewer, so the bonuses already out grow to their
--- value with one bonus fewer on the item, counting up
-local function growRevealed()
-    local from = {}
-    for _, row in ipairs(spin.rows) do
-        if row.stopped and row.entry and row.shown then
-            from[row] = row.shown
-        end
-    end
-    spin.assumed = spin.assumed - 1
-    if not next(from) then
-        return
-    end
-    local started = g_clock.millis()
-    local token = {}
-    spin.bump = token
-    local function tick()
-        if not spin or spin.bump ~= token or not rouletteVisible() then
+    elseif action == 'bonuses' then
+        local window = Forge.window()
+        if not window then
             return
         end
-        local p = math.min(1, (g_clock.millis() - started) / BUMP_TIME)
-        for row, old in pairs(from) do
-            local target, final = stepFor(row.entry, spin.assumed)
-            if target then
-                local value = math.floor(old + (target.value - old) * p + 0.5)
-                local done = p >= 1
-                paintResult(row, bonusText(row.entry, value, final and done), qualityColor(target.quality, final and done and row.entry.perfect))
-                if done then
-                    row.shown = target.value
-                end
+        showXpBadge(tonumber(data.rarityXp) or Forge.xp())
+        xpShop = type(data.shop) == 'table' and data.shop or xpShop
+        Forge.showBank(data)
+        Forge.onBonuses(data)
+        if shopWindow and shopWindow:isVisible() then
+            fillShop()
+            -- the shop says how the purchase went, where it was made
+            local result = data.result
+            local code = type(result) == 'table' and result.code
+            if code == 'bought' or code == 'coins' or code == 'points' or code == 'pack' then
+                shopWindow.status:setText(window.status:getText())
+                shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
             end
         end
-        if p < 1 then
-            scheduleEvent(tick, 30)
-        end
-    end
-    tick()
-end
-
--- fills the reel for a slot: random bonuses, the result on line WIN_INDEX
-local function loadReel(row)
-    local strip = roulette.reel.strip
-    strip:destroyChildren()
-    local total = #spin.rows
-    for i = 1, WIN_INDEX + LINES_AFTER do
-        local line = g_ui.createWidget('RouletteLine', strip)
-        if i == WIN_INDEX then
-            row.line = line
-            paintLine(line, slotLook(row, spin.assumed))
-        elseif total > 1 and math.random() < 0.1 then
-            -- empty lines: the number of bonuses is rolled too
-            paintLine(line, nil)
-        else
-            paintLine(line, randomLine(spin.result.pool))
-        end
-    end
-    strip:setHeight((WIN_INDEX + LINES_AFTER) * LINE)
-    strip:setMarginTop(REEL_TOP)
-    strip:setOpacity(1)
-end
-
-local function stopRow(row)
-    if row.stopped then
-        return
-    end
-    row.stopped = true
-    roulette.reel.strip:setMarginTop(REEL_TOP - (WIN_INDEX - 2) * LINE)
-    roulette.reel.strip:setOpacity(1)
-    row.result:setBorderWidth(1)
-    local text, color = slotLook(row, spin.assumed)
-    paintResult(row, text, color)
-    if row.line and not row.line:isDestroyed() then
-        row.line:setBackgroundColor(text and (color .. '44') or '#00000000')
-    end
-    if text then
-        return
-    end
-    local before = false
-    for _, other in ipairs(spin.rows) do
-        if other.stopped and other.entry then
-            before = true
-        end
-    end
-    growRevealed()
-    roulette.status:setText(before and tr('No bonus: the bonuses above get stronger!') or tr('No bonus: the next bonuses will be stronger.'))
-    roulette.status:setColor('#ffb84a')
-end
-
--- one slot at a time: its reel rolls, the next waits its turn
-local function animate()
-    if not spin or spin.finished or not rouletteVisible() then
-        return
-    end
-    local now = g_clock.millis()
-    spin.tick = now
-    local row = spin.rows[spin.current]
-    if row and now >= row.startsAt then
-        if not row.active then
-            row.active = true
-            if spin.current > 1 then
-                loadReel(row)
-            end
-            row.result:setOpacity(1)
-            row.result:setBorderWidth(2)
-            row.result:setBorderColor(ACTIVE_COLOR)
-            row.result.text:setText('...')
-            row.result.text:setColor(ACTIVE_COLOR)
-            roulette.status:setText(tr('Bonus %d of %d', spin.current, #spin.rows))
-            roulette.status:setColor(ACTIVE_COLOR)
-        end
-        local p = math.min(1, (now - row.startsAt) / SPIN_TIME)
-        local position, speed = spinCurve(p)
-        local strip = roulette.reel.strip
-        strip:setMarginTop(REEL_TOP - math.floor((WIN_INDEX - 2) * LINE * position))
-        -- dimmer while it runs fast, full contrast as it slows to a stop
-        local peak = 1 / CURVE_AREA
-        strip:setOpacity(1 - FADE * math.max(0, math.min(1, (speed - 0.6) / (peak - 0.6))))
-        if p >= 1 then
-            stopRow(row)
-            spin.current = spin.current + 1
-            local nextRow = spin.rows[spin.current]
-            if nextRow then
-                nextRow.startsAt = now + PAUSE
+        if not window:isVisible() then
+            window:show()
+            window:raise()
+            window:focus()
+            if featureButton then
+                featureButton:setOn(true)
             end
         end
     end
-    if spin.rows[spin.current] then
-        spin.event = scheduleEvent(animate, FRAME_MS)
-    elseif row and not row.entry then
-        -- the last slot was empty: let the bonuses finish growing first
-        spin.event = scheduleEvent(finishSpin, BUMP_TIME + 300)
-    else
-        spin.event = nil
-        finishSpin()
-    end
-end
-
--- skip: every slot shows its result, at the real values
-local function skipSpin()
-    spin.bump = nil
-    spin.assumed = spin.count
-    for i, row in ipairs(spin.rows) do
-        row.stopped = true
-        row.result:setBorderWidth(1)
-        paintResult(row, slotLook(row, spin.count))
-        if i == spin.current and row.line and not row.line:isDestroyed() then
-            roulette.reel.strip:setMarginTop(REEL_TOP - (WIN_INDEX - 2) * LINE)
-            roulette.reel.strip:setOpacity(1)
-            paintLine(row.line, slotLook(row, spin.count))
-        end
-    end
-    finishSpin()
-end
-
--- one line per bonus slot under the reel, and the first slot's reel
-local function startStrips(result)
-    roulette.results:destroyChildren()
-    spin.rows = {}
-    local rolled = result.rolled or {}
-    local total = math.max(1, result.maxBonuses or 0, #rolled)
-    spin.count = math.max(1, #rolled)
-    spin.assumed = total
-    spin.bump = nil
-    -- the empty slots fall anywhere among the bonuses; a kept bonus is the
-    -- first line and doesn't spin
-    local slots, kept = {}, nil
-    for _, entry in ipairs(rolled) do
-        if entry.locked then
-            kept = entry
-        else
-            slots[#slots + 1] = entry
-        end
-    end
-    local free = total - (kept and 1 or 0)
-    for i = #slots + 1, free do
-        slots[i] = false
-    end
-    for i = free, 2, -1 do
-        local j = math.random(i)
-        slots[i], slots[j] = slots[j], slots[i]
-    end
-    if kept then
-        table.insert(slots, 1, kept)
-    end
-    for i = 1, total do
-        local widget = g_ui.createWidget('RouletteResult', roulette.results)
-        widget.slot:setText(tr('Bonus %d', i))
-        widget.text:setText('?')
-        -- waiting: so the eye stays on the reel
-        widget:setOpacity(0.35)
-        spin.rows[i] = { result = widget, entry = slots[i] or nil }
-    end
-    roulette.results:setHeight(total * 29)
-    spin.current = 1
-    if kept then
-        local row = spin.rows[1]
-        row.stopped = true
-        row.result.slot:setText(tr('Kept'))
-        row.result.slot:setMarginLeft(24)
-        row.result.slot:setColor('#f0cf6a')
-        row.result.lock:show()
-        row.kept = true
-        paintResult(row, kept.text, qualityColor(kept.quality, kept.perfect))
-        row.result:setBorderWidth(1)
-        spin.current = 2
-    end
-    loadReel(spin.rows[spin.current])
-    spin.rows[spin.current].startsAt = g_clock.millis() + 300
-    spin.finished = false
-    roulette.status:setText(tr('Spinning...'))
-    roulette.status:setColor('#e0c060')
-    roulette.closeButton:setText(tr('Skip'))
-    setAgainButton()
-    if spin.event then
-        removeEvent(spin.event)
-    end
-    spin.event = scheduleEvent(animate, FRAME_MS)
-end
-
-local function showRoulette(result, onDone)
-    if not roulette then
-        roulette = g_ui.displayUI('roulette')
-    end
-    local grade = GRADES[result.rarity] or GRADES.uncommon
-    roulette.frame:setImageClip(string.format('%d 0 %d %d', grade.frame * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE))
-    local item = Item.create(result.itemId or 0, 1)
-    if result.shader and result.shader ~= '' then
-        item:setShader(result.shader)
-    end
-    roulette.frame.item:setItem(item)
-    roulette.name:setText(titleCase(result.name or ''))
-    roulette.name:setColor(grade.color)
-    local subtitle = tr('%s  up to %d bonuses  -%d Rarity XP', grade.label, result.maxBonuses or 0, tonumber(result.cost) or 0)
-    if (tonumber(result.gold) or 0) > 0 then
-        subtitle = subtitle .. '  ' .. (result.lock and tr('-%s gold (kept bonus)', formatGold(result.gold)) or tr('-%s gold', formatGold(result.gold)))
-    end
-    if result.upgrade then
-        subtitle = tr('Upgrade to %s!', grade.label) .. '  ' .. subtitle
-    end
-    roulette.subtitle:setText(subtitle)
-    if upgrade then
-        if upgrade.event then
-            removeEvent(upgrade.event)
-        end
-        upgrade = nil
-    end
-    roulette:setText(tr('Rarity Roulette'))
-    roulette:show()
-    roulette:raise()
-    roulette:focus()
-    spin = spin or {}
-    spin.result = result
-    spin.onDone = onDone
-    spin.waiting = false
-    -- a refresh kept from before this reroll is older than its answer
-    spin.pending = nil
-    -- the strips are measured against the window: lay it out first
-    addEvent(function()
-        if spin and spin.result == result then
-            startStrips(result)
-        end
-    end)
-end
-
--- ---------------------------------------------------------------------------
--- Raising the grade plays on the same reel: its lines say "up to <grade>" or
--- "failed", as many of each as the chance gives, and it stops on the
--- server's answer (a failure often right before a success, as roulettes
--- go). The bar under the reel shows the odds. A success goes on to the
--- roulette of the new bonuses; a failure can be tried again from here.
--- ---------------------------------------------------------------------------
-local UPGRADE_SPIN_TIME = 5200
-local UPGRADE_REVEAL = 1500 -- ms on the success before the new bonuses spin
-local FAILED_COLOR = '#9a8fb0'
-local NEAR_MISS = 0.6 -- how often a failure stops right before a success
-
-local function slotEntry(items, slot)
-    for _, entry in ipairs(items or {}) do
-        if entry.slotId == slot then
-            return entry
-        end
-    end
-end
-
-setUpgradeAgain = function()
-    local offer = upgrade.finished and not upgrade.success and upgrade.next and upgrade.next.upgrade
-    roulette.againButton:setVisible(offer and true or false)
-    roulette.xp:setText(upgrade.finished and tr('Rarity XP: %d', rarityXp) or '')
-    if offer then
-        roulette.againButton:setText(tr('Try again (%s gold + %d XP)', formatGold(offer.gold), offer.xp))
-        roulette.againButton:setEnabled(not upgrade.waiting and gold >= offer.gold and rarityXp >= offer.xp)
-    end
-end
-
-local function upgradeLine(line, success)
-    line.text:setText(success and tr('Up to %s!', upgrade.to.label) or tr('Failed'))
-    line.text:setColor(success and upgrade.to.color or FAILED_COLOR)
-end
-
--- the reel's lines: each a success with the chance, the answer on WIN_INDEX
-local function loadUpgradeReel()
-    local strip = roulette.reel.strip
-    strip:destroyChildren()
-    local share = upgrade.chance / 100
-    local lines = {}
-    for i = 1, WIN_INDEX + LINES_AFTER do
-        lines[i] = math.random() < share
-    end
-    -- both kinds go by under the marker, whatever the odds
-    if share > 0 then
-        lines[math.random(2, WIN_INDEX - 1)] = true
-    end
-    if share < 1 then
-        lines[math.random(2, WIN_INDEX - 1)] = false
-    end
-    lines[WIN_INDEX] = upgrade.success
-    if not upgrade.success and share > 0 and math.random() < NEAR_MISS then
-        lines[WIN_INDEX + 1] = true
-    end
-    for i, success in ipairs(lines) do
-        local line = g_ui.createWidget('RouletteLine', strip)
-        upgradeLine(line, success)
-        if i == WIN_INDEX then
-            upgrade.line = line
-        end
-    end
-    strip:setHeight(#lines * LINE)
-    strip:setMarginTop(REEL_TOP)
-    strip:setOpacity(1)
-end
-
-local function stopUpgrade()
-    if not upgrade or upgrade.finished then
-        return
-    end
-    upgrade.finished = true
-    if upgrade.event then
-        removeEvent(upgrade.event)
-        upgrade.event = nil
-    end
-    roulette.reel.strip:setMarginTop(REEL_TOP - (WIN_INDEX - 2) * LINE)
-    roulette.reel.strip:setOpacity(1)
-    local color = upgrade.success and upgrade.to.color or '#ff6464'
-    if upgrade.line and not upgrade.line:isDestroyed() then
-        upgrade.line:setBackgroundColor(color .. '44')
-    end
-    local row = upgrade.row
-    row:setBorderWidth(1)
-    row:setBorderColor(color)
-    row:setBackgroundColor(color .. '22')
-    row.text:setColor(color)
-    roulette.closeButton:setText(tr('Close'))
-    if upgrade.success then
-        row.text:setText(tr('Success! Now %s.', upgrade.to.label))
-        roulette.status:setText(tr('Upgrade! %s rises to %s. Now its new bonuses...', titleCase(upgrade.entry.name or ''), upgrade.to.label))
-        roulette.status:setColor(upgrade.to.color)
-        local done = upgrade
-        scheduleEvent(function()
-            if upgrade ~= done or not rouletteVisible() then
-                return
-            end
-            showRoulette(done.data.result, function() applyBonuses(done.data) end)
-            -- a refresh that came during the reel is newer than the answer
-            spin.pending = done.pending
-        end, UPGRADE_REVEAL)
-    else
-        row.text:setText(tr('Failed: it stays %s.', upgrade.from.label))
-        roulette.status:setText(tr('The upgrade failed (%d%% chance). The item stays exactly as it was.', upgrade.chance))
-        roulette.status:setColor('#ff6464')
-        local latest = upgrade.pending or upgrade.data
-        upgrade.pending = nil
-        applyBonuses(latest)
-        upgrade.next = slotEntry(latest.items, upgrade.entry.slotId)
-    end
-    setUpgradeAgain()
-end
-
-local function animateUpgrade()
-    if not upgrade or upgrade.finished or not rouletteVisible() then
-        return
-    end
-    upgrade.tick = g_clock.millis()
-    local p = (g_clock.millis() - upgrade.startsAt) / UPGRADE_SPIN_TIME
-    if p >= 1 then
-        stopUpgrade()
-        return
-    end
-    local position, speed = spinCurve(p)
-    local strip = roulette.reel.strip
-    strip:setMarginTop(REEL_TOP - math.floor((WIN_INDEX - 2) * LINE * position))
-    local peak = 1 / CURVE_AREA
-    strip:setOpacity(1 - FADE * math.max(0, math.min(1, (speed - 0.6) / (peak - 0.6))))
-    upgrade.event = scheduleEvent(animateUpgrade, FRAME_MS)
-end
-
--- the answer to an upgrade of `entry` (the item as the list showed it)
-local function showUpgrade(entry, data)
-    if not roulette then
-        roulette = g_ui.displayUI('roulette')
-    end
-    if spin and spin.rows and not spin.finished then
-        skipSpin()
-    end
-    if upgrade and upgrade.event then
-        removeEvent(upgrade.event)
-    end
-    local result = data.result
-    local offer = entry.upgrade or {}
-    local from = GRADES[entry.rarity] or GRADES.uncommon
-    local to = GRADES[offer.to] or from
-    local chance = math.max(0, math.min(100, tonumber(offer.chance) or tonumber(result.chance) or 0))
-    upgrade = { entry = entry, data = data, success = result.code == 'rerolled', chance = chance, from = from, to = to }
-
-    roulette:setText(tr('Raise the grade'))
-    roulette.frame:setImageClip(string.format('%d 0 %d %d', from.frame * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE))
-    local item = Item.create(entry.itemId or 0, 1)
-    if entry.shader and entry.shader ~= '' then
-        item:setShader(entry.shader)
-    end
-    roulette.frame.item:setItem(item)
-    roulette.name:setText(titleCase(entry.name or ''))
-    roulette.name:setColor(from.color)
-    roulette.subtitle:setText(tr('%s to %s  %d%% chance  -%s gold  -%d Rarity XP', from.label, to.label, chance,
-        formatGold(offer.gold or result.gold), tonumber(offer.xp or result.xp) or 0))
-
-    roulette.results:destroyChildren()
-    local odds = g_ui.createWidget('UpgradeChance', roulette.results)
-    odds.label:setText(tr('Chance'))
-    odds.percent:setText(tr('%d%% success, %d%% failure', chance, 100 - chance))
-    odds.percent:setColor(to.color)
-    odds.bar.fill:setBackgroundColor(to.color)
-    local row = g_ui.createWidget('RouletteResult', roulette.results)
-    row.slot:setText(tr('Upgrade'))
-    row.text:setText('...')
-    row.text:setColor(ACTIVE_COLOR)
-    row:setBorderWidth(2)
-    row:setBorderColor(ACTIVE_COLOR)
-    upgrade.row = row
-    roulette.results:setHeight(2 * 29)
-    roulette.status:setText(tr('Spinning...'))
-    roulette.status:setColor('#e0c060')
-    roulette.closeButton:setText(tr('Skip'))
-    setUpgradeAgain()
-    roulette:show()
-    roulette:raise()
-    roulette:focus()
-    -- the bar and the reel are measured against the window: lay it out first
-    local mine = upgrade
-    addEvent(function()
-        if upgrade ~= mine then
-            return
-        end
-        odds.bar.fill:setWidth(math.floor(math.max(0, odds.bar:getWidth() - 2) * chance / 100))
-        loadUpgradeReel()
-        upgrade.startsAt = g_clock.millis() + 300
-        upgrade.event = scheduleEvent(animateUpgrade, FRAME_MS)
-    end)
-end
-
--- a reel that stopped moving (an error in its animation) keeps nothing for
--- later: the answers go to the list, or the window would never open again
-local function reelAlive(state)
-    return state.tick == nil or g_clock.millis() - state.tick < 2000
-end
-
--- an answer from the server while the roulette is open
-rouletteTakes = function(data)
-    local result = data.result
-    if upgradeAsked and type(result) == 'table' then
-        local asked = upgradeAsked
-        if result.code == 'upgradeFailed' or (result.code == 'rerolled' and result.upgrade) then
-            upgradeAsked = nil
-            showUpgrade(asked.entry, data)
-            return true
-        end
-        if data.ok == false then
-            -- refused before the roll (gold, XP, too fast): said where it was asked
-            upgradeAsked = nil
-            if upgrade and upgrade.waiting and rouletteVisible() then
-                upgrade.waiting = false
-                applyBonuses(data)
-                roulette.status:setText(window.status:getText())
-                roulette.status:setColor('#ff6464')
-                setUpgradeAgain()
-                return true
-            end
-            return false
-        end
-    end
-    if upgrade and rouletteVisible() and ((not upgrade.finished and reelAlive(upgrade)) or upgrade.waiting) then
-        -- an automatic refresh while the reel runs: kept for its end
-        upgrade.pending = data
-        return true
-    end
-    if type(result) == 'table' and result.code == 'rerolled' then
-        showRoulette(result, function() applyBonuses(data) end)
-        return true
-    end
-    if spin and rouletteVisible() and spin.waiting and data.ok == false then
-        -- "spin again" failed (not enough XP, item taken off, too fast): say
-        -- why. The answer carries the whole list, newer than a kept refresh.
-        spin.waiting = false
-        spin.finished = true
-        spin.pending = nil
-        applyBonuses(data)
-        roulette.status:setText(window.status:getText())
-        roulette.status:setColor('#ff6464')
-        roulette.closeButton:setText(tr('Close'))
-        setAgainButton()
-        return true
-    end
-    if spin and rouletteVisible() and ((not spin.finished and reelAlive(spin)) or spin.waiting) then
-        -- an automatic refresh while the strips run or "spin again" waits for
-        -- its answer: keep it for the end
-        spin.pending = data
-        return true
-    end
-    return false
 end
 
 -- the Store on its Rarity category, where Rarity XP is sold
@@ -1602,12 +337,12 @@ local function packPrice(pack)
     return pack.currency == 'coins' and tr('%d coins', pack.price) or tr('%d Hunt Points', pack.price)
 end
 
-function fillShop()
+fillShop = function()
     if not shopWindow or not xpShop then
         return
     end
     local balances = { coins = tonumber(xpShop.coins) or 0, points = tonumber(xpShop.points) or 0 }
-    shopWindow.balance:setText(tr('You have %d Rarity XP.', rarityXp))
+    shopWindow.balance:setText(tr('You have %d Rarity XP.', Forge.xp()))
     shopWindow.coinsHave:setText(tr('you have %d', balances.coins))
     shopWindow.pointsHave:setText(tr('you have %d', balances.points))
     shopWindow.coinsList:destroyChildren()
@@ -1687,149 +422,33 @@ function buyRarityXp()
     shopWindow:focus()
 end
 
-function spinAgain()
-    if upgrade then
-        local next = upgrade.next
-        if not upgrade.finished or upgrade.success or upgrade.waiting or not (next and next.upgrade) then
-            return
-        end
-        upgrade.waiting = true
-        upgradeAsked = { entry = next }
-        roulette.status:setText(tr('Spinning...'))
-        roulette.status:setColor('#e0c060')
-        roulette.againButton:setEnabled(false)
-        send({ action = 'upgradeItem', slot = next.slotId })
-        expectAnswer()
-        return
-    end
-    if not spin or not spin.result or not spin.finished then
-        return
-    end
-    local cost = tonumber(spin.result.nextCost or spin.result.cost) or 0
-    if rarityXp < cost then
-        return
-    end
-    spin.waiting = true
-    roulette.status:setText(tr('Spinning...'))
-    roulette.status:setColor('#e0c060')
-    roulette.againButton:setEnabled(false)
-    -- the same bonus stays kept, for gold again
-    send({ action = 'rerollItem', slot = spin.result.slot, lock = spin.result.lock })
-    expectAnswer()
-end
-
--- forgets the roulette's state; returns the newest answer it was keeping
-local function resetRoulette()
-    if spin and spin.event then
-        removeEvent(spin.event)
-    end
-    if upgrade and upgrade.event then
-        removeEvent(upgrade.event)
-    end
-    if answerEvent then
-        removeEvent(answerEvent)
-        answerEvent = nil
-    end
-    local pending = (spin and spin.pending) or (upgrade and (upgrade.pending or (upgrade.success and upgrade.data)))
-    spin, upgrade, upgradeAsked = nil, nil, nil
-    return pending
-end
-
--- no answer to a reroll or upgrade: stop waiting, say so and ask for the
--- list again (a lost answer used to leave the roulette spinning forever)
-expectAnswer = function()
-    if answerEvent then
-        removeEvent(answerEvent)
-    end
-    answerEvent = scheduleEvent(function()
-        answerEvent = nil
-        local stuck = upgradeAsked ~= nil
-        upgradeAsked = nil
-        if spin and spin.waiting then
-            spin.waiting = false
-            spin.finished = true
-            stuck = true
-        end
-        if upgrade and upgrade.waiting then
-            upgrade.waiting = false
-            stuck = true
-        end
-        if not stuck then
-            return
-        end
-        if rouletteVisible() then
-            roulette.status:setText(tr('No answer from the server. Try again.'))
-            roulette.status:setColor('#ff6464')
-            roulette.closeButton:setText(tr('Close'))
-            pcall(setAgainButton)
-        end
-        send({ action = 'open' })
-    end, ANSWER_TIMEOUT)
-end
-
-local function closeRouletteNow()
-    if upgrade then
-        if not upgrade.finished then
-            stopUpgrade()
-            return
-        end
-        local done = upgrade
-        upgrade = nil
-        -- closed before the new bonuses spun: the list shows them
-        if done.success then
-            applyBonuses(done.pending or done.data)
-        end
-        roulette:hide()
-        return
-    end
-    if spin and not spin.finished and spin.rows then
-        skipSpin()
-        return
-    end
-    roulette:hide()
-end
-
--- Skip, Close and Escape: whatever went wrong in the reels, the roulette
--- closes (an error there used to fail on every click, so it never closed)
-function closeRoulette()
-    if not roulette then
-        return
-    end
-    local ok, err = pcall(closeRouletteNow)
-    if ok then
-        return
-    end
-    g_logger.warning('[raritybonus] the roulette closed after an error: ' .. tostring(err))
-    local pending = resetRoulette()
-    roulette:hide()
-    if pending then
-        pcall(applyBonuses, pending)
-    end
-    if window and window:isVisible() then
-        send({ action = 'open' })
-    end
-end
 
 function request()
-    window.status:setText('')
+    local window = Forge.window()
+    if window then
+        window.status:setText('')
+    end
     send({ action = 'open' })
 end
 
 function hide()
+    local window = Forge.window()
     if not window then
         return
     end
+    -- the cards or the needle still moving: the answer would be lost
+    if Forge.busy() then
+        return
+    end
     window:hide()
+    Forge.closeConfirm()
     if featureButton then
         featureButton:setOn(false)
-    end
-    if confirmBox then
-        confirmBox:destroy()
-        confirmBox = nil
     end
 end
 
 function toggle()
+    local window = Forge.window()
     if window and window:isVisible() then
         hide()
     else
@@ -1839,11 +458,12 @@ end
 
 -- equipment changed while the window is open: ask again
 local function onInventoryChange(player, slot, item, oldItem)
+    local window = Forge.window()
     if not window or not window:isVisible() then
         return
     end
     -- the same item with only its count changed (an arrow shot, a charge
-    -- used): its bonuses are the same, so no rebuild of the whole window
+    -- used): its bonuses are the same
     if item and oldItem and item:getId() == oldItem:getId() and item:getCountOrSubType() ~= oldItem:getCountOrSubType() then
         return
     end
@@ -1861,8 +481,7 @@ local function onGameStart()
         featureButton = modules.game_brevespanel.addFeature('bonus', toggle)
     end
     -- the Rarity XP balance for the Mythos bar: the server sends it at login,
-    -- but not when the game starts on a character still online (a page
-    -- reloaded, a dropped connection), so ask for it too
+    -- but not when the game starts on a character still online
     scheduleEvent(function()
         if g_game.isOnline() then
             send({ action = 'xp' })
@@ -1871,11 +490,7 @@ local function onGameStart()
 end
 
 local function onGameEnd()
-    -- the roulette first, and nothing of it kept for the next login
-    if roulette then
-        roulette:hide()
-    end
-    resetRoulette()
+    Forge.reset()
     if shopWindow then
         shopWindow:hide()
     end
@@ -1883,15 +498,21 @@ local function onGameEnd()
         dropRevive(key)
     end
     clearLootFinds()
-    hide()
+    local window = Forge.window()
+    if window then
+        window:hide()
+    end
+    if featureButton then
+        featureButton:setOn(false)
+    end
 end
 
 function init()
     registerReviveTextures()
     registerLootTextures()
     g_ui.importStyle('lootfind')
-    window = g_ui.displayUI('raritybonus')
-    window:hide()
+    g_ui.importStyle('shop')
+    Forge.create()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     connect(LocalPlayer, { onInventoryChange = onInventoryChange })
@@ -1916,15 +537,7 @@ function terminate()
         shopWindow:destroy()
         shopWindow = nil
     end
-    if window then
-        window:destroy()
-        window = nil
-    end
-    resetRoulette()
-    if roulette then
-        roulette:destroy()
-        roulette = nil
-    end
+    Forge.destroy()
     for key in pairs(revivals) do
         dropRevive(key)
     end
