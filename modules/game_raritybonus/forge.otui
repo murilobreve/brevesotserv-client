@@ -1520,7 +1520,6 @@ MythosWindow
         layout:
           type: horizontalBox
           spacing: 10
-          align-right: true
 
       ScrollablePanel
         id: list

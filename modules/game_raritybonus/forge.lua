@@ -242,6 +242,12 @@ local function pickItem(slot)
     if ascend and (ascend.phase == 'waiting' or ascend.phase == 'spinning') then
         return
     end
+    -- a confirm still open is about the item it names: another item picked
+    -- closes it (its "Yes" would have spent on the new one)
+    if confirmBox and slot ~= selected then
+        confirmBox:destroy()
+        confirmBox = nil
+    end
     selected = slot
     reforge, ascend = nil, nil
     Forge.refresh()
@@ -788,13 +794,22 @@ function reforgeNow()
     local cost = tonumber(entry.rerollCost) or 0
     local lock = locks[selected]
     local again = reforge and reforge.phase == 'done' and reforge.slot == selected
+    -- the item the question is about: "Yes" acts on it, not on whatever is
+    -- selected when it is clicked
+    local slot, itemId = selected, entry.itemId
     local function go()
+        local now = bySlot[slot]
+        if not now or now.itemId ~= itemId then
+            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6b')
+            return
+        end
+        selected = slot
         reforge = {
-            phase = 'rolling', slot = selected, before = entry.bonuses or {}, lock = lock,
+            phase = 'rolling', slot = slot, before = entry.bonuses or {}, lock = lock,
             shown = 0, startedAt = g_clock.millis(),
         }
         setStatus(tr('Reforging...'), '#e0c060')
-        Forge.send({ action = 'rerollItem', slot = selected, lock = lock })
+        Forge.send({ action = 'rerollItem', slot = slot, lock = lock })
         Forge.expectAnswer()
         fillReforge()
         pulse()
@@ -1098,10 +1113,17 @@ function ascendNow()
     if not up or (ascend and (ascend.phase == 'waiting' or ascend.phase == 'spinning')) then
         return
     end
+    local slot, itemId = selected, entry.itemId
     local function go()
-        ascend = { phase = 'waiting', slot = selected, offer = up, fromKey = entry.rarity }
+        local now = bySlot[slot]
+        if not now or now.itemId ~= itemId or not now.upgrade then
+            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6b')
+            return
+        end
+        selected = slot
+        ascend = { phase = 'waiting', slot = slot, offer = up, fromKey = entry.rarity }
         setStatus(tr('Trying the Ascension...'), '#ddd0ff')
-        Forge.send({ action = 'upgradeItem', slot = selected })
+        Forge.send({ action = 'upgradeItem', slot = slot })
         Forge.expectAnswer()
         fillAscend()
         spinWait()
@@ -1169,6 +1191,7 @@ local function fillBonuses()
         end
     end
     p.legend:destroyChildren()
+    local legendWidth, legendCount = 0, 0
     for i = #GRADE_ORDER, 1, -1 do
         local key = GRADE_ORDER[i]
         local pip = g_ui.createWidget('ForgePip', p.legend)
@@ -1176,8 +1199,14 @@ local function fillBonuses()
         pip:setMarginTop(3)
         local label = g_ui.createWidget('ForgeDim', p.legend)
         label:setText(GRADES[key].label)
-        label:setWidth(#GRADES[key].label * 7 + 4)
+        label:setWidth(label:getTextSize().width + 4)
+        legendWidth = legendWidth + pip:getWidth() + label:getWidth()
+        legendCount = legendCount + 2
     end
+    -- a horizontalBox with align-right put each pip and its name on the same
+    -- x (the names covered each other): the panel is the width of what it
+    -- holds instead, anchored to the right
+    p.legend:setWidth(legendWidth + 10 * (legendCount - 1))
 
     local list = p.list
     list:destroyChildren()
@@ -1510,6 +1539,9 @@ function Forge.reset()
         confirmBox:destroy()
         confirmBox = nil
     end
+    -- the next character starts clean: a seal left from this one would be
+    -- charged on its item in the same slot with the same bonus
+    locks, history, selected = {}, {}, nil
 end
 
 function Forge.destroy()
