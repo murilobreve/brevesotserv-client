@@ -259,12 +259,30 @@ def helmet_back(icon):
     return Image.fromarray(a.astype(np.uint8))
 
 
+HELMET_LEAN = 0.25  # each row up moves this many pixels left, like the Tibia body
+
+
+def lean(pic):
+    """leans a picture like the Tibia body (the top to the left)"""
+    a = np.array(pic)
+    h, w = a.shape[:2]
+    extra = int(np.ceil(HELMET_LEAN * h))
+    out = np.zeros((h, w + extra, 4), np.uint8)
+    for y in range(h):
+        off = int(round(HELMET_LEAN * (h - 1 - y)))
+        out[y, extra - off:extra - off + w] = a[y]
+    return Image.fromarray(out), extra
+
+
 def put_helmets(out, part, iid):
-    """the helmet item's own picture on the head of every frame: front from
-    the south, its back from the north, narrower from the sides"""
+    """the helmet item's own picture on the head of every frame, leaning like
+    the body: the front from the south, its back from the north, and from the
+    sides its profile (the half with the visor, the visor to where he looks)"""
     icon = r.item(iid).convert('RGBA')
     icon = icon.crop(icon.getbbox())
     back = helmet_back(icon)
+    side = icon.crop((0, 0, min(icon.width, icon.width // 2 + max(2, icon.width // 6)), icon.height))
+    views = {0: back, 1: side, 2: icon, 3: side.transpose(Image.FLIP_LEFT_RIGHT)}
     for fy in range(out.shape[0] // 64):
         d = fy % 4  # North, East, South, West
         for fx in range(out.shape[1] // 64):
@@ -274,14 +292,12 @@ def put_helmets(out, part, iid):
                 continue
             top = ys.min()
             xs = xs[ys < top + 10]  # the head: the top rows of the hood
-            pic = back if d == 0 else icon
+            pic = views[d]
             h = HELMET_HEIGHT
-            w = max(1, int(round(h * pic.width / pic.height * (0.8 if d in (1, 3) else 1))))
-            pic = pic.resize((w, h), Image.NEAREST)
-            if d == 3:
-                pic = pic.transpose(Image.FLIP_LEFT_RIGHT)
+            w = max(1, int(round(h * pic.width / pic.height)))
+            pic, extra = lean(pic.resize((w, h), Image.NEAREST))
             tile = Image.fromarray(out[y0:y0 + 64, x0:x0 + 64].astype(np.uint8))
-            tile.alpha_composite(pic, (int(round((xs.min() + xs.max()) / 2 - w / 2)), int(top) - 1))
+            tile.alpha_composite(pic, (int(round((xs.min() + xs.max()) / 2 - w / 2)) - extra, int(top) - 1))
             out[y0:y0 + 64, x0:x0 + 64] = np.array(tile)
     return out
 
