@@ -893,4 +893,9 @@ return {
         end
     },
     showInfoBanner = true,
+    -- the screenshot options (game_notifications) are option checkboxes too:
+    -- unknown here, each login warned "Attempted to set unknown option"
+    enableScreenshots = false,
+    onlyCaptureGameWindow = false,
+    keepBlacklog = false,
 }
