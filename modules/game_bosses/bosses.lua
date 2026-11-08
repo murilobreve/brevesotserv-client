@@ -37,7 +37,9 @@ local rouletteEvent
 local quietCombo = false -- filling the quest combo must not rebuild the list
 local REFRESH_SECONDS = 15 -- the open window asks for the arenas again
 
-local TIER_COLORS = { pale = '#c9d6e3', ashen = '#a7adb5', obsidian = '#a98bff', deathlord = '#ff6b6b', normal = '#3a3342' }
+local TIER_COLORS = { pale = '#c9d6e3', ashen = '#a7adb5', obsidian = '#a98bff', deathlord = '#ff6b6b', normal = '#3a3342',
+    -- the rarity grades (a quest reward's roulette)
+    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#e2a443', mythic = '#e8e4ff' }
 local CATS = {
     { 'weapon', 'Arma' }, { 'armor', 'Armadura' }, { 'helmet', 'Elmo' }, { 'legs', 'Calça' },
     { 'boots', 'Botas' }, { 'shield', 'Escudo' }, { 'jewel', 'Joia' },
@@ -853,58 +855,85 @@ end
 
 -- the roulette over the map: the server rolled the boss's tier at the pull
 -- of the lever; the team sees it for `ms` before the arena
+local rouletteQueue = {} -- rolls that came while another one turns
+
 local function showRoulette(data)
     if not roulette then
         roulette = g_ui.createWidget('BossRoulette', rootWidget)
         roulette:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
         roulette:addAnchor(AnchorTop, 'parent', AnchorTop)
         roulette:setMarginTop(70)
+        roulette:hide() -- a new widget is visible: it would look like one turning
+    end
+    if roulette:isVisible() then
+        rouletteQueue[#rouletteQueue + 1] = data
+        return
     end
     if rouletteEvent then
         removeEvent(rouletteEvent)
         rouletteEvent = nil
     end
+    -- a quest reward's rarity (scripts/rarity/01_core.lua questRewardRoll) or
+    -- a boss's tier at the lever (boss_tiers.lua preRoll)
+    local reward = data.action == 'rewardRoll'
     local ms = math.max(2500, tonumber(data.ms) or 4000)
     local tiers = data.tiers or {}
-    roulette.title:setText(tr('A ROLETA DO BOSS'))
-    roulette.boss:setText(data.boss or '')
-    roulette.wheel.creature:setOutfit(outfitOf(data.outfit))
+    roulette.title:setText(reward and tr('A RARIDADE DA RECOMPENSA') or tr('A ROLETA DO BOSS'))
+    roulette.boss:setText(reward and titleCase(data.name or '') or (data.boss or ''))
+    roulette.wheel.creature:setVisible(not reward)
+    roulette.wheel.item:setVisible(reward)
+    if reward then
+        roulette.wheel.item:setItemId(tonumber(data.item) or 0)
+    else
+        roulette.wheel.creature:setOutfit(outfitOf(data.outfit))
+    end
     roulette.result:setText('')
-    roulette.effects:setText(tr('O boss pode surgir raro...'))
+    roulette.effects:setText(reward and tr('O item pode vir com raridade...') or tr('O boss pode surgir raro...'))
     roulette:setBorderColor('#6b5631')
     roulette:show()
     roulette:raise()
     local slices = paintWheel(roulette.wheel, tiers)
     local key = data.result or 'normal'
+    if key == 'none' then
+        key = 'normal'
+    end
     spinWheel(roulette.wheel, slices, key, ms - 600, function()
         if not roulette then
             return
         end
         if key == 'normal' then
-            roulette.result:setText(tr('Normal'))
+            roulette.result:setText(reward and tr('Sem raridade') or tr('Normal'))
             roulette.result:setColor('#d6cfc2')
-            roulette.effects:setText(tr('Um boss comum, com o loot de sempre.'))
+            roulette.effects:setText(reward and tr('Um item comum, sem bônus de raridade.') or tr('Um boss comum, com o loot de sempre.'))
         else
             local color = TIER_COLORS[key] or '#ece6dc'
-            roulette.result:setText(data.name or tierName(tiers, key))
+            roulette.result:setText(reward and tierName(tiers, key) or (data.name or tierName(tiers, key)))
             roulette.result:setColor(color)
             roulette:setBorderColor(color)
-            local parts = {}
-            if data.health then
-                parts[#parts + 1] = tr('Vida %s', multiplier(data.health))
+            if reward then
+                roulette.effects:setText(tr('O item veio com bônus de raridade!'))
+            else
+                local parts = {}
+                if data.health then
+                    parts[#parts + 1] = tr('Vida %s', multiplier(data.health))
+                end
+                if data.damage then
+                    parts[#parts + 1] = tr('Dano %s', multiplier(data.damage))
+                end
+                parts[#parts + 1] = tr('itens raros em cada reward bag')
+                roulette.effects:setText(table.concat(parts, tr('  ·  ')))
             end
-            if data.damage then
-                parts[#parts + 1] = tr('Dano %s', multiplier(data.damage))
-            end
-            parts[#parts + 1] = tr('itens raros em cada reward bag')
-            roulette.effects:setText(table.concat(parts, tr('  ·  ')))
         end
         rouletteEvent = scheduleEvent(function()
             rouletteEvent = nil
             if roulette then
                 roulette:hide()
+                local nextRoll = table.remove(rouletteQueue, 1)
+                if nextRoll then
+                    showRoulette(nextRoll)
+                end
             end
-        end, 2600)
+        end, reward and 2200 or 2600)
     end)
 end
 
@@ -1001,6 +1030,10 @@ function handlers.search(data)
 end
 
 function handlers.rareRoll(data)
+    showRoulette(data)
+end
+
+function handlers.rewardRoll(data)
     showRoulette(data)
 end
 
@@ -1104,6 +1137,7 @@ local function onGameEnd()
         window.pages.hall.filters.search:setText('')
         window.pages.hall.filters.itemSearch:setText('')
     end
+    rouletteQueue = {}
     if roulette then
         roulette:hide()
     end
