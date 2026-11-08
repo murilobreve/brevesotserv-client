@@ -1,12 +1,10 @@
--- Forja de Raridade: the rarity window (forge.otui). Two pages:
---   Arsenal      everything done to an item, on one page: the rarity items
---                worn on a paperdoll; the one picked with its bonuses as
---                cards (a click seals one for the next reforge); below, side
---                by side, the Reforge (the cards turn face down and are
---                revealed one by one, each with how it changed) and the
---                Ascension (a dial whose lit arc is the chance; the needle
---                spins and stops in or out of it)
---   Your bonuses the totals, each bar split by the items that give it
+-- Forja de Raridade: the rarity window (forge.otui), one page: the rarity
+-- items worn on a paperdoll and, under it, the character's bonuses (each
+-- total with the items that give it); the item picked with its bonuses as
+-- cards (a click seals one for the next reforge); below, side by side, the
+-- Reforge (the cards turn face down and are revealed one by one, each with
+-- how it changed) and the Ascension (a dial whose lit arc is the chance; the
+-- needle spins and stops in or out of it).
 -- The server (scripts/rarity/bonus_window.lua, extended opcode 123) rolls;
 -- the window only shows. raritybonus.lua routes the opcode here.
 
@@ -38,16 +36,13 @@ local QUALITY = {
 local DOLL = { 2, 1, 3, 6, 4, 5, 9, 7, 10, 0, 8, 0 }
 
 local BAR = 120 -- the Arsenal's range bar
-local TOTAL_BAR = 426 -- Your bonuses
 
 local window
 local data -- the last summary from the server
 local items, bySlot = {}, {}
 local totalsByKey = {}
 local selected -- slot id of the item shown
-local page = 'arsenal'
 local locks = {} -- slot id -> bonus key sealed on the next reforge
-local filter = 'all'
 local rarityXp, gold = 0, 0
 local bonusDescs = {}
 local confirmBox
@@ -262,6 +257,59 @@ end
 
 local fillReforge, fillAscend -- below: they fill the two boxes under the cards
 
+-- the character's bonuses, under the paperdoll: each total (and its limit)
+-- and the items that give it, a click on an item picks it
+local MINI_BAR = 262
+
+local function fillMyBonuses()
+    local p = window.pages.arsenal.left
+    local list = p.bonusList
+    list:destroyChildren()
+    local totals = (data and data.totals) or {}
+    local atLimit = 0
+    for _, t in ipairs(totals) do
+        local row = g_ui.createWidget('ForgeMiniTotal', list)
+        row.name:setText(tr(t.label or ''))
+        local unit = t.unit or ''
+        local cap = not t.perItem and tonumber(t.cap)
+        if cap and cap <= 0 then
+            cap = nil
+        end
+        local sum = tonumber(t.total) or 0
+        local full = cap and (t.capped or sum >= cap)
+        if full then
+            atLimit = atLimit + 1
+        end
+        row.total:setText(cap and (plus(sum, unit) .. ' / ' .. number(cap) .. unit) or plus(sum, unit))
+        row.total:setColor(full and '#f3d38a' or '#b9b0a3')
+        row.track.fill:setWidth(cap and math.max(1, math.floor(MINI_BAR * math.min(1, sum / cap) + 0.5)) or 0)
+        row.track.fill:setBackgroundColor(full and '#e8c77a' or '#8a7fa0')
+        local tip = describe(t.key)
+        if cap then
+            local line = full and tr('At the limit: more of it adds nothing.') or tr('Limit: %s', number(cap) .. unit)
+            tip = tip and (tip .. '\n\n' .. line) or line
+        else
+            tip = tip and (tip .. '\n\n' .. tr('(on each item)')) or tr('(on each item)')
+        end
+        row:setTooltip(tip)
+        for _, src in ipairs(t.sources or {}) do
+            local slot = tonumber(src.item) or 0
+            local it = items[slot] and items[slot] or nil
+            local chip = g_ui.createWidget('ForgeMiniChip', row.chips)
+            if it then
+                setItem(chip.item, it)
+                chip:setBorderColor(grade(it.rarity).color .. (it.slotId == selected and 'ff' or '66'))
+                chip.onClick = function() pickItem(it.slotId) end
+            end
+            chip.value:setText(plus(src.value, unit))
+            chip:setWidth(22 + chip.value:getTextSize().width + 4)
+            chip:setTooltip(titleCase(src.name or (it and it.name) or ''))
+        end
+    end
+    p.bonusesNote:setText(#totals == 0 and '' or atLimit > 0 and tr('%d at the limit', atLimit) or tr('%d bonuses', #totals))
+    p.bonusesNote:setColor(atLimit > 0 and '#e8c77a' or '#8f877c')
+end
+
 local function fillArsenal()
     local p = window.pages.arsenal
     local doll = p.left.doll
@@ -284,33 +332,7 @@ local function fillArsenal()
             g_ui.createWidget('ForgeEmptySlot', doll)
         end
     end
-    -- how many items of each grade
-    local summary = p.left.summary
-    summary:destroyChildren()
-    local counts = {}
-    for _, entry in ipairs(items) do
-        counts[entry.rarity] = (counts[entry.rarity] or 0) + 1
-    end
-    for _, key in ipairs(GRADE_ORDER) do
-        local row = g_ui.createWidget('UIWidget', summary)
-        row:setHeight(14)
-        local pip = g_ui.createWidget('ForgePip', row)
-        pip:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-        pip:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
-        pip:setImageColor(GRADES[key].color)
-        local label = g_ui.createWidget('ForgeText', row)
-        label:addAnchor(AnchorLeft, 'prev', AnchorRight)
-        label:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
-        label:setMarginLeft(10)
-        label:setText(GRADES[key].label)
-        label:setTextAutoResize(true)
-        local count = g_ui.createWidget('ForgeText', row)
-        count:addAnchor(AnchorRight, 'parent', AnchorRight)
-        count:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
-        count:setTextAutoResize(true)
-        count:setFont('Verdana Bold-11px')
-        count:setText(tostring(counts[key] or 0))
-    end
+    fillMyBonuses()
 
     local c = p.center
     local entry = bySlot[selected]
@@ -348,7 +370,7 @@ end
 -- Reforge
 -- ---------------------------------------------------------------------------
 
-local CARD_W = 124
+local CARD_W = 116
 
 local function lockable(entry)
     return entry and (tonumber(entry.lockCost) or 0) > 0 and #(entry.bonuses or {}) >= 2
@@ -567,32 +589,8 @@ fillReforge = function()
         reforge.flashAt = nil
     end
 
-    -- the odds of how many bonuses, the rules and the price
+    -- the rules and the price
     local s = c.reforgeBox
-    s.odds:destroyChildren()
-    local counts = entry.counts
-    if lock then
-        s.countTitle:setText(tr('With a seal, the item keeps its %d bonuses', #(entry.bonuses or {})))
-    elseif type(counts) == 'table' and #counts > 0 then
-        s.countTitle:setText(tr('How many bonuses the item gets'))
-        local top = 0
-        for _, pct in ipairs(counts) do
-            top = math.max(top, tonumber(pct) or 0)
-        end
-        for i, pct in ipairs(counts) do
-            local row = g_ui.createWidget('ForgeOddsRow', s.odds)
-            row.label:setText(i == 1 and tr('1 bonus') or tr('%d bonuses', i))
-            row.pct:setText(number(pct) .. '%')
-            row.track.fill:setBackgroundColor(g.color)
-            row.track.fill:setWidth(math.floor(80 * (tonumber(pct) or 0) / math.max(1, top) + 0.5))
-        end
-    else
-        s.countTitle:setText(tr('The item always gets %d bonuses', max))
-    end
-    -- without the odds bars (a seal, a fixed count) the price takes the width
-    local hasOdds = #s.odds:getChildren() > 0
-    s.odds:setWidth(hasOdds and 190 or 0)
-    s.costXp:setMarginLeft(hasOdds and 14 or 0)
     local perfect = tonumber(data and data.perfectChance) or 0
     local rules = tr('Which bonuses: drawn from the list of this kind of item.') .. '\n' ..
         tr('Values: within the range of %s.', g.label)
@@ -602,8 +600,8 @@ fillReforge = function()
         rules = rules .. '\n' .. tr('Perfect roll: %s per bonus.', text)
     end
     rules = rules .. '\n' .. tr('Fewer bonuses come stronger.')
-    s.title:setTooltip(rules)
-    s.subtitle:setTooltip(rules)
+    s.rules:setText(rules)
+    s.title:setTooltip(nil)
     local cost = tonumber(entry.rerollCost) or 0
     s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
@@ -993,179 +991,23 @@ end
 -- Your bonuses
 -- ---------------------------------------------------------------------------
 
-local function groupOf(key)
-    key = key or ''
-    if key:find('resist') or key == 'max_health' or key == 'dodge' or key == 'armor' or key == 'defense'
-        or key == 'mending' or key:find('barrier') or key == 'vanguard' then
-        return 'defense'
-    end
-    if key == 'speed' or key:find('cooldown') or key:find('leech') or key == 'max_mana' then
-        return 'utility'
-    end
-    return 'offense'
-end
-
-local FILTERS = {
-    { 'all', 'All' }, { 'offense', 'Offense' }, { 'defense', 'Defense' }, { 'utility', 'Utility' },
-}
-
-local function fillBonuses()
-    local p = window.pages.bonuses
-    local totals = (data and data.totals) or {}
-    local atLimit, near = 0, 0
-    for _, t in ipairs(totals) do
-        local cap = not t.perItem and tonumber(t.cap)
-        if cap and cap > 0 then
-            local share = (tonumber(t.total) or 0) / cap
-            if t.capped or share >= 1 then
-                atLimit = atLimit + 1
-            elseif share >= 0.8 then
-                near = near + 1
-            end
-        end
-    end
-    p.tiles:destroyChildren()
-    for _, tile in ipairs({
-        { tr('ACTIVE BONUSES'), tostring(#totals), tr('from %d items', #items), '#ece6dc' },
-        { tr('AT THE LIMIT'), tostring(atLimit), tr('more adds nothing'), '#f3d38a' },
-        { tr('NEAR THE LIMIT'), tostring(near), tr('80% or more'), '#e8c77a' },
-        { tr('RARITY XP'), tostring(rarityXp), tr('for the Forge'), '#c9a4ff' },
-    }) do
-        local w = g_ui.createWidget('ForgeTile', p.tiles)
-        w:setWidth(228)
-        w.label:setText(tile[1])
-        w.value:setText(tile[2])
-        w.value:setColor(tile[4])
-        w.sub:setText(tile[3])
-    end
-    p.filters:destroyChildren()
-    for _, f in ipairs(FILTERS) do
-        local b = g_ui.createWidget('ForgeFilter', p.filters)
-        b:setText(tr(f[2]))
-        b:setOn(filter == f[1])
-        b.onClick = function()
-            filter = f[1]
-            fillBonuses()
-        end
-    end
-    p.legend:destroyChildren()
-    for i = #GRADE_ORDER, 1, -1 do
-        local key = GRADE_ORDER[i]
-        local pip = g_ui.createWidget('ForgePip', p.legend)
-        pip:setImageColor(GRADES[key].color)
-        pip:setMarginTop(3)
-        local label = g_ui.createWidget('ForgeDim', p.legend)
-        label:setText(GRADES[key].label)
-        label:setWidth(#GRADES[key].label * 7 + 4)
-    end
-
-    local list = p.list
-    list:destroyChildren()
-    for _, t in ipairs(totals) do
-        if filter == 'all' or groupOf(t.key) == filter then
-            local row = g_ui.createWidget('ForgeTotalRow', list)
-            row.name:setText(tr(t.label or ''))
-            local desc = describe(t.key)
-            if desc then
-                row:setTooltip(desc)
-            end
-            local unit = t.unit or ''
-            local cap = not t.perItem and tonumber(t.cap)
-            if cap and cap <= 0 then
-                cap = nil
-            end
-            local sum = tonumber(t.total) or 0
-            local share = cap and sum / cap or nil
-            if cap then
-                row.total:setText(plus(sum, unit) .. ' / ' .. number(cap) .. unit)
-            else
-                row.total:setText(plus(sum, unit) .. ' ' .. tr('(on each item)'))
-            end
-            if share and (t.capped or share >= 1) then
-                row.tag:setText(tr('at the limit'))
-                row.tag:setColor('#1a1306')
-                row.tag:setBackgroundColor('#e8c77a')
-                row.total:setColor('#f3d38a')
-            elseif share and share >= 0.8 then
-                row.tag:setText(tr('near the limit'))
-                row.tag:setColor('#e8c77a')
-                row.tag:setBorderWidth(1)
-                row.tag:setBorderColor('#8a6d36')
-            else
-                row.tag:setVisible(false)
-            end
-            -- the bar: one piece per item, in its grade's colour
-            local sources = t.sources or {}
-            local scale = cap or 0
-            if not cap then
-                for _, src in ipairs(sources) do
-                    scale = scale + (tonumber(src.value) or 0)
-                end
-            end
-            local widths, used = {}, 0
-            for i, src in ipairs(sources) do
-                widths[i] = scale > 0 and math.max(2, math.floor(TOTAL_BAR * (tonumber(src.value) or 0) / scale)) or 0
-                used = used + widths[i] + 2
-            end
-            if used > TOTAL_BAR then
-                local k = TOTAL_BAR / used
-                for i in ipairs(widths) do
-                    widths[i] = math.max(1, math.floor(widths[i] * k))
-                end
-            end
-            for i, src in ipairs(sources) do
-                local it = items[tonumber(src.item) or 0]
-                local seg = g_ui.createWidget('UIWidget', row.track)
-                seg:setWidth(widths[i])
-                seg:setPhantom(true)
-                seg:setBackgroundColor(it and grade(it.rarity).color or '#5a5260')
-                local chip = g_ui.createWidget('ForgeChip', row.chips)
-                if it then
-                    setItem(chip.item, it)
-                    chip:setBorderColor(grade(it.rarity).color .. '88')
-                end
-                chip.value:setText(plus(src.value, unit))
-                chip:setWidth(26 + chip.value:getTextSize().width + 6)
-                chip:setTooltip(titleCase(src.name or (it and it.name) or ''))
-            end
-        end
-    end
-end
-
 -- ---------------------------------------------------------------------------
 -- the window
 -- ---------------------------------------------------------------------------
-
-local PAGES = { arsenal = 'tabArsenal', bonuses = 'tabBonuses' }
 
 function Forge.refresh()
     if not window then
         return
     end
     window.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
-    for name, tab in pairs(PAGES) do
-        window.tabs[tab]:setOn(name == page)
-        window.pages[name]:setVisible(name == page)
-    end
-    if page == 'arsenal' then
-        fillArsenal()
-    else
-        fillBonuses()
-    end
+    fillArsenal()
 end
 
-function showPage(name)
-    -- the old pages are now part of the Arsenal
-    if name == 'reforge' or name == 'ascend' then
-        name = 'arsenal'
-    end
-    if not PAGES[name] then
+-- one page now (the Reforge, the Ascension and the bonuses are in it)
+function showPage()
+    if Forge.busy() then
         return
     end
-    if Forge.busy() and name ~= 'arsenal' then
-        return
-    end
-    page = name
     if reforge and reforge.phase == 'done' then
         reforge = nil
     end

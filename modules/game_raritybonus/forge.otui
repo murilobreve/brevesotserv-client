@@ -94,7 +94,7 @@ ForgePip < UIWidget
 
 // one worn item on the Arsenal's paperdoll
 ForgeSlot < UIButton
-  size: 60 60
+  size: 48 48
   background-color: #17131a
   border-width: 2
   border-color: #2a2430
@@ -103,7 +103,7 @@ ForgeSlot < UIButton
 
   UIItem
     id: item
-    size: 48 48
+    size: 40 40
     anchors.centerIn: parent
     virtual: true
     phantom: true
@@ -117,7 +117,7 @@ ForgeSlot < UIButton
     size: 8 8
 
 ForgeEmptySlot < UIWidget
-  size: 60 60
+  size: 48 48
   border-width: 1
   border-color: #241f28
   phantom: true
@@ -271,7 +271,7 @@ ForgeItemChip < UIButton
 
 // one bonus of the Reforge, as a card: face up or face down
 ForgeCard < UIButton
-  size: 124 212
+  size: 116 212
   background-color: #17141a
   border-width: 1
   border-color: #2e2833
@@ -755,6 +755,95 @@ ForgeFilter < UIButton
     background-color: #2a2219
     border-color: #8a6d36
 
+// one of the character's bonuses in the Arsenal: name, total (and limit),
+// and the items that give it, each with its share
+ForgeMiniTotal < UIWidget
+  height: 46
+  background-color: #17141a
+  border-width: 1
+  border-color: #2a2430
+
+  Label
+    id: name
+    anchors.left: parent.left
+    anchors.right: total.left
+    anchors.top: parent.top
+    margin-left: 7
+    margin-top: 5
+    margin-right: 4
+    height: 14
+    font: Verdana Bold-11px
+    color: #ece6dc
+
+  Label
+    id: total
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-right: 7
+    margin-top: 5
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #b9b0a3
+
+  UIWidget
+    id: chips
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: name.bottom
+    margin-left: 6
+    margin-right: 6
+    margin-top: 3
+    height: 18
+    layout:
+      type: horizontalBox
+      spacing: 4
+
+  UIWidget
+    id: track
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin: 0 1 1 1
+    height: 3
+    background-color: #241f28
+    phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      width: 0
+      phantom: true
+
+// an item in a bonus row: its picture and what it gives
+ForgeMiniChip < UIButton
+  height: 18
+  background-color: #1f1a24
+  border-width: 1
+  border-color: #2e2833
+  change-cursor-image: true
+  cursor: pointer
+
+  UIItem
+    id: item
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 1
+    size: 16 16
+    virtual: true
+    phantom: true
+
+  Label
+    id: value
+    anchors.left: item.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #d6cfc2
+    phantom: true
+
 MythosWindow
   id: forgeWindow
   !text: tr('Rarity Forge')
@@ -794,15 +883,6 @@ MythosWindow
       type: horizontalBox
       spacing: 4
 
-    ForgeTab
-      id: tabArsenal
-      !text: tr('Arsenal')
-      @onClick: modules.game_raritybonus.showPage('arsenal')
-
-    ForgeTab
-      id: tabBonuses
-      !text: tr('Your bonuses')
-      @onClick: modules.game_raritybonus.showPage('bonuses')
 
   // the gold in the bank (prices of the seal and the Ascension)
   BrevesValueBox
@@ -871,7 +951,7 @@ MythosWindow
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.bottom: parent.bottom
-        width: 220
+        width: 300
         padding: 12
 
         ForgeTitle
@@ -883,32 +963,49 @@ MythosWindow
         UIWidget
           id: doll
           anchors.top: wornTitle.bottom
-          anchors.left: parent.left
-          margin-top: 10
-          size: 196 266
+          anchors.horizontalCenter: parent.horizontalCenter
+          margin-top: 8
+          size: 156 210
           layout:
             type: grid
-            cell-size: 60 60
-            cell-spacing: 8
+            cell-size: 48 48
+            cell-spacing: 6
             num-columns: 3
 
         ForgeTitle
-          id: summaryTitle
+          id: bonusesTitle
           anchors.top: doll.bottom
           anchors.left: parent.left
-          margin-top: 6
-          !text: tr('YOUR ARSENAL')
+          margin-top: 10
+          !text: tr('YOUR BONUSES')
 
-        UIWidget
-          id: summary
-          anchors.top: summaryTitle.bottom
-          anchors.left: parent.left
+        ForgeDim
+          id: bonusesNote
+          anchors.verticalCenter: bonusesTitle.verticalCenter
           anchors.right: parent.right
-          margin-top: 8
-          height: 100
+          text-auto-resize: true
+
+        ScrollablePanel
+          id: bonusList
+          anchors.top: bonusesTitle.bottom
+          anchors.left: parent.left
+          anchors.right: bonusScroll.left
+          anchors.bottom: parent.bottom
+          margin-top: 6
+          margin-right: 3
+          vertical-scrollbar: bonusScroll
           layout:
             type: verticalBox
-            spacing: 4
+            spacing: 3
+
+        VerticalScrollBar
+          id: bonusScroll
+          anchors.top: bonusesTitle.bottom
+          margin-top: 6
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          step: 30
+          pixels-scroll: true
 
       UIWidget
         id: center
@@ -1015,7 +1112,7 @@ MythosWindow
           anchors.left: parent.left
           anchors.bottom: parent.bottom
           margin-top: 12
-          width: 350
+          width: 312
           padding: 12
 
           ForgeTitle
@@ -1033,40 +1130,30 @@ MythosWindow
             !text: tr('rolls the bonuses again')
 
           ForgeText
-            id: countTitle
+            id: costXp
             anchors.top: title.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            margin-top: 8
+            margin-top: 10
             height: 14
-
-          UIWidget
-            id: odds
-            anchors.top: countTitle.bottom
-            anchors.left: parent.left
-            margin-top: 4
-            size: 190 84
-            layout:
-              type: verticalBox
-              spacing: 2
-
-          ForgeText
-            id: costXp
-            anchors.top: countTitle.bottom
-            anchors.left: odds.right
-            anchors.right: parent.right
-            margin-top: 6
-            margin-left: 14
-            height: 28
-            text-wrap: true
 
           ForgeText
             id: costSeal
             anchors.top: costXp.bottom
-            anchors.left: costXp.left
+            anchors.left: parent.left
             anchors.right: parent.right
-            margin-top: 4
-            height: 44
+            margin-top: 6
+            height: 28
+            text-wrap: true
+
+          ForgeDim
+            id: rules
+            anchors.top: costSeal.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: rollButton.top
+            margin-top: 6
+            margin-bottom: 6
             text-wrap: true
 
           ForgeGoldButton
@@ -1152,7 +1239,7 @@ MythosWindow
             anchors.left: resultTitle.left
             anchors.right: parent.right
             margin-top: 2
-            height: 44
+            height: 58
             text-wrap: true
 
           UIWidget
@@ -1183,64 +1270,3 @@ MythosWindow
             text-align: center
             text-wrap: true
             visible: false
-
-    // ---------------------------------------------------------------- Your bonuses
-    UIWidget
-      id: bonuses
-      anchors.fill: parent
-      visible: false
-
-      UIWidget
-        id: tiles
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 58
-        layout:
-          type: horizontalBox
-          spacing: 12
-
-      UIWidget
-        id: filters
-        anchors.top: tiles.bottom
-        anchors.left: parent.left
-        margin-top: 12
-        size: 520 24
-        layout:
-          type: horizontalBox
-          spacing: 6
-
-      UIWidget
-        id: legend
-        anchors.verticalCenter: filters.verticalCenter
-        anchors.right: parent.right
-        size: 420 16
-        layout:
-          type: horizontalBox
-          spacing: 10
-          align-right: true
-
-      ScrollablePanel
-        id: list
-        anchors.top: filters.bottom
-        anchors.left: parent.left
-        anchors.right: scroll.left
-        anchors.bottom: parent.bottom
-        margin-top: 12
-        margin-right: 4
-        vertical-scrollbar: scroll
-        layout:
-          type: grid
-          cell-size: 448 74
-          cell-spacing: 10
-          num-columns: 2
-          flow: true
-
-      VerticalScrollBar
-        id: scroll
-        anchors.top: filters.bottom
-        margin-top: 12
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        step: 40
-        pixels-scroll: true
