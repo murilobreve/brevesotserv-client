@@ -554,5 +554,581 @@
     "firstspriteid": 1002412,
     "lastspriteid": 1002447,
     "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-490f0e0bcc3c1537.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002448,
+    "lastspriteid": 1002483,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-5d9f19e4bfed0ac9.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002484,
+    "lastspriteid": 1002519,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-70d98bc23d14a9ed.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002520,
+    "lastspriteid": 1002555,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-e69b9edf3235221f.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002556,
+    "lastspriteid": 1002591,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-fb8b3338cf904f4c.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002592,
+    "lastspriteid": 1002627,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-58569c7d8c7dbde7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002628,
+    "lastspriteid": 1002663,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2441094a22805d23.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002664,
+    "lastspriteid": 1002699,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-32813b668b39c3c1.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002700,
+    "lastspriteid": 1002735,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-4d3f3d4769caece7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002736,
+    "lastspriteid": 1002771,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-16d10bc3d847219e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002772,
+    "lastspriteid": 1002807,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-45e780bb308ae7af.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002808,
+    "lastspriteid": 1002843,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-b71430ca193dadaf.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002844,
+    "lastspriteid": 1002879,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-57b0ff24a54a7b6e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002880,
+    "lastspriteid": 1002915,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-767527779556a31d.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002916,
+    "lastspriteid": 1002951,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-b7adf3248ecd794f.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002952,
+    "lastspriteid": 1002987,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-b2e249605dd20f87.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1002988,
+    "lastspriteid": 1003023,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-3974d53370af9dc6.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003024,
+    "lastspriteid": 1003059,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-13b36d43acfa8bee.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003060,
+    "lastspriteid": 1003095,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2aa4fca5dbf6b73f.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003096,
+    "lastspriteid": 1003131,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-8198b782af976c64.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003132,
+    "lastspriteid": 1003167,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-adc611d5a0b73ab7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003168,
+    "lastspriteid": 1003203,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-cb1bc862967953ca.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003204,
+    "lastspriteid": 1003239,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-d0be0ea924620156.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003240,
+    "lastspriteid": 1003275,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-158b79355a45d2f7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003276,
+    "lastspriteid": 1003311,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-727109f7c173bcba.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003312,
+    "lastspriteid": 1003347,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-ff2988c15e740048.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003348,
+    "lastspriteid": 1003383,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2eb19d91961beae5.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003384,
+    "lastspriteid": 1003419,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-ec3a02a865cd52d5.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003420,
+    "lastspriteid": 1003455,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-beb199bc749028c0.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003456,
+    "lastspriteid": 1003491,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-a1241468eb754d9d.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003492,
+    "lastspriteid": 1003527,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-73f8b718538725f3.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003528,
+    "lastspriteid": 1003563,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-565e3155217ff13e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003564,
+    "lastspriteid": 1003599,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-ef9b6f1e0aff8684.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003600,
+    "lastspriteid": 1003635,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-bf05ff7245e860a9.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003636,
+    "lastspriteid": 1003671,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2c711140509e37e7.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003672,
+    "lastspriteid": 1003707,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-e75a128386eafb68.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003708,
+    "lastspriteid": 1003743,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-240e83e458bb8b0b.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003744,
+    "lastspriteid": 1003779,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-d00f7214408a1755.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003780,
+    "lastspriteid": 1003815,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-84c90080a4a06831.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003816,
+    "lastspriteid": 1003851,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-b59001ebfd8df391.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003852,
+    "lastspriteid": 1003887,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-85521634979a3f36.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003888,
+    "lastspriteid": 1003923,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-496c889087dd77c0.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003924,
+    "lastspriteid": 1003959,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2b96a339b333232e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003960,
+    "lastspriteid": 1003995,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-1862946fdf200fd4.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1003996,
+    "lastspriteid": 1004031,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-500a6c60d1b52e14.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004032,
+    "lastspriteid": 1004067,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-82aad5888ec86638.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004068,
+    "lastspriteid": 1004103,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-314073c69d88db06.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004104,
+    "lastspriteid": 1004139,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-c31071f3b64d35b5.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004140,
+    "lastspriteid": 1004175,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-5351be1104465c30.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004176,
+    "lastspriteid": 1004211,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2192398966e82afc.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004212,
+    "lastspriteid": 1004247,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-eed9b22da487fb94.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004248,
+    "lastspriteid": 1004283,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-d6aed8d514502b19.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004284,
+    "lastspriteid": 1004319,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-823ad8d6104e3971.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004320,
+    "lastspriteid": 1004355,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-f4ae7926f367f99e.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004356,
+    "lastspriteid": 1004391,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-9ccb0bb0e362ab1b.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004392,
+    "lastspriteid": 1004427,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-bf43e05ebd66fca8.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004428,
+    "lastspriteid": 1004463,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-70f3c8a18803543b.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004464,
+    "lastspriteid": 1004499,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-93a25314dcfb0958.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004500,
+    "lastspriteid": 1004535,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-2de87da3c7fc6a69.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004536,
+    "lastspriteid": 1004571,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-fbd40d90daca9c96.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004572,
+    "lastspriteid": 1004607,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-27d1a6cb732a4f6d.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004608,
+    "lastspriteid": 1004643,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-0de34534adae2107.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004644,
+    "lastspriteid": 1004679,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-91650a37fbe76310.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004680,
+    "lastspriteid": 1004715,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-4220c4187b307413.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004716,
+    "lastspriteid": 1004751,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-abd1be6788503faf.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004752,
+    "lastspriteid": 1004787,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-f14434335105aeed.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004788,
+    "lastspriteid": 1004823,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-fb8ae740948679cd.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004824,
+    "lastspriteid": 1004859,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-393938ff6697624a.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004860,
+    "lastspriteid": 1004895,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-bfd901435af91669.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004896,
+    "lastspriteid": 1004931,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-15c26af3a7f805ec.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004932,
+    "lastspriteid": 1004967,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-1cb8e14d18af83cf.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1004968,
+    "lastspriteid": 1005003,
+    "area": 64
+  },
+  {
+    "type": "sprite",
+    "file": "sprites-setoutfits-226a8d9026fc25a1.bmp.lzma",
+    "spritetype": 3,
+    "firstspriteid": 1005004,
+    "lastspriteid": 1005039,
+    "area": 64
   }
 ]
