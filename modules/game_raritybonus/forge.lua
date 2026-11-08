@@ -1,11 +1,11 @@
--- Forja de Raridade: the rarity window (forge.otui). Four pages:
---   Arsenal      the rarity items worn, on a paperdoll; the one picked shows
---                each bonus with the range it rolls in and where the roll fell
---   Reforge      the reroll: the bonuses as cards, a click seals one (kept,
---                for gold); the cards turn face down and are revealed one by
---                one, then "before -> after"
---   Ascension    the grade upgrade: a dial whose lit arc is the chance; the
---                needle spins and stops in or out of it
+-- Forja de Raridade: the rarity window (forge.otui). Two pages:
+--   Arsenal      everything done to an item, on one page: the rarity items
+--                worn on a paperdoll; the one picked with its bonuses as
+--                cards (a click seals one for the next reforge); below, side
+--                by side, the Reforge (the cards turn face down and are
+--                revealed one by one, each with how it changed) and the
+--                Ascension (a dial whose lit arc is the chance; the needle
+--                spins and stops in or out of it)
 --   Your bonuses the totals, each bar split by the items that give it
 -- The server (scripts/rarity/bonus_window.lua, extended opcode 123) rolls;
 -- the window only shows. raritybonus.lua routes the opcode here.
@@ -38,7 +38,6 @@ local QUALITY = {
 local DOLL = { 2, 1, 3, 6, 4, 5, 9, 7, 10, 0, 8, 0 }
 
 local BAR = 120 -- the Arsenal's range bar
-local SHARE_BAR = 206 -- "in your character"
 local TOTAL_BAR = 426 -- Your bonuses
 
 local window
@@ -261,6 +260,8 @@ local function fillPips(panel, gradeKey)
     end
 end
 
+local fillReforge, fillAscend -- below: they fill the two boxes under the cards
+
 local function fillArsenal()
     local p = window.pages.arsenal
     local doll = p.left.doll
@@ -313,11 +314,10 @@ local function fillArsenal()
 
     local c = p.center
     local entry = bySlot[selected]
-    for _, id in ipairs({ 'pedestal', 'badge', 'pips', 'name', 'info', 'bonusTitle', 'qualityTitle', 'bonuses', 'reforgeButton', 'ascendButton' }) do
+    for _, id in ipairs({ 'pedestal', 'badge', 'pips', 'name', 'info', 'hint', 'cards', 'reforgeBox', 'ascendBox' }) do
         c[id]:setVisible(entry ~= nil)
     end
     c.empty:setVisible(entry == nil)
-    p.right.shares:destroyChildren()
     if not entry then
         return
     end
@@ -333,71 +333,15 @@ local function fillArsenal()
     if (tonumber(entry.level) or 0) > 0 then
         table.insert(info, tr('Level %d', entry.level))
     end
-    table.insert(info, entry.finder and tr('Found by you') or tr('Not found by you'))
+    local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
+    table.insert(info, max == 1 and tr('1 bonus') or tr('1 to %d bonuses', max))
     c.info:setText(table.concat(info, '   '))
-
-    local list = c.bonuses
-    list:destroyChildren()
-    for _, bonus in ipairs(entry.bonuses or {}) do
-        local row = g_ui.createWidget('ForgeBonusRow', list)
-        row.name:setText(tr(bonus.label or ''))
-        local q = qualityOf(bonus)
-        local look = quality(q, bonus.perfect)
-        row.value:setText(plus(bonus.value, bonus.unit))
-        row.value:setColor(q and look[3] or '#ece6dc')
-        local hasRange = q ~= nil
-        row.track:setVisible(hasRange)
-        row.low:setVisible(hasRange and bonus.min ~= nil)
-        row.high:setVisible(hasRange and bonus.max ~= nil)
-        if hasRange then
-            row.track.fill:setWidth(math.floor(BAR * q + 0.5))
-            row.track.fill:setBackgroundColor(look[3])
-            row.track.fill:setOpacity(0.85)
-            row.track.mark:setMarginLeft(math.max(0, math.floor(BAR * q + 0.5) - 1))
-            if bonus.min then
-                row.low:setText(plus(bonus.min, bonus.unit))
-                row.high:setText(plus(bonus.max, bonus.unit))
-            end
-            row.quality:setText(tr(look[2]) .. ' ' .. math.floor(q * 100 + 0.5) .. '%')
-            row.quality:setColor(look[3])
-            row.quality:setBackgroundColor(look[4])
-            row.quality:setBorderColor(look[3] .. '55')
-        else
-            row.quality:setText('')
-            row.quality:setBorderWidth(0)
-        end
-        local desc = describe(bonus.key)
-        if desc then
-            row:setTooltip(desc)
-        end
+    -- the finder's +20%: on every value shown here, kept by any reforge
+    if entry.finder then
+        c.info:setText(c.info:getText() .. '   ' .. tr('Found by you: +20%'))
     end
-
-    -- this item's share of each total
-    for _, bonus in ipairs(entry.bonuses or {}) do
-        local total = totalsByKey[bonus.key]
-        local row = g_ui.createWidget('ForgeShareRow', p.right.shares)
-        row.name:setText(tr(bonus.label or ''))
-        local cap = total and not total.perItem and tonumber(total.cap)
-        if cap and cap > 0 then
-            local sum = tonumber(total.total) or 0
-            row.total:setText(number(sum) .. (bonus.unit or '') .. ' / ' .. number(cap) .. (bonus.unit or ''))
-            local mine = math.min(1, (tonumber(bonus.value) or 0) / cap)
-            local others = math.max(0, math.min(1 - mine, (sum - (tonumber(bonus.value) or 0)) / cap))
-            row.track.others:setWidth(math.floor(SHARE_BAR * others + 0.5))
-            row.track.mine:setWidth(math.max(1, math.floor(SHARE_BAR * mine + 0.5)))
-            if total.capped then
-                row.total:setColor('#f3d38a')
-            end
-        else
-            row.total:setText(tr('on the item'))
-            row.track:setVisible(false)
-        end
-    end
-
-    c.reforgeButton:setText(tr('Reforge  -  %d Rarity XP', tonumber(entry.rerollCost) or 0))
-    local up = entry.upgrade
-    c.ascendButton:setEnabled(up ~= nil)
-    c.ascendButton:setText(up and tr('Ascend to %s  -  %d%%', up.label or '', tonumber(up.chance) or 0) or tr('Highest grade'))
+    fillReforge()
+    fillAscend()
 end
 
 -- ---------------------------------------------------------------------------
@@ -411,6 +355,7 @@ local function lockable(entry)
 end
 
 local function fillCard(card, bonus, opts)
+    card.delta:setVisible(false)
     card.back:setVisible(false)
     card.empty:setVisible(false)
     card.flash:setVisible(false)
@@ -440,11 +385,19 @@ local function fillCard(card, bonus, opts)
         card.glow:setImageColor('#f3d38a')
         card:setBorderColor('#f3d38a')
     end
-    local desc = describe(bonus.key)
-    card:setTooltip(desc)
+    -- the card's tooltip: what the bonus does and how much the character has
+    local tip = describe(bonus.key)
+    local total = totalsByKey[bonus.key]
+    local cap = total and not total.perItem and tonumber(total.cap)
+    if cap and cap > 0 then
+        local line = tr('In your character: %s of %s', number(tonumber(total.total) or 0) .. (bonus.unit or ''), number(cap) .. (bonus.unit or ''))
+        tip = tip and (tip .. '\n\n' .. line) or line
+    end
+    card:setTooltip(tip)
 end
 
 local function backCard(card, n)
+    card.delta:setVisible(false)
     card.back:setVisible(true)
     card.empty:setVisible(false)
     card.sealed:setVisible(false)
@@ -455,6 +408,7 @@ local function backCard(card, n)
 end
 
 local function emptyCard(card)
+    card.delta:setVisible(false)
     card.back:setVisible(false)
     card.flash:setVisible(false)
     card.glow:setVisible(false)
@@ -510,96 +464,49 @@ local function rolledBonuses(result)
     return list
 end
 
-local function fillDiff()
-    local p = window.pages.reforge.main
-    p.diff:destroyChildren()
-    local show = reforge and reforge.phase == 'done'
-    p.diffTitle:setVisible(show or false)
-    if not show then
-        return
+-- after a reforge, how a bonus changed: text and colour for the card's corner
+local function deltaOf(bonus)
+    if not (reforge and reforge.phase ~= 'rolling') then
+        return nil
     end
-    local after = reforge.after or {}
-    for _, bonus in ipairs(after) do
-        local row = g_ui.createWidget('ForgeDiffRow', p.diff)
-        local old = sameKey(reforge.before, bonus.key, bonus.label)
-        row.name:setText(tr(bonus.label or ''))
-        row.after:setText(plus(bonus.value, bonus.unit))
-        if bonus.locked or (reforge.lock and bonus.key == reforge.lock) then
-            row.before:setText(plus(old and old.value or bonus.value, bonus.unit))
-            row.delta:setText(tr('sealed'))
-            row.delta:setColor('#e8c77a')
-        elseif old then
-            row.before:setText(plus(old.value, old.unit))
-            local d = (tonumber(bonus.value) or 0) - (tonumber(old.value) or 0)
-            row.delta:setText((d >= 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10)))
-            row.delta:setColor(d >= 0 and '#8fdc9a' or '#ff9c8a')
-        else
-            row.before:setText('-')
-            row.delta:setText(tr('new'))
-            row.delta:setColor('#c9a4ff')
-        end
+    if bonus.locked or (reforge.lock and bonus.key == reforge.lock) then
+        return nil
     end
-    for _, old in ipairs(reforge.before or {}) do
-        if not sameKey(after, old.key, old.label) and not sameKey(after, nil, old.label) then
-            local row = g_ui.createWidget('ForgeDiffRow', p.diff)
-            row.name:setText(tr(old.label or ''))
-            row.before:setText(plus(old.value, old.unit))
-            row.after:setText('-')
-            row.delta:setText(tr('lost'))
-            row.delta:setColor('#ff9c8a')
-        end
+    local old = sameKey(reforge.before, bonus.key, bonus.label)
+    if not old then
+        return tr('new'), '#c9a4ff'
     end
+    local d = (tonumber(bonus.value) or 0) - (tonumber(old.value) or 0)
+    if math.abs(d) < 0.05 then
+        return '=', '#a59d92'
+    end
+    return (d > 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10)), d > 0 and '#8fdc9a' or '#ff9c8a'
 end
 
-local function fillReforge()
-    local p = window.pages.reforge
-    local m = p.main
+fillReforge = function()
+    local c = window.pages.arsenal.center
     local entry = bySlot[selected]
-    m.strip:destroyChildren()
-    for _, it in ipairs(items) do
-        local chip = g_ui.createWidget('ForgeItemChip', m.strip)
-        setItem(chip.item, it)
-        local g = grade(it.rarity)
-        chip:setBorderColor(it.slotId == selected and '#f3d38a' or g.color)
-        chip:setBorderWidth(it.slotId == selected and 3 or 2)
-        chip:setTooltip(titleCase(it.name) .. '\n' .. g.label)
-        chip.onClick = function() pickItem(it.slotId) end
-    end
-    local cards = m.cards
+    local cards = c.cards
     cards:destroyChildren()
     if not entry then
-        m.name:setText(tr('No rarity item worn'))
-        m.gradeLine:setText('')
-        m.hint:setText('')
-        p.side.rollButton:setEnabled(false)
-        p.side.skipButton:setVisible(false)
-        fillDiff()
         return
     end
     local g = grade(entry.rarity)
-    m.frame:setBorderColor(g.color)
-    setItem(m.frame.item, entry)
     local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
-    m.gradeLine:setText(tr('%s  -  1 to %d bonuses', g.label:upper(), max))
-    if max == 1 then
-        m.gradeLine:setText(g.label:upper() .. '  -  ' .. tr('1 bonus'))
-    end
-    m.gradeLine:setColor(g.color)
-    m.name:setText(titleCase(entry.name))
     cards:setWidth(max * CARD_W + (max - 1) * 10)
 
     local phase = reforge and reforge.slot == selected and reforge.phase or 'idle'
     local lock = locks[selected]
     if phase == 'idle' then
         if lockable(entry) then
-            m.hint:setText(tr('Click a card to seal its bonus: it keeps its value and the others roll again. Then reforge.'))
+            c.hint:setText(tr('Click a card to seal its bonus: the next reforge keeps it and rolls the others.'))
         else
-            m.hint:setText(tr('The Reforge rolls the whole item again: how many bonuses, which ones and their values.'))
+            c.hint:setText(tr('Reforge rolls the bonuses again. Ascension tries to raise the grade.'))
         end
     elseif phase == 'rolling' or phase == 'reveal' then
-        m.hint:setText(tr('The cards turn one by one, from left to right.'))
+        c.hint:setText(tr('The cards turn one by one, from left to right.'))
     else
-        m.hint:setText(tr('Done. Below, before and after: green went up, red went down, violet is a new bonus.'))
+        c.hint:setText(tr('In each corner, how the bonus changed: green went up, red went down, violet is new.'))
     end
 
     for n = 1, max do
@@ -634,6 +541,12 @@ local function fillReforge()
             local bonus = list[n]
             if bonus and (n <= reforge.shown or bonus.locked) then
                 fillCard(card, bonus, { n = n, locked = bonus.locked })
+                local text, color = deltaOf(bonus)
+                card.delta:setVisible(text ~= nil)
+                if text then
+                    card.delta:setText(text)
+                    card.delta:setColor(color)
+                end
                 if n == reforge.flashAt then
                     flashCard(card, bonus.perfect and '#f3d38a' or quality(qualityOf(bonus), bonus.perfect)[3])
                 end
@@ -645,7 +558,7 @@ local function fillReforge()
             if phase == 'done' then
                 card.onClick = function()
                     reforge = nil
-                    fillReforge()
+                    Forge.refresh()
                 end
             end
         end
@@ -655,7 +568,7 @@ local function fillReforge()
     end
 
     -- the odds of how many bonuses, the rules and the price
-    local s = p.side
+    local s = c.reforgeBox
     s.odds:destroyChildren()
     local counts = entry.counts
     if lock then
@@ -671,11 +584,15 @@ local function fillReforge()
             row.label:setText(i == 1 and tr('1 bonus') or tr('%d bonuses', i))
             row.pct:setText(number(pct) .. '%')
             row.track.fill:setBackgroundColor(g.color)
-            row.track.fill:setWidth(math.floor(110 * (tonumber(pct) or 0) / math.max(1, top) + 0.5))
+            row.track.fill:setWidth(math.floor(80 * (tonumber(pct) or 0) / math.max(1, top) + 0.5))
         end
     else
         s.countTitle:setText(tr('The item always gets %d bonuses', max))
     end
+    -- without the odds bars (a seal, a fixed count) the price takes the width
+    local hasOdds = #s.odds:getChildren() > 0
+    s.odds:setWidth(hasOdds and 190 or 0)
+    s.costXp:setMarginLeft(hasOdds and 14 or 0)
     local perfect = tonumber(data and data.perfectChance) or 0
     local rules = tr('Which bonuses: drawn from the list of this kind of item.') .. '\n' ..
         tr('Values: within the range of %s.', g.label)
@@ -685,18 +602,22 @@ local function fillReforge()
         rules = rules .. '\n' .. tr('Perfect roll: %s per bonus.', text)
     end
     rules = rules .. '\n' .. tr('Fewer bonuses come stronger.')
-    s.rules:setText(rules)
+    s.title:setTooltip(rules)
+    s.subtitle:setTooltip(rules)
     local cost = tonumber(entry.rerollCost) or 0
-    s.costXp:setText(tr('Rarity XP: %d (you have %d)', cost, rarityXp))
+    s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
     if lockable(entry) then
-        s.costSeal:setText(tr('Seal (keep 1 bonus): %s gold', formatGold(entry.lockCost)))
-        s.costSeal:setColor(lock and '#e8c77a' or '#6e665e')
-        s.sealHelp:setText(tr('Click a card to seal it. One card at a time; click it again to let it go.'))
+        if lock then
+            s.costSeal:setText(tr('Seal: %s gold, keeps %s with its value.', formatGold(entry.lockCost), tr(((sameKey(entry.bonuses, lock) or {}).label) or '')))
+            s.costSeal:setColor('#e8c77a')
+        else
+            s.costSeal:setText(tr('Seal a card (keep 1 bonus): %s gold.', formatGold(entry.lockCost)))
+            s.costSeal:setColor('#8f877c')
+        end
     else
         s.costSeal:setText(tr('Seal: needs an item with 2 or more bonuses'))
         s.costSeal:setColor('#6e665e')
-        s.sealHelp:setText('')
     end
     local lockGold = lock and (tonumber(entry.lockCost) or 0) or 0
     local busy = phase == 'rolling' or phase == 'reveal'
@@ -710,7 +631,6 @@ local function fillReforge()
     else
         s.rollButton:setTooltip(nil)
     end
-    fillDiff()
 end
 
 -- the card backs pulse while the server rolls
@@ -723,7 +643,7 @@ local function pulse()
             return
         end
         local a = (math.sin((g_clock.millis() - t0) / 1100 * math.pi * 2) + 1) / 2
-        for _, card in ipairs(window.pages.reforge.main.cards:getChildren()) do
+        for _, card in ipairs(window.pages.arsenal.center.cards:getChildren()) do
             if card.back:isVisible() then
                 card.back:setBorderColor(a > 0.5 and '#8a6dd0' or '#3d3346')
                 card.back.rune:setOpacity(0.55 + 0.45 * a)
@@ -836,9 +756,9 @@ end
 -- Ascension
 -- ---------------------------------------------------------------------------
 
-local TICKS = 100
-local DIAL = 220
-local RADIUS = 97
+local TICKS = 72
+local DIAL = 116
+local RADIUS = 49
 
 local function buildDial(dial)
     if dial.ticks then
@@ -851,74 +771,83 @@ local function buildDial(dial)
         local rad = math.rad(angle)
         local tick = g_ui.createWidget('UIWidget', dial)
         tick:setImageSource('/game_raritybonus/images/forge/tick')
-        tick:setSize({ width = 6, height = 18 })
+        tick:setSize({ width = 4, height = 12 })
         tick:setPhantom(true)
         tick:addAnchor(AnchorLeft, 'parent', AnchorLeft)
         tick:addAnchor(AnchorTop, 'parent', AnchorTop)
-        tick:setMarginLeft(math.floor(c + RADIUS * math.sin(rad) - 3 + 0.5))
-        tick:setMarginTop(math.floor(c - RADIUS * math.cos(rad) - 9 + 0.5))
+        tick:setMarginLeft(math.floor(c + RADIUS * math.sin(rad) - 2 + 0.5))
+        tick:setMarginTop(math.floor(c - RADIUS * math.cos(rad) - 6 + 0.5))
         tick:setRotation(angle)
         dial.ticks[i + 1] = tick
     end
     dial.needle:raise()
 end
 
-local function upgradable()
-    local list = {}
-    for _, entry in ipairs(items) do
-        list[#list + 1] = entry
-    end
-    return list
-end
-
-local function fillAscend()
-    local p = window.pages.ascend
+fillAscend = function()
+    local box = window.pages.arsenal.center.ascendBox
     local entry = bySlot[selected]
-    p.list.rows:destroyChildren()
-    local any = false
-    for _, it in ipairs(upgradable()) do
-        local row = g_ui.createWidget('ForgeAscendRow', p.list.rows)
-        local from = grade(it.rarity)
-        setItem(row.frame.item, it)
-        row.frame:setBorderColor(from.color)
-        row.name:setText(titleCase(it.name))
-        row:setOn(it.slotId == selected)
-        if it.upgrade then
-            any = true
-            row.path:setText(from.label .. ' -> ' .. (it.upgrade.label or ''))
-            row.chance:setText((tonumber(it.upgrade.chance) or 0) .. '%')
-        else
-            row.path:setText(from.label .. '  ' .. tr('(highest grade)'))
-            row.chance:setText('')
-        end
-        row.onClick = function() pickItem(it.slotId) end
+    if not entry then
+        return
     end
-    local m = p.main
-    local up = entry and entry.upgrade
+    local up = entry.upgrade
     local shownUp = up
-    -- right after going up, the crests still show the way it went
+    -- right after going up, the dial still shows the way it went
     if ascend and ascend.slot == selected and ascend.offer then
         shownUp = ascend.offer
     end
-    local visible = entry ~= nil and (shownUp ~= nil)
-    m.stage:setVisible(visible)
-    m.result:setVisible(visible)
-    m.goButton:setVisible(visible)
-    m.none:setVisible(not visible)
-    if not entry then
-        m.none:setText(tr('You wear no rarity item.'))
-    elseif not shownUp then
-        m.none:setText(tr('%s is %s, the highest grade.', titleCase(entry.name), grade(entry.rarity).label))
+    local visible = shownUp ~= nil
+    for _, id in ipairs({ 'path', 'dial', 'resultTitle', 'resultText', 'history', 'goButton' }) do
+        box[id]:setVisible(visible)
     end
-    local s = p.side
-    s.how:setText(tr('If it goes up: the item changes grade and its bonuses roll again, in the range of the new grade.') .. '\n\n' ..
-        tr('If it fails: the item stays exactly as it was. The gold and the Rarity XP are spent.') .. '\n\n' ..
-        tr('The needle spins and stops in or out of the lit arc: the arc is as big as the chance.'))
-    s.history:destroyChildren()
+    box.none:setVisible(not visible)
+    if not visible then
+        box.none:setText(tr('%s is %s, the highest grade: nothing above it.', titleCase(entry.name), grade(entry.rarity).label))
+        return
+    end
+    local fromKey = ascend and ascend.slot == selected and ascend.fromKey or entry.rarity
+    local from, to = grade(fromKey), grade(shownUp.to)
+    box.path:setText(from.label .. '  >  ' .. to.label)
+    box.path:setColor(to.color)
+    box.path:setTooltip(tr('Up to %d bonuses now, up to %d if it goes up.', from.pips, to.pips))
+    local how = tr('If it goes up: the item changes grade and its bonuses roll again, in the range of the new grade.') .. '\n\n' ..
+        tr('If it fails: the item stays exactly as it was. The gold and the Rarity XP are spent.')
+    box.title:setTooltip(how)
+    buildDial(box.dial)
+    local chance = tonumber(shownUp.chance) or 0
+    for i, tick in ipairs(box.dial.ticks) do
+        tick:setImageColor(i <= chance * TICKS / 100 and to.color or '#2a2430')
+    end
+    box.dial.chance:setText(chance .. '%')
+    box.dial.chance:setColor(to.color)
+    box.dial.needle:setRotation(needleAngle)
+
+    local phase = ascend and ascend.slot == selected and ascend.phase or 'idle'
+    box:setBorderColor('#2e2833')
+    if phase == 'idle' then
+        box.resultTitle:setText(tr('%d%% chance', chance))
+        box.resultTitle:setColor('#ece6dc')
+        box.resultText:setText(tr('The needle spins: in the lit arc, the item becomes %s. Outside, it stays as it is.', to.label))
+    elseif phase == 'waiting' or phase == 'spinning' then
+        box.resultTitle:setText(tr('Spinning...'))
+        box.resultTitle:setColor('#ddd0ff')
+        box.resultText:setText(tr('Good luck.'))
+    elseif phase == 'win' then
+        box.resultTitle:setText(tr('Now %s!', to.label))
+        box.resultTitle:setColor(to.color)
+        box.resultText:setText(tr('It went up a grade and its bonuses rolled again: see the cards above.'))
+        box:setBorderColor(to.color)
+    else
+        box.resultTitle:setText(tr('Not this time'))
+        box.resultTitle:setColor('#ff9c8a')
+        box.resultText:setText(tr('It stays %s, as it was. Spent: %s gold and %d Rarity XP.', from.label, formatGold(shownUp.gold), tonumber(shownUp.xp) or 0))
+        box:setBorderColor('#7a3a33')
+    end
+    -- this session's tries
+    box.history:destroyChildren()
     local wins = 0
     for _, win in ipairs(history) do
-        local pip = g_ui.createWidget('ForgePip', s.history)
-        pip:setSize({ width = 12, height = 12 })
+        local pip = g_ui.createWidget('ForgePip', box.history)
+        pip:setSize({ width = 10, height = 10 })
         if win then
             wins = wins + 1
             pip:setImageColor('#8fdc9a')
@@ -927,74 +856,22 @@ local function fillAscend()
             pip:setImageColor('#ff9c8a')
         end
     end
-    s.historyText:setText(#history > 0 and tr('%d of %d tries went up', wins, #history) or tr('No tries yet.'))
-    if not visible then
-        return
-    end
-
-    local fromKey = ascend and ascend.slot == selected and ascend.fromKey or entry.rarity
-    local from, to = grade(fromKey), grade(shownUp.to)
-    local stage = m.stage
-    buildDial(stage.dial)
-    setItem(stage.from.item, entry)
-    stage.from.frame:setImageColor(from.color)
-    stage.fromName:setText(from.label)
-    stage.fromName:setColor(from.color)
-    stage.fromInfo:setText(tr('now, up to %d bonuses', from.pips))
-    setItem(stage.to.item, entry)
-    stage.to.frame:setImageColor(to.color)
-    stage.toName:setText(to.label)
-    stage.toName:setColor(to.color)
-    stage.toInfo:setText(tr('if it goes up, up to %d', to.pips))
-    local won = ascend and ascend.slot == selected and ascend.phase == 'win'
-    stage.to:setOpacity(won and 1 or 0.5)
-    stage.to.glow:setVisible(won or false)
-    stage.to.glow:setImageColor(to.color)
-    local chance = tonumber(shownUp.chance) or 0
-    for i, tick in ipairs(stage.dial.ticks) do
-        tick:setImageColor(i <= chance * TICKS / 100 and to.color or '#2a2430')
-    end
-    stage.dial.chance:setText(chance .. '%')
-    stage.dial.chance:setColor(to.color)
-    stage.dial.needle:setRotation(needleAngle)
-
-    local phase = ascend and ascend.slot == selected and ascend.phase or 'idle'
-    local r = m.result
-    r:setBorderColor('#2e2833')
-    if phase == 'idle' then
-        r.title:setText(tr('Ready to try'))
-        r.title:setColor('#ece6dc')
-        r.text:setText(tr('The needle spins and stops. If it lands in the %s arc, the item goes up a grade.', to.label))
-    elseif phase == 'waiting' or phase == 'spinning' then
-        r.title:setText(tr('Spinning...'))
-        r.title:setColor('#ddd0ff')
-        r.text:setText(tr('Good luck.'))
-    elseif phase == 'win' then
-        r.title:setText(tr('It went up! Now it is %s', to.label))
-        r.title:setColor(to.color)
-        r.text:setText(ascend.lines and ascend.lines ~= '' and tr('New bonuses: %s', ascend.lines) or tr('Its bonuses rolled again at %s.', to.label))
-        r:setBorderColor(to.color)
-    else
-        r.title:setText(tr('Not this time'))
-        r.title:setColor('#ff9c8a')
-        r.text:setText(tr('%s stays %s, as it was. Spent: %s gold and %d Rarity XP.', titleCase(entry.name), from.label, formatGold(shownUp.gold), tonumber(shownUp.xp) or 0))
-        r:setBorderColor('#7a3a33')
-    end
+    box.history:setTooltip(#history > 0 and tr('%d of %d tries went up', wins, #history) or nil)
     local goUp = entry.upgrade
     local busy = phase == 'waiting' or phase == 'spinning'
     if goUp then
-        m.goButton:setText(tr('Try the Ascension  -  %s gold + %d XP', formatGold(goUp.gold), tonumber(goUp.xp) or 0))
-        m.goButton:setEnabled(not busy and gold >= (tonumber(goUp.gold) or 0) and rarityXp >= (tonumber(goUp.xp) or 0))
+        box.goButton:setText(tr('Ascend  -  %s gold + %d XP', formatGold(goUp.gold), tonumber(goUp.xp) or 0))
+        box.goButton:setEnabled(not busy and gold >= (tonumber(goUp.gold) or 0) and rarityXp >= (tonumber(goUp.xp) or 0))
         if rarityXp < (tonumber(goUp.xp) or 0) then
-            m.goButton:setTooltip(tr('You need %d Rarity XP and have %d.', tonumber(goUp.xp) or 0, rarityXp))
+            box.goButton:setTooltip(tr('You need %d Rarity XP and have %d.', tonumber(goUp.xp) or 0, rarityXp))
         elseif gold < (tonumber(goUp.gold) or 0) then
-            m.goButton:setTooltip(tr('It costs %s gold and you have %s.', formatGold(goUp.gold), formatGold(gold)))
+            box.goButton:setTooltip(tr('It costs %s gold and you have %s.', formatGold(goUp.gold), formatGold(gold)))
         else
-            m.goButton:setTooltip(nil)
+            box.goButton:setTooltip(nil)
         end
     else
-        m.goButton:setText(tr('Highest grade'))
-        m.goButton:setEnabled(false)
+        box.goButton:setText(tr('Highest grade'))
+        box.goButton:setEnabled(false)
     end
 end
 
@@ -1002,13 +879,16 @@ end
 local function shake(widget)
     local offsets = { -7, 6, -4, 3, -2, 0 }
     local i = 0
+    -- around the widget's own margins (the box sits 12 px from its neighbour)
+    widget.restMargins = widget.restMargins or { widget:getMarginLeft(), widget:getMarginRight() }
+    local baseLeft, baseRight = widget.restMargins[1], widget.restMargins[2]
     local function step()
         if widget:isDestroyed() then
             return
         end
         i = i + 1
-        widget:setMarginLeft(offsets[i] or 0)
-        widget:setMarginRight(-(offsets[i] or 0))
+        widget:setMarginLeft(baseLeft + (offsets[i] or 0))
+        widget:setMarginRight(baseRight - (offsets[i] or 0))
         if i < #offsets then
             scheduleEvent(step, 60)
         end
@@ -1019,7 +899,7 @@ end
 local function setNeedle(angle)
     needleAngle = angle
     if window then
-        window.pages.ascend.main.stage.dial.needle:setRotation(angle % 360)
+        window.pages.arsenal.center.ascendBox.dial.needle:setRotation(angle % 360)
     end
 end
 
@@ -1057,7 +937,7 @@ local function finishAscend()
         Forge.refresh()
     end
     if not win and window then
-        shake(window.pages.ascend.main.result)
+        shake(window.pages.arsenal.center.ascendBox)
     end
 end
 
@@ -1256,7 +1136,7 @@ end
 -- the window
 -- ---------------------------------------------------------------------------
 
-local PAGES = { arsenal = 'tabArsenal', reforge = 'tabReforge', ascend = 'tabAscend', bonuses = 'tabBonuses' }
+local PAGES = { arsenal = 'tabArsenal', bonuses = 'tabBonuses' }
 
 function Forge.refresh()
     if not window then
@@ -1269,23 +1149,20 @@ function Forge.refresh()
     end
     if page == 'arsenal' then
         fillArsenal()
-    elseif page == 'reforge' then
-        fillReforge()
-    elseif page == 'ascend' then
-        fillAscend()
     else
         fillBonuses()
     end
 end
 
 function showPage(name)
+    -- the old pages are now part of the Arsenal
+    if name == 'reforge' or name == 'ascend' then
+        name = 'arsenal'
+    end
     if not PAGES[name] then
         return
     end
-    if reforge and (reforge.phase == 'rolling' or reforge.phase == 'reveal') and name ~= 'reforge' then
-        return
-    end
-    if ascend and (ascend.phase == 'waiting' or ascend.phase == 'spinning') and name ~= 'ascend' then
+    if Forge.busy() and name ~= 'arsenal' then
         return
     end
     page = name
@@ -1294,18 +1171,6 @@ function showPage(name)
     end
     if ascend and (ascend.phase == 'win' or ascend.phase == 'lose') then
         ascend = nil
-    end
-    -- the Ascension starts on an item that can go up
-    if name == 'ascend' then
-        local entry = bySlot[selected]
-        if not (entry and entry.upgrade) then
-            for _, it in ipairs(items) do
-                if it.upgrade then
-                    selected = it.slotId
-                    break
-                end
-            end
-        end
     end
     Forge.refresh()
 end
