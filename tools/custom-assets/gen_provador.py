@@ -7,10 +7,13 @@ of the pieces that are on, so a piece taken off shows the clothes under it.
 Usage (pillow, numpy, protobuf; the server's tools/render_sprites.py):
   python3 gen_provador.py ../../data/things/1525 /path/to/brevesotserv/tools OUT_DIR
 
-Writes OUT_DIR/<sex>/base_<dir>.png, OUT_DIR/<sex>/<item id>_<dir>.png and
-OUT_DIR/provador.json (the sets, their pieces and the hands' positions).
+Writes OUT_DIR/<set>/<sex>/<pieces>_<dir>.png: the character redrawn at 4x
+(pixel_redraw.py) for every combination of the armour pieces worn (<pieces>:
+one letter per piece on, h b l f, or "none"), the weapon and shield icons
+redrawn at 2x, and OUT_DIR/provador.json (the sets, their pieces and where
+the hands hold the weapon and the shield, in pixels of the 4x picture).
 """
-import json, os, sys
+import itertools, json, os, sys
 import numpy as np
 from PIL import Image
 
@@ -20,6 +23,8 @@ sys.argv = sys.argv[:3]
 # the drawing functions of the set outfits (everything before their main loop)
 src = open(os.path.join(HERE, 'gen_set_outfits.py')).read()
 exec(compile(src[:src.index('for name, looks, addons, colors, items, how, *rest in SETS:')], 'gen_set_outfits', 'exec'))
+sys.path.insert(0, HERE)
+from pixel_redraw import redraw, scale2x, outline  # noqa: E402
 
 DIRS = ['north', 'east', 'south', 'west']
 SEXES = {'male': BASE[0], 'female': BASE[1]}
@@ -75,7 +80,6 @@ def main():
     os.makedirs(PROVADOR_OUT, exist_ok=True)
     manifest = {'sets': [], 'hands': {}}
     for sex, look in SEXES.items():
-        os.makedirs(os.path.join(PROVADOR_OUT, sex), exist_ok=True)
         a, masked = idle(look)
         part = body_parts(a, head_mask(look))
         on = a[..., 3] > 0
@@ -88,24 +92,33 @@ def main():
         base[cloth, :3] = match(L[cloth], LINEN)
         hair = on & ~dark & ~skin & (part == 1)
         base[hair, :3] = np.stack([L[hair] * 0.45 + 20, L[hair] * 0.3 + 12, L[hair] * 0.18 + 6], -1)
-        for d in range(4):
-            Image.fromarray(base[d * 64:(d + 1) * 64].astype(np.uint8)).save(os.path.join(PROVADOR_OUT, sex, 'base_%s.png' % DIRS[d]))
-        manifest['hands'][sex] = hands(a, part, skin)
+        hd = hands(a, part, skin)
+        manifest['hands'][sex] = {d: {k: [v[0] * 4, v[1] * 4] for k, v in w.items()} for d, w in hd.items()}
         for key, name, closed, items, weapon, shield in PROVADOR_SETS:
             full = faithful(a, masked, look, items, closed)
             face = skin & grow(part == 1, 3) & ~grow(part >= 3, 1) if closed else np.zeros_like(skin)
+            masks = []
             for k, iid in enumerate(items):
                 mine = on & ((part == k + 1) | (face if k == 0 else False))
                 if k > 0:
                     mine &= ~face
-                layer = np.zeros_like(full)
-                layer[mine] = full[mine]
+                masks.append(mine)
+            folder = os.path.join(PROVADOR_OUT, key, sex)
+            os.makedirs(folder, exist_ok=True)
+            for worn in itertools.product((False, True), repeat=4):
+                pic = base.copy()
+                for k in range(4):
+                    if worn[k]:
+                        pic[masks[k]] = full[masks[k]]
+                tag = ''.join(c for c, w in zip('hblf', worn) if w) or 'none'
                 for d in range(4):
-                    Image.fromarray(layer[d * 64:(d + 1) * 64].astype(np.uint8)).save(os.path.join(PROVADOR_OUT, sex, '%d_%s.png' % (iid, DIRS[d])))
+                    big = redraw(pic[d * 64:(d + 1) * 64].astype(np.uint8))
+                    Image.fromarray(big).save(os.path.join(folder, '%s_%s.png' % (tag, DIRS[d])))
     for key, name, closed, items, weapon, shield in PROVADOR_SETS:
         for iid in (weapon, shield):
             icon = r.item(iid).convert('RGBA')
-            icon.crop(icon.getbbox()).save(os.path.join(PROVADOR_OUT, 'item_%d.png' % iid))
+            icon = np.array(icon.crop(icon.getbbox()))
+            Image.fromarray(outline(scale2x(np.pad(icon, ((1, 1), (1, 1), (0, 0)))))).save(os.path.join(PROVADOR_OUT, 'item_%d.png' % iid))
         pieces = [{'slot': SLOTS[k], 'id': iid, 'name': item_name(iid)} for k, iid in enumerate(items)]
         pieces.append({'slot': 'weapon', 'id': weapon, 'name': item_name(weapon)})
         pieces.append({'slot': 'shield', 'id': shield, 'name': item_name(shield)})
