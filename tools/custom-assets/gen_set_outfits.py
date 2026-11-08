@@ -277,43 +277,61 @@ def faithful(a, masked, look, items, closed):
     return out
 
 
-HAT_DROP = 7  # how far a hat's brim sits below the top of the head
-
-
-def straw_hat(iid, width=19, brim=5, cone=8, cone_width=9):
-    """a cone straw hat drawn as pixel art in the item's colours: a flat brim,
-    a cone to the tip, light from the top left, straw rings, a dark outline"""
+def straw_hat(iid, R=7.5, RC=4.0, HC=9.0, LEAN=0.4, FLAT=0.5, LZ=0.9):
+    """a cone straw hat modelled in 3D (a round brim of radius R, a cone of
+    base RC and height HC) and drawn the way Tibia draws: the brim as a
+    flattened ellipse (FLAT), height going up and a little to the left with
+    the body's slant (LEAN), light from the top left, straw rings, the item's
+    colours and a dark outline. A round hat is the same from every side.
+    Returns the sprite and where the brim's centre is in it."""
+    import math
     main, _, _ = item_look(iid)
+    S, ox, oy = 40, 20, 24
+    depth = np.full((S, S), -1e9)
+    light = np.zeros((S, S))
+    on = np.zeros((S, S), bool)
+    Ld = np.array([-1.0, -0.8, LZ])
+    Ld /= np.linalg.norm(Ld)
 
-    def colour(t):  # 0 dark .. 1 light
-        return np.append(main[int(np.clip(t, 0, 1) * (len(main) - 1))], 255)
-    a = np.zeros((cone + brim, width, 4))
-    cx = (width - 1) / 2
-    for y in range(brim):
-        for x in range(width):
-            dx, dy = (x - cx) / (width / 2), (y - (brim - 1) / 2) / (brim / 2)
-            if dx * dx + dy * dy <= 1:
-                a[cone + y, x] = colour(0.75 - 0.35 * y / (brim - 1) - 0.25 * (x - cx) / width)
-    for y in range(cone):
-        half = cone_width / 2 * (y + 1) / cone
-        for x in range(width):
-            if abs(x - cx) <= half:
-                a[y, x] = colour(0.95 - 0.5 * (x - cx + half) / max(1, 2 * half) - 0.1 * y / cone)
-    for y in range(1, cone, 3):
-        a[y, :, :3] = np.where(a[y, :, 3:] > 0, a[y, :, :3] * 0.85, a[y, :, :3])
-    out = np.zeros((a.shape[0] + 2, width + 2, 4))
-    out[1:-1, 1:-1] = a
-    on = out[..., 3] > 0
+    def plot(x, y, z, n, tex):
+        sx, sy = int(round(ox + x - LEAN * z)), int(round(oy + FLAT * y - z))
+        d = LEAN * x + y / FLAT + z  # nearer the viewer: drawn on top
+        if 0 <= sx < S and 0 <= sy < S and d > depth[sy, sx]:
+            depth[sy, sx] = d
+            light[sy, sx] = (max(0.0, float(np.dot(n, Ld))) * 0.8 + 0.2) * tex
+            on[sy, sx] = True
+    for r in np.arange(0, R + 0.01, 0.12):  # brim
+        for a in np.arange(0, 2 * math.pi, 0.02 / max(r, 0.5)):
+            plot(r * math.cos(a), r * math.sin(a), 0, np.array([0, 0, 1.0]), 0.88 if int(r) % 2 else 1.0)
+    for a in np.arange(0, 2 * math.pi, 0.01):  # brim edge
+        plot(R * math.cos(a), R * math.sin(a), -0.6, np.array([math.cos(a), math.sin(a), 0.0]), 0.7)
+    slope = RC / HC
+    for h in np.arange(0, HC, 0.08):  # cone
+        rr = RC * (1 - h / HC)
+        for a in np.arange(0, 2 * math.pi, 0.02 / max(rr, 0.3)):
+            n = np.array([math.cos(a), math.sin(a), slope])
+            plot(rr * math.cos(a), rr * math.sin(a), h, n / np.linalg.norm(n), 0.86 if int(h / 2.2) % 2 else 1.0)
+    out = np.zeros((S, S, 4))
+    t = (light - light[on].min()) / max(1e-6, light[on].max() - light[on].min())
+    pal = main[int(len(main) * 0.12):int(len(main) * 0.88)]
+    idx = np.clip((t * (len(pal) - 1)).round().astype(int), 0, len(pal) - 1)
+    out[on, :3] = pal[idx[on]]
+    out[on, 3] = 255
     edge = ~on & (np.roll(on, 1, 0) | np.roll(on, -1, 0) | np.roll(on, 1, 1) | np.roll(on, -1, 1))
-    out[edge] = np.append(main[0] * 0.45, 255)
-    return Image.fromarray(out.astype(np.uint8))
+    out[edge, :3] = main[0] * 0.45
+    out[edge, 3] = 255
+    im = Image.fromarray(out.astype(np.uint8))
+    bb = im.getbbox()
+    return im.crop(bb), (ox - bb[0], oy - bb[1])
+
+
+HAT_DROP = 4  # how far the brim's centre sits below the top of the head
 
 
 def put_hat(out, a, part, iid):
     """a round hat (the same from every side) on the head of every frame; the
     hood under it becomes dark hair"""
-    pic = straw_hat(iid)
-    w, h = pic.size
+    pic, (ax, ay) = straw_hat(iid)
     for fy in range(out.shape[0] // 64):
         for fx in range(out.shape[1] // 64):
             y0, x0 = fy * 64, fx * 64
@@ -329,7 +347,7 @@ def put_hat(out, a, part, iid):
             hair = head & (L > 25)
             t[hair, :3] = np.stack([L[hair] * 0.45 + 20, L[hair] * 0.3 + 12, L[hair] * 0.18 + 6], -1)
             tile = Image.fromarray(t.astype(np.uint8))
-            tile.alpha_composite(pic, (int(round(cx - w / 2)), int(top + HAT_DROP - h)))
+            tile.alpha_composite(pic, (int(round(cx - ax)), int(top + HAT_DROP - ay)))
             out[y0:y0 + 64, x0:x0 + 64] = np.array(tile)
     return out
 
