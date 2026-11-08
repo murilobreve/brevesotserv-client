@@ -50,7 +50,29 @@ SETS = [
     ('zaoan', BASE, 0, (82, 82, 82, 82), (10385, 10384, 10387, 10386), 'faithful', False),
     ('falcon', BASE, 0, (82, 82, 82, 82), (28715, 28719, 28720, 3554), 'faithful', False),
     ('plate', BASE, 0, (82, 82, 82, 82), (3351, 3357, 3557, 3554), 'faithful', True),
+    # every other set of the game (Leather/Steel Boots, Leather/Plate Legs
+    # where the set has none)
+    ('leather', BASE, 0, (82, 82, 82, 82), (3355, 17846, 3559, 3552), 'faithful', False),
+    ('studded', BASE, 0, (82, 82, 82, 82), (3376, 3378, 3362, 3552), 'faithful', False),
+    ('chain', BASE, 0, (82, 82, 82, 82), (3352, 3358, 3558, 3552), 'faithful', False),
+    ('brass', BASE, 0, (82, 82, 82, 82), (3354, 3359, 3372, 3552), 'faithful', False),
+    ('dwarven', BASE, 0, (82, 82, 82, 82), (3396, 3397, 3398, 3554), 'faithful', False),
+    ('gnome', BASE, 0, (82, 82, 82, 82), (27647, 27648, 27649, 3554), 'faithful', True),
+    ('lion', BASE, 0, (82, 82, 82, 82), (34156, 34157, 3557, 3554), 'faithful', True),
+    ('green_demon', BASE, 0, (82, 82, 82, 82), (37609, 37608, 37607, 37610), 'faithful', True),
+    ('norcferatu', BASE, 0, (82, 82, 82, 82), (51260, 51262, 51265, 51268), 'faithful', True),
+    ('yalahari', BASE, 0, (82, 82, 82, 82), (8864, 8862, 8863, 50289), 'faithful', True),
+    ('depth', BASE, 0, (82, 82, 82, 82), (13995, 13994, 13996, 13997), 'faithful', False),
+    ('broken_iks', BASE, 0, (82, 82, 82, 82), (40532, 40533, 40531, 40534), 'faithful', False),
+    ('stoic_iks', BASE, 0, (82, 82, 82, 82), (44636, 44620, 44642, 44648), 'faithful', False),
+    ('leaf', BASE, 0, (82, 82, 82, 82), (26187, 50277, 9014, 3552), 'faithful', False),
+    ('gill', BASE, 0, (82, 82, 82, 82), (16104, 16105, 16106, 3552), 'faithful', False),
+    ('eldritch', BASE, 0, (82, 82, 82, 82), (36670, 36663, 36667, 3554), 'faithful', False),
+    ('fur', BASE, 0, (82, 82, 82, 82), (7458, 22085, 3559, 7457), 'faithful', False),
+    ('pirate', BASE, 0, (82, 82, 82, 82), (6096, 6095, 3559, 5461), 'faithful', False),
 ]
+# SET_ONLY=name,name draws only those sets
+ONLY = set(filter(None, os.environ.get('SET_ONLY', '').split(',')))
 
 r = rs.Renderer(ASSETS)
 
@@ -255,6 +277,8 @@ def faithful(a, masked, look, items, closed):
 
 
 for name, looks, addons, colors, items, how, *rest in SETS:
+    if ONLY and name not in ONLY:
+        continue
     if how == 'faithful':
         for look in looks:
             a, masked = frames(look, addons, colors)
