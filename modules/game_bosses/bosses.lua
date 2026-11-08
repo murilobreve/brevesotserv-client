@@ -1,14 +1,11 @@
 -- Salão dos Bosses: the bosses fought from a lever, each in its lever room
--- (copied from the official map). Three pages (bosses.otui):
---   Hall        filters (name or quest, an item of the loot, the state, the
---               kind of equipment, experience, quest, level, party,
---               favourites), the list sorted as the player picks, and the
---               boss picked: its numbers, its loot (the rarest and strongest
---               pieces, what drops most) and the party; the button takes the
---               player to the lever room (from a protection zone or out of
---               combat) whatever those say: the lever is what refuses
---   Your waits  when each boss frees again: a 24 h line and a ring per boss
---   Rare boss   the chances of a rare boss and its roulette
+-- (copied from the official map). The window (bosses.otui): filters (name or
+-- quest, an item of the loot, the state, the kind of equipment, experience,
+-- quest, level, party, favourites), the list sorted as the player picks (a
+-- dot for the state), and the boss picked: its numbers, its rarest and
+-- strongest loot and the party; the button takes the player to the lever
+-- room (from a protection zone or out of combat) whatever those say: the
+-- lever is what refuses. The rows are made once and only hidden or moved.
 -- When the team pulls a lever the server rolls the boss's tier and every
 -- member sees the roulette over the map for a few seconds before the arena
 -- ("rareRoll", scripts/rarity/boss_tiers.lua).
@@ -23,7 +20,6 @@ local toolbarButton
 local state -- last "state" from the server
 local receivedAt = 0 -- os.time() when it came: the waits count down from there
 local selectedName
-local page = 'hall'
 local subtab = 'loot'
 local filters = { states = {}, cats = {}, xpMin = 0, mine = false, party = false, fav = false }
 local sortDesc = true
@@ -32,7 +28,6 @@ local lootCache = {} -- boss name -> its loot (server "loot")
 local itemQuery = '' -- the item searched in the loot
 local itemFound -- set of boss names whose loot has it (server "search")
 local rows = {} -- boss name -> row of the list
-local waitTiles = {} -- boss name -> tile of Your waits
 local tickEvent
 local messageEvent
 local searchEvent
@@ -48,7 +43,7 @@ local CATS = {
     { 'boots', 'Botas' }, { 'shield', 'Escudo' }, { 'jewel', 'Joia' },
 }
 local SORTS = {
-    { 'xp', 'Experiência' }, { 'hp', 'Vida' }, { 'ready', 'Libera primeiro' }, { 'rare', 'Loot mais raro' },
+    { 'xp', 'Experiência' }, { 'hp', 'Vida' }, { 'ready', 'Libera primeiro' },
     { 'level', 'Nível mínimo' }, { 'name', 'Nome' }, { 'fav', 'Favoritos primeiro' },
 }
 
@@ -220,6 +215,16 @@ local function paintPill(pill, boss)
     pill:setColor(color)
     pill:setBackgroundColor(back)
     pill:setBorderColor(border)
+end
+
+-- the list's state mark: a coloured dot, its text in the tooltip
+local function paintDot(dot, boss)
+    local key, text, color = statusOf(boss)
+    if dot.stateKey ~= key or dot.stateText ~= text then
+        dot.stateKey, dot.stateText = key, text
+        dot:setImageColor(color)
+        dot:setTooltip(text)
+    end
 end
 
 -- what would stop the lever now, one line each
@@ -587,37 +592,32 @@ local function fillQuests()
 end
 
 local function fillRow(row, boss)
-    row.frame.creature:setOutfit(outfitOf(boss.outfit))
-    row.name:setText(boss.name)
-    paintPill(row.status, boss)
-    local tail = tr(' · %s XP · %s vida', shortNumber(boss.experience), shortNumber(boss.health))
-    local quest = boss.quest or ''
-    local room = 46 - #tail
-    if #quest > room then
-        quest = quest:sub(1, math.max(4, room - 2)):gsub('%s+$', '') .. '...'
-    end
-    row.info:setText(quest .. tail)
-    row.icons:destroyChildren()
-    for _, top in ipairs(boss.top or {}) do
-        local icon = g_ui.createWidget('BossLootIcon', row.icons)
-        icon.item:setItemId(tonumber(top[1]) or 0)
-        icon:setBorderColor(rareColor(top[2]) .. '88')
-        icon:setTooltip(percent(top[2]))
-    end
-    if boss.rare then
-        local note = g_ui.createWidget('BossDim', row.icons)
-        note:setText(tr('mais raro %s', percent(boss.rare)))
-        note:setTextAutoResize(true)
-        note:setMarginTop(3)
-    end
-    row.star:setImageSource(favorites[boss.name] and '/game_bosses/images/star_on' or '/game_bosses/images/star')
-    row.star.onClick = function()
-        favorites[boss.name] = not favorites[boss.name] or nil
-        saveFavorites()
-        row.star:setImageSource(favorites[boss.name] and '/game_bosses/images/star_on' or '/game_bosses/images/star')
-        if filters.fav or sortKey() == 'fav' then
-            addEvent(refreshList) -- after the click: the row (and its star) is rebuilt
+    -- what never changes is set once, when the row is made
+    if not row.filled then
+        row.filled = true
+        row.frame.creature:setOutfit(outfitOf(boss.outfit))
+        row.name:setText(boss.name)
+        local tail = tr(' · %s XP · %s vida', shortNumber(boss.experience), shortNumber(boss.health))
+        local quest = boss.quest or ''
+        local room = 42 - #tail
+        if #quest > room then
+            quest = quest:sub(1, math.max(4, room - 2)):gsub('%s+$', '') .. '...'
         end
+        row.info:setText(quest .. tail)
+        row.star.onClick = function()
+            favorites[boss.name] = not favorites[boss.name] or nil
+            saveFavorites()
+            row.star:setImageSource(favorites[boss.name] and '/game_bosses/images/star_on' or '/game_bosses/images/star')
+            if filters.fav or sortKey() == 'fav' then
+                addEvent(refreshList)
+            end
+        end
+    end
+    paintDot(row.status, boss)
+    local fav = favorites[boss.name] and true or false
+    if row.fav ~= fav then
+        row.fav = fav
+        row.star:setImageSource(fav and '/game_bosses/images/star_on' or '/game_bosses/images/star')
     end
 end
 
@@ -629,40 +629,54 @@ function refreshList()
     end
     local middle = window.pages.hall.middle
     local list = middle.list
-    -- while the rows are rebuilt, focus moving from row to row must not
-    -- redraw the detail (nor ask the server for every boss's loot)
+    -- the rows are made once per boss and kept: a filter or a new order only
+    -- hides them or moves them, which costs far less than making them again
     rebuilding = true
-    list:focusChild(nil, ActiveFocusReason)
-    list:destroyChildren()
-    rows = {}
     local bosses = sortedBosses()
+    local shown = {}
     local keep
-    for _, boss in ipairs(bosses) do
-        local row = g_ui.createWidget('BossRow', list)
-        fillRow(row, boss)
-        row.onFocusChange = function(widget, focused)
-            if focused and not rebuilding then
-                selectedName = boss.name
-                renderDetail()
+    for index, boss in ipairs(bosses) do
+        local row = rows[boss.name]
+        if not row or row:isDestroyed() then
+            row = g_ui.createWidget('BossRow', list)
+            local name = boss.name
+            row.onFocusChange = function(widget, focused)
+                if focused and not rebuilding then
+                    selectedName = name
+                    renderDetail()
+                end
             end
+            row.onDoubleClick = function()
+                selectedName = name
+                goSelected()
+                return true
+            end
+            rows[name] = row
         end
-        row.onDoubleClick = function()
-            selectedName = boss.name
-            goSelected()
-            return true
+        fillRow(row, boss)
+        shown[boss.name] = true
+        row:setVisible(true)
+        if list:getChildIndex(row) ~= index then
+            list:moveChildToIndex(row, index)
         end
-        rows[boss.name] = row
         if boss.name == selectedName then
             keep = row
+        end
+    end
+    for name, row in pairs(rows) do
+        if not shown[name] and not row:isDestroyed() then
+            row:setVisible(false)
         end
     end
     middle.count:setText(tr('%d de %d bosses', #bosses, #state.bosses))
     middle.empty:setText(tr('Nenhum boss com esses filtros.'))
     middle.empty:setVisible(#bosses == 0)
-    local focus = keep or list:getFirstChild()
+    local focus = keep or (bosses[1] and rows[bosses[1].name])
     if focus then
-        list:focusChild(focus, KeyboardFocusReason)
-        list:ensureChildVisible(focus)
+        if list:getFocusedChild() ~= focus then
+            list:focusChild(focus, KeyboardFocusReason)
+            list:ensureChildVisible(focus)
+        end
         if not keep then
             selectedName = bosses[1].name
         end
@@ -752,13 +766,10 @@ renderDetail = function()
     local loot = bossLoot(boss)
     local l = d.loot
     l.strong:destroyChildren()
-    l.freq:destroyChildren()
     l.strongTitle:setText(tr('Mais raros e mais fortes'))
-    l.freqTitle:setText(tr('O que mais cai'))
     l.lootWait:setText(tr('Carregando o loot...'))
     l.lootWait:setVisible(loot == nil)
     l.strongTitle:setVisible(loot ~= nil and subtab == 'loot')
-    l.freqTitle:setVisible(loot ~= nil and subtab == 'loot')
     if not loot then
         if not lootCache[boss.name .. '#asked'] then
             lootCache[boss.name .. '#asked'] = true
@@ -783,7 +794,7 @@ renderDetail = function()
             if ga ~= gb then return ga < gb end
             return (a.chance or 0) < (b.chance or 0)
         end)
-        for i = 1, math.min(6, #pool) do
+        for i = 1, math.min(10, #pool) do
             local item = pool[i]
             local card = g_ui.createWidget('BossStrongItem', l.strong)
             card.frame.item:setItemId(item.id)
@@ -797,23 +808,6 @@ renderDetail = function()
             card.chance:setText(percent(item.chance))
             card.chance:setColor(color)
             card:setTooltip(titleCase(item.name))
-        end
-        local common = {}
-        for _, item in ipairs(all) do
-            if not item.name:lower():find('coin', 1, true) then
-                common[#common + 1] = item
-            end
-        end
-        table.sort(common, function(a, b) return (a.chance or 0) > (b.chance or 0) end)
-        local top = common[1] and common[1].chance or 1
-        for i = 1, math.min(5, #common) do
-            local item = common[i]
-            local line = g_ui.createWidget('BossFreqItem', l.freq)
-            line.item:setItemId(item.id)
-            line.name:setText(titleCase(item.name))
-            line.chance:setText(percent(item.chance))
-            line.track.fill:setWidth(math.max(1, math.floor(90 * (item.chance or 0) / math.max(0.01, top))))
-            line:setTooltip(titleCase(item.name) .. (item.max and item.max > 1 and tr(' (até %d)', item.max) or ''))
         end
     end
 
@@ -850,157 +844,10 @@ renderDetail = function()
     d.go:setEnabled(true)
 end
 
--- ---------------------------------------------------------------- Your waits
-
-local function renderWaits()
-    if not window or not state then
-        return
-    end
-    local w = window.pages.waits
-    w.lineTitle:setText(tr('PRÓXIMAS 24 HORAS: cada marca é um boss que volta a liberar para você'))
-    for _, child in ipairs(w.timeline:getChildren()) do
-        if child:getId() ~= 'axis' then
-            child:destroy()
-        end
-    end
-    local width = 948 - 36
-    for _, hour in ipairs({ 0, 6, 12, 18, 24 }) do
-        local label = g_ui.createWidget('BossDim', w.timeline)
-        label:setText(hour == 0 and tr('agora') or tr('+%dh', hour))
-        label:setTextAutoResize(true)
-        label:addAnchor(AnchorTop, 'parent', AnchorTop)
-        label:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-        label:setMarginTop(44)
-        label:setMarginLeft(18 + math.floor(width * hour / 24) - 10)
-    end
-    local ready, waiting = {}, {}
-    for _, boss in ipairs(state.bosses) do
-        if canFight(boss) then
-            if waitLeft(boss) > 0 then
-                waiting[#waiting + 1] = boss
-            else
-                ready[#ready + 1] = boss
-            end
-        end
-    end
-    table.sort(waiting, function(a, b) return waitLeft(a) < waitLeft(b) end)
-    table.sort(ready, function(a, b) return (a.experience or 0) > (b.experience or 0) end)
-    for _, boss in ipairs(waiting) do
-        local left = waitLeft(boss)
-        if left < 86400 then
-            local marker = g_ui.createWidget('BossMarker', w.timeline)
-            marker.creature:setOutfit(outfitOf(boss.outfit))
-            marker:setImageColor(left < 3600 and '#9fd99a' or '#e8c77a')
-            marker:addAnchor(AnchorTop, 'parent', AnchorTop)
-            marker:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-            marker:setMarginTop(10)
-            marker:setMarginLeft(18 + math.floor(width * left / 86400) - 17)
-            marker:setTooltip(boss.name .. tr(' · ') .. formatWait(left))
-        end
-    end
-    w.readyTitle:setText(tr('PRONTOS AGORA: %d   ·   ESPERANDO: %d (o anel enche até liberar)', #ready, #waiting))
-    w.grid:destroyChildren()
-    waitTiles = {}
-    local function tile(boss)
-        local t = g_ui.createWidget('BossWaitTile', w.grid)
-        t.track.creature:setOutfit(outfitOf(boss.outfit))
-        t.name:setText(boss.name)
-        t.boss = boss
-        t.onClick = function()
-            selectedName = boss.name
-            addEvent(function() showPage('hall') end)
-        end
-        waitTiles[boss.name] = t
-        return t
-    end
-    for _, boss in ipairs(ready) do
-        local t = tile(boss)
-        t.track.arc:setImageClip('1520 0 76 76')
-        t.track.arc:setImageColor('#9fd99a')
-        t.time:setText(tr('Pronto'))
-        t.time:setColor('#9fd99a')
-        t:setBorderColor('#2f4a2f')
-    end
-    for _, boss in ipairs(waiting) do
-        tile(boss)
-    end
-    updateWaitTiles()
-end
-
-function updateWaitTiles()
-    for _, t in pairs(waitTiles) do
-        local boss = t.boss
-        local left = waitLeft(boss)
-        if left > 0 then
-            local total = math.max(1, tonumber(boss.wait) or 72000)
-            local done = math.max(0, math.min(1, 1 - left / total))
-            local frame = math.floor(done * 20 + 0.5)
-            local soon = left < 3600
-            t.track.arc:setImageClip(string.format('%d 0 76 76', frame * 76))
-            t.track.arc:setImageColor(soon and '#9fd99a' or '#e8c77a')
-            t.time:setText(formatWait(left))
-            t.time:setColor(soon and '#9fd99a' or '#e8c77a')
-            t:setBorderColor(soon and '#2f4a2f' or '#2a2430')
-        end
-    end
-end
-
 -- ---------------------------------------------------------------- Rare boss
 
 local function tiersOf()
     return state and state.rare or {}
-end
-
-local function renderRare()
-    if not window then
-        return
-    end
-    local r = window.pages.rare
-    r.side.chancesTitle:setText(tr('AS CHANCES'))
-    r.side.legend:destroyChildren()
-    local rest = 100
-    for _, tier in ipairs(tiersOf()) do
-        local row = g_ui.createWidget('BossLegendRow', r.side.legend)
-        row.dot:setImageColor(TIER_COLORS[tier.key] or '#ece6dc')
-        row.name:setText(tier.name)
-        row.chance:setText(percent(tier.chance))
-        rest = rest - (tonumber(tier.chance) or 0)
-    end
-    local normal = g_ui.createWidget('BossLegendRow', r.side.legend)
-    normal.dot:setImageColor('#6e6577')
-    normal.name:setText(tr('Normal'))
-    normal.chance:setText(percent(math.max(0, rest)))
-    r.side.about:setText(tr('Quando o time puxa a alavanca, a roleta gira na tela de todos por 4 segundos, e só então o time entra na arena. Onde ela parar decide se o boss vem normal ou raro.\n\nBoss raro: mais vida e mais dano, e cada reward bag ganha mais loot, mais gold e itens raros. Um VIP no time aumenta as chances.'))
-    r.main.intro:setText(tr('A roleta do boss raro. Veja como ela gira: o resultado aqui é só uma demonstração.'))
-    r.main.spin:setText(tr('Girar a roleta'))
-    local boss = findBoss(selectedName) or (state and state.bosses and state.bosses[1])
-    if boss then
-        r.main.wheel.creature:setOutfit(outfitOf(boss.outfit))
-    end
-    r.main.wheel.slices = paintWheel(r.main.wheel, tiersOf())
-end
-
--- the demonstration on the Rare boss page: a roll with the real chances
-function demoSpin()
-    local r = window.pages.rare.main
-    local tiers = tiersOf()
-    local roll, edge, key = math.random() * 100, 0, 'normal'
-    for _, tier in ipairs(tiers) do
-        edge = edge + (tonumber(tier.chance) or 0)
-        if roll < edge then
-            key = tier.key
-            break
-        end
-    end
-    r.spin:setEnabled(false)
-    r.result:setText('')
-    r.effects:setText('')
-    spinWheel(r.wheel, r.wheel.slices or paintWheel(r.wheel, tiers), key, 3200, function()
-        r.spin:setEnabled(true)
-        r.result:setText(key == 'normal' and tr('Normal') or tierName(tiers, key))
-        r.result:setColor(key == 'normal' and '#d6cfc2' or TIER_COLORS[key])
-        r.effects:setText(key == 'normal' and tr('Um boss comum, com o loot de sempre.') or tr('Mais vida e mais dano; itens raros em cada reward bag.'))
-    end)
 end
 
 -- the roulette over the map: the server rolled the boss's tier at the pull
@@ -1062,24 +909,8 @@ end
 
 -- ---------------------------------------------------------------- pages
 
-local PAGES = { hall = 'tabHall', waits = 'tabWaits', rare = 'tabRare' }
-
-function showPage(name)
-    if not window or not PAGES[name] then
-        return
-    end
-    page = name
-    for key, tab in pairs(PAGES) do
-        window.tabs[tab]:setOn(key == name)
-        window.pages[key]:setVisible(key == name)
-    end
-    if name == 'hall' then
-        refreshList()
-    elseif name == 'waits' then
-        renderWaits()
-    else
-        renderRare()
-    end
+function showPage()
+    refreshList()
 end
 
 -- the waits count down without asking the server again
@@ -1094,18 +925,14 @@ local function updateStatuses()
         end
         local row = rows[boss.name]
         if row and not row:isDestroyed() then
-            paintPill(row.status, boss)
+            paintDot(row.status, boss)
         end
     end
     if window then
         window.summary:setText(tr('%d bosses · %d prontos para você', #state.bosses, ready))
-        if page == 'hall' then
-            local boss = findBoss(selectedName)
-            if boss then
-                paintPill(window.pages.hall.detail.status, boss)
-            end
-        elseif page == 'waits' then
-            updateWaitTiles()
+        local boss = findBoss(selectedName)
+        if boss then
+            paintPill(window.pages.hall.detail.status, boss)
         end
     end
     local panel = modules.game_brevespanel
@@ -1139,29 +966,8 @@ function handlers.state(data)
     receivedAt = os.time()
     if window and window:isVisible() then
         fillQuests()
-        if page == 'hall' then
-            -- the list is rebuilt only when it changes size; the pills follow the clock
-            local shown = #sortedBosses()
-            local count = 0
-            for _ in pairs(rows) do
-                count = count + 1
-            end
-            if shown ~= count then
-                refreshList()
-            else
-                for name, row in pairs(rows) do
-                    local boss = findBoss(name)
-                    if boss and not row:isDestroyed() then
-                        fillRow(row, boss)
-                    end
-                end
-                renderDetail()
-            end
-        elseif page == 'waits' then
-            renderWaits()
-        else
-            renderRare()
-        end
+        -- the rows are kept: only their state and the order change
+        refreshList()
     end
     updateStatuses()
 end
@@ -1239,7 +1045,7 @@ function show()
         tickEvent = cycleEvent(tick, 1000)
     end
     fillQuests()
-    showPage(page)
+    refreshList()
     send({ action = 'open' })
 end
 
@@ -1286,7 +1092,7 @@ local function onGameEnd()
     hide()
     state = nil
     selectedName = nil
-    rows, waitTiles, lootCache = {}, {}, {}
+    rows, lootCache = {}, {}
     itemQuery, itemFound = '', nil
     if roulette then
         roulette:hide()
@@ -1300,9 +1106,7 @@ function init()
     window = g_ui.displayUI('bosses')
     window:hide()
     window:setText(tr('Salão dos Bosses'))
-    window.tabs.tabHall:setText(tr('Salão'))
-    window.tabs.tabWaits:setText(tr('Suas esperas'))
-    window.tabs.tabRare:setText(tr('Boss raro'))
+    window.closeX:setTooltip(tr('Fechar'))
     local f = window.pages.hall.filters
     f.filtersTitle:setText(tr('FILTROS'))
     f.searchLabel:setText(tr('Boss ou quest'))
@@ -1319,7 +1123,6 @@ function init()
     end
     m.dir:setText('v')
     m.dir:setTooltip(tr('Inverter a ordem'))
-    window.pages.rare.main.result:setText('')
 
     ProtocolGame.registerExtendedJSONOpcode(BOSS_OPCODE, onBossOpcode)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
