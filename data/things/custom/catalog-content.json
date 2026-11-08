@@ -653,7 +653,7 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-setoutfits-57b0ff24a54a7b6e.bmp.lzma",
+    "file": "sprites-setoutfits-b030d688591fc441.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1002880,
     "lastspriteid": 1002915,
@@ -661,7 +661,7 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-setoutfits-767527779556a31d.bmp.lzma",
+    "file": "sprites-setoutfits-0a363bdb7895ab8f.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1002916,
     "lastspriteid": 1002951,
@@ -669,7 +669,7 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-setoutfits-b7adf3248ecd794f.bmp.lzma",
+    "file": "sprites-setoutfits-29fb3d535863bb97.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1002952,
     "lastspriteid": 1002987,
@@ -677,7 +677,7 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-setoutfits-b2e249605dd20f87.bmp.lzma",
+    "file": "sprites-setoutfits-eaaa4cfde8354ccc.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1002988,
     "lastspriteid": 1003023,
