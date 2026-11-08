@@ -74,7 +74,7 @@ WIKI_TIERS = {
         name = 'Lord of Death', color = '#e04848', shader = 'Rarity - Lord of Death', outfit = 25, monster = 'Minotaur',
         effect = 20,
         chance = '0,16%', hp = 'x3,30', attack = 'x3,63', defense = 'x1', xp = 'x7,26',
-        loot = 'x20', rolls = '+3', gold = 'x50', affix = '1,8 por morte', skull = 'Preta',
+        loot = 'x20', rolls = '+3', gold = 'x50', affix = '1,16 por morte', skull = 'Preta',
         grades = { 20, 20, 20, 28, 12 },
         arrival = 'A luz some, o pentagrama preto aparece e tudo em volta morre.',
     },
@@ -286,9 +286,9 @@ WIKI_PAGES.bosses = {
         { 'table', widths = { 105, 55, 55, 55, 250 }, head = { 'Tier', 'Chance', 'Vida', 'Dano', 'Em cada reward bag' },
           rows = {
               { 'Pale', '20%', '+50%', '+15%', '1 rolagem extra de loot, gold x2, 75% de 1 item raro' },
-              { 'Ashen', '10%', '+80%', '+25%', '1 rolagem extra, gold x3, 1 item raro e 20% de outro' },
-              { 'Obsidian', '5%', '+120%', '+35%', '2 rolagens extras, gold x4, 1 item raro e 50% de outro' },
-              { 'Lord of Death', '1%', '+170%', '+50%', '3 rolagens extras, gold x5, 3 itens raros' },
+              { 'Ashen', '10%', '+80%', '+25%', '1 rolagem extra, gold x3, 1 item raro e 4% de outro' },
+              { 'Obsidian', '5%', '+120%', '+35%', '2 rolagens extras, gold x4, 1 item raro e 10% de outro' },
+              { 'Lord of Death', '1%', '+170%', '+50%', '3 rolagens extras, gold x5, 1 item raro, e 20% de chance de um 2º e de um 3º' },
           } },
         { 'p', 'A chance vale por luta, e um VIP no time aumenta todas. As rolagens extras multiplicam a chance de cada item do loot do boss (até 50% por rolagem; itens abaixo de 0,3% não sobem). O item raro é uma peça do loot da bag que vira rara, ou uma peça comum quando a bag não tem equipamento. As magias do tier batem conforme o nível da alavanca. O boss raro não renasce, não mata os monstros em volta, e morrer para ele não traz a maldição do Lord of Death.' },
     },
@@ -378,7 +378,7 @@ WIKI_PAGES.obsidian = tierPage('obsidian', 'Obsidian', {
 })
 
 WIKI_PAGES.deathlord = tierPage('deathlord', 'Lord of Death', {
-    { 'p', 'O monstro mais raro do jogo: 1 em 625 mortes. Deixa um item raro sempre e, em 80% das vezes, um segundo; 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
+    { 'p', 'O monstro mais raro do jogo: 1 em 625 mortes. Deixa um item raro sempre e, em 16% das vezes, um segundo; 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
     { 'h', 'Quando ele chega' },
     { 'p', 'Todo outro monstro a até 6 sqm, no mesmo andar, morre na hora. Eles não dão loot nem XP e voltam pelo respawn normal. Bosses e summons de jogadores não morrem.' },
     { 'h', 'Se ele matar você' },
@@ -428,7 +428,7 @@ WIKI_PAGES.items = {
               { { 'Pale', '#c9d6e3' }, '0,45 (45% de chance de um)' },
               { { 'Ashen', '#9aa0a8' }, '0,72 (72% de chance de um)' },
               { { 'Obsidian', '#9b7bff' }, '0,9 (90% de chance de um)' },
-              { { 'Lord of Death', '#e04848' }, '1,8 (um sempre, 80% de chance de outro)' },
+              { { 'Lord of Death', '#e04848' }, '1,16 (um sempre, 16% de chance de outro)' },
               { 'Recompensa de quest', '25% de chance' },
           } },
         { 'p', 'Monstros raros sempre pagam: se não houver equipamento no corpo, um equipamento da lista de loot do próprio monstro é escolhido.' },
