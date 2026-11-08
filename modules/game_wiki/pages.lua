@@ -330,7 +330,7 @@ WIKI_PAGES.tiers = {
               { { 'Lord of Death', '#e04848' }, '0,1%', 'x3,30', 'x3,63', 'x7,26', 'x20', 'x50' },
           } },
         { 'p', 'Na Hunt Task (diária e Trilha do Caçador), um monstro raro conta como várias mortes, pela XP dele: Pale 3, Ashen 4, Obsidian 5 e Lord of Death 7.' },
-        { 'p', 'Um monstro raro é mais forte só na vida: armadura e defesa são as do monstro normal, então o seu dano entra inteiro.' },
+        { 'p', 'Um monstro raro tem mais vida e bate mais forte (as colunas Vida e Ataque), mas armadura e defesa são as do monstro normal, então o seu dano entra inteiro.' },
         { 'p', 'A chance é por morte de monstro. O sorteio começa pela camada mais alta, então um mesmo monstro nunca vira duas coisas ao mesmo tempo. Loot multiplica a chance de cada item da lista do próprio monstro nas rolagens extras, até no máximo 50% por rolagem, para o corpo não vir sempre com os mesmos itens; itens muito raros (abaixo de 0,3% de chance) não são multiplicados.' },
         { 'p', 'Ouro multiplica o ouro que o monstro dá normalmente: um Dragon Lord Obsidian deixa uns 4.600 de ouro em vez de uns 90. Ele vem em crystal e platinum coins.' },
         { 'p', 'O monstro que volta com tier não pertence a nenhum spawn: se ficar 5 minutos sem nenhum jogador a até 10 sqm, ele some.' },
