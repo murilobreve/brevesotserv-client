@@ -109,6 +109,32 @@ local function rewardText(experience, pointsText, charms)
     return tr('Recompensa: +%s de experiência e %s.', formatNumber(experience), pointsText)
 end
 
+-- a name too long for its label (a task of three monsters, "Many Faces /
+-- Mirror Image / Distorted Phantom") in a smaller font, so it shows whole
+local SMALLER_FONTS = { 'Verdana-10px-antialiased', 'Verdana-9px-antialiased' }
+
+local function fitText(label, text)
+    label.fullFont = label.fullFont or label:getFont()
+    label:setFont(label.fullFont)
+    label:setText(text)
+    local width = label:getWidth()
+    if width <= 0 then
+        -- not laid out yet (the window just opened): once it is
+        scheduleEvent(function()
+            if not label:isDestroyed() and label:getText() == text and label:getWidth() > 0 then
+                fitText(label, text)
+            end
+        end, 50)
+        return
+    end
+    for _, font in ipairs(SMALLER_FONTS) do
+        if label:getTextSize().width <= width then
+            break
+        end
+        label:setFont(font)
+    end
+end
+
 local function setBar(bar, value, total, color)
     total = math.max(1, total or 1)
     value = math.max(0, math.min(value or 0, total))
@@ -173,16 +199,24 @@ local function updateTeleportButton(button, which, available)
     end
 end
 
--- "A, B e C": the relatives whose kills also count for a task (the server's
--- `also`, HuntTaskConfig.species)
-local function alsoText(also)
-    if type(also) ~= 'table' or #also == 0 then
-        return nil
+-- the monsters of a species task side by side under its text (its own
+-- first), each with its name on hover; nothing for a task of one monster
+local function showSpecies(card, counted)
+    local panel = card.species
+    if not panel then
+        return
     end
-    if #also == 1 then
-        return also[1]
+    panel:destroyChildren()
+    if type(counted) ~= 'table' or #counted == 0 then
+        panel:setVisible(false)
+        return
     end
-    return table.concat(also, ', ', 1, #also - 1) .. ' e ' .. also[#also]
+    for _, monster in ipairs(counted) do
+        local cell = g_ui.createWidget('TaskSpeciesCell', panel)
+        cell.creature:setOutfit(outfitOf(monster.outfit))
+        cell:setTooltip(monster.name or '')
+    end
+    panel:setVisible(true)
 end
 
 local function renderDaily()
@@ -191,10 +225,11 @@ local function renderDaily()
     card.title:setText(tr('Task diária'))
     card.action2:setVisible(false)
     card.action:setEnabled(true)
+    showSpecies(card, daily and not daily.done and daily.counted)
 
     if not daily then
         card.creature:setVisible(false)
-        card.name:setText(tr('Nenhuma task hoje ainda'))
+        fitText(card.name, tr('Nenhuma task hoje ainda'))
         card.info:setText(tr('Um monstro do seu level com hunt na sala de teleporte de uma cidade.'))
         card.badge:setText('')
         card.bar:setVisible(false)
@@ -209,7 +244,7 @@ local function renderDaily()
 
     card.creature:setVisible(true)
     card.creature:setOutfit(outfitOf(daily.outfit))
-    card.name:setText(daily.monster)
+    fitText(card.name, daily.monster)
     card.info:setText(levelAndRooms(daily.level, daily.rooms))
     card.badge:setText(daily.hot and tr('Em alta no Hunt Board: pontos dobrados!') or '')
     card.bar:setVisible(true)
@@ -228,11 +263,17 @@ local function renderDaily()
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
     card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms))
-    local dailyAlso = alsoText(daily.also)
-    card.extra:setText(dailyAlso and tr('Mate %d %s (valem também: %s). Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster, dailyAlso)
-        or tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
+    -- a species task: its name is the species' ("Iks") and these are the
+    -- monsters of its hunt that count ("Iks Chuka, Iks Pututu e Iks Aucar")
+    if daily.variants and daily.variants ~= '' then
+        card.extra:setText(tr('Mate %d %s. Valem: %s.', daily.need, daily.monster, daily.variants))
+        card.name:setTooltip(tr('Valem: %s.', daily.variants))
+    else
+        card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
+        card.name:setTooltip('')
+    end
     local cost = state.rerollCost or 0
-    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar (grátis)'))
+    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar monstro (grátis)'))
     card.action.onClick = function()
         if cost > 0 then
             closeRerollBox()
@@ -254,10 +295,11 @@ local function renderTrailCard()
     local trail = state.trail
     local steps = trail.steps or {}
     card.action2:setVisible(false)
+    showSpecies(card, not trail.finished and (steps[trail.index] or {}).counted)
     card.title:setText(tr('Trilha do Caçador'))
     if trail.finished then
         card.creature:setVisible(false)
-        card.name:setText(tr('Trilha completa!'))
+        fitText(card.name, tr('Trilha completa!'))
         card.info:setText(tr('Você venceu os %d monstros da trilha.', #steps))
         card.badge:setText('')
         card.bar:setVisible(true)
@@ -269,7 +311,8 @@ local function renderTrailCard()
         card.title:setText(tr('Trilha do Caçador, etapa %d de %d', trail.index, #steps))
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
-        card.name:setText(step.name or '?')
+        fitText(card.name, step.name or '?')
+        card.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
         card.info:setText(levelAndRooms(step.level, step.rooms))
         card.bar:setVisible(true)
         setBar(card.bar, trail.kills, step.need, '#9b7bff')
@@ -279,7 +322,8 @@ local function renderTrailCard()
         else
             local every = math.max(1, trail.milestoneEvery or 5)
             local nextMilestone = math.ceil(trail.index / every) * every
-            card.badge:setText(tr('Próximo marco: etapa %d', nextMilestone))
+            -- none after the last step
+            card.badge:setText(nextMilestone <= #steps and tr('Próximo marco: etapa %d', nextMilestone) or '')
             card.badge:setColor('#8a8a8a')
         end
         if step.milestone then
@@ -287,9 +331,11 @@ local function renderTrailCard()
         end
         card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms))
         local following = steps[trail.index + 1]
-        local upcoming = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
-        local stepAlso = alsoText(step.also)
-        card.extra:setText(stepAlso and (tr('Valem também: %s.', stepAlso) .. ' ' .. upcoming) or upcoming)
+        local after = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
+        if step.variants and step.variants ~= '' then
+            after = tr('Valem: %s.', step.variants) .. ' ' .. after
+        end
+        card.extra:setText(after)
         updateTeleportButton(card.action2, 'trail', state.teleportTrail)
     end
     card.action:setText(tr('Ver trilha completa'))
@@ -355,7 +401,8 @@ local function renderTrailList()
             row:setId('step' .. i)
             row.index:setText(tostring(i))
             row.creature:setOutfit(outfitOf(step.outfit))
-            row.name:setText(step.milestone and (step.name .. '  (marco)') or step.name)
+            fitText(row.name, step.milestone and (step.name .. '  (marco)') or step.name)
+            row.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
             row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
                 .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or ''))
         end

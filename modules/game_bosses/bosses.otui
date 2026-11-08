@@ -70,13 +70,73 @@ BossStat < UIWidget
     color: #e6e0f2
     phantom: true
 
+// a line of the rare boss table: the tier, its chance, the rarity items of a
+// reward bag and the odds of each grade (bosses.lua: renderRare)
+BossRareCell < Label
+  font: verdana-11px-antialised
+  color: #d1ccd9
+  text-align: center
+
+BossRareRow < UIWidget
+  height: 17
+  phantom: false
+
+  BossRareCell
+    id: tier
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 112
+    text-align: left
+
+  BossRareCell
+    id: chance
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 70
+
+  BossRareCell
+    id: items
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 136
+
+  BossRareCell
+    id: grade1
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 75
+
+  BossRareCell
+    id: grade2
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 75
+
+  BossRareCell
+    id: grade3
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 75
+
+  BossRareCell
+    id: grade4
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 75
+
+  BossRareCell
+    id: grade5
+    anchors.left: prev.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 75
+
 BossTab < BrevesTab
   size: 96 24
   anchors.top: parent.top
 
 MythosWindow
   id: bossesWindow
-  size: 740 580
+  size: 740 710
   @onEscape: modules.game_bosses.hide()
 
   BossTab
@@ -128,9 +188,9 @@ MythosWindow
     id: list
     anchors.top: summary.bottom
     anchors.left: parent.left
-    anchors.bottom: message.top
+    anchors.bottom: rare.top
     margin-top: 4
-    margin-bottom: 6
+    margin-bottom: 8
     width: 392
     focusable: false
     vertical-scrollbar: scroll
@@ -271,6 +331,25 @@ MythosWindow
       margin-top: 10
       margin-bottom: 6
       text-auto-resize: false
+
+  // a rare boss: for each tier, its chance when the team goes in, the
+  // rarity items of each reward bag and the grade of each one
+  BrevesSection
+    id: rare
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+    height: 120
+    padding: 26 6 4 6
+
+    UIWidget
+      id: rows
+      anchors.fill: parent
+      phantom: true
+      layout:
+        type: verticalBox
+        spacing: 1
 
   Label
     id: message

@@ -88,6 +88,11 @@ protected:
     bool m_terminated{ false };
     bool m_stopping{ false };
 
+    // restart(): the new process starts at the end of terminate(), once this
+    // one has written its settings and closed its files
+    bool m_restartPending{ false };
+    std::string m_restartBinary;
+
     std::unique_ptr<ApplicationContext> m_context;
 };
 

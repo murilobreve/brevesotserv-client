@@ -310,9 +310,40 @@ MythosWindow
       font: verdana-11px-antialised
       color: #f3dcae
 
+    // the odds that a reward comes out a rarity item, by grade (quests.lua:
+    // renderCard; gamelib's UIRarityBar)
+    QuestHeading
+      id: rarityTitle
+      anchors.top: prizeText.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+
+    UIRarityBar
+      id: rarityBar
+      anchors.top: rarityTitle.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      height: 8
+      padding: 1
+      background-color: #3b3449
+      border-width: 1
+      border-color: #514553
+
+    Label
+      id: rarityText
+      anchors.top: rarityBar.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 3
+      height: 28
+      font: verdana-11px-antialised
+      color: #b4afc3
+
     QuestStat
       id: steps
-      anchors.top: prizeText.bottom
+      anchors.top: rarityText.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 2

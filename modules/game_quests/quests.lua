@@ -200,6 +200,47 @@ local function setStat(stat, key, value, color)
     stat.value:setColor(color or '#e6e0f2')
 end
 
+-- the odds that the reward comes out a rarity item (the server's
+-- state.rarity: RarityConfig.questReward), for a quest whose rewards may
+local function hasRareReward(quest)
+    for _, reward in ipairs(quest.rewards or {}) do
+        if reward.rare then
+            return true
+        end
+    end
+    return false
+end
+
+local function setRarityShown(card, shown)
+    card.rarityTitle:setHeight(shown and 16 or 0)
+    card.rarityTitle:setMarginTop(shown and 6 or 0)
+    card.rarityBar:setHeight(shown and 8 or 0)
+    card.rarityBar:setMarginTop(shown and 2 or 0)
+    card.rarityText:setHeight(shown and 28 or 0)
+    card.rarityText:setMarginTop(shown and 3 or 0)
+    card.rarityTitle:setVisible(shown)
+    card.rarityBar:setVisible(shown)
+    card.rarityText:setVisible(shown)
+end
+
+local function renderRarity(card, quest)
+    local rarity = state and state.rarity
+    local shown = rarity ~= nil and not quest.prize and hasRareReward(quest) and RarityOdds ~= nil
+    setRarityShown(card, shown)
+    if not shown then
+        return
+    end
+    local parts = RarityOdds.parts(rarity.grades, rarity.chance)
+    card.rarityTitle:setText(tr('Chance to come out a rarity item: %s', RarityOdds.percent(rarity.chance)))
+    card.rarityBar:setOdds(parts)
+    -- two lines: the first three, the rest
+    local first, second = {}, {}
+    for index, part in ipairs(parts) do
+        table.insert(index <= 3 and first or second, part)
+    end
+    card.rarityText:setColoredText(RarityOdds.legend(first) .. '\n' .. RarityOdds.legend(second))
+end
+
 local function renderCard()
     local card = window.card
     local quest = findQuest(selectedKey)
@@ -265,6 +306,8 @@ local function renderCard()
     card.prizeText:setText(table.concat(extras, '   '))
     card.prizeText:setHeight(#extras > 0 and 14 or 0)
     card.prizeText:setMarginTop(#extras > 0 and 3 or 0)
+
+    renderRarity(card, quest)
 
     if quest.steps and quest.steps > 0 then
         setStat(card.steps, tr('Way to the chest'), tr('about %d steps', quest.steps))
@@ -544,10 +587,34 @@ local function showChest(data)
             end, 40)
         end
     end
-    -- room for the title, the cards, the hint and the buttons
+    -- the odds that the reward comes out a rarity item
+    local rarity = data.rarity
+    local rare = false
+    for _, reward in ipairs(rewards) do
+        rare = rare or reward.rare
+    end
+    local oddsHeight = 0
+    if rarity and rare and RarityOdds then
+        local parts = RarityOdds.parts(rarity.grades, rarity.chance)
+        chestWindow.rarityTitle:setText(tr('%s chance to come out a rarity item', RarityOdds.percent(rarity.chance)))
+        chestWindow.rarityBar:setOdds(parts)
+        local first, second = {}, {}
+        for index, part in ipairs(parts) do
+            table.insert(index <= 3 and first or second, part)
+        end
+        chestWindow.rarityText:setColoredText(RarityOdds.legend(first) .. '\n' .. RarityOdds.legend(second))
+        oddsHeight = 10 + 14 + 3 + 8 + 3 + 28
+    else
+        for _, id in ipairs({ 'rarityTitle', 'rarityBar', 'rarityText' }) do
+            chestWindow[id]:setVisible(false)
+            chestWindow[id]:setHeight(0)
+            chestWindow[id]:setMarginTop(0)
+        end
+    end
+    -- room for the title, the cards, the hint, the odds and the buttons
     chestWindow:setSize({
         width = math.max(420, chestWindow.rewards:getWidth() + 32),
-        height = chestWindow.rewards:getHeight() + 136,
+        height = chestWindow.rewards:getHeight() + 136 + oddsHeight,
     })
     choose(nil)
     chestWindow:raise()

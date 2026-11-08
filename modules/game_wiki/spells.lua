@@ -227,6 +227,12 @@ local function spellBlocks(row)
         table.insert(blocks, { 'p', T('Esta magia transforma uma blank rune na runa abaixo. Clique para ver o que a runa faz e quem a vende.') })
         table.insert(blocks, { 'table', widths = { 300, 246 }, rows = { { { T('Abrir a runa'), WARM }, T('cargas, level e magic level para usar'), link = 'i:' .. row.rune } } })
     end
+    -- how to cast it (the Ascensão's spells: aimed with the mouse, charged,
+    -- the way you face; Ascensao.spellUse on the server)
+    if (row.use or '') ~= '' then
+        table.insert(blocks, { 'h', T('Como usar') })
+        table.insert(blocks, { 'p', L(row.use) })
+    end
     if row.src == 'ascensao' then
         table.insert(blocks, { 'h', T('Ascensão') })
         table.insert(blocks, { 'p', T('Esta magia vem do sistema de Ascensão: gaste os pontos no caminho %s para liberar. O botão Ascensão na barra Mythos abre a janela dos caminhos.', L(row.path)) })

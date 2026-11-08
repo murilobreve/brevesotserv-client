@@ -46,26 +46,26 @@ WIKI_GRADES = {
 
 -- stack: forge stack the tier gives the monster. The engine turns it into
 -- HP x(1 + (15*stack + 35)/100), attack x(1.35 + (stack-1)*0.1) and
--- experience x(stack + 10)/10; the tier's healthFactor multiplies the HP
--- again and rarity tiers get no forge defense.
+-- experience x(stack + 10)/10; the tier's healthFactor, damageFactor and
+-- experienceFactor multiply them again and rarity tiers get no forge defense.
 WIKI_TIERS = {
     pale = {
         name = 'Pale', color = '#c9d6e3', shader = 'Rarity - Pale', outfit = 34, monster = 'Dragon',
-        chance = '0,63%', hp = 'x2,94', attack = 'x1,75', defense = 'x1', xp = 'x1,5',
+        chance = '0,75%', hp = 'x1,75', attack = 'x1,93', defense = 'x1', xp = 'x3,85',
         loot = 'x3', rolls = '+1', gold = 'x10', affix = '0,75 por morte', skull = 'Branca',
         grades = { 66, 28, 5.2, 0.75, 0.05 },
         arrival = '"You sense something pale stirring..." e um brilho azul no corpo.',
     },
     ashen = {
         name = 'Ashen', color = '#9aa0a8', shader = 'Rarity - Ashen', outfit = 55, monster = 'Behemoth',
-        chance = '0,44%', hp = 'x4,32', attack = 'x2,15', defense = 'x1', xp = 'x1,9',
+        chance = '0,5%', hp = 'x2,15', attack = 'x2,37', defense = 'x1', xp = 'x4,73',
         loot = 'x6', rolls = '+1', gold = 'x30', affix = '1,2 por morte', skull = 'Vermelha',
         grades = { 50, 33, 12.5, 3.9, 0.6 },
         arrival = 'Fogo no chão, fumaça em volta e "*the ground scorches*".',
     },
     obsidian = {
         name = 'Obsidian', color = '#9b7bff', shader = 'Rarity - Obsidian', outfit = 121, monster = 'Hydra',
-        chance = '0,31%', hp = 'x6,56', attack = 'x2,65', defense = 'x1', xp = 'x2,4',
+        chance = '0,25%', hp = 'x2,65', attack = 'x2,92', defense = 'x1', xp = 'x5,83',
         loot = 'x12', rolls = '+2', gold = 'x50', affix = '1,5 por morte', skull = 'Preta',
         grades = { 33, 32, 23, 8, 4 },
         arrival = 'Explosões, anéis de morte e "IT HAS ARRIVED!".',
@@ -73,7 +73,7 @@ WIKI_TIERS = {
     deathlord = {
         name = 'Lord of Death', color = '#e04848', shader = 'Rarity - Lord of Death', outfit = 25, monster = 'Minotaur',
         effect = 20,
-        chance = '0,031%', hp = 'x8,64', attack = 'x3,30', defense = 'x1', xp = 'x2,5',
+        chance = '0,1%', hp = 'x3,30', attack = 'x3,63', defense = 'x1', xp = 'x7,26',
         loot = 'x20', rolls = '+3', gold = 'x50', affix = '3 por morte', skull = 'Preta',
         grades = { 20, 20, 20, 28, 12 },
         arrival = 'A luz some, o pentagrama preto aparece e tudo em volta morre.',
@@ -324,11 +324,12 @@ WIKI_PAGES.tiers = {
         { 'table', widths = { 110, 64, 58, 58, 52, 52, 58 },
           head = { 'Tier', 'Chance', 'Vida', 'Ataque', 'XP', 'Loot', 'Ouro' },
           rows = {
-              { { 'Pale', '#c9d6e3' }, '0,63%', 'x2,94', 'x1,75', 'x1,5', 'x3', 'x10' },
-              { { 'Ashen', '#9aa0a8' }, '0,44%', 'x4,32', 'x2,15', 'x1,9', 'x6', 'x30' },
-              { { 'Obsidian', '#9b7bff' }, '0,31%', 'x6,56', 'x2,65', 'x2,4', 'x12', 'x50' },
-              { { 'Lord of Death', '#e04848' }, '0,031%', 'x8,64', 'x3,30', 'x2,5', 'x20', 'x50' },
+              { { 'Pale', '#c9d6e3' }, '0,75%', 'x1,75', 'x1,93', 'x3,85', 'x3', 'x10' },
+              { { 'Ashen', '#9aa0a8' }, '0,5%', 'x2,15', 'x2,37', 'x4,73', 'x6', 'x30' },
+              { { 'Obsidian', '#9b7bff' }, '0,25%', 'x2,65', 'x2,92', 'x5,83', 'x12', 'x50' },
+              { { 'Lord of Death', '#e04848' }, '0,1%', 'x3,30', 'x3,63', 'x7,26', 'x20', 'x50' },
           } },
+        { 'p', 'Na Hunt Task (diária e Trilha do Caçador), um monstro raro conta como várias mortes, pela XP dele: Pale 3, Ashen 4, Obsidian 5 e Lord of Death 7.' },
         { 'p', 'Um monstro raro é mais forte só na vida: armadura e defesa são as do monstro normal, então o seu dano entra inteiro.' },
         { 'p', 'A chance é por morte de monstro. O sorteio começa pela camada mais alta, então um mesmo monstro nunca vira duas coisas ao mesmo tempo. Loot multiplica a chance de cada item da lista do próprio monstro nas rolagens extras, até no máximo 50% por rolagem, para o corpo não vir sempre com os mesmos itens; itens muito raros (abaixo de 0,3% de chance) não são multiplicados.' },
         { 'p', 'Ouro multiplica o ouro que o monstro dá normalmente: um Dragon Lord Obsidian deixa uns 4.600 de ouro em vez de uns 90. Ele vem em crystal e platinum coins.' },
@@ -359,25 +360,25 @@ local function tierPage(key, menu, extra)
 end
 
 WIKI_PAGES.pale = tierPage('pale', 'Pale', {
-    { 'p', 'A camada mais comum: 0,63% das mortes (1 em 160). Tem quase o triplo da vida e o triplo de loot. Três vezes em cada quatro, ele deixa um item raro.' },
+    { 'p', 'A camada mais comum: 0,75% das mortes (1 em 133). Tem 1,75 vez a vida, bate quase o dobro, dá quase 4 vezes a XP e o triplo de loot. Três vezes em cada quatro, ele deixa um item raro.' },
     { 'p', 'Ele tem caveira branca e uma cor fria, quase sem saturação.' },
     { 'links', { 'tiers', 'ashen' } },
 })
 
 WIKI_PAGES.ashen = tierPage('ashen', 'Ashen', {
-    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,44% das mortes (1 em 229), com caveira vermelha e fumaça em volta.' },
+    { 'p', 'Cinza de cinzas, com tons doentes de verde e violeta. Aparece em 0,5% das mortes (1 em 200), com caveira vermelha e fumaça em volta.' },
     { 'p', 'O loot é 6 vezes maior. Ele sempre deixa um item raro, e 20% das vezes deixa dois.' },
     { 'links', { 'pale', 'obsidian' } },
 })
 
 WIKI_PAGES.obsidian = tierPage('obsidian', 'Obsidian', {
-    { 'p', 'Roxo e azul, com caveira preta. Aparece em 0,31% das mortes (1 em 320).' },
+    { 'p', 'Roxo e azul, com caveira preta. Aparece em 0,25% das mortes (1 em 400).' },
     { 'p', 'Ele sempre deixa um item raro, e metade das vezes deixa dois. O corpo tem 2 rolagens extras de loot. Um terço dos raros já sai Praeclarus ou melhor.' },
     { 'links', { 'ashen', 'deathlord' } },
 })
 
 WIKI_PAGES.deathlord = tierPage('deathlord', 'Lord of Death', {
-    { 'p', 'O monstro mais raro do jogo: 1 em 3200 mortes, um décimo da chance do Obsidian. Deixa três itens raros, e 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
+    { 'p', 'O monstro mais raro do jogo: 1 em 1000 mortes. Deixa três itens raros, e 40% deles saem Legendarius ou Mythicus. Fica todo preto, com o pentagrama preto embaixo dele.' },
     { 'h', 'Quando ele chega' },
     { 'p', 'Todo outro monstro a até 6 sqm, no mesmo andar, morre na hora. Eles não dão loot nem XP e voltam pelo respawn normal. Bosses e summons de jogadores não morrem.' },
     { 'h', 'Se ele matar você' },
@@ -398,11 +399,11 @@ WIKI_PAGES.huntboard = {
         { 'table', widths = { 80, 90, 70, 70, 80, 100 },
           head = { 'Rate', 'Multiplicador', 'Pale', 'Ashen', 'Obsidian', 'Lord of Death' },
           rows = {
-              { '1x', 'x1', '0,63%', '0,44%', '0,31%', '0,031%' },
-              { '2x', 'x1,17', '0,73%', '0,51%', '0,36%', '0,036%' },
-              { '3x', 'x1,33', '0,83%', '0,58%', '0,42%', '0,042%' },
-              { '4x', 'x1,5', '0,94%', '0,66%', '0,47%', '0,047%' },
-              { { '5x', '#ffd27a' }, { 'x1,67', '#ffd27a' }, '1,04%', '0,73%', '0,52%', '0,052%' },
+              { '1x', 'x1', '0,75%', '0,5%', '0,25%', '0,1%' },
+              { '2x', 'x1,17', '0,88%', '0,58%', '0,29%', '0,12%' },
+              { '3x', 'x1,33', '1%', '0,67%', '0,33%', '0,13%' },
+              { '4x', 'x1,5', '1,13%', '0,75%', '0,38%', '0,15%' },
+              { { '5x', '#ffd27a' }, { 'x1,67', '#ffd27a' }, '1,25%', '0,83%', '0,42%', '0,17%' },
           } },
         { 'h', 'Loot' },
         { 'p', 'O loot tem o seu próprio sorteio, separado da XP: de 1x a 3x. Um monstro pode estar com XP alta e loot normal, ou o contrário. Nenhum monstro fica abaixo de 1x: um terço fica em 1x, outro terço perto de 1,5x, e o resto vai ficando mais raro até 3x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
@@ -430,7 +431,7 @@ WIKI_PAGES.items = {
               { { 'Lord of Death', '#e04848' }, '3' },
               { 'Recompensa de quest', '25% de chance' },
           } },
-        { 'p', 'O bônus Rarity Find dos anéis e amuletos multiplica esses números. Monstros raros sempre pagam: se não houver equipamento no corpo, um equipamento da lista de loot do próprio monstro é escolhido.' },
+        { 'p', 'Monstros raros sempre pagam: se não houver equipamento no corpo, um equipamento da lista de loot do próprio monstro é escolhido.' },
         { 'p', 'Qual equipamento vira raro é sorteado entre todos os da lista de loot do monstro, não só entre os que caíram, e os itens que caem muito não dominam o sorteio. Um raro de Dragon é steel shield 14% das vezes (seriam 37% pela chance de drop) e dragon shield 6% (seria 0,6%). Itens muito raros da lista (abaixo de 0,3% de chance) ficam de fora desse sorteio, mas se um deles cair ele pode virar raro.' },
         { 'p', 'Itens com carga ou tempo de uso nunca viram raros: eles se gastam ou viram outro item, e o raro sumiria junto. Ficam de fora o ice rapier, as armas de glooth, as armas shimmer, void boots, tiara of power, firewalker boots, os rainbow shields e parecidos.' },
         { 'h', 'Como o item é sorteado' },
@@ -492,7 +493,7 @@ WIKI_PAGES.quality = {
         { 'p', 'Metade vem do armor, da defesa ou do ataque do item (com o dano de elemento), comparado com os melhores do mesmo tipo: capacetes, armaduras, calças, botas, escudos e armas de uma e de duas mãos, cada um com os seus. 35% vêm do level exigido (level 400 conta tudo) e 15% dos slots de imbuement (dois contam tudo).' },
         { 'p', 'Wands, rods, armas de distância, anéis e amuletos não têm um valor desses no item, então usam o level (85%) e os slots (15%).' },
         { 'h', 'Quanto os bônus crescem' },
-        { 'p', 'Dano, cura, leech, resistências, skills, magic level, vida e mana máximas, pierce e regen crescem até 3 vezes: x(1 + 2 x qualidade). Critical Hit Chance, Physical Resist, Hit Chance, o Attack das armas de distância, Speed, Cleave, Splinter, Long Shot, Frenzy, Vital Barrier, Onslaught, Momentum, Amplification, Experience, Loot, Rarity Find, Ally Healing e Physical Reflect crescem até 2 vezes. Attack Speed, Cooldown Reduction e Dodge Chance não mudam.' },
+        { 'p', 'Dano, cura, leech, resistências, skills, magic level, vida e mana máximas e o dano de magia do elemento crescem até 3 vezes: x(1 + 2 x qualidade). Critical Hit Chance, Physical Resist, o Attack das armas de distância, Speed, Cleave, Splinter, Long Shot, Frenzy, Onslaught, Momentum, Ally Healing e Physical Reflect crescem até 2 vezes. Attack Speed, Cooldown Reduction e Dodge Chance não mudam.' },
         { 'p', 'Armor, Defense e o Attack das armas corpo a corpo são uma parte do valor do próprio item: Armor de 10% a 80% do armor do item, Defense de 8% a 60% da defesa e Attack de 8% a 50% do ataque com o elemento. Uma leather armor ganha de +1 a +3 de armor; uma falcon plate, de +2 a +14.' },
         { 'table', widths = { 200, 100, 120 }, head = { 'Item', 'Qualidade', 'Bônus até' },
           rows = {
@@ -538,7 +539,7 @@ WIKI_PAGES.pools = {
         }),
         { 'h', 'Arcos e armas de distância' },
         poolTable({
-            { 'Attack', '1 a 20', '' }, { 'Distance Skill', '2% a 15%', '' }, { 'Hit Chance', '1% a 15%', '' },
+            { 'Attack', '1 a 20', '' }, { 'Distance Skill', '2% a 15%', '' },
             { 'Critical Hit Chance', '1% a 10%', '' }, { 'Critical Hit Damage', '2% a 38%', '' },
             { 'Attack Speed', '3% a 25%', 'duas mãos: 5% a 35%' }, { 'Long Shot Damage', '4% a 20%', 'em monstros a 3 sqm ou mais' },
             { 'Splinter Chance', '5% a 23%', 'duas mãos: 8% a 18%' },
@@ -550,49 +551,48 @@ WIKI_PAGES.pools = {
         poolTable({
             { 'Magic Level', '2% a 15%', '' }, { 'Mana Leech', '2% a 20%', '' }, { 'Critical Hit Chance', '2% a 15%', '' },
             { 'Critical Hit Damage', '8% a 60%', '' }, { 'Wand/Rod Damage', '30% a 250%', '' }, { 'Max Mana', '3% a 23%', '' },
-            { 'Splinter Chance', '5% a 23%', '' }, { 'Cooldown Reduction', '2% a 14%', '' }, { 'Attack Speed', '3% a 25%', '' },
-            { 'Resist Pierce', '8% a 45%', 'elemento da própria arma' }, { 'Ally Healing', '5% a 30%', 'só rods de druid' },
+            { 'Cooldown Reduction', '2% a 14%', '' },
+            { 'Dano de magia do elemento', '6% a 30%', 'elemento da própria arma (ex.: Death Spell Damage)' }, { 'Ally Healing', '5% a 30%', 'só rods de druid' },
             { 'Attack Spell Damage', '5% a 23%', '' }, { 'Bônus de magia', '8% a 53%', 'até dois; wand: sorcerer, rod: druid; cura: 5% a 35%' },
             { 'Onslaught', '1% a 6%', 'golpe fatal, +60% de dano' },
         }),
         { 'h', 'Escudos' },
         poolTable({
-            { 'Defense', '8% a 60%', 'da defesa do escudo' }, { 'Resistência', '1% a 20%', 'um elemento' }, { 'Healing Received', '5% a 30%', '' },
+            { 'Defense', '8% a 60%', 'da defesa do escudo' }, { 'Resistência', '1% a 15%', 'pode vir duas' }, { 'Healing Received', '5% a 30%', '' },
             { 'Max Health', '2% a 15%', '' }, { 'Physical Reflect', '1% a 15%', '' },
-            { 'Vital Barrier', '2% a 10%', 'da vida máxima' },
         }),
         { 'h', 'Spellbooks' },
         poolTable({
             { 'Magic Level', '2% a 15%', '' }, { 'Max Mana', '3% a 23%', '' }, { 'Defense', '8% a 60%', 'da defesa do livro' },
-            { 'Resistência', '1% a 20%', '' }, { 'Ally Healing', '5% a 30%', '' }, { 'Cooldown Reduction', '2% a 14%', '' },
-            { 'Resist Pierce', '8% a 45%', 'elemento sorteado' }, { 'Attack Spell Damage', '5% a 23%', '' },
+            { 'Resistência', '1% a 15%', 'pode vir duas' }, { 'Ally Healing', '5% a 30%', '' }, { 'Cooldown Reduction', '2% a 14%', '' },
+            { 'Dano de magia do elemento', '6% a 30%', 'elemento sorteado' }, { 'Attack Spell Damage', '5% a 23%', '' },
             { 'Bônus de magia', '8% a 53%', 'um; da vocação do livro; cura: 5% a 35%' },
-            { 'Vital Barrier', '2% a 10%', 'da vida máxima' },
         }),
         { 'h', 'Capacetes, armaduras e calças' },
         poolTable({
-            { 'Armor', '10% a 80%', 'do armor do item' }, { 'Resistência', '1% a 20%', 'pode vir duas' }, { 'Healing Received', '5% a 30%', '' },
+            { 'Armor', '10% a 80%', 'do armor do item' }, { 'Resistência', '1% a 15%', 'pode vir até três' }, { 'Healing Received', '5% a 30%', '' },
             { 'Skill da vocação', '2% a 15%', 'ML, melee, distance ou fist' },
             { 'Dodge Chance', '1% a 6%', '' }, { 'Physical Reflect', '1% a 15%', '' }, { 'Cooldown Reduction', '2% a 14%', '' },
-            { 'Speed', '5 a 50', 'só calças' }, { 'Vital Barrier', '1% a 6%', 'da vida máxima' },
+            { 'Speed', '5 a 50', 'só calças' },
             { 'Life Leech', '1% a 6%', 'só capacete e armadura' }, { 'Mana Leech', '1% a 10%', 'só capacete e armadura' },
             { 'Momentum', '2% a 16%', 'só capacete' }, { 'Transcendence', '1% a 2%', 'só calça' },
         }),
         { 'h', 'Botas' },
         poolTable({
-            { 'Armor', '10% a 80%', 'do armor da bota' }, { 'Speed', '5 a 50', '' }, { 'Resistência', '1% a 20%', '' },
+            { 'Armor', '10% a 80%', 'do armor da bota' }, { 'Speed', '5 a 50', '' }, { 'Resistência', '1% a 15%', 'pode vir duas' },
             { 'Healing Received', '5% a 30%', '' }, { 'Max Health', '2% a 15%', '' }, { 'Dodge Chance', '1% a 6%', '' },
-            { 'Amplification', '5% a 35%', '' },
         }),
         { 'h', 'Anéis e amuletos' },
         { 'p', 'Só os que não têm carga nem tempo de uso.' },
         poolTable({
-            { 'Max Health', '2% a 12%', '' }, { 'Max Mana', '3% a 18%', '' }, { 'Resistência', '1% a 12%', '' },
-            { 'Experience', '2% a 10%', '' }, { 'Loot Chance', '2% a 15%', '' }, { 'Rarity Find Chance', '2% a 15%', '' },
-            { 'Health per Regen Tick', '30 a 150', '' }, { 'Mana per Regen Tick', '30 a 150', '' },
-            { 'Frenzy', '1% a 3%', 'por monstro morto, até 5' },
+            { 'Max Health', '2% a 12%', '' }, { 'Resistência', '1% a 10%', 'pode vir duas' },
+            { 'Transcendence', '1% a 2%', '' }, { 'Frenzy', '1% a 3%', 'por monstro morto, até 5' },
+            { 'Momentum', '2% a 12%', '' }, { 'Onslaught', '1% a 4%', 'golpe fatal, +60% de dano' },
+            { 'Critical Hit Damage', '2% a 25%', '' },
+            { 'Attack Spell Damage', '3% a 15%', '' }, { 'Life Leech', '1% a 6%', '' }, { 'Mana Leech', '1% a 10%', '' },
+            { 'Healing Received', '5% a 20%', '' }, { 'Dodge Chance', '1% a 4%', '' },
         }),
-        { 'p', 'Physical Resist vai só até 10% na faixa base: é a resistência mais forte.' },
+        { 'p', 'Physical Resist vai só até 7% por item: é a resistência mais forte.' },
         { 'links', { 'quality', 'affixes', 'stacking' } },
     },
 }
@@ -622,7 +622,7 @@ WIKI_PAGES.affixes = {
             { 'Long Shot Damage', 'Dano a mais nos ataques e magias em monstros a 3 sqm ou mais de você. Vem de arcos e bestas.', '30%' },
             { 'Splinter Chance', 'Chance de o ataque básico de arma de distância, wand ou rod estilhaçar: o mesmo dano acerta todos os monstros nos 8 sqm em volta do alvo. Vale também com diamond, burst e poison arrow e viper star (no monstro atacado).', '38%' },
             { 'Wand/Rod Damage', 'Dano a mais no ataque de wand e rod. No máximo quadruplica o dano.', '300%' },
-            { 'Resist Pierce', 'Tira pontos da resistência do monstro a um elemento, nunca abaixo de 0.', '90%' },
+            { 'Dano de magia do elemento', 'Mais dano das magias e runas de um elemento (Fire, Earth, Energy, Ice, Holy ou Death Spell Damage). Vem de wands, rods e spellbooks.', '75%' },
         }),
         { 'h', 'Magia' },
         affixTable({
@@ -647,21 +647,15 @@ WIKI_PAGES.affixes = {
         affixTable({
             { 'Armor, Defense', 'Armor ou defesa a mais no item, uma parte do valor do próprio item.', '' },
             { 'Max Health', 'Vida máxima a mais.', '75%' },
-            { 'Resistência', 'Menos dano de fire, earth, energy, ice, holy ou death.', '50%' },
-            { 'Physical Resist', 'Menos dano físico. A mais forte e a mais rara.', '20%' },
+            { 'Resistência', 'Menos dano de fire, earth, energy, ice, holy ou death.', '37%' },
+            { 'Physical Resist', 'Menos dano físico. A mais forte e a mais rara.', '15%' },
             { 'Healing Received', 'Magias, runas e poções curam mais. Leech não conta.', '100%' },
             { 'Dodge Chance', 'Chance de desviar de um golpe.', '12%' },
             { 'Physical Reflect', 'Devolve parte do dano físico que um monstro causa em você.', '15%' },
             { 'Speed', 'Velocidade a mais. Vem de botas e calças.', '80' },
-            { 'Vital Barrier', 'A cura que passa da vida cheia (magias, runas e poções, não leech) vira uma barreira que segura os próximos golpes, até essa parte da vida máxima, por 6 s. Vem de escudos, spellbooks, capacetes, armaduras e calças.', '20%' },
         }),
         { 'h', 'Anéis e amuletos' },
         affixTable({
-            { 'Experience', 'XP a mais por monstro.', '15%' },
-            { 'Loot Chance', 'Multiplica a chance de cada item do loot do monstro.', '20%' },
-            { 'Rarity Find Chance', 'Multiplica a chance de um item virar raro.', '20%' },
-            { 'Health per Regen Tick', 'Vida a mais em cada tick de regeneração.', '300' },
-            { 'Mana per Regen Tick', 'Mana a mais em cada tick de regeneração.', '300' },
             { 'Frenzy', 'Cada monstro que você mata dá esse dano a mais por 8 s, até 5 vezes; matar de novo renova. Bom em hunt de muitos monstros, fraco em boss. Antes se chamava Momentum.', '5% (x5)' },
         }),
         { 'h', 'Bônus da Exaltation Forge' },
@@ -669,8 +663,7 @@ WIKI_PAGES.affixes = {
         affixTable({
             { 'Onslaught', 'Chance de um golpe ou magia de ataque ser Fatal: 60% de dano a mais. Vem de armas, wands e rods (forja tier 10: 9%).', '9%' },
             { 'Momentum', 'Em combate, a cada 2 s, chance de tirar 2 s de todos os cooldowns. Vem de capacetes (forja tier 10: 24%).', '24%' },
-            { 'Transcendence', 'Em combate, a cada 2 s, chance de virar o avatar da vocação por 7 s: 15% menos dano recebido e todo golpe crítico. Vem de calças (forja tier 10: 2,35%).', '3%' },
-            { 'Amplification', 'Deixa Onslaught, Momentum e Transcendence (da forja ou de raros) e a Ruse da forja mais prováveis nessa porcentagem. Vem de botas (forja tier 10: 57%).', '50%' },
+            { 'Transcendence', 'Em combate, a cada 2 s, chance de virar o avatar da vocação por 7 s: 15% menos dano recebido e todo golpe crítico. Vem de calças, anéis e amuletos (forja tier 10: 2,35%).', '4%' },
         }),
         { 'h', 'Resistências e a cor da gema' },
         { 'table', widths = { 120, 120 }, head = { 'Elemento', 'Nome no item' },
@@ -710,11 +703,11 @@ WIKI_PAGES.stacking = {
         { 'table', widths = { 220, 120, 120 }, head = { 'Itens', 'Soma direta', 'Total real' },
           rows = {
               { 'Dodge 4% + 4% + 4%', '12%', '11,5%' },
-              { 'Fire Resist 20% + 20%', '40%', '36%' },
+              { 'Fire Resist 10% + 10%', '20%', '19%' },
               { 'Critical Hit Chance 10% + 10%', '20%', '19%' },
-              { 'Experience 8% + 8%', '16%', '15% (teto)' },
+              { 'Onslaught 5% + 5%', '10%', '9% (teto)' },
           } },
-        { 'p', 'Bônus fixos, como Attack, Armor, Speed e Regen, somam direto. Depois de combinar, o total para no teto do bônus.' },
+        { 'p', 'Bônus fixos, como Attack, Armor e Speed, somam direto. Depois de combinar, o total para no teto do bônus.' },
         { 'h', 'Com imbuements e a forja' },
         { 'p', 'Os bônus de raridade somam com os imbuements, e com a Exaltation Forge. Crit e leech da raridade se juntam aos do Strike e do Vampirism/Void.' },
         { 'note', 'A chance de crítico total pode chegar a 60%: os 10% do Strike mais até 50% da raridade.' },
@@ -731,10 +724,9 @@ WIKI_PAGES.experience = {
         { 'lead', 'Todos os bônus de XP multiplicam um ao outro. Nenhum deles anula outro.' },
         { 'table', widths = { 200, 160, 150 }, head = { 'Fonte', 'Bônus', 'Como entra' },
           rows = {
-              { 'Monstro raro', 'x1,5 a x2,5', 'multiplica' },
+              { 'Monstro raro', 'x3,85 a x7,26', 'multiplica' },
               { 'Boosted creature', 'x2', 'multiplica, vale para a versão rara' },
               { 'Prey de XP', 'o valor do slot', 'multiplica' },
-              { 'Anel ou amuleto raro', 'até +15%', 'multiplica' },
               { 'XP Boost e level baixo', 'o valor de cada', 'somam entre si' },
               { 'Stamina', 'a da sua stamina', 'multiplica' },
               { 'Rate do servidor', 'a do seu level', 'multiplica' },
