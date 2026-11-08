@@ -286,11 +286,20 @@ ForgeCard < UIButton
     phantom: true
     visible: false
 
-  Label
-    id: number
+  UIWidget
+    id: icon
     anchors.left: parent.left
     anchors.top: parent.top
-    margin-left: 8
+    margin-left: 6
+    margin-top: 5
+    size: 18 18
+    phantom: true
+
+  Label
+    id: number
+    anchors.left: icon.right
+    anchors.top: parent.top
+    margin-left: 5
     margin-top: 7
     font: verdana-11px-antialised
     color: #8f877c
@@ -763,12 +772,21 @@ ForgeMiniTotal < UIWidget
   border-width: 1
   border-color: #2a2430
 
+  UIWidget
+    id: icon
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-left: 5
+    margin-top: 4
+    size: 18 18
+    phantom: true
+
   Label
     id: name
-    anchors.left: parent.left
+    anchors.left: icon.right
     anchors.right: total.left
     anchors.top: parent.top
-    margin-left: 7
+    margin-left: 5
     margin-top: 5
     margin-right: 4
     height: 14
@@ -787,10 +805,9 @@ ForgeMiniTotal < UIWidget
 
   UIWidget
     id: chips
-    anchors.left: parent.left
+    anchors.left: name.left
     anchors.right: parent.right
     anchors.top: name.bottom
-    margin-left: 6
     margin-right: 6
     margin-top: 3
     height: 18
@@ -1115,10 +1132,20 @@ MythosWindow
           width: 312
           padding: 12
 
-          ForgeTitle
-            id: title
+          UIWidget
+            id: icon
             anchors.top: parent.top
             anchors.left: parent.left
+            size: 14 14
+            image-source: /game_raritybonus/images/reroll
+            image-color: #e8c77a
+            phantom: true
+
+          ForgeTitle
+            id: title
+            anchors.verticalCenter: icon.verticalCenter
+            anchors.left: icon.right
+            margin-left: 6
             !text: tr('REFORGE')
 
           ForgeDim
@@ -1129,31 +1156,31 @@ MythosWindow
             text-auto-resize: true
             !text: tr('rolls the bonuses again')
 
+          // the rules, in a tooltip
+          UIWidget
+            id: info
+            anchors.verticalCenter: icon.verticalCenter
+            anchors.right: parent.right
+            size: 14 14
+            image-source: /game_raritybonus/images/info
+            image-color: #a59d92
+
           ForgeText
             id: costXp
-            anchors.top: title.bottom
+            anchors.top: icon.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            margin-top: 10
+            margin-top: 14
             height: 14
 
+          // only with a card sealed: which one and its price
           ForgeText
             id: costSeal
             anchors.top: costXp.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            margin-top: 6
+            margin-top: 8
             height: 28
-            text-wrap: true
-
-          ForgeDim
-            id: rules
-            anchors.top: costSeal.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: rollButton.top
-            margin-top: 6
-            margin-bottom: 6
             text-wrap: true
 
           ForgeGoldButton
@@ -1185,11 +1212,29 @@ MythosWindow
           margin-left: 12
           padding: 12
 
-          ForgeTitle
-            id: title
+          UIWidget
+            id: icon
             anchors.top: parent.top
             anchors.left: parent.left
+            size: 14 14
+            image-source: /game_raritybonus/images/improve
+            image-color: #c9a4ff
+            phantom: true
+
+          ForgeTitle
+            id: title
+            anchors.verticalCenter: icon.verticalCenter
+            anchors.left: icon.right
+            margin-left: 6
             !text: tr('ASCENSION')
+
+          UIWidget
+            id: info
+            anchors.verticalCenter: icon.verticalCenter
+            anchors.right: parent.right
+            size: 14 14
+            image-source: /game_raritybonus/images/info
+            image-color: #a59d92
 
           Label
             id: path
@@ -1201,7 +1246,7 @@ MythosWindow
 
           UIWidget
             id: dial
-            anchors.top: title.bottom
+            anchors.top: icon.bottom
             anchors.left: parent.left
             margin-top: 2
             size: 116 116
@@ -1223,7 +1268,7 @@ MythosWindow
 
           Label
             id: resultTitle
-            anchors.top: title.bottom
+            anchors.top: icon.bottom
             anchors.left: dial.right
             anchors.right: parent.right
             margin-top: 10

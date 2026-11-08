@@ -1538,6 +1538,8 @@ locale = {
     ["At the limit: more of it adds nothing."] = "No limite: mais disso não soma nada.",
     ["Limit: %s"] = "Limite: %s",
     ["%d at the limit"] = "%d no limite",
+    ["Seal: click a card before reforging; it keeps its bonus with this value and the others roll again. Price: %s gold."] = "Selo: clique numa carta antes de reforjar; ela mantém o bônus com este valor e os outros rolam de novo. Preço: %s gold.",
+    ["In the lit arc it becomes %s; outside it, it stays as it is."] = "Na faixa acesa, vira %s; fora dela, fica como está.",
   }
 }
 
