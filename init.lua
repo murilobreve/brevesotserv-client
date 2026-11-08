@@ -202,10 +202,20 @@ end
 -- it: if the mark is still there, the last start died loading, and this one
 -- loads only the client modules and the updater, which installs the next
 -- version (or offers to try the full start again).
+-- Not in the browser: there the mark is saved while the modules load, so a
+-- tab closed or reloaded meanwhile looked like a crash, and the web build has
+-- no updater to fetch a fix with.
 local BOOT_MARK = '/mythos_boot_incomplete.txt'
+local inBrowser = false
+pcall(function() inBrowser = g_platform.isBrowser and g_platform.isBrowser() or false end)
 local lastStartDied = false
 pcall(function() lastStartDied = g_resources.fileExists(BOOT_MARK) end)
-if lastStartDied then
+if inBrowser then
+    if lastStartDied then
+        pcall(g_resources.deleteFile, BOOT_MARK)
+    end
+    loadModules()
+elseif lastStartDied then
     pcall(g_resources.deleteFile, BOOT_MARK)
     g_logger.warning('the last start crashed while loading the modules: safe start (client modules and updater only)')
     MYTHOS_SAFE_START = true

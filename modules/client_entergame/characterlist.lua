@@ -958,8 +958,8 @@ function CharacterList.show()
         return
     end
     -- an autologin that answers while a new version downloads: the client
-    -- restarts when it is done and logs in again
-    if Updater and Updater.isUpdating and Updater.isUpdating() then
+    -- restarts when it is done and logs in again (and none in a safe start)
+    if MYTHOS_SAFE_START or (Updater and Updater.isUpdating and Updater.isUpdating()) then
         return
     end
     charactersWindow:show()
