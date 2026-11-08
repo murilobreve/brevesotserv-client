@@ -22,6 +22,35 @@ local GRADES = {
 }
 local GRADE_ORDER = { 'mythic', 'legendary', 'epic', 'rare', 'uncommon' }
 
+-- a picture for each bonus (images/forge/bonus, cut from the client's
+-- imbuement icons): the element ones by their element, the rest by kind
+local BONUS_ICONS = {
+    critical_chance = 'crit', critical_damage = 'crit', perfect_shot = 'crit', executioner = 'crit', onslaught = 'crit',
+    spell_damage = 'flame_phys', physical_resist = 'shield_phys', reflect = 'shield_phys',
+    life_leech = 'life', max_health = 'life', health_regen = 'life', mending = 'life', emergency_heal = 'life',
+    ally_heal = 'life', vital_barrier = 'life', vanguard = 'life',
+    mana_leech = 'mana', max_mana = 'mana', mana_regen = 'mana',
+    melee_skill = 'sword', sword_skill = 'sword', attack = 'sword', axe_skill = 'axe', cleave = 'axe',
+    club_skill = 'club', fist_skill = 'fist', distance_skill = 'bow', hit_chance = 'bow', long_shot = 'bow',
+    shoot_range = 'bow', splinter = 'bow', magic_level = 'wand', magic_level_pct = 'wand', wand_damage = 'wand',
+    amplification = 'wand', transcendence = 'wand', armor = 'shield', defense = 'shield', dodge = 'shield',
+    speed = 'wings', attack_speed = 'wings', cooldown_reduction = 'wings', cooldown_chance = 'wings',
+    momentum = 'boots', tier_momentum = 'boots', loot = 'backpack', rarity_find = 'backpack', experience = 'backpack',
+}
+for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) do
+    BONUS_ICONS[element .. '_resist'] = 'shield_' .. element
+    BONUS_ICONS[element .. '_pierce'] = 'flame_' .. element
+    BONUS_ICONS[element .. '_spell_damage'] = 'flame_' .. element
+end
+
+local function bonusIcon(widget, key)
+    local name = BONUS_ICONS[key or '']
+    widget:setVisible(name ~= nil)
+    if name then
+        widget:setImageSource('/game_raritybonus/images/forge/bonus/' .. name)
+    end
+end
+
 -- where a roll fell in its range: name, colour, tag background
 local QUALITY = {
     { 0.999, 'Perfect', '#f3d38a', '#3a2c12' },
@@ -269,7 +298,14 @@ local function fillMyBonuses()
     local atLimit = 0
     for _, t in ipairs(totals) do
         local row = g_ui.createWidget('ForgeMiniTotal', list)
-        row.name:setText(tr(t.label or ''))
+        -- a long name gives way to the total on its right
+        local label = tr(t.label or '')
+        if #label > 20 then
+            label = label:sub(1, 18):gsub('%s+$', '') .. '..'
+            row.name:setTooltip(tr(t.label or ''))
+        end
+        row.name:setText(label)
+        bonusIcon(row.icon, t.key)
         local unit = t.unit or ''
         local cap = not t.perItem and tonumber(t.cap)
         if cap and cap <= 0 then
@@ -386,6 +422,7 @@ local function fillCard(card, bonus, opts)
         card[id]:setVisible(true)
     end
     card.number:setText(tr('BONUS %d', opts.n))
+    bonusIcon(card.icon, bonus.key)
     card.sealed:setVisible(opts.locked or false)
     card:setBorderWidth(opts.locked and 2 or 1)
     card:setBorderColor(opts.locked and '#e8c77a' or '#2e2833')
@@ -420,6 +457,7 @@ end
 
 local function backCard(card, n)
     card.delta:setVisible(false)
+    card.icon:setVisible(false)
     card.back:setVisible(true)
     card.empty:setVisible(false)
     card.sealed:setVisible(false)
@@ -431,6 +469,7 @@ end
 
 local function emptyCard(card)
     card.delta:setVisible(false)
+    card.icon:setVisible(false)
     card.back:setVisible(false)
     card.flash:setVisible(false)
     card.glow:setVisible(false)
@@ -600,22 +639,21 @@ fillReforge = function()
         rules = rules .. '\n' .. tr('Perfect roll: %s per bonus.', text)
     end
     rules = rules .. '\n' .. tr('Fewer bonuses come stronger.')
-    s.rules:setText(rules)
-    s.title:setTooltip(nil)
+    -- the seal: what it is, its price, or why this item has none
+    local seal
+    if lockable(entry) then
+        seal = tr('Seal: click a card before reforging; it keeps its bonus with this value and the others roll again. Price: %s gold.', formatGold(entry.lockCost))
+    else
+        seal = tr('Seal: needs an item with 2 or more bonuses')
+    end
+    s.info:setTooltip(rules .. '\n\n' .. seal)
     local cost = tonumber(entry.rerollCost) or 0
     s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
-    if lockable(entry) then
-        if lock then
-            s.costSeal:setText(tr('Seal: %s gold, keeps %s with its value.', formatGold(entry.lockCost), tr(((sameKey(entry.bonuses, lock) or {}).label) or '')))
-            s.costSeal:setColor('#e8c77a')
-        else
-            s.costSeal:setText(tr('Seal a card (keep 1 bonus): %s gold.', formatGold(entry.lockCost)))
-            s.costSeal:setColor('#8f877c')
-        end
-    else
-        s.costSeal:setText(tr('Seal: needs an item with 2 or more bonuses'))
-        s.costSeal:setColor('#6e665e')
+    s.costSeal:setVisible(lock ~= nil)
+    if lock then
+        s.costSeal:setText(tr('Seal: %s gold, keeps %s with its value.', formatGold(entry.lockCost), tr(((sameKey(entry.bonuses, lock) or {}).label) or '')))
+        s.costSeal:setColor('#e8c77a')
     end
     local lockGold = lock and (tonumber(entry.lockCost) or 0) or 0
     local busy = phase == 'rolling' or phase == 'reveal'
@@ -809,7 +847,7 @@ fillAscend = function()
     box.path:setTooltip(tr('Up to %d bonuses now, up to %d if it goes up.', from.pips, to.pips))
     local how = tr('If it goes up: the item changes grade and its bonuses roll again, in the range of the new grade.') .. '\n\n' ..
         tr('If it fails: the item stays exactly as it was. The gold and the Rarity XP are spent.')
-    box.title:setTooltip(how)
+    box.info:setTooltip(how)
     buildDial(box.dial)
     local chance = tonumber(shownUp.chance) or 0
     for i, tick in ipairs(box.dial.ticks) do
@@ -824,7 +862,7 @@ fillAscend = function()
     if phase == 'idle' then
         box.resultTitle:setText(tr('%d%% chance', chance))
         box.resultTitle:setColor('#ece6dc')
-        box.resultText:setText(tr('The needle spins: in the lit arc, the item becomes %s. Outside, it stays as it is.', to.label))
+        box.resultText:setText(tr('In the lit arc it becomes %s; outside it, it stays as it is.', to.label))
     elseif phase == 'waiting' or phase == 'spinning' then
         box.resultTitle:setText(tr('Spinning...'))
         box.resultTitle:setColor('#ddd0ff')
