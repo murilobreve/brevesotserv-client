@@ -1,0 +1,4 @@
+# lint.mjs --browser writes the pasted page here for a moment
+tmp-lint/
+# lint.mjs --minify: the engine as the CI page carries it (minified)
+tmp-min/

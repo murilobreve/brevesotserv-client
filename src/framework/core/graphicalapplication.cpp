@@ -41,6 +41,10 @@
 #include <framework/sound/soundmanager.h>
 #endif
 
+#ifdef FRAMEWORK_VOICE
+#include <framework/voice/voicemanager.h>
+#endif
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
@@ -107,6 +111,11 @@ void GraphicalApplication::deinit()
 
 void GraphicalApplication::terminate()
 {
+#ifdef FRAMEWORK_VOICE
+    // first: the voice engine raises Lua events and owns audio devices
+    g_voice.terminate();
+#endif
+
     // destroy particles
     g_particles.terminate();
 
@@ -325,6 +334,10 @@ void GraphicalApplication::poll()
 
 #ifdef FRAMEWORK_SOUND
     g_sounds.poll();
+#endif
+
+#ifdef FRAMEWORK_VOICE
+    g_voice.poll();
 #endif
 
     g_particles.poll();

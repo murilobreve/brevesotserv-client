@@ -57,6 +57,10 @@
 #include <framework/sound/streamsoundsource.h>
 #endif
 
+#ifdef FRAMEWORK_VOICE
+#include <framework/voice/voicemanager.h>
+#endif
+
 #ifdef FRAMEWORK_NET
 #include <framework/net/httplogin.h>
 #include <framework/net/protocol.h>
@@ -1144,5 +1148,33 @@ void Application::registerLuaFunctions()
     g_lua.bindClassMemberFunction<SoundChannel>("setEnabled", &SoundChannel::setEnabled);
     g_lua.bindClassMemberFunction<SoundChannel>("isEnabled", &SoundChannel::isEnabled);
     g_lua.bindClassMemberFunction<SoundChannel>("getId", &SoundChannel::getId);
+#endif
+
+#ifdef FRAMEWORK_VOICE
+    // VoiceManager (Mythos Voz; modules/game_voice/engine_full.lua)
+    g_lua.registerSingletonClass("g_voice");
+    g_lua.bindSingletonFunction("g_voice", "isSupported", &VoiceManager::isSupported, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "connect", &VoiceManager::connect, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "disconnect", &VoiceManager::disconnect, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "sendControl", &VoiceManager::sendControl, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setTransmit", &VoiceManager::setTransmit, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setMode", &VoiceManager::setMode, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setVadThreshold", &VoiceManager::setVadThreshold, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setPreset", &VoiceManager::setPreset, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setInputDevice", &VoiceManager::setInputDevice, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setOutputDevice", &VoiceManager::setOutputDevice, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "getInputDevices", &VoiceManager::getInputDevices, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "getOutputDevices", &VoiceManager::getOutputDevices, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setInputGain", &VoiceManager::setInputGain, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setOutputVolume", &VoiceManager::setOutputVolume, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setUserVolume", &VoiceManager::setUserVolume, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setSlotVolume", &VoiceManager::setSlotVolume, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setDeafened", &VoiceManager::setDeafened, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setSelfMuted", &VoiceManager::setSelfMuted, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setMeter", &VoiceManager::setMeter, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setPttMouse", &VoiceManager::setPttMouse, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setGlobalPtt", &VoiceManager::setGlobalPtt, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "startLocalTest", &VoiceManager::startLocalTest, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "stats", &VoiceManager::stats, &g_voice);
 #endif
 }

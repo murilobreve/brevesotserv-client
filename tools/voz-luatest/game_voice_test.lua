@@ -1571,5 +1571,146 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
     assert(ok, err)
 end)
 
+-- the full engine over g_voice, as src/framework/luafunctions.cpp binds it
+-- (the browser build); runs after the stub-client test and keeps its stubs
+
+test('engine_full over the g_voice binding: every call bound, events end to end', function()
+    local file = io.open(ROOT .. '/src/framework/luafunctions.cpp')
+    local cpp = file and file:read('*a') or ''
+    if file then
+        file:close()
+    end
+    local bound = {}
+    for name in cpp:gmatch('bindSingletonFunction%("g_voice", "([%w_]+)"') do
+        bound[name] = true
+    end
+    assert(bound.isSupported and bound.connect and bound.sendControl, 'g_voice bound in luafunctions.cpp')
+    -- every g_voice function engine_full.lua calls is one the C++ binds
+    local src = io.open(MODULE .. 'engine_full.lua'):read('*a')
+    for name in src:gmatch('g_voice%.([%a_]+)%(') do
+        -- onVoiceEvent is the Lua callback the C++ calls, not a binding
+        assert(bound[name] or name == 'onVoiceEvent', 'engine_full calls g_voice.' .. name .. ', which is not bound')
+    end
+    local list = src:match('for _, name in ipairs%((%b{})%)')
+    for name in list:gmatch("'([%a_]+)'") do
+        assert(bound[name], 'engine_full maps ' .. name .. ', which is not bound')
+    end
+    -- a fake binding: records the calls, answers the device lists
+    local calls = {}
+    g_voice = {}
+    for name in pairs(bound) do
+        g_voice[name] = function(...)
+            calls[#calls + 1] = { name, ... }
+        end
+    end
+    g_voice.isSupported = function() return true end
+    g_voice.getInputDevices = function() return { 'Fake Mic' } end
+    g_voice.getOutputDevices = function() return {} end
+    local function last(name)
+        for i = #calls, 1, -1 do
+            if calls[i][1] == name then
+                return calls[i]
+            end
+        end
+    end
+    local function count(name)
+        local n = 0
+        for _, call in ipairs(calls) do
+            n = n + (call[1] == name and 1 or 0)
+        end
+        return n
+    end
+    local handlers, sent, errors = {}, {}, {}
+    ProtocolGame = {
+        registerExtendedOpcode = function(op, fn) handlers[op] = fn end,
+        unregisterExtendedOpcode = function(op) handlers[op] = nil end,
+    }
+    local protocol = { sendExtendedOpcode = function(self, op, buf) sent[#sent + 1] = json.decode(buf) end }
+    g_game = {
+        isOnline = function() return true end,
+        getProtocolGame = function() return protocol end,
+        getCharacterName = function() return ME end,
+        getLocalPlayer = function() return nil end,
+    }
+    g_platform = { isBrowser = function() return true end, isMobile = function() return false end }
+    g_logger = { error = function(m) errors[#errors + 1] = m end }
+    local realDofile = dofile
+    dofile = function(path) return realDofile((path:gsub('^/game_voice/', MODULE))) end
+    local ok, err = pcall(function()
+        init()
+        eq(sent[1].a, 'hi')
+        eq(sent[1].cl, 'web')
+        eq(sent[1].eng, 'full', 'the full engine chosen')
+        handlers[142](protocol, 142, json.encode(CFG))
+        setWant(true)
+        handlers[142](protocol, 142, json.encode(tokMsg()))
+        local c = last('connect')
+        assert(c, 'g_voice.connect called')
+        eq(c[2], CFG.url)
+        eq(c[3], TOK)
+        eq(c[4], 'web')
+        assert(last('setMode') and last('setPreset') and last('setPttMouse'), 'the engine settings sent')
+        g_voice.onVoiceEvent('state', 'connecting', 0, 0)
+        g_voice.onVoiceEvent('state', 'open', 0, 0)
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'welcome', sid = 7, now = 1700000000, exp = 1700000300 }), 0, 0)
+        eq(getSession().state, ST.ONLINE)
+        local join = json.decode(last('sendControl')[2])
+        eq(join.t, 'join')
+        eq(join.room, 'p:10:5')
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'roster', room = 'p:10:5', slot = 0,
+            u = { { 7, 0, 1, ME, 0 }, { 8, 0, 2, 'Ana', 0 } } }), 0, 0)
+        eq(getSession().rooms[0].count, 2)
+        g_voice.onVoiceEvent('spk', '', 8, 1)
+        eq(getSession().rooms[0].members[8].speaking, true, 'speaking edge')
+        g_voice.onVoiceEvent('spk', '', 8, 0)
+        eq(getSession().rooms[0].members[8].speaking, false)
+        g_voice.onVoiceEvent('talk', '', 0, 0)
+        eq(getSession().talkSlot, 0)
+        g_voice.onVoiceEvent('talk', '', -1, 0)
+        -- the two microphone notices reach the player's screen
+        local shown = {}
+        local realDisplay = modules.game_textmessage.displayGameMessage
+        modules.game_textmessage.displayGameMessage = function(text) shown[#shown + 1] = text end
+        g_voice.onVoiceEvent('mic', 'denied', 0, 0)
+        g_voice.onVoiceEvent('mic', 'encoder', 0, 0)
+        g_voice.onVoiceEvent('mic', 'ok', 0, 0)
+        modules.game_textmessage.displayGameMessage = realDisplay
+        eq(#shown, 2, 'one notice each for denied and encoder, none for ok')
+        assert(shown[2]:find('encode') or shown[2]:find('codificar'), 'the encoder notice: ' .. tostring(shown[2]))
+        g_voice.onVoiceEvent('devices', '', 0, 0)
+        g_voice.onVoiceEvent('level', '', -30, 0)
+        g_voice.onVoiceEvent('stats', '{}', 0, 0)
+        -- push-to-talk goes to g_voice.setTransmit
+        pressTalk(0)
+        eq(last('setTransmit')[2], 0)
+        releaseTalk()
+        eq(last('setTransmit')[2], -1)
+        -- the mic test on, then the relay restarts: the test ends in the
+        -- engine too (the page does not end it on a relay close)
+        toggleMicTest()
+        eq(last('startLocalTest')[2], true, 'mic test on')
+        -- the relay restarts: backoff, then a fresh token and one new connect
+        local connects = count('connect')
+        g_voice.onVoiceEvent('state', 'closed', 1012, 0)
+        eq(getSession().state, ST.BACKOFF)
+        eq(isTesting(), false)
+        eq(last('startLocalTest')[2], false, 'the engine is told the mic test ended')
+        runEvents(6000)
+        handlers[142](protocol, 142, json.encode(tokMsg()))
+        eq(count('connect'), connects + 1, 'one new connect after the backoff')
+        -- game end: disconnect; a late closed of that socket changes nothing
+        g_game.onGameEnd()
+        assert(last('disconnect'), 'g_voice.disconnect called')
+        g_voice.onVoiceEvent('state', 'closed', 1000, 0)
+        eq(getSession().state, ST.OFF)
+        terminate()
+        eq(g_voice.onVoiceEvent, nil, 'disconnected from g_voice')
+        eq(#errors, 0, 'errors: ' .. table.concat(errors, ' | '))
+    end)
+    dofile = realDofile
+    g_voice = nil
+    assert(ok, err)
+end)
+
 print(string.format('%d passed, %d failed', passed, failed))
 os.exit(failed == 0 and 0 or 1)

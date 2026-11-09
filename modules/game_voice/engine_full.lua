@@ -1,14 +1,17 @@
--- Full engine: audio and control through the native g_voice binding (libopus,
--- OpenAL and ixwebsocket on Windows; WebCodecs in the browser). This client
--- has no g_voice yet: EngineFull.available() is false and voice.lua picks the
--- lite engine instead. Events come back through g_voice.onVoiceEvent(type, s,
--- a, b), the same shape the other engines hand to their sink:
+-- Full engine: audio and control through the g_voice binding (WebCodecs in
+-- the browser build, src/framework/voice/voiceengine_web.cpp with
+-- browser/voice/mythos-voice.js; libopus, OpenAL and ixwebsocket on Windows
+-- later). The Windows build has no g_voice yet: there EngineFull.available()
+-- is false and voice.lua picks the lite engine instead. voice.lua sends every
+-- setting again on each change, so each setter must do nothing when its value
+-- did not change. Events come back through g_voice.onVoiceEvent(type, s, a,
+-- b), the same shape the other engines hand to their sink:
 --   'state' s = connecting|open|closed|error, a = close code
 --   'ctl'   s = one control message from the relay (JSON text)
 --   'spk'   a = sid, b = 1|0 (speaking edges)
 --   'talk'  a = slot or -1 (the local gate)
 --   'level' a = dBFS (only while the meter is on)
---   'mic'   s = ok|denied|nodevice; 'devices', 'stats', 'caps'
+--   'mic'   s = ok|denied|nodevice|encoder; 'devices', 'stats', 'caps'
 
 EngineFull = {}
 EngineFull.__index = EngineFull
