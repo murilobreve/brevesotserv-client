@@ -1,0 +1,9 @@
+Module
+  name: game_voice
+  description: Mythos Voz - voice chat for parties, guilds and public rooms (shows only when the server offers it)
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ voice_state, engine_full, engine_lite, engine_mock, voice_ui, voice_settings, voice ]
+  @onLoad: init()
+  @onUnload: terminate()

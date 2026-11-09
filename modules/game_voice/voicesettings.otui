@@ -1,0 +1,310 @@
+// Mythos Voz settings: audio on the left, keys and behaviour on the right.
+// Saved in the g_settings node 'voice' (voice_settings.lua).
+
+VoiceSettingLabel < Label
+  font: verdana-11px-antialised
+  color: #c9c0cf
+  text-auto-resize: true
+
+VoiceSettingSection < Label
+  font: verdana-11px-rounded
+  color: #f3dcae
+  text-auto-resize: true
+
+VoiceSettingCheck < QtCheckBox
+  font: verdana-11px-antialised
+  color: #d1ccd9
+  margin-top: 6
+  anchors.left: parent.left
+  anchors.right: parent.right
+
+VoiceKeyRow < UIWidget
+  height: 22
+  margin-top: 4
+  anchors.left: parent.left
+  anchors.right: parent.right
+
+  Label
+    id: label
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 86
+    font: verdana-11px-antialised
+    color: #c9c0cf
+
+  UIWidget
+    id: value
+    anchors.left: label.right
+    anchors.right: change.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+    height: 20
+    image-source: /images/mythos/input
+    image-border: 3
+    font: verdana-11px-antialised
+    color: #e6e2ee
+    text-align: center
+    focusable: true
+
+    $focus:
+      image-source: /images/mythos/input_focus
+
+  VoiceSmallButton
+    id: change
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    !text: tr('Change')
+
+VoiceSettingsWindow < MythosWindow
+  !text: tr('Voice settings')
+  size: 540 420
+  @onEscape: modules.game_voice.VoiceSettings.hide()
+
+  // audio
+  UIWidget
+    id: audio
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.bottom: closeButton.top
+    width: 244
+    margin-bottom: 8
+
+    QtCheckBox
+      id: enabled
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      font: verdana-11px-antialised
+      color: #f3dcae
+      !text: tr('Voice on')
+
+    VoiceSettingLabel
+      id: modeLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 10
+      !text: tr('Talk with')
+
+    BrevesTab
+      id: modePtt
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 4
+      width: 118
+      !text: tr('Push to talk')
+
+    BrevesTab
+      id: modeVad
+      anchors.top: modePtt.top
+      anchors.left: modePtt.right
+      margin-left: 6
+      width: 118
+      !text: tr('Voice activation')
+      !tooltip: tr('Opens the microphone by itself when you talk. Use headphones: speakers make an echo for the others.')
+
+    VoiceSettingLabel
+      id: vadLabel
+      anchors.top: modePtt.bottom
+      anchors.left: parent.left
+      margin-top: 8
+
+    MythosHSlider
+      id: vad
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      minimum: -60
+      maximum: -20
+      step: 1
+
+    UIWidget
+      id: meter
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 3
+      height: 4
+      background-color: #24212e
+
+      UIWidget
+        id: fill
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: 0
+        background-color: #78d04c
+
+    VoiceSettingLabel
+      id: inDeviceLabel
+      anchors.top: meter.bottom
+      anchors.left: parent.left
+      margin-top: 10
+      !text: tr('Microphone')
+
+    MythosComboBox
+      id: inDevice
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 3
+
+    VoiceSettingLabel
+      id: outDeviceLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 8
+      !text: tr('Speakers')
+
+    MythosComboBox
+      id: outDevice
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 3
+
+    VoiceSettingLabel
+      id: inGainLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 8
+
+    MythosHSlider
+      id: inGain
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      minimum: 0
+      maximum: 200
+      step: 10
+
+    VoiceSettingLabel
+      id: outVolLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 8
+
+    MythosHSlider
+      id: outVol
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 4
+      minimum: 0
+      maximum: 200
+      step: 10
+
+    VoiceSettingLabel
+      id: presetLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 10
+      !text: tr('Quality')
+
+    MythosComboBox
+      id: preset
+      anchors.verticalCenter: presetLabel.verticalCenter
+      anchors.left: presetLabel.right
+      anchors.right: parent.right
+      margin-left: 8
+
+  // keys and behaviour
+  UIWidget
+    id: keys
+    anchors.top: parent.top
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    width: 244
+    margin-bottom: 8
+
+    VoiceSettingSection
+      id: keysTitle
+      anchors.top: parent.top
+      anchors.left: parent.left
+      !text: tr('Push-to-talk keys')
+
+    VoiceKeyRow
+      id: keyParty
+      anchors.top: prev.bottom
+
+    VoiceKeyRow
+      id: keyGuild
+      anchors.top: prev.bottom
+
+    VoiceKeyRow
+      id: keyRoom
+      anchors.top: prev.bottom
+
+    VoiceSettingLabel
+      id: keyStatus
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      color: #e0604a
+      text-wrap: true
+
+    VoiceSettingLabel
+      id: mouseLabel
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      margin-top: 6
+      !text: tr('Mouse side button')
+
+    MythosComboBox
+      id: mouse
+      anchors.verticalCenter: mouseLabel.verticalCenter
+      anchors.left: mouseLabel.right
+      anchors.right: parent.right
+      margin-left: 8
+
+    VoiceSettingCheck
+      id: autoParty
+      anchors.top: mouseLabel.bottom
+      margin-top: 10
+      !text: tr('Join the party room by itself')
+
+    VoiceSettingCheck
+      id: autoGuild
+      anchors.top: prev.bottom
+      !text: tr('Join the guild room by itself')
+
+    VoiceSettingCheck
+      id: overheadIcon
+      anchors.top: prev.bottom
+      !text: tr('Show an icon over who is talking')
+
+    VoiceSettingCheck
+      id: ducking
+      anchors.top: prev.bottom
+      !text: tr('Lower the game sounds while someone talks')
+
+    VoiceSettingCheck
+      id: globalPtt
+      anchors.top: prev.bottom
+      !text: tr('Push to talk with the game in the background')
+
+    VoiceSettingLabel
+      id: liteNote
+      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 10
+      color: #8f88a3
+      text-wrap: true
+
+  MythosButton
+    id: testButton
+    !text: tr('Test microphone')
+    width: 120
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_voice.toggleMicTest()
+
+  MythosPrimaryButton
+    id: closeButton
+    !text: tr('Close')
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_voice.VoiceSettings.hide()
