@@ -90,23 +90,6 @@ local REEL_FIRST, REEL_STEP, REEL_TICK = 4200, 1950, 210
 -- the last card turns this much later when a good bonus came out already
 local REEL_SUSPENSE = 1500
 
--- the Forge's sounds, at the player's effects volume (none with it off)
-local SOUNDS = '/game_raritybonus/sounds/'
-local function sfx(name, gain, pitch)
-    if not g_sounds or not g_sounds.isAudioEnabled() then
-        return
-    end
-    pcall(function()
-        local channel = g_sounds.getChannel(SoundChannels.Effect)
-        if channel and not channel:isEnabled() then
-            return
-        end
-        local volume = (channel and channel:getGain() or 1) * (gain or 1)
-        if volume > 0.01 then
-            g_sounds.play(SOUNDS .. name .. '.ogg', 0, volume, pitch or 1)
-        end
-    end)
-end
 
 -- ---------------------------------------------------------------------------
 -- small helpers, shared with raritybonus.lua
@@ -501,30 +484,53 @@ end
 local function spinReel(card)
     local pool = poolNow()
     local back = card.back
-    if #pool == 0 then
-        back.reelIcon:setVisible(false)
-        back.reelName:setText('')
-        back.reelRange:setText('')
+    local on = #pool > 0
+    back.band:setVisible(on)
+    back.rune:setVisible(not on)
+    back.reelIcon:setVisible(on)
+    if not on then
+        for _, id in ipairs({ 'reelPrev', 'reelName', 'reelRange', 'reelNextRow' }) do
+            back[id]:setText('')
+        end
         return
     end
-    local i = math.random(#pool)
-    if #pool > 1 and i == card.reelIndex then
-        i = i % #pool + 1
+    -- a column that rolls down: the next row moves into the band, the band's
+    -- row moves up, a new one comes in from below
+    local function pick(avoid1, avoid2)
+        local i = math.random(#pool)
+        for _ = 1, 4 do
+            if #pool <= 2 or (i ~= avoid1 and i ~= avoid2) then
+                break
+            end
+            i = i % #pool + 1
+        end
+        return i
     end
-    card.reelIndex = i
-    local bonus = pool[i]
-    bonusIcon(back.reelIcon, bonus.key)
-    back.reelName:setText(tr(bonus.label or ''))
-    back.reelRange:setText(tr('range %s to %s', plus(bonus.min, bonus.unit), plus(bonus.max, bonus.unit)))
+    if not card.reelCur then
+        card.reelCur = pick()
+        card.reelNextIdx = pick(card.reelCur)
+    end
+    card.reelPrevIdx = card.reelCur
+    card.reelCur = card.reelNextIdx
+    card.reelNextIdx = pick(card.reelCur, card.reelPrevIdx)
+    local prev, cur, nxt = pool[card.reelPrevIdx], pool[card.reelCur], pool[card.reelNextIdx]
+    back.reelPrev:setText(tr(prev.label or ''))
+    bonusIcon(back.reelIcon, cur.key)
+    back.reelName:setText(tr(cur.label or ''))
+    back.reelRange:setText(plus(cur.min, cur.unit) .. '  ~  ' .. plus(cur.max, cur.unit))
+    back.reelNextRow:setText(tr(nxt.label or ''))
 end
 
 local function backCard(card, n)
     if reforge and (reforge.phase == 'rolling' or reforge.phase == 'reveal') then
         spinReel(card)
     else
+        card.back.band:setVisible(false)
+        card.back.rune:setVisible(true)
         card.back.reelIcon:setVisible(false)
-        card.back.reelName:setText('')
-        card.back.reelRange:setText('')
+        for _, id in ipairs({ 'reelPrev', 'reelName', 'reelRange', 'reelNextRow' }) do
+            card.back[id]:setText('')
+        end
     end
     card.delta:setVisible(false)
     card.icon:setVisible(false)
@@ -550,6 +556,51 @@ local function emptyCard(card)
     card.empty:setVisible(true)
     card:setBorderColor('#241f28')
     card:setTooltip(nil)
+end
+
+-- a card that just turned: its value climbs from the bottom of its range
+-- to what was rolled, the ring filling and the grade name changing on the
+-- way, so it shows how far it could have gone (it stops on the real roll)
+local COUNT_MS, COUNT_STEPS = 1100, 26
+local function countUp(card, bonus)
+    local q = qualityOf(bonus)
+    local value, min = tonumber(bonus.value), tonumber(bonus.min)
+    if not q or not value or not min or value <= min then
+        return
+    end
+    local whole = math.floor(value) == value
+    local step = 0
+    local function frame()
+        if card:isDestroyed() or not card.value then
+            return
+        end
+        step = step + 1
+        local t = step / COUNT_STEPS
+        -- quick at first, crawling at the end
+        local e = 1 - (1 - t) ^ 3
+        if step >= COUNT_STEPS then
+            e = 1
+        end
+        local v = min + (value - min) * e
+        v = whole and math.floor(v + 0.5) or math.floor(v * 10 + 0.5) / 10
+        local qe = q * e
+        local perfect = bonus.perfect and e >= 1
+        local look = quality(qe, perfect)
+        card.value:setText(plus(v, bonus.unit))
+        card.value:setColor(look[3])
+        card.track.arc:setImageClip(string.format('%d 0 76 76', math.floor(qe * 20 + 0.5) * 76))
+        card.track.arc:setImageColor(look[3])
+        card.track.percent:setText(math.floor(qe * 100 + 0.5) .. '%')
+        card.track.percent:setColor(look[3])
+        card.grade:setText(tr(look[2]):upper())
+        card.grade:setColor(look[3])
+        if step < COUNT_STEPS then
+            scheduleEvent(frame, math.floor(COUNT_MS / COUNT_STEPS))
+        else
+            card.grade:setColor('#a59d92')
+        end
+    end
+    frame()
 end
 
 -- a card that just turned: a flash of its quality colour that fades out
@@ -694,6 +745,7 @@ fillReforge = function()
                 end
                 if n == reforge.flashAt then
                     flashCard(card, bonus.perfect and '#f3d38a' or quality(qualityOf(bonus), bonus.perfect)[3])
+                    countUp(card, bonus)
                 end
             elseif not bonus and reforge.shown >= #list then
                 emptyCard(card)
@@ -819,13 +871,6 @@ local function runReels()
                 if n == slowing then
                     local elapsed = now - (reforge.lastFlip or now)
                     every = REEL_TICK + math.floor(elapsed * 0.4)
-                    -- the card about to stop ticks, higher as it gets close
-                    local near = math.max(0, math.min(1, elapsed / (reforge.stepLen or REEL_STEP)))
-                    sfx('tick', 0.55, 0.9 + near * 0.6)
-                elseif not slowing and now >= (reforge.nextTick or 0) then
-                    -- all the reels together: one soft tick for the lot
-                    reforge.nextTick = now + REEL_TICK
-                    sfx('tick', 0.3, 0.8)
                 end
                 card.reelNext = now + every
             end
@@ -875,23 +920,14 @@ local function jolt(widget)
     step()
 end
 
--- a card has just stopped: its sound, and a jolt for a perfect one
+-- a card has just stopped: a jolt for a perfect one
 local function landed(bonus)
     if not bonus then
         return
     end
     local tier = tierOf(bonus)
-    if tier == 4 then
-        sfx('perfect', 0.9)
-        if window then
-            jolt(window.pages.arsenal.center.cards)
-        end
-    elseif tier == 3 then
-        sfx('excellent', 0.8)
-    elseif tier == 2 then
-        sfx('good', 0.7)
-    else
-        sfx('land', 0.8)
+    if tier == 4 and window then
+        jolt(window.pages.arsenal.center.cards)
     end
     if tier >= 2 then
         reforge.hot = true
@@ -928,9 +964,6 @@ local function finishReforge()
         return
     end
     scoreRoll()
-    if reforge.newRecord and not reforge.skip then
-        scheduleEvent(function() sfx('record', 0.8) end, 500)
-    end
     tellPending()
     reforge.phase = 'done'
     reforge.shown = #(reforge.after or {})
@@ -957,7 +990,7 @@ local function revealNext()
     if reforge.shown >= #list then
         reforge.flashAt = math.min(reforge.shown, #list)
         fillReforge()
-        animEvent = scheduleEvent(finishReforge, 450)
+        animEvent = scheduleEvent(finishReforge, 1300)
         return
     end
     reforge.flashAt = reforge.shown

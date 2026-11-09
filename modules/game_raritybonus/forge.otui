@@ -422,12 +422,41 @@ ForgeCard < UIButton
       image-color: #8a6dd0
       phantom: true
 
-    // while the Reforge rolls: the reel runs through what the item can get
+    // while the Reforge rolls: a slot-machine column of what the item can
+    // get; the middle row (in the band) is the one that counts
+    UIWidget
+      id: band
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: parent.top
+      margin-top: 78
+      height: 72
+      background-color: #8a6dd018
+      border-width: 1
+      border-color: #8a6dd055
+      phantom: true
+      visible: false
+
+    Label
+      id: reelPrev
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: parent.top
+      margin-top: 44
+      margin-left: 6
+      margin-right: 6
+      height: 28
+      text-align: center
+      text-wrap: true
+      font: verdana-11px-antialised
+      color: #5d5568
+      phantom: true
+
     UIWidget
       id: reelIcon
       anchors.horizontalCenter: parent.horizontalCenter
-      anchors.top: parent.top
-      margin-top: 112
+      anchors.top: band.top
+      margin-top: 6
       size: 18 18
       phantom: true
       visible: false
@@ -437,14 +466,14 @@ ForgeCard < UIButton
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.top: reelIcon.bottom
-      margin-top: 4
+      margin-top: 2
       margin-left: 6
       margin-right: 6
-      height: 30
+      height: 28
       text-align: center
       text-wrap: true
       font: verdana-11px-antialised
-      color: #cbbcf0
+      color: #e6dcff
       phantom: true
 
     Label
@@ -452,11 +481,25 @@ ForgeCard < UIButton
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.top: reelName.bottom
-      margin-top: 2
       height: 14
       text-align: center
       font: verdana-11px-antialised
-      color: #8f877c
+      color: #e8c77a
+      phantom: true
+
+    Label
+      id: reelNextRow
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: band.bottom
+      margin-top: 6
+      margin-left: 6
+      margin-right: 6
+      height: 28
+      text-align: center
+      text-wrap: true
+      font: verdana-11px-antialised
+      color: #5d5568
       phantom: true
 
   UIWidget
