@@ -153,13 +153,21 @@ local function later(delay, callback)
     return event
 end
 
+-- a `later` event called off before it runs leaves `pending` too
+local function cancel(event)
+    if event then
+        pending[event] = nil
+        removeEvent(event)
+    end
+end
+
 local function forget(id)
     local cast = casts[id]
     if not cast then
         return
     end
     casts[id] = nil
-    removeEvent(cast.forget)
+    cancel(cast.forget)
     for _, placed in pairs(cast.placed) do
         detachArt(placed)
     end
@@ -172,7 +180,7 @@ local function castOf(id, ms)
         cast = { placed = {} }
         casts[id] = cast
     end
-    removeEvent(cast.forget)
+    cancel(cast.forget)
     cast.forget = later(ms, function()
         forget(id)
     end)

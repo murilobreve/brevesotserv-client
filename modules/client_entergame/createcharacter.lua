@@ -63,6 +63,12 @@ local function latin1(text)
     end))
 end
 
+-- typed text is Latin-1 (the fonts) and the site's JSON is UTF-8: an
+-- accented password or name sent as typed made the site answer 'missing login'
+local function siteText(text)
+    return CharacterList.siteText(text)
+end
+
 -- a POST to the site with the account in use; the answer comes to callback
 -- as a table, or nil when the site did not answer
 local function post(body, timeout, callback)
@@ -71,11 +77,11 @@ local function post(body, timeout, callback)
         callback(nil)
         return
     end
-    body.password = G.password
+    body.password = siteText(G.password)
     if G.account:find('@', 1, true) then
-        body.email = G.account
+        body.email = siteText(G.account)
     else
-        body.accountname = G.account
+        body.accountname = siteText(G.account)
     end
     body.lang = language()
     request = request + 1
@@ -311,7 +317,7 @@ function CreateCharacter.submit()
     updateCreateButton()
     post({
         action = 'create',
-        name = name,
+        name = siteText(name),
         sex = chosen.sex,
         vocation = chosen.vocation,
         town = chosen.town

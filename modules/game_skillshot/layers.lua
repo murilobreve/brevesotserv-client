@@ -485,11 +485,9 @@ function newLayerSet(base, path, label)
                 t = math.max(last.t, now) + (ms or 100), x = x, y = y, angle = math.deg(angle),
                 flown = (last.flown or 0) + math.sqrt((x - last.x) ^ 2 + (y - last.y) ^ 2)
             }
+            -- it stays where it is if no more steps come, until the
+            -- spell's own forget timer stops it
             refresh()
-            -- it stays where it is if no more steps come
-            for _, placed in pairs(flight.placed) do
-                placed.effect:setDuration(flight.points[#flight.points].t + 4000)
-            end
         end
         -- ms until the head gets to the end of its last step
         function flight.arrivesIn()
@@ -503,17 +501,27 @@ function newLayerSet(base, path, label)
         end
         -- fades out in `fade` ms from the end of its last step (0: now)
         function flight.stop(fade)
-            if not fade or fade <= 0 then
-                for _, placed in pairs(flight.placed) do
-                    detachArt(placed)
+            local placed = flight.placed
+            local function detach()
+                for _, layer in pairs(placed) do
+                    detachArt(layer)
                 end
+            end
+            if not fade or fade <= 0 then
                 flight.placed = {}
+                detach()
                 return
             end
             refresh(fade)
-            for _, placed in pairs(flight.placed) do
-                placed.effect:setDuration(flight.points[#flight.points].t + fade)
+            flight.placed = {}
+            -- taken off once the fade ends: the engine schedules the detach
+            -- only at the attach (30 s for a flight), so a later setDuration
+            -- left the faded layers on the sqm, drawn unseen, for that long
+            local echo = 0
+            for _, spec in pairs(heads) do
+                echo = math.max(echo, spec.delay or 0)
             end
+            scheduleEvent(detach, math.floor(flight.arrivesIn() + fade + echo + 100))
         end
         return flight
     end

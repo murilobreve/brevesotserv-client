@@ -25,6 +25,10 @@
 #include "resourcemanager.h"
 #include "framework/otml/otmldocument.h"
 
+#ifndef USE_PRECOMPILED_HEADERS
+#include <sstream>
+#endif
+
 Config::Config()
 {
     m_confsDoc = OTMLDocument::create();
@@ -71,12 +75,25 @@ bool Config::save()
 {
     if (m_fileName.length() == 0)
         return false;
-    if (!m_confsDoc->save(m_fileName))
-        return false;
-    // Mythos: and a copy, read in its place if the file is ever left
-    // half-written (Config::load): one of the two is always whole
-    m_confsDoc->save(m_fileName + ".bak");
-    return true;
+
+    // Mythos: the copy, read in its place if the file is ever left broken
+    // (Config::load), is the file as it was before this save, and only when
+    // it reads whole. Written from the same data right after the file, a
+    // full disk cut both at the same point.
+    try {
+        if (g_resources.fileExists(m_fileName)) {
+            const auto previous = g_resources.readFileContents(m_fileName);
+            if (!previous.empty()) {
+                std::istringstream in(previous);
+                OTMLDocument::parse(in, m_fileName);
+                g_resources.writeFileContents(m_fileName + ".bak", previous);
+            }
+        }
+    } catch (const std::exception& e) {
+        g_logger.warning("Configuration file '{}' not copied to '{}.bak': {}", m_fileName, m_fileName, e.what());
+    }
+
+    return m_confsDoc->save(m_fileName);
 }
 
 void Config::clear()

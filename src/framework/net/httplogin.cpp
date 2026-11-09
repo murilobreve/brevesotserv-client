@@ -194,11 +194,19 @@ void LoginHttp::Logger(const auto& req, const auto& res) {
     g_logger.debug("=========");
 }
 
+// Mythos: typed text is Latin-1 in both builds (the fonts draw one glyph per
+// byte) and the site keeps passwords as UTF-8, so an accented password must
+// go as UTF-8; json also throws on text that is not valid UTF-8. A password
+// saved by an older browser build is UTF-8 already and goes as it is.
+static std::string siteText(const std::string& text) {
+    return stdext::is_valid_utf8(text) ? text : stdext::latin1_to_utf8(text);
+}
+
 // The login field takes an e-mail or an account name; the website's login.php
 // looks an account up by "email" or by "accountname", so send the one it is.
 static json loginBody(const std::string& login, const std::string& password) {
-    json body = { {"password", password}, {"stayloggedin", true}, {"type", "login"} };
-    body[login.find('@') != std::string::npos ? "email" : "accountname"] = login;
+    json body = { {"password", siteText(password)}, {"stayloggedin", true}, {"type", "login"} };
+    body[login.find('@') != std::string::npos ? "email" : "accountname"] = siteText(login);
     return body;
 }
 

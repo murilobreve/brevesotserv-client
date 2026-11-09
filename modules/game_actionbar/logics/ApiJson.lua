@@ -559,8 +559,11 @@ function ApiJson.saveData()
         g_resources.makeDir("/settings/")
     end
 
-    g_resources.writeFileContents(DEFAULT_SETTINGS_FILE, result)
-    g_resources.writeFileContents(BACKUP_SETTINGS_FILE, result)
+    -- the copy only from a file that was written whole: written anyway, a
+    -- full disk cut both at the same point
+    if g_resources.writeFileContents(DEFAULT_SETTINGS_FILE, result) then
+        g_resources.writeFileContents(BACKUP_SETTINGS_FILE, result)
+    end
 end
 
 function ApiJson.createDefaultSettings()

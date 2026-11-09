@@ -38,6 +38,24 @@ local lastManifest
 local remindedAt = {}                 -- version -> os.time() of the last in-game notice
 local currentOperation                -- the HTTP download running now
 local restartPending = false          -- installed while in game: restart after logout
+local repairing = false               -- the download puts back files of this same version
+
+-- with the version up to date, each start (and "Verificar" / "Procurar de
+-- novo") also compares the client folder with the manifest, so a file the
+-- antivirus took away or a copy cut short is downloaded again instead of
+-- waiting for the next version. A file whose size and time did not change
+-- since it was last found intact is not read again (STAMPS_FILE).
+local STAMPS_FILE = '/updater_stamps.txt' -- in the player's settings folder
+local VERIFY_SLICE_MS = 25                -- the check gives the screen a frame after this long
+-- files the player may edit (the server address, the public settings): put
+-- back only when they are missing, never over his changes
+local USER_FILES = { ['servidor.ini'] = true, ['config.ini'] = true }
+-- a start repairs by itself at most this often (seconds): a file that still
+-- differs after the restart must not restart the client on every start.
+-- "Verificar" and "Procurar de novo" always repair.
+local REPAIR_FILE = '/updater_repair.txt'
+local REPAIR_COOLDOWN = 60 * 60
+local filesChecked = false            -- the last check found every file intact
 
 -- the fonts draw one glyph per byte (Latin-1); this file is UTF-8
 local function latin1(text)
@@ -125,6 +143,7 @@ end
 
 local STATUS_COLORS = {
   checking = '#6b6b6b',
+  verifying = '#6b6b6b',
   uptodate = '#5fbf6a',
   available = '#e2a443',
   updating = '#9b7bff',
@@ -143,10 +162,13 @@ local function renderStatus()
   local text, action
   if status == 'checking' then
     text = txt('Procurando atualização...', 'Checking for updates...')
+  elseif status == 'verifying' then
+    text = txt('Conferindo os arquivos do client...', 'Checking the client files...')
   elseif status == 'uptodate' then
     text = txt('Client atualizado (versão %d)', 'Client up to date (version %d)', localInfo.versao)
-    -- check again on demand; a new version found this way installs right away
-    action = { txt('Verificar', 'Check'), function() Updater.check(true) end }
+    -- check again on demand; a new version found this way installs right
+    -- away, and every file is read again and put back if it is broken
+    action = { txt('Verificar', 'Check'), function() Updater.check(true, true) end }
   elseif status == 'available' then
     text = txt('Nova versão %d disponível', 'New version %d available', remoteVersion or 0)
     action = { txt('Atualizar agora', 'Update now'), function() Updater.update() end }
@@ -172,7 +194,7 @@ end
 -- installs by itself (and restarts); otherwise the player chooses.
 local safeBox
 local function showSafeBox()
-  if not MYTHOS_SAFE_START or safeBox or status == 'updating' or status == 'checking' then
+  if not MYTHOS_SAFE_START or safeBox or status == 'updating' or status == 'checking' or status == 'verifying' then
     log('safe box skipped: ' .. tostring(status) .. ' ' .. tostring(MYTHOS_SAFE_START))
     return
   end
@@ -193,14 +215,17 @@ local function showSafeBox()
     buttons[#buttons + 1] = { text = txt('Procurar de novo', 'Check again'), callback = function()
       safeBox:destroy()
       safeBox = nil
-      Updater.check(true)
+      Updater.check(true, true)
     end }
   end
   buttons[#buttons + 1] = { text = txt('Sair', 'Quit'), callback = function() g_app.exit() end }
+  local checked = status == 'uptodate' and filesChecked
   safeBox = displayGeneralBox(txt('Mythos', 'Mythos'),
     txt('O Mythos fechou sozinho da última vez que abriu, por isso desta vez abriu só o atualizador.\n\n'
+      .. (checked and 'Os arquivos do client foram conferidos e estão inteiros. ' or '')
       .. 'Ainda não há uma versão nova com a correção. Avise a equipe e tente de novo mais tarde.',
       'Mythos closed by itself the last time it opened, so this time it opened only the updater.\n\n'
+      .. (checked and 'The client files were checked and are intact. ' or '')
       .. 'There is no new version with a fix yet. Tell the team and try again later.'),
     buttons, tryAgain, function() g_app.exit() end)
 end
@@ -284,9 +309,15 @@ local function giveUp(message)
   end
   if message then
     log(message)
-    displayErrorBox(txt('Atualização', 'Update'),
-      txt('Não foi possível baixar a nova versão agora. Você pode jogar normalmente; o client tenta de novo na próxima vez que abrir.',
-        'The new version could not be downloaded right now. You can play as usual; the client tries again next time it opens.'))
+    if repairing then
+      displayErrorBox(txt('Atualização', 'Update'),
+        txt('Não foi possível baixar agora os arquivos do client que faltam ou estão com defeito. O client tenta de novo na próxima vez que abrir.',
+          'The missing or damaged client files could not be downloaded right now. The client tries again next time it opens.'))
+    else
+      displayErrorBox(txt('Atualização', 'Update'),
+        txt('Não foi possível baixar a nova versão agora. Você pode jogar normalmente; o client tenta de novo na próxima vez que abrir.',
+          'The new version could not be downloaded right now. You can play as usual; the client tries again next time it opens.'))
+    end
   end
 end
 
@@ -312,7 +343,11 @@ local function openBox(onCancel)
   end
   box = g_ui.createWidget('UpdaterWindow', rootWidget)
   box:setText(txt('Atualização', 'Update'))
-  box.versions:setText(txt('Versão %d para %d', 'Version %d to %d', localInfo.versao, remoteVersion or 0))
+  if repairing then
+    box.versions:setText(txt('Reparando os arquivos da versão %d', 'Repairing the files of version %d', localInfo.versao))
+  else
+    box.versions:setText(txt('Versão %d para %d', 'Version %d to %d', localInfo.versao, remoteVersion or 0))
+  end
   box.cancelButton:setText(txt('Cancelar', 'Cancel'))
   box.cancelButton.onClick = function()
     local current = box
@@ -346,7 +381,15 @@ local function install(changed, manifest)
   if not staleRemoved then
     removeStale(manifest)
   end
-  log(string.format('updated to version %d (%d files)', manifest.versao, #changed))
+  if repairing then
+    log(string.format('repaired %d files of version %d', #changed, localInfo.versao))
+    -- written only now, before the restart: a file that still differs after
+    -- it must not restart the client again (REPAIR_COOLDOWN), while a
+    -- download that failed is tried again on the next start, as the box says
+    pcall(g_resources.writeFileContents, REPAIR_FILE, string.format('%d %d', localInfo.versao, os.time()))
+  else
+    log(string.format('updated to version %d (%d files)', manifest.versao, #changed))
+  end
   -- never restart under a player in game: it waits for the logout
   if g_game.isOnline() or g_game.isLogging() then
     restartPending = true
@@ -359,7 +402,11 @@ local function install(changed, manifest)
     return
   end
   if box then
-    box.content:setText(txt('Mythos atualizado. Reiniciando...', 'Mythos updated. Restarting...'))
+    if repairing then
+      box.content:setText(txt('Arquivos reparados. Reiniciando...', 'Files repaired. Restarting...'))
+    else
+      box.content:setText(txt('Mythos atualizado. Reiniciando...', 'Mythos updated. Restarting...'))
+    end
     box.track.fill:setWidth(box.track:getWidth() - 4)
     if box.cancelButton then
       box.cancelButton:setEnabled(false)
@@ -473,24 +520,36 @@ local function downloadAll(changed, manifest, myGeneration)
   nextFile()
 end
 
-local function startUpdate(manifest)
-  -- one bad path and the whole manifest is refused, before any download
+-- one bad path and the whole manifest is refused, before any download
+local function manifestPathsValid(manifest)
   for path in pairs(manifest.files) do
     if not validPath(path) then
       log('manifest refused: bad path ' .. tostring(path))
-      setStatus('error')
-      return
+      return false
     end
+  end
+  return true
+end
+
+-- changed: the files to download, already found by verifyFiles (a repair of
+-- this same version); otherwise every file is compared with the manifest
+local function startUpdate(manifest, changed)
+  if not manifestPathsValid(manifest) then
+    setStatus('error')
+    return
   end
   if type(manifest.removed) == 'string' then
     manifest.removed = { manifest.removed }
   end
 
-  local changed = {}
-  for path, info in pairs(manifest.files) do
-    local sha = type(info) == 'table' and info.sha256 or info
-    if type(sha) == 'string' and g_resources.fileSha256InWorkDir(path) ~= sha then
-      table.insert(changed, { path = path, sha256 = sha })
+  repairing = changed ~= nil
+  if not changed then
+    changed = {}
+    for path, info in pairs(manifest.files) do
+      local sha = type(info) == 'table' and info.sha256 or info
+      if type(sha) == 'string' and g_resources.fileSha256InWorkDir(path) ~= sha then
+        table.insert(changed, { path = path, sha256 = sha })
+      end
     end
   end
   -- versao.json last: if anything fails before it, the next start sees the
@@ -501,7 +560,11 @@ local function startUpdate(manifest)
     end
     return a.path < b.path
   end)
-  log(string.format('version %d -> %d, %d files to download', localInfo.versao, manifest.versao, #changed))
+  if repairing then
+    log(string.format('version %d: %d files missing or broken, downloading them again', localInfo.versao, #changed))
+  else
+    log(string.format('version %d -> %d, %d files to download', localInfo.versao, manifest.versao, #changed))
+  end
   if #changed == 0 then
     setStatus('uptodate')
     return
@@ -527,12 +590,173 @@ local function startUpdate(manifest)
   downloadAll(changed, manifest, myGeneration)
 end
 
+-- ---------------------------------------------------------------- repair
+
+-- path -> { stamp, sha256 } of the files found intact the last time
+local function loadStamps()
+  local stamps = {}
+  local ok, text = pcall(g_resources.readFileContents, STAMPS_FILE)
+  if ok and type(text) == 'string' then
+    for path, stamp, sha in text:gmatch('([^\t\n]+)\t([^\t\n]+)\t(%x+)\n') do
+      stamps[path] = { stamp = stamp, sha256 = sha }
+    end
+  end
+  return stamps
+end
+
+local function saveStamps(stamps)
+  local lines = {}
+  for path, entry in pairs(stamps) do
+    lines[#lines + 1] = path .. '\t' .. entry.stamp .. '\t' .. entry.sha256 .. '\n'
+  end
+  table.sort(lines)
+  pcall(g_resources.writeFileContents, STAMPS_FILE, table.concat(lines))
+end
+
+-- the manifest's files that are missing or differ from it, checked a slice
+-- per frame (hashing every file takes a few seconds on a slow disk), then
+-- done(changed). full: every file is read again (the player asked, or the
+-- safe start); otherwise only a file whose stamp changed since it was last
+-- found intact. Stops (done(nil)) when the player enters the game meanwhile.
+local function verifyFiles(manifest, full, myGeneration, done)
+  local stampOf = g_resources.fileStampInWorkDir -- nil in an older .exe
+  local paths = {}
+  for path in pairs(manifest.files) do
+    if path ~= LOCAL_INFO then
+      paths[#paths + 1] = path
+    end
+  end
+  table.sort(paths)
+  local known = loadStamps()
+  local stamps, dirty = {}, false
+  local changed = {}
+  local index = 0
+
+  local function finish(result)
+    if not result then
+      -- stopped by the game: the files not reached yet keep their stamps
+      for i = index + 1, #paths do
+        stamps[paths[i]] = stamps[paths[i]] or known[paths[i]]
+      end
+    end
+    -- what is not in this manifest any more goes from the file too
+    for path in pairs(known) do
+      if not stamps[path] then
+        dirty = true
+        break
+      end
+    end
+    if dirty and stampOf then
+      saveStamps(stamps)
+    end
+    done(result)
+  end
+
+  local function step()
+    if myGeneration ~= generation then
+      return
+    end
+    if g_game.isOnline() or g_game.isLogging() then
+      return finish(nil)
+    end
+    local started = g_clock.millis()
+    while index < #paths do
+      index = index + 1
+      local path = paths[index]
+      local info = manifest.files[path]
+      local sha = type(info) == 'table' and info.sha256 or info
+      local size = type(info) == 'table' and tonumber(info.size) or nil
+      if type(sha) == 'string' then
+        local stamp
+        if stampOf then
+          stamp = stampOf(path)
+        else
+          stamp = g_resources.fileExistsInWorkDir(path) and '?' or ''
+        end
+        local fileSize = tonumber(stamp:match('^(%d+):') or '')
+        if stamp == '' then
+          table.insert(changed, { path = path, sha256 = sha })
+        elseif USER_FILES[path] then
+          -- left as the player has it
+        elseif size and fileSize and size ~= fileSize then
+          table.insert(changed, { path = path, sha256 = sha })
+        elseif stampOf or full then
+          local last = known[path]
+          if not full and last and last.stamp == stamp and last.sha256 == sha then
+            stamps[path] = last
+          elseif g_resources.fileSha256InWorkDir(path) == sha then
+            stamps[path] = { stamp = stamp, sha256 = sha }
+            dirty = true
+          else
+            table.insert(changed, { path = path, sha256 = sha })
+          end
+        end
+      end
+      if g_clock.millis() - started >= VERIFY_SLICE_MS then
+        scheduleEvent(step, 1)
+        return
+      end
+    end
+    finish(changed)
+  end
+
+  step()
+end
+
+-- the version is up to date: put back what is missing or broken. asked:
+-- the player clicked for it (no cooldown)
+local function repair(manifest, full, asked)
+  -- only against the manifest of this same version: an older one (a stale
+  -- main/ cache, a test build made with -SemEnviar) would put the previous
+  -- version's files over the newer ones
+  if (tonumber(manifest.versao) or 0) ~= localInfo.versao then
+    setStatus('uptodate')
+    return
+  end
+  if not manifestPathsValid(manifest) then
+    setStatus('error')
+    return
+  end
+  local myGeneration = generation
+  local started = g_clock.millis()
+  filesChecked = false
+  setStatus('verifying')
+  verifyFiles(manifest, full, myGeneration, function(changed)
+    if myGeneration ~= generation then
+      return
+    end
+    if not changed then
+      log('file check stopped: the game started')
+      setStatus('uptodate')
+      return
+    end
+    log(string.format('file check (%s): %d to repair, %d ms', full and 'full' or 'quick', #changed, g_clock.millis() - started))
+    filesChecked = #changed == 0
+    if #changed == 0 or g_game.isOnline() or g_game.isLogging() then
+      setStatus('uptodate')
+      return
+    end
+    if not asked then
+      local ok, text = pcall(g_resources.readFileContents, REPAIR_FILE)
+      local version, at = tostring(ok and text or ''):match('^(%d+) (%d+)')
+      if tonumber(version) == localInfo.versao and os.time() - (tonumber(at) or 0) < REPAIR_COOLDOWN then
+        log('repaired by itself less than an hour ago: not again until "Verificar"')
+        setStatus('uptodate')
+        return
+      end
+    end
+    startUpdate(manifest, changed)
+  end)
+end
+
 -- ---------------------------------------------------------------- checks
 
 -- autoInstall: download right away (client start, "Update now"); otherwise
--- only report the new version (the periodic check while the client is open)
-function Updater.check(autoInstall)
-  if not localInfo or status == 'updating' then
+-- only report the new version (the periodic check while the client is open).
+-- With autoInstall and the version up to date, the files are checked too:
+-- verifyAll reads every one of them again (the player asked).
+function Updater.check(autoInstall, verifyAll)
+  if not localInfo or status == 'updating' or status == 'verifying' then
     return
   end
   if status ~= 'available' then
@@ -546,7 +770,7 @@ function Updater.check(autoInstall)
   HTTP.timeout = CHECK_TIMEOUT
   HTTP.getJSON(url, function(manifest, err)
     -- a check that was already on its way when an update started
-    if status == 'updating' then
+    if status == 'updating' or status == 'verifying' then
       return
     end
     if err or type(manifest) ~= 'table' or type(manifest.files) ~= 'table' then
@@ -557,8 +781,17 @@ function Updater.check(autoInstall)
     lastManifest = manifest
     filesBase = base
     remoteVersion = tonumber(manifest.versao) or 0
-    if remoteVersion <= localInfo.versao then
+    if remoteVersion < localInfo.versao then
+      log(string.format('manifest %d older than this client %d (stale cache or a test build): files not checked',
+        remoteVersion, localInfo.versao))
+      setStatus('uptodate')
+      return
+    end
+    if remoteVersion == localInfo.versao then
       log(string.format('up to date (version %d)', localInfo.versao))
+      if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
+        return repair(manifest, verifyAll or MYTHOS_SAFE_START, verifyAll)
+      end
       setStatus('uptodate')
       return
     end

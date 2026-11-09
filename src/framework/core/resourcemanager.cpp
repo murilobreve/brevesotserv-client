@@ -603,15 +603,51 @@ bool ResourceManager::writeFileBuffer(const std::string& fileName, const uint8_t
             return false;
     }
 
+    // Mythos: written to "<name>.tmp" and moved over the file only once every
+    // byte is on the disk. PHYSFS_openWrite empties the file first and the
+    // results were not checked, so a full disk left it cut short (settings,
+    // hotkeys, Heal Bot), the caller was told it worked, and the copy made
+    // right after (Config::save) came out cut the same way.
     const auto normalizedFileName = normalizeVirtualPath(fileName);
-    PHYSFS_file* file = PHYSFS_openWrite(normalizedFileName.c_str());
+    const auto tempFileName = normalizedFileName + ".tmp";
+    PHYSFS_file* file = PHYSFS_openWrite(tempFileName.c_str());
     if (!file) {
-        g_logger.error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        g_logger.error("Unable to write '{}': {}", normalizedFileName, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
         return false;
     }
 
-    PHYSFS_writeBytes(file, data, size);
-    PHYSFS_close(file);
+    const PHYSFS_sint64 written = PHYSFS_writeBytes(file, data, size);
+    // closing flushes the file to the disk: a full disk can show up only here
+    const bool closed = PHYSFS_close(file) != 0;
+    if (written != static_cast<PHYSFS_sint64>(size) || !closed) {
+        g_logger.error("Unable to write '{}' ({} of {} bytes): {}", normalizedFileName, written, size, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        PHYSFS_delete(tempFileName.c_str());
+        return false;
+    }
+
+    const char* writeDir = PHYSFS_getWriteDir();
+    if (!writeDir) {
+        PHYSFS_delete(tempFileName.c_str());
+        return false;
+    }
+    const auto target = utf8Path(writeDir) / utf8Path(normalizedFileName);
+    const auto temp = utf8Path(writeDir) / utf8Path(tempFileName);
+
+    // replaces the file in one step (MoveFileEx on Windows): it is either the
+    // old one or the new one, whole, even if the PC goes off right now
+    std::error_code ec;
+    std::filesystem::rename(temp, target, ec);
+    if (ec) {
+        // the file held open somewhere: written over in place, as before
+        std::error_code copyEc;
+        std::filesystem::copy_file(temp, target, std::filesystem::copy_options::overwrite_existing, copyEc);
+        std::error_code removeEc;
+        std::filesystem::remove(temp, removeEc);
+        if (copyEc) {
+            g_logger.error("Unable to replace '{}': {} (rename: {})", normalizedFileName, copyEc.message(), ec.message());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -947,6 +983,23 @@ std::string ResourceManager::fileSha256InWorkDir(const std::string& path)
         g_logger.debug("Unable to read workdir file '{}' for SHA-256: {}", path, e.what());
         return "";
     }
+}
+
+std::string ResourceManager::fileStampInWorkDir(const std::string& path)
+{
+    const auto relativePath = safeRelativePath(path);
+    if (relativePath.empty())
+        return "";
+
+    std::error_code ec;
+    const auto fullPath = workDirPath(relativePath);
+    const auto size = std::filesystem::file_size(fullPath, ec);
+    if (ec)
+        return "";
+    const auto time = std::filesystem::last_write_time(fullPath, ec);
+    if (ec)
+        return "";
+    return fmt::format("{}:{}", static_cast<unsigned long long>(size), static_cast<long long>(time.time_since_epoch().count()));
 }
 
 bool ResourceManager::writeDownloadedFile(const std::string& path, std::string destinationPath, const bool decompressLzma)
