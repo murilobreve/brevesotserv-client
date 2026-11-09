@@ -6,9 +6,12 @@ public rooms and event stages, Discord-like. Audio goes through the
 grants the rights, over extended opcode 142.
 
 This module is phase 3 of the voice plan: the whole panel and protocol with
-the **mock** and **lite** engines. The **full** engine (real audio) needs the
-`g_voice` C++ binding of phases 4 and 6; until then `EngineFull.available()`
-is false.
+the **mock** and **lite** engines. The **full** engine (real audio) runs over
+the `g_voice` C++ binding: in the browser build since phase 4
+(`browser/voice/mythos-voice.js`, WebCodecs and AudioWorklet; see
+`browser/voice/README.md` for the engine and its tests). The Windows build
+has no `g_voice` until the native engine (phases 6 and 7), so there
+`EngineFull.available()` is false and the lite engine is used.
 
 ## Files
 
@@ -61,7 +64,7 @@ through one sink with the shape of `g_voice.onVoiceEvent(type, s, a, b)`:
 | `spk` | `a` = sid, `b` = 1/0 (speaking edges) |
 | `talk` | `a` = slot or -1 (the local gate) |
 | `level` | `a` = dBFS, only while the settings window is open (`setMeter`) |
-| `mic` | `s` = `ok`, `denied`, `nodevice` |
+| `mic` | `s` = `ok`, `denied`, `nodevice`, `encoder` (the browser could not encode: listen only; `denied` and `encoder` show a notice) |
 | `devices` | the device lists changed |
 
 Contract for the phase 4/6 `g_voice` binding, used by `engine_full.lua`:
@@ -75,6 +78,19 @@ Contract for the phase 4/6 `g_voice` binding, used by `engine_full.lua`:
 (browser; btn 3 or 4, slot -1 to turn off), `setGlobalPtt(vk)` (Windows; a
 virtual-key code, 0 to turn off), `startLocalTest(b)`. The wrapper drops a
 `closed`/`error` state that arrives after its own `disconnect()`.
+`applyEnginePrefs()` sends every setting again on each change (each slider
+step), so a setter whose value did not change must do nothing: no microphone
+reopened by `setInputDevice`, no permission prompt from `setMeter` (the
+browser engine opens the microphone for the meter only when the permission is
+already given; a press or the mic test opens it otherwise). Behaviour the
+native engine must match (listed in `voiceengine.h`): voice activation
+listens only in a room; the side mouse button and the push-to-talk key are
+held apart; whatever needs the capture wakes an output stream asleep from
+idle; a saved device unresolved at the first open is moved to once it can
+be; `disconnect()` keeps the meter going while `terminate()` stops it.
+voice.lua ends the mic test in the engine too (`startLocalTest(false)`)
+whenever the session leaves ONLINE or the game ends: the engine does not end
+a test because the relay closed the socket.
 
 ## State machine (`voice_state.lua`)
 
@@ -211,8 +227,9 @@ Where the plan left room, the simplest safe option was taken:
 
 ## Known gaps for later phases
 
-- Mouse side buttons in the native client (phase 7) and real audio (phases
-  4 and 6). "Testar microfone" calls the engine's local loopback; the relay's
-  echo room is the "Teste de eco" entry of the room list.
+- Mouse side buttons in the native client (phase 7) and real audio in the
+  Windows client (phase 6). "Testar microfone" calls the engine's local
+  loopback (in the browser: microphone -> Opus -> mixer, nothing sent); the
+  relay's echo room is the "Teste de eco" entry of the room list.
 - The over-head icon offset (`VoiceHeadIcon` margins) is a first guess and
   must be checked on screen with the CI browser build.

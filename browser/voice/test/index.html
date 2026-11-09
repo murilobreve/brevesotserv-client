@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mythos Voz test</title>
+<style>
+  :root { --bg: #15131c; --fg: #e8e4f2; --mute: #8f88a6; --ok: #78d04c; --bad: #e06464; --line: #2c2838; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  fieldset { border: 1px solid var(--line); margin: 0 0 12px; padding: 8px 12px; }
+  legend { color: var(--mute); }
+  label { margin-right: 12px; white-space: nowrap; }
+  input[type=text] { width: 22em; max-width: 100%; }
+  button { margin: 2px 4px 2px 0; }
+  .ptt { min-width: 10em; }
+  pre { background: #0d0c12; border: 1px solid var(--line); padding: 8px; max-height: 18em; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  #state.open { color: var(--ok); }
+  #state.closed { color: var(--bad); }
+</style>
+</head>
+<body>
+<h1>Mythos Voz: engine test page <span id="state">idle</span></h1>
+<fieldset>
+  <legend>Connection</legend>
+  <label>Relay <input id="url" type="text" value="ws://127.0.0.1:7291/voz"></label>
+  <label>Room <input id="room" type="text" value="p:1:1" style="width:8em"></label><br>
+  <label>Claims <input id="claims" type="text" value='{"a":1,"c":101,"i":1001,"n":"Teste","p":"p:1:1","pl":1,"pub":1,"lv":60}'></label>
+  <button id="connect">Connect</button><button id="disconnect">Disconnect</button>
+</fieldset>
+<fieldset>
+  <legend>Talk</legend>
+  <button id="ptt" class="ptt">Hold to talk (party)</button>
+  <label><input id="vad" type="checkbox"> voice activation</label>
+  <label>threshold <input id="vaddb" type="number" value="-45" min="-60" max="-20" style="width:4em"> dB</label>
+  <label><input id="smute" type="checkbox"> self-mute</label>
+  <label><input id="deaf" type="checkbox"> deafen</label>
+  <label><input id="test" type="checkbox"> mic test (local)</label>
+  <label><input id="meter" type="checkbox"> meter <span id="level">-</span></label>
+  <label>preset <select id="preset"><option value="0">normal</option><option value="1">eco</option><option value="2">high</option></select></label>
+</fieldset>
+<pre id="stats"></pre>
+<pre id="log"></pre>
+<script src="../mythos-voice.js"></script>
+<script>
+// window.harness: what the game's Lua side does (hello token, join, backoff),
+// reduced to what the automated test needs. Events from the engine land in
+// harness.events; relay control messages, parsed, in harness.ctl.
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var logEl = $('log');
+  var H = window.harness = {
+    events: [],
+    ctl: [],
+    gen: 0,
+    state: 'idle',
+    welcome: null,
+    room: null,
+    reconnect: null, // { claims, attempts: [], stopped: false }
+    log: function (line) {
+      var text = new Date().toISOString().slice(11, 23) + ' ' + line;
+      logEl.textContent = (text + '\n' + logEl.textContent).slice(0, 20000);
+    },
+    cmd: function (c) { MythosVoice.cmd(c); },
+    connect: function (url, tok, room) {
+      H.gen++;
+      H.room = room || null;
+      H.welcome = null;
+      MythosVoice.cmd({ op: 'connect', url: url, tok: tok, cl: 'web', b: 'test-page', g: H.gen });
+    },
+    disconnect: function () {
+      H.gen++;
+      H.welcome = null;
+      H.state = 'idle';
+      if (H.reconnect) { H.reconnect.stopped = true; }
+      MythosVoice.cmd({ op: 'disconnect' });
+    },
+    // online again since time t: a welcome and the room's roster, both newer
+    joinedSince: function (t, room) {
+      return !!H.welcome && H.welcome.at >= t && H.ctl.some(function (m) { return m.t === 'roster' && m.room === room && m.at >= t; });
+    },
+    send: function (msg) { MythosVoice.cmd({ op: 'ctl', json: JSON.stringify(msg) }); },
+    mint: function (claims) {
+      return fetch('/mint?claims=' + encodeURIComponent(JSON.stringify(claims))).then(function (r) {
+        if (!r.ok) { throw new Error('mint ' + r.status); }
+        return r.text();
+      });
+    },
+    // the reconnect policy of voice_state.lua (protocol H), in short
+    autoReconnect: function (url, claims, room) {
+      H.reconnect = { url: url, claims: claims, room: room, attempts: [], failures: 0, stopped: false, timer: 0, openAt: 0, since: performance.now() };
+      H.attempt();
+    },
+    attempt: function () {
+      var R = H.reconnect;
+      if (!R || R.stopped) { return; }
+      R.attempts.push(performance.now());
+      H.mint(R.claims).then(function (tok) {
+        if (!R.stopped) { H.connect(R.url, tok, R.room); }
+      }, function (err) {
+        H.log('mint failed: ' + err);
+        H.backoff(null);
+      });
+    },
+    backoff: function (code) {
+      var R = H.reconnect;
+      if (!R || R.stopped) { return; }
+      if (code === 4403 || code === 4409 || code === 4503) { R.stopped = true; return; }
+      var delay;
+      if (code === 1012) {
+        delay = 1000 + Math.random() * 4000;
+      } else if (code === 4401 && !R.reauth) {
+        R.reauth = true;
+        delay = 0;
+      } else {
+        var steps = [1, 2, 4, 8, 16, 30, 60];
+        R.failures++;
+        delay = steps[Math.min(R.failures, steps.length) - 1] * 1000 * (0.7 + Math.random() * 0.6);
+      }
+      H.log('backoff ' + Math.round(delay) + ' ms after ' + code);
+      R.timer = setTimeout(H.attempt, delay);
+    },
+    count: function (type) {
+      return H.events.filter(function (e) { return e.t === type; }).length;
+    },
+    clear: function () { H.events.length = 0; H.ctl.length = 0; }
+  };
+
+  MythosVoice.setSink(function (batch) {
+    var t = performance.now();
+    batch.forEach(function (e) {
+      // as voiceengine_web.cpp does: events of an older socket are dropped
+      if (e.g && e.g !== H.gen) { return; }
+      e.at = t;
+      H.events.push(e);
+      if (H.events.length > 5000) { H.events.splice(0, 1000); }
+      if (e.t === 'state') {
+        H.state = e.s;
+        $('state').textContent = e.s + (e.a ? ' ' + e.a : '');
+        $('state').className = e.s;
+        H.log('state ' + e.s + ' ' + (e.a || ''));
+        if (e.s === 'closed' && H.reconnect) { H.backoff(e.a); }
+      } else if (e.t === 'ctl') {
+        var m;
+        try { m = JSON.parse(e.s); } catch (err) { return; }
+        m.at = t;
+        H.ctl.push(m);
+        if (H.ctl.length > 2000) { H.ctl.splice(0, 500); }
+        if (m.t !== 'st') { H.log('ctl ' + e.s.slice(0, 160)); }
+        if (m.t === 'welcome') {
+          H.welcome = m;
+          if (H.reconnect) { H.reconnect.failures = 0; }
+          if (H.room) { H.send({ t: 'join', room: H.room }); }
+        }
+      } else if (e.t === 'level') {
+        $('level').textContent = e.a + ' dB';
+      } else {
+        H.log(e.t + ' ' + (e.s !== undefined ? e.s : '') + ' ' + (e.a !== undefined ? e.a : '') + ' ' + (e.b !== undefined ? e.b : '') +
+          (e.i ? ' in=' + JSON.stringify(e.i) + ' out=' + JSON.stringify(e.o) : ''));
+      }
+    });
+  });
+
+  // manual controls
+  $('connect').onclick = function () {
+    var claims;
+    try { claims = JSON.parse($('claims').value); } catch (err) { H.log('bad claims'); return; }
+    H.mint(claims).then(function (tok) { H.connect($('url').value, tok, $('room').value); }, function (err) { H.log(String(err)); });
+  };
+  $('disconnect').onclick = H.disconnect;
+  var ptt = $('ptt');
+  var down = function (e) { e.preventDefault(); MythosVoice.cmd({ op: 'tx', slot: 0 }); };
+  var up = function () { MythosVoice.cmd({ op: 'tx', slot: -1 }); };
+  ptt.addEventListener('pointerdown', down);
+  ptt.addEventListener('pointerup', up);
+  ptt.addEventListener('pointerleave', up);
+  $('vad').onchange = function () { MythosVoice.cmd({ op: 'mode', vad: this.checked }); };
+  $('vaddb').onchange = function () { MythosVoice.cmd({ op: 'vad', db: Number(this.value) }); };
+  $('smute').onchange = function () { MythosVoice.cmd({ op: 'smute', on: this.checked }); H.send({ t: 'self', m: this.checked ? 1 : 0 }); };
+  $('deaf').onchange = function () { MythosVoice.cmd({ op: 'deaf', on: this.checked }); H.send({ t: 'deaf', on: this.checked ? 1 : 0 }); };
+  $('test').onchange = function () { MythosVoice.cmd({ op: 'test', on: this.checked }); };
+  $('meter').onchange = function () { MythosVoice.cmd({ op: 'meter', on: this.checked }); };
+  $('preset').onchange = function () { MythosVoice.cmd({ op: 'preset', p: Number(this.value) }); };
+  setInterval(function () {
+    var s = MythosVoice.stats();
+    delete s.probe;
+    $('stats').textContent = JSON.stringify(s);
+  }, 1000);
+})();
+</script>
+</body>
+</html>

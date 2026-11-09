@@ -82,6 +82,7 @@ return {
     ["You sent many reports today. Thank you! Try again tomorrow."] = "Voc\234 j\225 enviou muitos relatos hoje. Obrigado! Tente de novo amanh\227.",
     ["The report could not be sent."] = "N\227o foi poss\237vel enviar a den\250ncia.",
     ["Voice: the microphone was blocked. You can still listen."] = "Voz: o microfone foi bloqueado. Voc\234 ainda pode ouvir.",
+    ["Voice: this browser could not encode your voice. You can still listen."] = "Voz: este navegador n\227o conseguiu codificar sua voz. Voc\234 ainda pode ouvir.",
     ["Voice: presence mode cannot talk. Update the client or use Chrome, Edge or Firefox."] = "Voz: o modo presen\231a n\227o fala. Atualize o cliente ou use Chrome, Edge ou Firefox.",
     ["Voice: join a room first."] = "Voz: entre numa sala primeiro.",
     ["Voice: your microphone is muted."] = "Voz: seu microfone est\225 silenciado.",

@@ -45,6 +45,15 @@ function callEngine(method, ...)
     return engineCall(method, ...)
 end
 
+-- the mic test ends with the session; the engine is told, since a socket
+-- the relay closed does not end the test there
+local function stopTest()
+    if testing then
+        testing = false
+        engineCall('startLocalTest', false)
+    end
+end
+
 local function buildTag()
     local version = g_app.getVersion and g_app.getVersion() or ''
     local commit = g_app.getBuildCommit and g_app.getBuildCommit() or ''
@@ -110,6 +119,8 @@ local function onEngineEvent(kind, s, a, b)
         VoiceSettings.onLevel(a)
     elseif kind == 'mic' and s == 'denied' then
         notify(tr('Voice: the microphone was blocked. You can still listen.'))
+    elseif kind == 'mic' and s == 'encoder' then
+        notify(tr('Voice: this browser could not encode your voice. You can still listen.'))
     elseif kind == 'devices' then
         VoiceSettings.refreshDevices()
     end
@@ -375,7 +386,7 @@ local function onSessionEvent(what, a, b, c)
     elseif what == 'state' then
         if session.state ~= ST.ONLINE then
             releaseTalk()
-            testing = false
+            stopTest()
         end
         VoiceUI.onState()
         VoiceSettings.onState()
@@ -483,7 +494,7 @@ end
 
 local function onGameEnd()
     releaseTalk()
-    testing = false
+    stopTest()
     if session then -- nil only if init failed half way
         session:gameEnd()
     end

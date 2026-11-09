@@ -10,6 +10,20 @@ option(TOGGLE_FRAMEWORK_XML "Use XML " ON)
 option(TOGGLE_FRAMEWORK_NET "Use NET " ON)
 option(TOGGLE_FRAMEWORK_PROTOBUF "Use Protobuf" ON)
 option(TOGGLE_FRAMEWORK_EDITOR "Use Editor " OFF)
+# Voice chat (Mythos Voz, modules/game_voice). Only the browser engine exists
+# so far (browser/voice/mythos-voice.js + framework/voice/voiceengine_web.cpp):
+# on by default only in the WASM build. The desktop build compiles none of it
+# until the native engine (libopus/OpenAL) arrives; turned on there by hand it
+# builds the null engine (no audio, the Lua side uses its presence-only mode).
+if(WASM)
+  set(_TOGGLE_FRAMEWORK_VOICE_DEFAULT ON)
+else()
+  set(_TOGGLE_FRAMEWORK_VOICE_DEFAULT OFF)
+endif()
+option(TOGGLE_FRAMEWORK_VOICE "Voice chat (Mythos Voz)" ${_TOGGLE_FRAMEWORK_VOICE_DEFAULT})
+if(ANDROID)
+  set(TOGGLE_FRAMEWORK_VOICE OFF)
+endif()
 option(TOGGLE_DIRECTX "Use DX9 support" OFF)
 # Draw with OpenGL ES 3 instead of desktop OpenGL. On Windows this links
 # ANGLE, which translates OpenGL ES to Direct3D 11 (the "DirectX" client).
@@ -91,6 +105,9 @@ endif()
 
 if (TOGGLE_FRAMEWORK_EDITOR)
   set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DFRAMEWORK_EDITOR)
+endif()
+if (TOGGLE_FRAMEWORK_VOICE)
+  set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DFRAMEWORK_VOICE)
 endif()
 if (ANDROID)
   set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DOPENGL_ES=3)
@@ -540,6 +557,17 @@ if (WASM)
   )
 endif()
 
+if (TOGGLE_FRAMEWORK_VOICE)
+  if (WASM)
+    set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_web.cpp)
+  else()
+    set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_null.cpp)
+  endif()
+  set(SOURCE_FILES ${SOURCE_FILES} ${_VOICE_SOURCES})
+  # compiled on their own: no unity-batch neighbours to clash with
+  set_source_files_properties(${_VOICE_SOURCES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
+
 if(NOT WASM)
   # Vendored minizip sources for ZIP extraction fallback (must be after SOURCE_FILES definition)
   set(SOURCE_FILES ${SOURCE_FILES}
@@ -869,6 +897,24 @@ elseif(WASM)
 
   set(_WASM_LONGJMP_MODE "emscripten")
   set(_WASM_EXPORTED_FUNCTIONS "_main,_paste_return")
+  set(_WASM_RUNTIME_METHODS "ccall")
+  set(_WASM_SHELL_FILE "../browser/shell.html")
+  if(TOGGLE_FRAMEWORK_VOICE)
+    # the page's voice engine hands its events to otc_voice_event in a
+    # malloc'd copy (a roster is too big for ccall's stack copy) and frees
+    # the commands the game sends it
+    set(_WASM_EXPORTED_FUNCTIONS "${_WASM_EXPORTED_FUNCTIONS},_malloc,_free,_otc_voice_event")
+    set(_WASM_RUNTIME_METHODS "${_WASM_RUNTIME_METHODS},stringToUTF8,lengthBytesUTF8")
+    # the engine ships inside index.html: a copy of shell.html with it pasted in
+    include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/VoiceShell.cmake")
+    set(_VOICE_SHELL_IN "${CMAKE_CURRENT_SOURCE_DIR}/../browser/shell.html")
+    set(_VOICE_JS "${CMAKE_CURRENT_SOURCE_DIR}/../browser/voice/mythos-voice.js")
+    set(_VOICE_SHELL_OUT "${CMAKE_BINARY_DIR}/shell.voice.html")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_VOICE_SHELL_IN}" "${_VOICE_JS}")
+    mythos_voice_shell("${_VOICE_SHELL_IN}" "${_VOICE_JS}" "${_VOICE_SHELL_OUT}")
+    set(_WASM_SHELL_FILE "${_VOICE_SHELL_OUT}")
+    set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS "${_VOICE_SHELL_OUT}")
+  endif()
   set(_WASM_CXX_FLAGS "-O3 -ffast-math -frtti -pthread -fexceptions")
   if(WASM_USE_WASM_EXCEPTIONS)
     set(_WASM_LONGJMP_MODE "wasm")
@@ -957,7 +1003,7 @@ elseif(WASM)
           -lopenal
           -lidbfs.js
           -lwebsocket.js
-          -sEXPORTED_RUNTIME_METHODS=ccall
+          "-sEXPORTED_RUNTIME_METHODS=${_WASM_RUNTIME_METHODS}"
           "-sEXPORTED_FUNCTIONS=${_WASM_EXPORTED_FUNCTIONS}"
           -sINCOMING_MODULE_JS_API=[locateFile,preRun,postRun,print,printErr,canvas,setStatus,monitorRunDependencies,onAbort]
           -sFORCE_FILESYSTEM
@@ -987,7 +1033,7 @@ elseif(WASM)
           --preload-file=../data@data
           --preload-file=../mods@mods
           --preload-file=../modules@modules
-          --shell-file=../browser/shell.html
+          "--shell-file=${_WASM_SHELL_FILE}"
           --use-preload-cache
   )
 

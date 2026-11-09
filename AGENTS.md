@@ -42,3 +42,10 @@ Reference: `docs/client-assets-auto-install.md`
 - A creature looked up by id after the moment it was sent (a scheduled event, an art's tick, a `later` callback) may have died: `g_map.getCreatureById` still finds it, `isDead()` is true and `getPosition()` is nil. Never hand that nil to the engine (`g_map.getTile`, `art.particles`, `art.play`): use `layerCreaturePosition(id)` in `game_skillshot`, or check `isDead()` and the position first.
 - A C++ function that throws inside a call from Lua is raised as a Lua error after its catch block (`LuaInterface::luaCppFunctionCallback`, `lua_dofile`, `lua_loadfile`, `loadFiles`); raising it inside the catch closed the Windows client (LuaJIT unwinds with SEH). Keep any new `lua_error` out of catch blocks.
 - Validate in the browser client: root a monster with Raízes Errantes (`exori tera vis`) and kill it while it is held; no "Lua exception" may follow in the log.
+
+## Browser Voice Engine (`browser/voice/mythos-voice.js`)
+
+- It is pasted into index.html inside the emscripten shell (`cmake/VoiceShell.cmake`): never three braces in a row, `</script`, or a line starting with `#` (emscripten preprocesses the shell). `shell.html` shows the crash screen on any uncaught page error: every engine callback goes through `safe()`.
+- The game thread never waits on the page: commands with `MAIN_THREAD_ASYNC_EM_ASM`, events through `otc_voice_event` into a queue drained by `g_voice.poll()`. No new synchronous `MAIN_THREAD_EM_ASM` per frame.
+- Desktop compiles none of it while `TOGGLE_FRAMEWORK_VOICE` is OFF (default outside WASM); keep every voice line in `luafunctions.cpp`/`graphicalapplication.cpp` under `#ifdef FRAMEWORK_VOICE`.
+- Validate: in `browser/voice/test/`, `node lint.mjs --browser`, `node worklet.mjs`, `node bridge.mjs`, `node e2e.mjs` (local relay), and `luajit tools/voz-luatest/game_voice_test.lua`.
