@@ -84,6 +84,9 @@ local needleAngle = 0
 local history = {} -- this session's Ascension tries: true = went up
 local animEvent
 local reelEvent -- the Reforge's reels (the cards' backs) while it rolls
+-- the Reforge's pace: how long the reels run before the first card stops,
+-- the time between two cards, how often a reel shows another bonus
+local REEL_FIRST, REEL_STEP, REEL_TICK = 4200, 1950, 210
 
 -- ---------------------------------------------------------------------------
 -- small helpers, shared with raritybonus.lua
@@ -773,9 +776,9 @@ local function runReels()
         for n, card in ipairs(window.pages.arsenal.center.cards:getChildren()) do
             if card.back:isVisible() and now >= (card.reelNext or 0) then
                 spinReel(card)
-                local every = 70
+                local every = REEL_TICK
                 if n == slowing then
-                    every = 70 + math.floor((now - (reforge.lastFlip or now)) * 0.4)
+                    every = REEL_TICK + math.floor((now - (reforge.lastFlip or now)) * 0.4)
                 end
                 card.reelNext = now + every
             end
@@ -829,7 +832,7 @@ local function revealNext()
     reforge.flashAt = reforge.shown
     reforge.lastFlip = g_clock.millis()
     fillReforge()
-    animEvent = scheduleEvent(revealNext, 650)
+    animEvent = scheduleEvent(revealNext, REEL_STEP)
 end
 
 function reforgeNow()
@@ -1277,8 +1280,8 @@ function Forge.onBonuses(d)
             fillReforge()
             runReels()
             -- the reels run a moment before the first card stops
-            local wait = math.max(0, 1400 - (g_clock.millis() - reforge.startedAt))
-            reforge.lastFlip = g_clock.millis() + wait - 650
+            local wait = math.max(0, REEL_FIRST - (g_clock.millis() - reforge.startedAt))
+            reforge.lastFlip = g_clock.millis() + wait - REEL_STEP
             animEvent = scheduleEvent(revealNext, wait)
             return
         end
