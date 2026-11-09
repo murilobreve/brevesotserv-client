@@ -87,6 +87,26 @@ local reelEvent -- the Reforge's reels (the cards' backs) while it rolls
 -- the Reforge's pace: how long the reels run before the first card stops,
 -- the time between two cards, how often a reel shows another bonus
 local REEL_FIRST, REEL_STEP, REEL_TICK = 4200, 1950, 210
+-- the last card turns this much later when a good bonus came out already
+local REEL_SUSPENSE = 1500
+
+-- the Forge's sounds, at the player's effects volume (none with it off)
+local SOUNDS = '/game_raritybonus/sounds/'
+local function sfx(name, gain, pitch)
+    if not g_sounds or not g_sounds.isAudioEnabled() then
+        return
+    end
+    pcall(function()
+        local channel = g_sounds.getChannel(SoundChannels.Effect)
+        if channel and not channel:isEnabled() then
+            return
+        end
+        local volume = (channel and channel:getGain() or 1) * (gain or 1)
+        if volume > 0.01 then
+            g_sounds.play(SOUNDS .. name .. '.ogg', 0, volume, pitch or 1)
+        end
+    end)
+end
 
 -- ---------------------------------------------------------------------------
 -- small helpers, shared with raritybonus.lua
@@ -453,6 +473,11 @@ local function fillCard(card, bonus, opts)
         card.glow:setVisible(true)
         card.glow:setImageColor('#f3d38a')
         card:setBorderColor('#f3d38a')
+    elseif q and q >= 0.85 then
+        -- an Excellent roll keeps a cold glow
+        card.glow:setVisible(true)
+        card.glow:setImageColor('#8cc4ff')
+        card:setBorderColor('#5f8fc4')
     end
     -- the card's tooltip: what the bonus does and how much the character has
     local tip = describe(bonus.key)
@@ -611,8 +636,22 @@ fillReforge = function()
         end
     elseif phase == 'rolling' or phase == 'reveal' then
         c.hint:setText(tr('The cards turn one by one, from left to right.'))
+    elseif reforge and reforge.score then
+        local line = tr('Roll score: %d%%', reforge.score)
+        if reforge.newRecord then
+            line = line .. '\n' .. tr('NEW RECORD for this item!')
+        elseif reforge.record then
+            line = line .. '\n' .. tr('Your record on this item: %d%%', math.max(reforge.record, reforge.score))
+        else
+            line = line .. '\n' .. tr('Your first record on this item.')
+        end
+        c.hint:setText(line)
+        c.hint:setColor(reforge.newRecord and '#f3d38a' or quality(reforge.score / 100)[3])
     else
         c.hint:setText(tr('In each corner, how the bonus changed: green went up, red went down, violet is new.'))
+    end
+    if not (reforge and reforge.score and phase == 'done') then
+        c.hint:setColor('#8f877c')
     end
 
     for n = 1, max do
@@ -778,7 +817,15 @@ local function runReels()
                 spinReel(card)
                 local every = REEL_TICK
                 if n == slowing then
-                    every = REEL_TICK + math.floor((now - (reforge.lastFlip or now)) * 0.4)
+                    local elapsed = now - (reforge.lastFlip or now)
+                    every = REEL_TICK + math.floor(elapsed * 0.4)
+                    -- the card about to stop ticks, higher as it gets close
+                    local near = math.max(0, math.min(1, elapsed / (reforge.stepLen or REEL_STEP)))
+                    sfx('tick', 0.55, 0.9 + near * 0.6)
+                elseif not slowing and now >= (reforge.nextTick or 0) then
+                    -- all the reels together: one soft tick for the lot
+                    reforge.nextTick = now + REEL_TICK
+                    sfx('tick', 0.3, 0.8)
                 end
                 card.reelNext = now + every
             end
@@ -796,10 +843,93 @@ local function tellPending()
     end
 end
 
+-- where a bonus fell: 1 weak/fair, 2 good, 3 excellent, 4 perfect
+local function tierOf(bonus)
+    local q = qualityOf(bonus) or 0
+    if bonus.perfect or q >= 0.999 then
+        return 4
+    elseif q >= 0.85 then
+        return 3
+    elseif q >= 0.6 then
+        return 2
+    end
+    return 1
+end
+
+-- a short jolt of the cards on a perfect roll
+local function jolt(widget)
+    local offsets = { -6, 5, -4, 3, -2, 0 }
+    local i = 0
+    widget.restMargin = widget.restMargin or widget:getMarginTop()
+    local base = widget.restMargin
+    local function step()
+        if widget:isDestroyed() then
+            return
+        end
+        i = i + 1
+        widget:setMarginTop(base + (offsets[i] or 0))
+        if i < #offsets then
+            scheduleEvent(step, 45)
+        end
+    end
+    step()
+end
+
+-- a card has just stopped: its sound, and a jolt for a perfect one
+local function landed(bonus)
+    if not bonus then
+        return
+    end
+    local tier = tierOf(bonus)
+    if tier == 4 then
+        sfx('perfect', 0.9)
+        if window then
+            jolt(window.pages.arsenal.center.cards)
+        end
+    elseif tier == 3 then
+        sfx('excellent', 0.8)
+    elseif tier == 2 then
+        sfx('good', 0.7)
+    else
+        sfx('land', 0.8)
+    end
+    if tier >= 2 then
+        reforge.hot = true
+    end
+end
+
+-- the roll's score (the mean quality of the rolled bonuses, 0-100) and
+-- this item's best on this computer
+local function scoreRoll()
+    local sum, n = 0, 0
+    for _, bonus in ipairs(reforge.after or {}) do
+        if not bonus.locked then
+            sum = sum + (bonus.perfect and 1 or (qualityOf(bonus) or 0))
+            n = n + 1
+        end
+    end
+    if n == 0 then
+        return
+    end
+    local score = math.floor(sum / n * 100 + 0.5)
+    local entry = bySlot[reforge.slot]
+    local key = string.format('forge_record_%s_%s', tostring(entry and entry.itemId or 0), tostring(reforge.slot))
+    local old = tonumber(g_settings.get(key))
+    reforge.score, reforge.record = score, old
+    reforge.newRecord = old ~= nil and score > old
+    if not old or score > old then
+        g_settings.set(key, score)
+    end
+end
+
 local function finishReforge()
     stopAnim()
     if not reforge then
         return
+    end
+    scoreRoll()
+    if reforge.newRecord and not reforge.skip then
+        scheduleEvent(function() sfx('record', 0.8) end, 500)
     end
     tellPending()
     reforge.phase = 'done'
@@ -823,6 +953,7 @@ local function revealNext()
     repeat
         reforge.shown = reforge.shown + 1
     until reforge.shown > #list or not list[reforge.shown].locked
+    landed(list[reforge.shown])
     if reforge.shown >= #list then
         reforge.flashAt = math.min(reforge.shown, #list)
         fillReforge()
@@ -831,8 +962,15 @@ local function revealNext()
     end
     reforge.flashAt = reforge.shown
     reforge.lastFlip = g_clock.millis()
+    -- the last card to turn waits longer when something good came out
+    local after = reforge.shown + 1
+    while list[after] and list[after].locked do
+        after = after + 1
+    end
+    local last = after >= #list
+    reforge.stepLen = (last and reforge.hot) and (REEL_STEP + REEL_SUSPENSE) or REEL_STEP
     fillReforge()
-    animEvent = scheduleEvent(revealNext, REEL_STEP)
+    animEvent = scheduleEvent(revealNext, reforge.stepLen)
 end
 
 function reforgeNow()
