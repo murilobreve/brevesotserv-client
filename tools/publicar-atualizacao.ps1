@@ -6,6 +6,9 @@
 #   objects\<sha256>          o conteudo de cada arquivo (so os que ainda nao estao la)
 #   <canal>\manifest.json     a lista: caminho -> sha256, o numero da versao e
 #                            os arquivos que sairam (o client apaga)
+#   <canal>\versao.json       so o numero da versao, poucos bytes: com o client
+#                            aberto, a checagem de meia em meia hora le so ele
+#                            e baixa a lista (~200 KB) quando o numero sobe
 # O client, ao abrir, le o manifest.json e baixa so o que mudou. Tudo vem do
 # GitHub: a VPS nao gasta banda nenhuma.
 #
@@ -124,6 +127,8 @@ $versao = if ($mudou) { $versaoAntiga + 1 } else { $versaoAntiga }
 # tenta de novo na proxima vez que abrir
 $infoLocal = [ordered]@{ canal = $Canal; versao = $versao } | ConvertTo-Json -Compress
 [System.IO.File]::WriteAllText((Join-Path $Pasta "versao.json"), $infoLocal, $semBom)
+# o mesmo numero no repositorio, ao lado do manifest (o client aberto le so ele)
+[System.IO.File]::WriteAllText((Join-Path $pastaCanal "versao.json"), $infoLocal, $semBom)
 $shaInfo = (Get-FileHash -Path (Join-Path $Pasta "versao.json") -Algorithm SHA256).Hash.ToLower()
 Copy-Item -LiteralPath (Join-Path $Pasta "versao.json") -Destination (Join-Path $pastaObjetos $shaInfo) -Force
 $arquivos["versao.json"] = [ordered]@{ sha256 = $shaInfo; size = (Get-Item (Join-Path $Pasta "versao.json")).Length }
@@ -178,7 +183,7 @@ $manifest = [ordered]@{
     data = (Get-Date).ToString("yyyy-MM-dd HH:mm")
     files = $lista
     removed = $listaRemovidos
-} | ConvertTo-Json -Depth 5
+} | ConvertTo-Json -Depth 5 -Compress
 [System.IO.File]::WriteAllText($caminhoManifest, $manifest, $semBom)
 
 Info ("versao {0} -> {1}, {2} arquivos, {3} MB novos" -f $versaoAntiga, $versao, $arquivos.Count, [math]::Round($tamanhoNovo / 1MB, 1))

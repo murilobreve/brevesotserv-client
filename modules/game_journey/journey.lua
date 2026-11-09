@@ -182,6 +182,8 @@ local function fillStep(widget, index, done, active)
     widget.action:setVisible(not done)
 end
 
+local REWARD_HEIGHT = 30 -- two lines of verdana-11px-rounded
+
 local function layoutWindow()
     if not window then
         return
@@ -199,7 +201,14 @@ local function layoutWindow()
                 if child:getId():match('^step') then
                     child:setHeight(stepHeight(child))
                 end
-                total = total + child:getHeight() + child:getMarginTop() + child:getMarginBottom()
+                local height = child:getHeight()
+                -- the reward wraps to a second line in a narrow column
+                -- ('+ 50 Hunt Points') and may not have wrapped yet: room
+                -- for two lines, so the end is never cut
+                if child:getId() == 'reward' then
+                    height = math.max(height, REWARD_HEIGHT)
+                end
+                total = total + height + child:getMarginTop() + child:getMarginBottom()
                 count = count + 1
             end
         end
@@ -233,7 +242,21 @@ local function fillWindow()
         local widget = contents['step' .. index]
         fillStep(widget, index, steps[STEPS[index].key], index == active)
     end
-    contents.reward:setText(tr(finished and 'You got: %d Rarity XP + %d Hunt Points' or 'Reward: %d Rarity XP + %d Hunt Points', reward.rarityXp or 0, reward.huntPoints or 0))
+    -- the server says when the reward waits for a level (pendingLevel) and
+    -- pays it once per account: another character took it when it comes
+    -- marked rewarded with nothing in it
+    local rarityXp, huntPoints = reward.rarityXp or 0, reward.huntPoints or 0
+    local rewardText
+    if journey.pendingLevel then
+        rewardText = tr('Reward at level %d: %d Rarity XP + %d Hunt Points', tonumber(journey.pendingLevel) or 0, rarityXp, huntPoints)
+    elseif journey.rewarded and rarityXp == 0 and huntPoints == 0 then
+        rewardText = tr('Reward already paid on this account')
+    elseif finished then
+        rewardText = tr('You got: %d Rarity XP + %d Hunt Points', rarityXp, huntPoints)
+    else
+        rewardText = tr('Reward: %d Rarity XP + %d Hunt Points', rarityXp, huntPoints)
+    end
+    contents.reward:setText(rewardText)
     contents.doneButton:setVisible(finished)
     contents.doneButton:setText(tr('Close'))
     contents.doneButton.onClick = function()
@@ -592,9 +615,14 @@ local function onGameStart()
     if modules.game_hunttasks and modules.game_hunttasks.getState then
         taskState = modules.game_hunttasks.getState()
     end
+    -- each client at its own moment (g_game.spreadDelay), a little sooner
+    -- than the other windows: the server reads only memory for it, and a
+    -- new player's guide waits for it
     scheduleEvent(function()
-        send({ action = 'state' })
-    end, 800)
+        if g_game.isOnline() then
+            send({ action = 'state' })
+        end
+    end, g_game.spreadDelay and g_game.spreadDelay(1500, 4000) or 800)
     if not checkEvent then
         checkEvent = scheduleEvent(check, 5000)
     end

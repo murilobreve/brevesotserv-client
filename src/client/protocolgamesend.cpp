@@ -982,18 +982,13 @@ void ProtocolGame::sendBugReport(const std::string_view comment)
     send(msg);
 }
 
-void ProtocolGame::sendRuleViolation(const std::string_view target, const uint8_t reason, const uint8_t action, const std::string_view comment, const std::string_view statement, const uint16_t statementId, const bool ipBanishment)
+void ProtocolGame::sendRuleViolation(const std::string_view, const uint8_t, const uint8_t, const std::string_view, const std::string_view, const uint16_t, const bool)
 {
-    const auto& msg = std::make_shared<OutputMessage>();
-    msg->addU8(Proto::ClientWheelGemAction); // usado em gemas, desabilitado para ClientRuleViolation
-    msg->addString(target);
-    msg->addU8(reason);
-    msg->addU8(action);
-    msg->addString(comment);
-    msg->addString(statement);
-    msg->addU16(statementId);
-    msg->addU8(ipBanishment);
-    send(msg);
+    // nothing is sent: 0xE7 is the Wheel gem action on this server
+    // (sendWheelGemAction), which read this packet as a gem action, and the
+    // server has no rule violation packet. game_ruleviolation sends its
+    // reports through the feedback opcode (129) instead.
+    g_logger.warning("sendRuleViolation: not supported by this server, nothing sent");
 }
 
 void ProtocolGame::sendWheelGemAction(uint8_t actionType, uint16_t param, uint8_t pos)

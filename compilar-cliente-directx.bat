@@ -1,13 +1,16 @@
 @echo off
-rem Mythos - versao DirectX, a que o site da aos jogadores. Sincroniza com a
-rem branch de teste (ou com o main), compila o client desenhando com Direct3D
-rem 11 (via ANGLE) e empacota em dist\Mythos DirectX\, sem mexer no client
-rem normal. Pode abrir com dois cliques ou de qualquer cmd: o ambiente do
-rem Visual Studio e carregado aqui mesmo.
-rem   compilar-cliente-directx.bat         sincroniza, compila e empacota
-rem   compilar-cliente-directx.bat limpo   apaga a configuracao do CMake antes
-rem   compilar-cliente-directx.bat main    do main em vez da branch de teste
-rem                                        (o atualizar-jogadores.bat usa)
+rem Mythos - versao DirectX, a que o site da aos jogadores. Sincroniza com o
+rem main (ou com uma branch de teste), compila o client desenhando com
+rem Direct3D 11 (via ANGLE) e empacota em dist\Mythos DirectX\, sem mexer no
+rem client normal. Pode abrir com dois cliques ou de qualquer cmd: o ambiente
+rem do Visual Studio e carregado aqui mesmo.
+rem   compilar-cliente-directx.bat              sincroniza com o main, compila e empacota
+rem   compilar-cliente-directx.bat limpo        apaga a configuracao do CMake antes
+rem   compilar-cliente-directx.bat main         o mesmo que sem nada (o atualizar-jogadores.bat usa)
+rem   compilar-cliente-directx.bat NOME-DA-BRANCH   uma branch de teste em vez do main
+rem O padrao e sempre o main: as correcoes so chegam aos jogadores depois
+rem do merge no main, e uma branch de teste antiga publicada sem querer
+rem tiraria delas uma correcao ja lancada.
 setlocal
 
 rem roda uma copia de si mesmo a partir da pasta temporaria: assim o git
@@ -19,12 +22,11 @@ if /i not "%~1"=="--rodando" (
 )
 cd /d "%~2"
 set "PASTA=%CD%"
-set "BRANCH=claude/funny-maxwell-kpy7sn"
+set "BRANCH=main"
 set "LIMPO="
-if /i "%~3"=="main" set "BRANCH=main"
-if /i "%~4"=="main" set "BRANCH=main"
-if /i "%~3"=="limpo" set "LIMPO=1"
-if /i "%~4"=="limpo" set "LIMPO=1"
+if /i "%~3"=="limpo" (set "LIMPO=1") else if not "%~3"=="" set "BRANCH=%~3"
+if /i "%~4"=="limpo" (set "LIMPO=1") else if not "%~4"=="" set "BRANCH=%~4"
+if /i "%BRANCH%"=="main" set "BRANCH=main"
 
 if not defined VCPKG_ROOT set "VCPKG_ROOT=C:\vcpkg"
 
@@ -88,6 +90,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%PASTA%\tools\empacotar-cli
 if errorlevel 1 goto :falhou
 
 echo.
+if not "%BRANCH%"=="main" (
+    echo ATENCAO: este client veio da branch de teste %BRANCH%, nao do main.
+    echo Publicar manda esta branch para todos os jogadores. Para a versao normal,
+    echo responda N e rode de novo sem nada: compilar-cliente-directx.bat
+    echo.
+)
 rem S publica: os jogadores recebem a versao nova ao abrir o client, e o
 rem instalador do site e trocado. N so deixa o client pronto em dist\ para testar.
 choice /c SN /m "Publicar esta versao para os jogadores"

@@ -394,6 +394,20 @@ local function hasInstallCatalogEntryFile(basePath, entry)
   return installFileExists(basePath .. entry.file)
 end
 
+-- every sprite sheet of the catalog must be there too: an antivirus or a
+-- copy cut short can take one away, and the client updater leaves
+-- data/things to this module (tools/publicar-atualizacao.ps1), so nothing
+-- else would bring it back. The ~5000 sheets are looked for once per
+-- session and path (each login runs this check); a folder that failed is
+-- looked at again on the next login, after the download.
+-- A missing sheet never locks the player out: the prompt offers "Play
+-- anyway", and once the download ran in this session a sheet that is still
+-- missing (an antivirus deleting it again) is logged and the game opens
+-- without it, as it did before this check. The next start offers it again.
+local spritesChecked = {}
+local sheetMissing = {}     -- basePath -> first missing sheet (the rest is there)
+local sheetsTolerated = {}  -- basePath -> true: downloaded or "Play anyway" this session
+
 local function hasModernClientFilesAtPath(basePath, installPath)
   local fileExists = installPath and installFileExists or g_resources.fileExists
   local readFile = installPath and readInstallFile or g_resources.readFileContents
@@ -415,8 +429,10 @@ local function hasModernClientFilesAtPath(basePath, installPath)
 
   local hasAppearances = false
   local hasStaticData = false
+  local checkSprites = not spritesChecked[basePath]
+  local missingSheet
   for _, entry in ipairs(catalog) do
-    local entryType = entry.type
+    local entryType = type(entry) == 'table' and entry.type or nil
     if entryType == 'appearances' or entryType == 'staticdata' or entryType == 'proficiencies' then
       if installPath and not hasInstallCatalogEntryFile(basePath, entry) then
         return false
@@ -428,14 +444,48 @@ local function hasModernClientFilesAtPath(basePath, installPath)
       elseif entryType == 'staticdata' then
         hasStaticData = true
       end
+    elseif entryType == 'sprite' and checkSprites then
+      local present
+      if installPath then
+        present = hasInstallCatalogEntryFile(basePath, entry)
+      else
+        present = hasCatalogEntryFile(basePath, entry)
+      end
+      if not present then
+        -- one is enough to know; the other entries are still checked
+        missingSheet = tostring(entry.file)
+        checkSprites = false
+      end
     end
   end
 
-  return hasAppearances and hasStaticData
+  if not (hasAppearances and hasStaticData) then
+    return false
+  end
+  if missingSheet then
+    if sheetsTolerated[basePath] then
+      logWarning(string.format('Sprite sheet %s is still missing in %s: the game opens without it (some sprites do not show). The download is offered again on the next start.',
+        missingSheet, basePath))
+      spritesChecked[basePath] = true
+      sheetMissing[basePath] = nil
+      return true
+    end
+    logWarning(string.format('Sprite sheet %s is missing in %s: the client assets are offered for download again.',
+      missingSheet, basePath))
+    sheetMissing[basePath] = missingSheet
+    return false
+  end
+  spritesChecked[basePath] = true
+  sheetMissing[basePath] = nil
+  return true
+end
+
+local function installBasePath(version)
+  return string.format('data/things/%d/', version)
 end
 
 local function hasModernClientFiles(version)
-  return hasModernClientFilesAtPath(string.format('data/things/%d/', version), true)
+  return hasModernClientFilesAtPath(installBasePath(version), true)
 end
 
 local hasInstalledModernClientFiles = hasModernClientFiles
@@ -1511,7 +1561,14 @@ function ensureClientVersion(version, callback)
   end
 
   local promptBox
-  local message = string.format('Assets for client %s are not installed.\nDownload them now?', versionLabel(version))
+  -- only sprite sheets are missing: the game can open without them
+  local sheetsOnly = version >= 1281 and sheetMissing[installBasePath(version)] ~= nil
+  local message
+  if sheetsOnly then
+    message = tr('Some sprite files of client %s are missing (an antivirus may have removed them).\nDownload them again now?', versionLabel(version))
+  else
+    message = tr('Assets for client %s are not installed.\nDownload them now?', versionLabel(version))
+  end
   local function startDownload()
     if promptBox then
       local box = promptBox
@@ -1545,6 +1602,9 @@ function ensureClientVersion(version, callback)
           return finishDownload(false, installError or 'Unable to install client assets.')
         end
 
+        -- downloaded in this session: a sheet that is still missing no
+        -- longer keeps the player out (hasModernClientFilesAtPath)
+        sheetsTolerated[installBasePath(version)] = true
         if not hasModernClientFiles(version) then
           return finishDownload(false, 'Assets were downloaded but the client files are still incomplete. Missing catalog-content.json, assets.json.sha256, or required catalog files.')
         end
@@ -1577,6 +1637,27 @@ function ensureClientVersion(version, callback)
       box:cancel()
     end
     callback(false, tr('Assets are required for this client version.'))
+  end
+
+  local function playAnyway()
+    if not promptBox then
+      return -- answered already (Enter and a click in the same frame)
+    end
+    local box = promptBox
+    promptBox = nil
+    box:cancel()
+    logWarning(string.format('Playing client %s without sprite sheet %s (the player chose not to download).',
+      versionLabel(version), tostring(sheetMissing[installBasePath(version)])))
+    sheetsTolerated[installBasePath(version)] = true
+    callback(true)
+  end
+
+  if sheetsOnly then
+    promptBox = displayGeneralBox(tr('Missing Assets'), message, {
+      { text = tr('Download'), callback = startDownload },
+      { text = tr('Play anyway'), callback = playAnyway }
+    }, startDownload, playAnyway)
+    return
   end
 
   promptBox = displayGeneralBox(tr('Missing Assets'), message, {

@@ -361,14 +361,26 @@ local function onOpcode(protocol, opcode, data)
     end
 end
 
+local openEvent
+
 local function onGameStart()
     if not panelButton and modules.game_brevespanel then
         panelButton = modules.game_brevespanel.addFeature('ascensao', toggle)
     end
-    send({ action = 'open' })
+    -- each client at its own moment (g_game.spreadDelay): a login rush
+    -- brings hundreds of clients in the same minute
+    removeEvent(openEvent)
+    openEvent = scheduleEvent(function()
+        openEvent = nil
+        if g_game.isOnline() and not state then
+            send({ action = 'open' })
+        end
+    end, g_game.spreadDelay and g_game.spreadDelay(4000, 10000) or 0)
 end
 
 local function onGameEnd()
+    removeEvent(openEvent)
+    openEvent = nil
     hide()
     state = nil
     clearStatus()
@@ -387,6 +399,8 @@ function init()
 end
 
 function terminate()
+    removeEvent(openEvent)
+    openEvent = nil
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
     clearStatus()

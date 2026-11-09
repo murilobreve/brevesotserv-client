@@ -901,6 +901,15 @@ end
 
 -- ---------------------------------------------------------------- timers
 
+-- why the last online minute did not count (the board's onlineSkip), under
+-- the bar: the coin counts only while hunting, for one character of the
+-- account and a few accounts per connection
+local ONLINE_SKIP_TEXTS = {
+    idle = 'Counts only while you hunt (monster experience in the last %d min)',
+    account = 'Another character of this account is counting',
+    ip = 'Other accounts on this connection are already counting',
+}
+
 local function updateOnline()
     if not window then
         return
@@ -910,7 +919,15 @@ local function updateOnline()
     local minutes = math.min(online.minutes, goal)
     bar.fill:setWidth(math.max(1, math.floor((bar:getWidth() - 2) * minutes / goal)))
     bar.value:setText(tr('%d / %d min', minutes, goal))
-    bar:setTooltip(tr('You get %d Mythos Coin(s) for every %d minutes online.', online.amount, goal))
+    bar:setTooltip(tr('You get %d Mythos Coin(s) for every %d minutes hunting online.', online.amount, goal))
+    local note = window.onlineNote
+    if note then
+        local text = ONLINE_SKIP_TEXTS[online.skip]
+        note:setVisible(text ~= nil)
+        if text then
+            note:setText(tr(text, online.activeMinutes or 15))
+        end
+    end
 end
 
 local function tick()
@@ -1147,6 +1164,8 @@ function handlers.board(data)
     online.minutes = data.online or online.minutes
     online.goal = data.onlineGoal or online.goal
     online.amount = data.onlineAmount or online.amount
+    online.skip = data.onlineSkip -- nil: the last minute counted
+    online.activeMinutes = data.onlineActiveMinutes or online.activeMinutes
     updateOnline()
     if data.period == currentPeriod then
         renderBoard()
@@ -1382,12 +1401,14 @@ local function onGameStart()
     if ratesEvent then
         removeEvent(ratesEvent)
     end
+    -- each client at its own moment (g_game.spreadDelay): a login rush
+    -- brings hundreds of clients in the same minute
     ratesEvent = scheduleEvent(function()
         ratesEvent = nil
         if g_game.isOnline() then
             send({ action = 'rates' })
         end
-    end, 1000)
+    end, g_game.spreadDelay and g_game.spreadDelay(4000, 10000) or 1000)
     if not next(sectionButtons) and modules.game_brevespanel then
         sectionButtons.rates = modules.game_brevespanel.addFeature('rates', toggleRates)
         sectionButtons.board = modules.game_brevespanel.addFeature('board', toggleBoard)

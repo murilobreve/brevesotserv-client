@@ -411,6 +411,11 @@ WIKI_PAGES.huntboard = {
         { 'p', 'Acima de 1x o monstro também fica mais forte: vida x (1 + (rate - 1) x 0,35) e dano x (1 + (rate - 1) x 0,15). A 4x ele tem 2,05 vezes a vida e bate 1,45 vez mais forte; a 5x, 2,4 vezes a vida e 1,6 vez o dano. É vida de verdade: o seu dano entra inteiro.' },
         { 'p', 'O Hunt Board (no painel Mythos, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
         { 'p', 'A rate também aparece ao lado da barra de vida de cada monstro. A cor avisa o quanto ele está forte: cinza perto de 1x, amarelo perto de 2x, laranja perto de 3,5x e vermelho em 5x. A partir de 4x vem com um ponto de exclamação, como 4.6x!.' },
+        { 'p', 'Um monstro raro (Pale, Ashen, Obsidian, Lord of Death) não ganha essa força extra do Hunt Board: fica só com a força do grau dele.' },
+        { 'h', 'Prêmios do ranking' },
+        { 'p', 'A hora só paga quando foi uma disputa de verdade: o primeiro precisa de 300 kills ou 10 milhões de XP na hora, e o ranking precisa de 3 contas concorrentes, de 3 conexões diferentes, cada uma com 100 kills ou 3,3 milhões de XP. Contam só os monstros que o próprio personagem feriu: a XP dividida da party não faz de ninguém um concorrente.' },
+        { 'p', 'Uma conta leva no máximo 75 coins por dia dos prêmios de hora; passando disso, o prêmio vai para a próxima conta do ranking. Cada conta leva um prêmio por período.' },
+        { 'p', 'A coin por hora online só conta enquanto você caça (XP de monstro nos últimos 15 minutos), para um personagem por conta e poucas contas por conexão. A janela do Hunt Board avisa embaixo da barra quando o seu tempo não está contando.' },
         { 'links', { 'tiers', 'experience' } },
     },
 }
@@ -804,10 +809,9 @@ WIKI_PAGES.travel = {
         { 'table', widths = { 150, 396 }, rows = {
             { { 'Teleportes', '#ffd27a' }, 'Leva ao prédio de teleports: a sala das hunts, o salão das Novas Hunts, a sala dos Iniciantes, os Eventos e, um andar abaixo, a sala das cidades.' },
             { { 'Trainers', '#ffd27a' }, 'Leva à sala de treino, para treinar skills com armas de exercício.' },
-            { { 'Promotion', '#ffd27a' }, 'No andar de cima: o NPC Eremo vende a promoção da vocação.' },
             { { 'Bank System', '#ffd27a' }, 'O banco (NPC Rokyn).' },
-            { { 'Vender Loot', '#ffd27a' }, 'O Gersao compra todo o loot pelo melhor preço.' },
         } },
+        { 'p', 'O Gersao, no templo de Ventera, compra o loot pelo melhor preço. A promoção da vocação se compra com o comando !promotion.' },
         { 'h', 'Hunts TP' },
         { 'p', 'Na janela do Hunt Board, o Hunts TP leva direto até a hunt de qualquer monstro que tem teleport de hunt, sem passar pelas salas. É de graça, tem 30 segundos de espera entre um teleport e outro e só funciona fora de luta: numa área protegida ou sem o sinal de batalha, nunca com PZ. A janela de Hunt Tasks usa o mesmo teleport para a tarefa diária e para a Trilha do Caçador.' },
         { 'h', 'Cidades' },

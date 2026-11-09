@@ -49,3 +49,13 @@ Reference: `docs/client-assets-auto-install.md`
 - The game thread never waits on the page: commands with `MAIN_THREAD_ASYNC_EM_ASM`, events through `otc_voice_event` into a queue drained by `g_voice.poll()`. No new synchronous `MAIN_THREAD_EM_ASM` per frame.
 - Desktop compiles none of it while `TOGGLE_FRAMEWORK_VOICE` is OFF (default outside WASM); keep every voice line in `luafunctions.cpp`/`graphicalapplication.cpp` under `#ifdef FRAMEWORK_VOICE`.
 - Validate: in `browser/voice/test/`, `node lint.mjs --browser`, `node worklet.mjs`, `node bridge.mjs`, `node e2e.mjs` (local relay), and `luajit tools/voz-luatest/game_voice_test.lua`.
+
+## Narrow Rules (recurring defects)
+
+- `AttachedEffect` reads its duration only when it is attached: `setDuration` after `tile:attachEffect` does nothing. To end a skillshot layer early, schedule `detachArt` (`game_skillshot`).
+- Client text is Latin-1 in both builds (the fonts draw one glyph per byte). Convert at the boundaries only: UTF-8 to Latin-1 for browser input and paste; Latin-1 to UTF-8 for anything sent to the site or put in JSON for it (`stdext::latin1_to_utf8`, `siteText` in `httplogin.cpp`, `CharacterList.siteText`). `data/locales/pt.lua` is cp1252.
+- PT-BR text in a fixed-width window that does not wrap must fit the window's content width; measure it with the font's glyph widths (rightmost filled column + 1, `spacing` and `space-width` from the `.otfont`). A widget's text is clipped to the widget's rect moved by `text-offset`, so a checkbox label wider than `width - text-offset` runs over the next widget.
+- `client_updater`: a same-version repair runs only against a manifest whose `versao` equals `versao.json`; an older manifest (a stale `main/` cache, a `-SemEnviar` test build) changes nothing. Every check goes through `getJSONWithin` (a deadline, then `HTTP.cancel`): the native HTTP client has one thread for every request. A periodic check reads only `<canal>/versao.json`; the commit and the manifest only when that number goes up, never twice for the same commit.
+- A request a module sends by itself when the game starts waits `g_game.spreadDelay(min, max)` (gamelib), so a login rush does not bring every client's requests in the same second; calls of one burst come `SPREAD_STEP` apart.
+- `client_assets`: a missing sprite sheet offers the download but never locks the player out ("Play anyway"; still missing after a download in the same session opens the game). Only missing core files (appearances, staticdata) are required.
+- Extended opcode 139 is the client build report (`client_updater` -> server `scripts/custom/client_version.lua`); check the server's opcode list before taking a new number.

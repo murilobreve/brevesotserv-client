@@ -1,11 +1,15 @@
 -- Feedback and bug reports: a tab on the right edge of the game screen opens
--- a window where the player picks Bug, Idea or Feedback and writes it. The
--- server saves it with the character and the position, and the staff read
--- it on the website's monitoring page (scripts/feedback/feedback.lua).
+-- a window where the player picks Bug, Idea, Feedback or Report (a player)
+-- and writes it. The server saves it with the character and the position,
+-- and the staff read it on the website's monitoring page
+-- (scripts/feedback/feedback.lua).
 --
 -- Opcode OPCODE, JSON both ways:
 --   client -> server { action = 'send', kind, message, client }
+--                    { action = 'send', kind = 'report', target, message, client }
 --   server -> client { action = 'result', ok, code, seconds, message }
+--   code: sent, short, wait, limit, and for a report target (no player with
+--   that name) or self
 
 local OPCODE = 129
 local MAX_LENGTH = 1000
@@ -16,6 +20,7 @@ local DIM = '#a39cbc'
 
 local tab, window, closeEvent, waitEvent
 local kind = 'bug'
+local KINDS = { 'bug', 'idea', 'feedback', 'report' }
 local waiting = false
 
 -- the fonts draw one glyph per byte (Latin-1); the server's JSON is UTF-8
@@ -64,9 +69,14 @@ end
 local function selectKind(id)
     kind = id
     if window then
-        for _, other in ipairs({ 'bug', 'idea', 'feedback' }) do
+        for _, other in ipairs(KINDS) do
             window[other]:setChecked(other == id)
         end
+        -- a report names the player: the message goes under the name
+        local report = id == 'report'
+        window.target:setVisible(report)
+        window.message:removeAnchor(AnchorTop)
+        window.message:addAnchor(AnchorTop, report and 'target' or 'bug', AnchorBottom)
     end
 end
 
@@ -95,7 +105,7 @@ function show()
         return
     end
     window = g_ui.createWidget('FeedbackWindow', rootWidget)
-    for _, id in ipairs({ 'bug', 'idea', 'feedback' }) do
+    for _, id in ipairs(KINDS) do
         window[id].onClick = function()
             selectKind(id)
         end
@@ -129,6 +139,15 @@ function send()
         setStatus(tr('Write a few words about it first.'), BAD)
         return
     end
+    local target
+    if kind == 'report' then
+        target = window.target:getText():gsub('^%s+', ''):gsub('%s+$', '')
+        if #target < 2 then
+            setStatus(tr('Write the name of the player.'), BAD)
+            window.target:focus()
+            return
+        end
+    end
     local protocol = g_game.getProtocolGame()
     if not protocol then
         setStatus(tr('You are not in the game.'), BAD)
@@ -137,6 +156,7 @@ function send()
     protocol:sendExtendedJSONOpcode(OPCODE, {
         action = 'send',
         kind = kind,
+        target = target,
         message = text:sub(1, MAX_LENGTH),
         client = clientInfo(),
     })
@@ -164,6 +184,10 @@ local function answerText(data)
         return string.format(tr('Wait %d seconds before sending another report.'), tonumber(data.seconds) or 30)
     elseif data.code == 'limit' then
         return tr('You sent many reports today. Thank you! Try again tomorrow.')
+    elseif data.code == 'target' then
+        return tr('There is no player with that name.')
+    elseif data.code == 'self' then
+        return tr('You cannot report yourself.')
     end
     return latin1(data.message or '')
 end
@@ -183,6 +207,7 @@ local function onOpcode(protocol, opcode, data)
     window.sendButton:setEnabled(true)
     if data.ok then
         window.message:setText('')
+        window.target:setText('')
         setStatus(message, GOOD)
         closeEvent = scheduleEvent(hide, 1800)
     else

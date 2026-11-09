@@ -422,6 +422,16 @@ MythosWindow
     color: #cbc0e0
     !text: tr('Online reward')
 
+  // why the last minute did not count (filled by updateOnline)
+  Label
+    id: onlineNote
+    anchors.top: onlineBar.bottom
+    anchors.right: onlineBar.right
+    text-auto-resize: true
+    font: verdana-9px-rounded
+    color: #e2a443
+    visible: false
+
   MythosSeparator
     id: topSep
     anchors.top: ratesTab.bottom

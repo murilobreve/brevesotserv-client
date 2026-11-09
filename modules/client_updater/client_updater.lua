@@ -10,10 +10,13 @@
 -- never changes content and GitHub's cache can never serve a mixed version.
 -- Nothing here can stop the game: any failure just leaves the current files.
 --
--- While the client is open it checks again every few minutes. The login
+-- While the client is open it checks again every half hour. The login
 -- screen shows the state (up to date / new version / updating) and a player
 -- in game gets a message when a new version comes out; it installs the next
 -- time the client opens, or from the login screen's "Update now".
+-- Those periodic checks read only <channel>/versao.json, a few bytes with
+-- the published number; the commit and the file list (~200 KB) are read
+-- again only when that number went up, and never twice for the same commit.
 
 Updater = {}
 
@@ -21,8 +24,21 @@ local DEFAULT_BASE = 'https://raw.githubusercontent.com/murilobreve/mythos-clien
 local LOCAL_INFO = 'versao.json'
 local CHECK_TIMEOUT = 8
 local DOWNLOAD_TIMEOUT = 20            -- seconds to connect for each file (2 by default)
-local DEFAULT_INTERVAL = 10 * 60      -- seconds between checks while open
+local DEFAULT_INTERVAL = 30 * 60      -- seconds between checks while open
 local REMIND_EVERY = 30 * 60          -- seconds between in-game reminders
+-- each check answer has a deadline of its own (connection and transfer):
+-- the client has one HTTP thread for everything (VIP status, players
+-- online, account creation, crash reports), and an answer that stops
+-- halfway (a captive portal, a bad Wi-Fi) held all of it for up to 30
+-- minutes. A cancelled request frees that thread at once.
+local SMALL_DEADLINE = 15             -- seconds: the commit, the published number
+local MANIFEST_DEADLINE = 60          -- seconds: the file list
+-- a check that failed (offline, GitHub busy: 429 / 5xx) tries again after
+-- these many seconds, then only at the next periodic check
+local CHECK_RETRY_WAIT = { 60, 5 * 60 }
+-- the server keeps which build each player runs, so the staff see who is
+-- behind (data-otservbr-global/scripts/custom/client_version.lua)
+local REPORT_OPCODE = 139
 
 local box
 local downloads = {}
@@ -56,6 +72,10 @@ local USER_FILES = { ['servidor.ini'] = true, ['config.ini'] = true }
 local REPAIR_FILE = '/updater_repair.txt'
 local REPAIR_COOLDOWN = 60 * 60
 local filesChecked = false            -- the last check found every file intact
+local lastSha                         -- the commit lastManifest was read from
+local failedChecks = 0                -- checks failed in a row
+local retryCheckEvent
+local retryEvent                      -- a file download waiting to try again
 
 -- the fonts draw one glyph per byte (Latin-1); this file is UTF-8
 local function latin1(text)
@@ -99,16 +119,50 @@ local REF_URL = 'https://api.github.com/repos/murilobreve/mythos-client/git/ref/
 local COMMIT_BASE = 'https://raw.githubusercontent.com/murilobreve/mythos-client/%s/'
 local filesBase -- base of the version being checked or downloaded
 
+-- HTTP.getJSON with a deadline for the whole answer (the native timeout
+-- covers only the connection); callback(nil, err) when it runs out
+local function getJSONWithin(url, seconds, callback)
+  local done, watchdog = false, nil
+  local oldTimeout = HTTP.timeout
+  HTTP.timeout = CHECK_TIMEOUT
+  local operation = HTTP.getJSON(url, function(data, err)
+    if done then
+      return
+    end
+    done = true
+    if watchdog then
+      removeEvent(watchdog)
+      watchdog = nil
+    end
+    callback(data, err)
+  end)
+  HTTP.timeout = oldTimeout
+  if not done then
+    watchdog = scheduleEvent(function()
+      watchdog = nil
+      if done then
+        return
+      end
+      done = true
+      if operation then
+        HTTP.cancel(operation)
+      end
+      callback(nil, 'no answer in ' .. seconds .. 's')
+    end, seconds * 1000)
+  end
+end
+
+-- callback(base, sha): sha is nil when the files come from main/
 local function resolveBase(callback)
   local custom = os.getenv and os.getenv('MYTHOS_UPDATE_URL') or nil
   if custom and custom ~= '' then
     return callback(baseUrl())
   end
-  HTTP.getJSON(REF_URL, function(ref, err)
+  getJSONWithin(REF_URL, SMALL_DEADLINE, function(ref, err)
     local sha = not err and type(ref) == 'table' and type(ref.object) == 'table' and ref.object.sha
     if type(sha) == 'string' and sha:match('^%x+$') and #sha >= 40 then
       log('checking commit ' .. sha:sub(1, 7))
-      callback(string.format(COMMIT_BASE, sha))
+      callback(string.format(COMMIT_BASE, sha), sha)
     else
       log('commit unknown (' .. tostring(err) .. '), checking main')
       callback(baseUrl())
@@ -298,6 +352,10 @@ local function giveUp(message)
     HTTP.cancel(currentOperation)
     currentOperation = nil
   end
+  if retryEvent then
+    removeEvent(retryEvent)
+    retryEvent = nil
+  end
   for _, name in ipairs(downloads) do
     pcall(g_resources.deleteFile, '/downloads/' .. name)
   end
@@ -417,9 +475,21 @@ end
 
 -- a download that stops receiving data never ends by itself (the timeout
 -- only covers the connection), so each file has a watchdog: no progress for
--- STALL_SECONDS and it is cancelled and tried again, up to FILE_TRIES times
+-- STALL_SECONDS and it is cancelled and tried again, up to FILE_TRIES times.
+-- Each new try waits longer (RETRY_WAIT): on launch day many players behind
+-- one address (CGNAT) hit GitHub's limit together, and three tries in the
+-- same second all failed. "Too many requests" (429) and GitHub's own
+-- failures (5xx) get more tries (BUSY_WAIT).
 local STALL_SECONDS = 20
-local FILE_TRIES = 3
+local RETRY_WAIT = { 5, 15, 45 }       -- seconds before the 2nd, 3rd and 4th try
+local FILE_TRIES = #RETRY_WAIT + 1
+local BUSY_WAIT = { 5, 15, 45, 90, 90 }
+local BUSY_TRIES = #BUSY_WAIT + 1
+
+local function serverBusy(reason)
+  local code = tonumber(tostring(reason):match('http_status::(%d+)'))
+  return code ~= nil and (code == 429 or code >= 500)
+end
 
 local function downloadAll(changed, manifest, myGeneration)
   local base = filesBase or baseUrl()
@@ -443,11 +513,24 @@ local function downloadAll(changed, manifest, myGeneration)
       end
       finished = true
       stopWatchdog()
-      if attempt >= FILE_TRIES then
+      local busy = serverBusy(reason)
+      local tries = busy and BUSY_TRIES or FILE_TRIES
+      if attempt >= tries then
         return giveUp('download failed for ' .. entry.path .. ': ' .. reason)
       end
-      log(string.format('%s: %s, trying again (%d/%d)', entry.path, reason, attempt + 1, FILE_TRIES))
-      fetch(entry, attempt + 1)
+      local wait = (busy and BUSY_WAIT or RETRY_WAIT)[attempt] or RETRY_WAIT[#RETRY_WAIT]
+      log(string.format('%s: %s, trying again in %ds (%d/%d)', entry.path, reason, wait, attempt + 1, tries))
+      if box then
+        -- short: the label is 348 px and does not wrap (305 px at 3311 files)
+        box.content:setText(txt('Arquivo %d de %d: nova tentativa em %d s (%d/%d)',
+          'File %d of %d: trying again in %d s (%d/%d)', index, total, wait, attempt + 1, tries))
+      end
+      retryEvent = scheduleEvent(function()
+        retryEvent = nil
+        if myGeneration == generation then
+          fetch(entry, attempt + 1)
+        end
+      end, wait * 1000)
     end
     local function arm()
       stopWatchdog()
@@ -463,8 +546,8 @@ local function downloadAll(changed, manifest, myGeneration)
     -- a fresh file name per try: a cancelled download may still write its own
     entry.download = string.format('mythos_update_%d_%d_%d', manifest.versao, index, attempt)
     table.insert(downloads, entry.download)
-    -- the last try goes through main/, in case the commit address misbehaves
-    local from = (attempt == FILE_TRIES) and baseUrl() or base
+    -- the last tries go through main/, in case the commit address misbehaves
+    local from = (attempt >= FILE_TRIES) and baseUrl() or base
     local oldTimeout = HTTP.timeout
     HTTP.timeout = DOWNLOAD_TIMEOUT
     arm()
@@ -751,6 +834,76 @@ end
 
 -- ---------------------------------------------------------------- checks
 
+-- a manifest read now, or the one already read from this same commit
+local function onManifest(manifest, base, autoInstall, verifyAll)
+  failedChecks = 0
+  lastManifest = manifest
+  filesBase = base
+  remoteVersion = tonumber(manifest.versao) or 0
+  if remoteVersion < localInfo.versao then
+    log(string.format('manifest %d older than this client %d (stale cache or a test build): files not checked',
+      remoteVersion, localInfo.versao))
+    setStatus('uptodate')
+    return
+  end
+  if remoteVersion == localInfo.versao then
+    log(string.format('up to date (version %d)', localInfo.versao))
+    if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
+      return repair(manifest, verifyAll or MYTHOS_SAFE_START, verifyAll)
+    end
+    setStatus('uptodate')
+    return
+  end
+  -- in game, or entering it: only report it. At the character list (an
+  -- autologin is faster than this check) the update goes ahead, and the
+  -- locked update window keeps the player from entering meanwhile
+  if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
+    return startUpdate(manifest)
+  end
+  log(string.format('version %d is out (running %d)', remoteVersion, localInfo.versao))
+  setStatus('available')
+  remindInGame()
+end
+
+local function checkFailed(err, autoInstall)
+  log('no update information: ' .. tostring(err))
+  setStatus(remoteVersion and remoteVersion > localInfo.versao and 'available' or 'error')
+  failedChecks = failedChecks + 1
+  local wait = CHECK_RETRY_WAIT[failedChecks]
+  if wait and not retryCheckEvent then
+    log(string.format('checking again in %ds', wait))
+    retryCheckEvent = scheduleEvent(function()
+      retryCheckEvent = nil
+      Updater.check(autoInstall)
+    end, wait * 1000)
+  end
+end
+
+-- the commit, then its file list (not again when the commit did not change)
+local function fullCheck(autoInstall, verifyAll)
+  resolveBase(function(base, sha)
+    -- a check that was already on its way when an update started
+    if status == 'updating' or status == 'verifying' then
+      return
+    end
+    if sha and sha == lastSha and lastManifest then
+      log('same commit as the last check: file list not downloaded again')
+      return onManifest(lastManifest, base, autoInstall, verifyAll)
+    end
+    local url = base .. localInfo.canal .. '/manifest.json?t=' .. os.time()
+    getJSONWithin(url, MANIFEST_DEADLINE, function(manifest, err)
+      if status == 'updating' or status == 'verifying' then
+        return
+      end
+      if err or type(manifest) ~= 'table' or type(manifest.files) ~= 'table' then
+        return checkFailed(err, autoInstall)
+      end
+      lastSha = sha
+      onManifest(manifest, base, autoInstall, verifyAll)
+    end)
+  end)
+end
+
 -- autoInstall: download right away (client start, "Update now"); otherwise
 -- only report the new version (the periodic check while the client is open).
 -- With autoInstall and the version up to date, the files are checked too:
@@ -759,55 +912,41 @@ function Updater.check(autoInstall, verifyAll)
   if not localInfo or status == 'updating' or status == 'verifying' then
     return
   end
+  if retryCheckEvent then
+    removeEvent(retryCheckEvent)
+    retryCheckEvent = nil
+  end
+  -- the periodic check, once a file list was read: only the published
+  -- number (<channel>/versao.json, from tools/publicar-atualizacao.ps1).
+  -- main/ may be 5 minutes old, which is fine for a version that installs
+  -- on the next start; a higher number, or none (an older publication),
+  -- checks the commit and the file list as the start does
+  if not autoInstall and lastManifest and (status == 'uptodate' or status == 'available') then
+    local known = math.max(localInfo.versao, remoteVersion or 0)
+    getJSONWithin(baseUrl() .. localInfo.canal .. '/versao.json?t=' .. os.time(), SMALL_DEADLINE, function(info, err)
+      if status == 'updating' or status == 'verifying' then
+        return
+      end
+      local number = not err and type(info) == 'table' and tonumber(info.versao) or nil
+      if number and number <= known then
+        if remoteVersion and remoteVersion > localInfo.versao then
+          remindInGame()
+        end
+        return
+      end
+      if number then
+        log(string.format('version %d published (running %d)', number, localInfo.versao))
+      else
+        log('published number unknown (' .. tostring(err) .. '), checking the commit')
+      end
+      fullCheck(false)
+    end)
+    return
+  end
   if status ~= 'available' then
     setStatus('checking')
   end
-  local oldTimeout = HTTP.timeout
-  HTTP.timeout = CHECK_TIMEOUT
-  resolveBase(function(base)
-  local url = base .. localInfo.canal .. '/manifest.json?t=' .. os.time()
-  local outerTimeout = HTTP.timeout
-  HTTP.timeout = CHECK_TIMEOUT
-  HTTP.getJSON(url, function(manifest, err)
-    -- a check that was already on its way when an update started
-    if status == 'updating' or status == 'verifying' then
-      return
-    end
-    if err or type(manifest) ~= 'table' or type(manifest.files) ~= 'table' then
-      log('no update information: ' .. tostring(err))
-      setStatus(remoteVersion and remoteVersion > localInfo.versao and 'available' or 'error')
-      return
-    end
-    lastManifest = manifest
-    filesBase = base
-    remoteVersion = tonumber(manifest.versao) or 0
-    if remoteVersion < localInfo.versao then
-      log(string.format('manifest %d older than this client %d (stale cache or a test build): files not checked',
-        remoteVersion, localInfo.versao))
-      setStatus('uptodate')
-      return
-    end
-    if remoteVersion == localInfo.versao then
-      log(string.format('up to date (version %d)', localInfo.versao))
-      if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
-        return repair(manifest, verifyAll or MYTHOS_SAFE_START, verifyAll)
-      end
-      setStatus('uptodate')
-      return
-    end
-    -- in game, or entering it: only report it. At the character list (an
-    -- autologin is faster than this check) the update goes ahead, and the
-    -- locked update window keeps the player from entering meanwhile
-    if autoInstall and not g_game.isOnline() and not g_game.isLogging() then
-      return startUpdate(manifest)
-    end
-    log(string.format('version %d is out (running %d)', remoteVersion, localInfo.versao))
-    setStatus('available')
-    remindInGame()
-  end)
-  HTTP.timeout = outerTimeout
-  end)
-  HTTP.timeout = oldTimeout
+  fullCheck(autoInstall, verifyAll)
 end
 
 local function onGameEnd()
@@ -848,7 +987,44 @@ local function showVersion()
   versionLabel:setMarginBottom(4)
 end
 
+-- the build this client runs, for the server (REPORT_OPCODE): the staff
+-- see who is behind, and a build below the server's minimum is told to
+-- update. Also from the browser and a client without versao.json (versao
+-- 0). A few seconds after entering, once the server's first packets are in.
+local reportEvent
+local function reportVersion()
+  if reportEvent then
+    removeEvent(reportEvent)
+  end
+  reportEvent = scheduleEvent(function()
+    reportEvent = nil
+    local protocol = g_game.isOnline() and g_game.getProtocolGame() or nil
+    if not protocol or not protocol.sendExtendedJSONOpcode then
+      return
+    end
+    local canal = localInfo and localInfo.canal or ''
+    if canal == '' and g_platform.isBrowser and g_platform.isBrowser() then
+      canal = 'browser'
+    end
+    local commit = g_app.getBuildCommit and g_app.getBuildCommit() or ''
+    pcall(protocol.sendExtendedJSONOpcode, protocol, REPORT_OPCODE, {
+      action = 'version',
+      canal = canal,
+      versao = localInfo and localInfo.versao or 0,
+      commit = tostring(commit):sub(1, 12),
+      status = status,
+      remote = remoteVersion,
+    })
+  end, 3000)
+end
+
+local function onGameStart()
+  remindInGame()
+  reportVersion()
+end
+
 function Updater.init()
+  connect(g_game, { onGameStart = onGameStart })
   localInfo = readLocalInfo()
   if not localInfo then
     -- a client run from the source tree has no updater: just offer the choice
@@ -872,7 +1048,7 @@ function Updater.init()
   Updater.check(true)
   checkEvent = cycleEvent(function() Updater.check(false) end, checkInterval() * 1000)
   -- the login screen comes back after a logout: show the latest state there
-  connect(g_game, { onGameEnd = onGameEnd, onGameStart = remindInGame })
+  connect(g_game, { onGameEnd = onGameEnd })
 end
 
 function Updater.terminate()
@@ -882,7 +1058,11 @@ function Updater.terminate()
     removeEvent(checkEvent)
     checkEvent = nil
   end
-  disconnect(g_game, { onGameEnd = onGameEnd, onGameStart = remindInGame })
+  removeEvent(retryCheckEvent)
+  removeEvent(retryEvent)
+  removeEvent(reportEvent)
+  retryCheckEvent, retryEvent, reportEvent = nil, nil, nil
+  disconnect(g_game, { onGameEnd = onGameEnd, onGameStart = onGameStart })
   if versionLabel then
     versionLabel:destroy()
     versionLabel = nil

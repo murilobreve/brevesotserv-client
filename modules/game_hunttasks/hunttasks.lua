@@ -465,7 +465,8 @@ local OFFER_INFO = {
     ascensao = { name = 'Pergaminho de Ascensão', lines = { 'Use em um item com raridade: ele sobe um grau e ganha um bônus novo.', 'Os bônus que o item já tem ficam iguais.' } },
     mitica = { name = 'Bag of Mythical', lines = { 'Abre um item aleatório que já vem Mythicus, o grau mais alto.' } },
     desire = { name = 'Bag You Desire', lines = { 'Abre um item da Soul War: arma, armadura, calça, bota ou o Soulbastion.' } },
-    coins = { name = '25 Mythos Coins', count = '25x', lines = { 'Coins para gastar na Store.' } },
+    -- the level and the cap are the server's HuntTaskConfig.coinsOffer
+    coins = { name = '25 Mythos Coins', count = '25x', lines = { 'Coins para gastar na Store.', 'A partir do level 100.', 'Até 100 coins por semana por conta.' } },
     pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
     rarityxp50 = { name = '50 Rarity XP', count = '50x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
     rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
