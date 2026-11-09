@@ -415,9 +415,48 @@ ForgeCard < UIButton
     UIWidget
       id: rune
       size: 56 56
-      anchors.centerIn: parent
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.top: parent.top
+      margin-top: 44
       image-source: /game_raritybonus/images/forge/rune
       image-color: #8a6dd0
+      phantom: true
+
+    // while the Reforge rolls: the reel runs through what the item can get
+    UIWidget
+      id: reelIcon
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.top: parent.top
+      margin-top: 112
+      size: 18 18
+      phantom: true
+      visible: false
+
+    Label
+      id: reelName
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: reelIcon.bottom
+      margin-top: 4
+      margin-left: 6
+      margin-right: 6
+      height: 30
+      text-align: center
+      text-wrap: true
+      font: verdana-11px-antialised
+      color: #cbbcf0
+      phantom: true
+
+    Label
+      id: reelRange
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: reelName.bottom
+      margin-top: 2
+      height: 14
+      text-align: center
+      font: verdana-11px-antialised
+      color: #8f877c
       phantom: true
 
   UIWidget
@@ -1182,6 +1221,26 @@ MythosWindow
             margin-top: 8
             height: 28
             text-wrap: true
+
+          // what a reforge can give: a count, the list in its tooltip
+          UIWidget
+            id: poolIcon
+            anchors.left: parent.left
+            anchors.bottom: rollButton.top
+            margin-bottom: 9
+            size: 14 14
+            image-source: /game_raritybonus/images/info
+            image-color: #8a6dd0
+
+          ForgeText
+            id: pool
+            anchors.left: poolIcon.right
+            anchors.right: parent.right
+            anchors.verticalCenter: poolIcon.verticalCenter
+            margin-left: 6
+            height: 14
+            color: #cbbcf0
+            phantom: false
 
           ForgeGoldButton
             id: rollButton

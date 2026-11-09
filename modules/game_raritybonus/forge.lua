@@ -83,6 +83,7 @@ local ascend -- { phase = 'waiting'|'spinning'|'win'|'lose', slot, ... }
 local needleAngle = 0
 local history = {} -- this session's Ascension tries: true = went up
 local animEvent
+local reelEvent -- the Reforge's reels (the cards' backs) while it rolls
 
 -- ---------------------------------------------------------------------------
 -- small helpers, shared with raritybonus.lua
@@ -461,7 +462,42 @@ local function fillCard(card, bonus, opts)
     card:setTooltip(tip)
 end
 
+-- what a reforge can give the item being reforged (the server's pool)
+local function poolNow()
+    local entry = reforge and bySlot[reforge.slot]
+    return (entry and entry.pool) or {}
+end
+
+-- a card's back shows one bonus of the pool: icon, name, its range; never
+-- the same one twice in a row
+local function spinReel(card)
+    local pool = poolNow()
+    local back = card.back
+    if #pool == 0 then
+        back.reelIcon:setVisible(false)
+        back.reelName:setText('')
+        back.reelRange:setText('')
+        return
+    end
+    local i = math.random(#pool)
+    if #pool > 1 and i == card.reelIndex then
+        i = i % #pool + 1
+    end
+    card.reelIndex = i
+    local bonus = pool[i]
+    bonusIcon(back.reelIcon, bonus.key)
+    back.reelName:setText(tr(bonus.label or ''))
+    back.reelRange:setText(tr('range %s to %s', plus(bonus.min, bonus.unit), plus(bonus.max, bonus.unit)))
+end
+
 local function backCard(card, n)
+    if reforge and (reforge.phase == 'rolling' or reforge.phase == 'reveal') then
+        spinReel(card)
+    else
+        card.back.reelIcon:setVisible(false)
+        card.back.reelName:setText('')
+        card.back.reelRange:setText('')
+    end
     card.delta:setVisible(false)
     card.icon:setVisible(false)
     card.back:setVisible(true)
@@ -653,6 +689,20 @@ fillReforge = function()
         seal = tr('Seal: needs an item with 2 or more bonuses')
     end
     s.info:setTooltip(rules .. '\n\n' .. seal)
+    -- what a reforge can give, with the ranges, in the tooltip
+    local pool = entry.pool or {}
+    s.pool:setVisible(#pool > 0)
+    s.poolIcon:setVisible(#pool > 0)
+    if #pool > 0 then
+        s.pool:setText(tr('Can roll: %d bonuses (hover to see)', #pool))
+        local lines = {}
+        for _, bonus in ipairs(pool) do
+            lines[#lines + 1] = tr(bonus.label or '') .. ':  ' .. plus(bonus.min, bonus.unit) .. '  -  ' .. plus(bonus.max, bonus.unit)
+        end
+        local tip = tr('What a reforge can give this item:\n(range at this grade; fewer bonuses come stronger)') .. '\n\n' .. table.concat(lines, '\n')
+        s.pool:setTooltip(tip)
+        s.poolIcon:setTooltip(tip)
+    end
     local cost = tonumber(entry.rerollCost) or 0
     s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
@@ -692,6 +742,45 @@ local function pulse()
             end
         end
         animEvent = scheduleEvent(tick, 50)
+    end
+    tick()
+end
+
+-- the card that turns next in the reveal (sealed ones are face up already)
+local function nextToFlip()
+    local list = reforge.after or {}
+    local n = reforge.shown + 1
+    while list[n] and list[n].locked do
+        n = n + 1
+    end
+    return n
+end
+
+-- the reels run while the server rolls and through the reveal; the card
+-- about to turn slows down before it stops on its bonus
+local function runReels()
+    if reelEvent then
+        removeEvent(reelEvent)
+        reelEvent = nil
+    end
+    local function tick()
+        reelEvent = nil
+        if not reforge or not window or (reforge.phase ~= 'rolling' and reforge.phase ~= 'reveal') then
+            return
+        end
+        local now = g_clock.millis()
+        local slowing = reforge.phase == 'reveal' and nextToFlip() or nil
+        for n, card in ipairs(window.pages.arsenal.center.cards:getChildren()) do
+            if card.back:isVisible() and now >= (card.reelNext or 0) then
+                spinReel(card)
+                local every = 70
+                if n == slowing then
+                    every = 70 + math.floor((now - (reforge.lastFlip or now)) * 0.4)
+                end
+                card.reelNext = now + every
+            end
+        end
+        reelEvent = scheduleEvent(tick, 30)
     end
     tick()
 end
@@ -738,8 +827,9 @@ local function revealNext()
         return
     end
     reforge.flashAt = reforge.shown
+    reforge.lastFlip = g_clock.millis()
     fillReforge()
-    animEvent = scheduleEvent(revealNext, 450)
+    animEvent = scheduleEvent(revealNext, 650)
 end
 
 function reforgeNow()
@@ -769,6 +859,7 @@ function reforgeNow()
         Forge.expectAnswer()
         fillReforge()
         pulse()
+        runReels()
     end
     if again then
         go()
@@ -1184,7 +1275,10 @@ function Forge.onBonuses(d)
             end
             reforge.phase = 'reveal'
             fillReforge()
-            local wait = math.max(0, 900 - (g_clock.millis() - reforge.startedAt))
+            runReels()
+            -- the reels run a moment before the first card stops
+            local wait = math.max(0, 1400 - (g_clock.millis() - reforge.startedAt))
+            reforge.lastFlip = g_clock.millis() + wait - 650
             animEvent = scheduleEvent(revealNext, wait)
             return
         end
