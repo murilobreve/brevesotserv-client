@@ -101,7 +101,8 @@ OFF --game start--> WAIT_CFG --cfg off--> DISABLED (beta/off/bad url, invisible)
                        +--cfg on and this character opted in -> WAIT_TOKEN
 WAIT_TOKEN --tok--> CONNECTING --welcome--> ONLINE
 CONNECTING/ONLINE --close--> see below
-BACKOFF --timer--> CONNECTING (fresh unused token) or WAIT_TOKEN (asks one)
+BACKOFF/FAILED --timer--> CONNECTING (fresh unused token) or WAIT_TOKEN (asks one)
+BACKOFF/FAILED --tok or cfg on from canary--> the same, at once
 any --game end--> OFF
 ```
 
@@ -112,11 +113,20 @@ any --game end--> OFF
 | 4409 | BLOCKED replaced ("Reconectar" button, no automatic retry; a later `cfg on` does not lift it either, or two windows would replace each other forever) |
 | 4503 | BLOCKED off |
 | 1012 | BACKOFF 1-5 s random, not counted as a failure |
-| 4429, 4408, 1000, network, unknown | BACKOFF 1, 2, 4, 8, 16, 30, 60 s ±30%; the 10th failure in a row is FAILED (manual "Tentar de novo" only) |
+| 4429, 4408, 1000, network, unknown | BACKOFF 1, 2, 4, 8, then 15 s ±30%; from the 20th failure in a row (about 4 minutes) FAILED, which still tries by itself every 60 s ±30% ("Tentar de novo" tries at once) |
 
 The failure count (and the one-time 4401 retry) resets after 30 s online.
 No token within 10 s, or no welcome within 15 s of connecting, counts as a
 failure. Backoff and every other wait use `scheduleEvent`; nothing per frame.
+The steps stop at 15 s so a relay back after an outage is found within 20 s
+(the play-test: 40 s after a one-minute outage with steps up to 60 s), and
+FAILED never needs a click: a relay restart or a VPS reboot of a few minutes
+used to leave every player without voice until each one pressed the button.
+A token canary pushes (or a late answer) and a `cfg on` while waiting in
+BACKOFF or FAILED are a sign the server is there: the retry is made at once
+(with the token, or the new relay address). Token requests keep canary's
+limits all along (see Tokens below); the panel counts down to the next try
+in both states.
 
 ## Protocol details and choices
 
@@ -191,6 +201,19 @@ Where the plan left room, the simplest safe option was taken:
 - A member row that leaves a room with hidden members gives its place to a
   hidden one in a redraw at most once a second, so a big room's churn does
   not redraw the panel every frame.
+- **Where the panel opens** (`VoiceUI.toggle`): where it is if its side panel
+  has room for its minimum height; else a side panel with room
+  (`findContentPanelAvailable`); else the top of the selected side panel
+  (the play-test at 1280x720 with Battle List, Unjustified Points and VIP:
+  appended at the end, it opened under the bottom of the screen). 100 ms
+  later, once the layout settled, a panel that does not end inside
+  `rootWidget` floats over the top right of the map (and is saved there).
+- **Section headers**: the key hint ("Segure Insert") ends where the
+  header's button (Sair, Entrar, Mostrar) starts, cut with "..." when it does
+  not fit; the header's tooltip has it whole.
+- **Volume popup**: a click on the track or an arrow moves 10% (it moved 1%),
+  on the 10% grid for the track; "0%" and "100%" buttons; the thumb still
+  drags freely.
 - **Ducking**: game channels go to 70% on the first speaker and back on the
   last; a volume the player changed meanwhile is kept.
 - **Push-to-talk**: the three talk keys, mute, deafen and the panel toggle are
@@ -200,8 +223,16 @@ Where the plan left room, the simplest safe option was taken:
   A key is also refused when anything else would run on it in the chat modes
   it is saved for (`VoiceSettings.keyTaken`): another `Keybind` action, a
   hotkey of the current preset, the hotkeys manager (`game_hotkeys`) or an
-  action bar button (`game_actionbar`); in the browser, F11 (the page's full
-  screen). A key the client has no name for cancels the capture.
+  action bar button that holds an action (`game_actionbar`: the bar puts
+  F1-F12 on its first buttons, and the key of an empty button is free; a
+  button with a rune the character has none of yet, or a spell it cannot
+  cast yet, still counts: its key will run it); in
+  the browser, F11 (the page's full screen). A key the client has no name for
+  cancels the capture. The onboarding offers a free key when the party has
+  none (`VoiceSettings.freeKey`: Insert, else Pause), set only when voice is
+  turned on there; in the browser with the full engine it also offers the
+  mouse side button (Mouse 4). A refused key names a free one ("Tente
+  Insert."); the chat-key hint no longer suggests F1-F12.
   Release: the key-up of the same combo, any key-up of that key (another
   modifier held), focus loss (the window releases every key), and a 60 s limit
   with a notice. Touch screens get a hold-to-talk button.

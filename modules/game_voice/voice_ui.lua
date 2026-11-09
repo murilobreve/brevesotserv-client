@@ -21,12 +21,15 @@ local REFILL_MS = 1000 -- a big room's churn redraws the panel at most this ofte
 local MAX_HEADS = 8
 local REPORT_WAIT_MS = 8000
 local MUTE_SECS = 600
+local PLACE_CHECK_MS = 100 -- the side panel's layout has settled by then
+local FLOAT_MARGIN = 8
+local VOLUME_PAGE = 10     -- a click on the volume track or its arrows: 10%
 
 local window, toggleButton
 local sections = {} -- [slot] = { room, panel, rows = { [sid] = row }, shown, hidden, more, over }
 local boxes = {}    -- party, guild, rooms: one container each, so a directory update leaves the others alone
 local heads, headCount = {}, 0
-local refreshEvent, roomsEvent, countdownEvent, dirEvent
+local refreshEvent, roomsEvent, countdownEvent, dirEvent, placeEvent
 local refreshAt = 0 -- when the pending refresh runs (g_clock.millis)
 local dirty = false
 local dirSig = '' -- the directory as last drawn
@@ -98,7 +101,8 @@ function UI.destroy()
     removeEvent(roomsEvent)
     removeEvent(countdownEvent)
     removeEvent(dirEvent)
-    refreshEvent, roomsEvent, countdownEvent, dirEvent = nil, nil, nil, nil
+    removeEvent(placeEvent)
+    refreshEvent, roomsEvent, countdownEvent, dirEvent, placeEvent = nil, nil, nil, nil, nil
     sections, boxes, roomsOpen, dirty, dirSig = {}, {}, false, false, ''
     -- a panel that went with its parent is not destroyed twice (a warning)
     if window then
@@ -128,6 +132,110 @@ function UI.closePopups()
     reportWait = nil
 end
 
+local function visible()
+    return window ~= nil and window:isVisible()
+end
+
+-- where the panel opens ------------------------------------------------------
+--
+-- The play-test at 1280x720 with Battle List, Unjustified Points and VIP
+-- open: the panel went to the end of a side panel with no room left, under
+-- the bottom of the screen, and nothing showed. Now it goes where it fits;
+-- else to the top of the selected side panel (the windows under it give
+-- way as the game's own rules say); and once the layout settled, a panel
+-- that still does not end inside the screen floats over the map.
+
+local function isContainer(widget)
+    return widget ~= nil and widget:getClassName() == 'UIMiniWindowContainer'
+end
+
+-- room in a side panel for the panel at its minimum height (it is closed
+-- here, so its own height is not counted)
+local function hasRoom(panel)
+    return isContainer(panel) and panel:isVisible() and panel:fits(window, window:getMinimumHeight(), 0) >= 0
+end
+
+-- moves the panel into a side panel (at `index`, or at the end) and keeps
+-- the place for the next login (CharMiniWindows)
+local function moveTo(panel, index)
+    local old = window:getParent()
+    if old then
+        old:removeChild(window)
+    end
+    if index then
+        panel:insertChild(index, window)
+    else
+        panel:addChild(window)
+    end
+    if isContainer(old) and old ~= panel then
+        old:saveChildren()
+    end
+    panel:saveChildren()
+end
+
+local function placeWindow()
+    local parent = window:getParent()
+    if parent and not isContainer(parent) then
+        return true -- floating where the player left it (checked on screen after)
+    end
+    if hasRoom(parent) then
+        return true
+    end
+    local game = modules.game_interface
+    local panel = game and game.findContentPanelAvailable and
+        game.findContentPanelAvailable(window, window:getMinimumHeight())
+    if hasRoom(panel) then
+        moveTo(panel)
+        return true
+    end
+    -- no side panel has room: the top of the selected one (or of where it is)
+    local selected = game and game.getSelectedPanel and game.getSelectedPanel() or panel
+    for _, top in ipairs({ selected or false, parent or false }) do
+        if isContainer(top) and top:isVisible() then
+            moveTo(top, 1)
+            return true
+        end
+    end
+    return false
+end
+
+function UI.onScreen()
+    local r, root = window:getRect(), rootWidget:getRect()
+    return r.width > 0 and r.height > 0 and r.x >= root.x and r.y >= root.y and r.x + r.width <= root.x + root.width and
+        r.y + r.height <= root.y + root.height
+end
+
+-- over the map, at its top right: a spot that always shows
+function UI.float()
+    local game = modules.game_interface
+    local host = game and game.getRootPanel and game.getRootPanel() or rootWidget
+    local map = game and game.getMapPanel and game.getMapPanel()
+    local root = rootWidget:getRect()
+    local area = map and map:isVisible() and map:getRect() or root
+    local old = window:getParent()
+    if old ~= host then
+        if old then
+            old:removeChild(window)
+        end
+        host:addChild(window)
+        if isContainer(old) then
+            old:saveChildren()
+        end
+    end
+    -- shorter only when it does not fit (a minimized panel stays so)
+    local height = window:getHeight()
+    if height > area.height - 2 * FLOAT_MARGIN then
+        height = math.max(window:getMinimumHeight(), area.height - 2 * FLOAT_MARGIN)
+        window:setHeight(height)
+    end
+    local width = window:getWidth()
+    local x = math.max(root.x, math.min(area.x + area.width - width - FLOAT_MARGIN, root.x + root.width - width))
+    local y = math.max(root.y, math.min(area.y + FLOAT_MARGIN, root.y + root.height - height))
+    window:setPosition({ x = x, y = y })
+    window:raise()
+    window:saveParentPosition(host:getId(), window:getPosition())
+end
+
 function UI.toggle()
     if not window then
         return
@@ -136,14 +244,17 @@ function UI.toggle()
         window:close()
         return
     end
-    if not window:getParent() then
-        local panel = modules.game_interface.findContentPanelAvailable(window, window:getMinimumHeight())
-        if not panel then
-            return
-        end
-        panel:addChild(window)
+    if not placeWindow() then
+        UI.float()
     end
     window:open()
+    removeEvent(placeEvent)
+    placeEvent = scheduleEvent(function()
+        placeEvent = nil
+        if visible() and not UI.onScreen() then
+            UI.float()
+        end
+    end, PLACE_CHECK_MS)
 end
 
 function UI.onPanelOpen()
@@ -169,14 +280,15 @@ function UI.onPanelClose()
     countdownEvent = nil
 end
 
-local function visible()
-    return window ~= nil and window:isVisible()
-end
-
 -- the status line -------------------------------------------------------------
 
 local function dateText(ts)
     return ts and ts > 0 and os.date('%d/%m %H:%M', ts) or '?'
+end
+
+-- whole seconds until the next automatic try
+local function secondsLeft(s)
+    return math.max(1, math.ceil(((s.retryAt or 0) - g_clock.millis()) / 1000))
 end
 
 -- a short headline for the status row, its color, the retry button's text
@@ -192,10 +304,14 @@ local function statusOf(s)
     elseif state == ST.WAIT_TOKEN or state == ST.CONNECTING then
         return tr('Connecting...'), COLOR_WAIT
     elseif state == ST.BACKOFF then
-        local secs = math.max(1, math.ceil(((s.retryAt or 0) - g_clock.millis()) / 1000))
-        return tr('Voice unavailable'), COLOR_BAD, tr('Try now'), fmt('Trying again in %d s.', secs)
+        return tr('Voice unavailable'), COLOR_BAD, tr('Try now'), fmt('Trying again in %d s.', secondsLeft(s))
     elseif state == ST.FAILED then
-        return tr('Voice unavailable'), COLOR_BAD, tr('Try again'), tr('The voice server did not answer.')
+        -- it still tries by itself, once a minute
+        local detail = tr('The voice server did not answer.')
+        if s.retryAt then
+            detail = detail .. ' ' .. fmt('Trying again in %d s.', secondsLeft(s))
+        end
+        return tr('Voice unavailable'), COLOR_BAD, tr('Try again'), detail
     elseif state == ST.BLOCKED then
         if s.why == 'banned' then
             return tr('Banned from voice'), COLOR_BAD, nil, fmt('Until %s.', dateText(s.untilTs))
@@ -209,12 +325,12 @@ local function statusOf(s)
     return tr('Voice unavailable'), COLOR_OFF
 end
 
--- the BACKOFF countdown: one tick a second, only while it shows
+-- the BACKOFF and FAILED countdown: one tick a second, only while it shows
 local function scheduleCountdown()
     removeEvent(countdownEvent)
     countdownEvent = nil
     local s = session()
-    if visible() and s and s.state == ST.BACKOFF then
+    if visible() and s and s.retryAt and (s.state == ST.BACKOFF or s.state == ST.FAILED) then
         countdownEvent = scheduleEvent(function()
             countdownEvent = nil
             UI.onState()
@@ -285,11 +401,62 @@ function UI.scheduleRefresh(delay)
     end, delay)
 end
 
+-- the hint ("Hold Insert") ends where the header's button starts: cut with
+-- "..." when it does not fit (a long key name, a narrow panel), the whole
+-- text in the header's tooltip. Run again on each change of the hint's
+-- width. The text is set only when it changes: a label without a width yet
+-- takes the size of a new text, and that must not start another round.
+function UI.fitHint(h)
+    local hint, full = h.hint, h.fullHint or ''
+    local function put(text)
+        if hint:getText() ~= text then
+            hint:setText(text)
+        end
+    end
+    local room = hint:getWidth()
+    put(full)
+    if full == '' or room <= 0 or hint:getTextSize().width <= room then
+        return
+    end
+    -- the longest start of the text that fits with the dots (measured by
+    -- the label itself: the font has no call to measure from Lua)
+    local function cut(n)
+        return n > 0 and (full:sub(1, n):gsub('%s+$', '') .. '...') or ''
+    end
+    local lo, hi = 0, #full - 1
+    while lo < hi do
+        local mid = math.ceil((lo + hi) / 2)
+        put(cut(mid))
+        if hint:getTextSize().width <= room then
+            lo = mid
+        else
+            hi = mid - 1
+        end
+    end
+    put(cut(lo))
+end
+
 local function header(parent, title, hint)
     local h = g_ui.createWidget('VoiceSectionHeader', parent)
     h.title:setText(title)
-    h.hint:setText(hint or '')
+    h.fullHint = hint or ''
+    if h.fullHint ~= '' then
+        h:setTooltip(h.fullHint)
+    end
+    h.hint.onGeometryChange = function()
+        UI.fitHint(h)
+    end
+    UI.fitHint(h)
     return h
+end
+
+-- the header's button (Join, Leave, Show, Hide); the hint stops before it
+local function headerAction(h, text, onClick)
+    h.action:setVisible(true)
+    h.action:setText(text)
+    h.action.onClick = onClick
+    h.hint:addAnchor(AnchorRight, 'action', AnchorLeft)
+    h.hint:setMarginRight(4)
 end
 
 local function note(parent, text)
@@ -400,11 +567,9 @@ local function members(parent, room)
 end
 
 local function leaveButton(h, room)
-    h.action:setVisible(true)
-    h.action:setText(tr('Leave'))
-    h.action.onClick = function()
+    headerAction(h, tr('Leave'), function()
         session():leave(room.id)
-    end
+    end)
 end
 
 local function partySection(parent, s)
@@ -414,11 +579,9 @@ local function partySection(parent, s)
         leaveButton(h, room)
         members(parent, room)
     elseif s.tokRooms.party then
-        h.action:setVisible(true)
-        h.action:setText(tr('Join'))
-        h.action.onClick = function()
+        headerAction(h, tr('Join'), function()
             s:join(s.tokRooms.party.id)
-        end
+        end)
     else
         note(parent, tr('No party'))
     end
@@ -462,9 +625,7 @@ end
 -- public rooms and events, from the relay's directory (only while unfolded)
 local function roomsSection(parent, s)
     local h = header(parent, tr('ROOMS'), keyHint(2))
-    h.action:setVisible(true)
-    h.action:setText(roomsOpen and tr('Hide') or tr('Show'))
-    h.action.onClick = function()
+    headerAction(h, roomsOpen and tr('Hide') or tr('Show'), function()
         roomsOpen = not roomsOpen
         if roomsOpen then
             UI.startDir()
@@ -473,7 +634,7 @@ local function roomsSection(parent, s)
             dirEvent = nil
         end
         UI.scheduleRooms()
-    end
+    end)
     local joined = s.rooms[2]
     if joined and (joined.kind == 'echo' or not roomsOpen) then
         dirRow(parent, s, joined.id, '# ' .. roomLabel(joined), true)
@@ -838,7 +999,25 @@ function UI.memberMenu(roomId, sid, pos)
     menu:display(pos)
 end
 
--- a slider 0-200% for one player's volume; closes on a click outside
+-- a click on the volume track moves one page toward it, on the 10% grid
+-- (it moved 1% a click: about 100 clicks down to 0); the thumb still drags
+-- freely
+function UI.volumePage(slider)
+    local thumb = slider:getChildById('sliderButton')
+    if not thumb then
+        return
+    end
+    local value = slider:getValue()
+    if g_window.getMousePosition().x < thumb:getX() + thumb:getWidth() / 2 then
+        value = math.ceil(value / VOLUME_PAGE) * VOLUME_PAGE - VOLUME_PAGE
+    else
+        value = math.floor(value / VOLUME_PAGE) * VOLUME_PAGE + VOLUME_PAGE
+    end
+    slider:setValue(value)
+end
+
+-- a slider 0-200% for one player's volume, 0% and 100% buttons; closes on a
+-- click outside
 function UI.volumePopup(roomId, sid, pos)
     local s = session()
     local m = s and s:memberAnywhere(sid)
@@ -862,6 +1041,16 @@ function UI.volumePopup(roomId, sid, pos)
         if member then
             s:setUserVolume(member, value)
         end
+    end
+    -- the arrows and the track: 10% a click (the scroll bar's own click
+    -- handler calls onClickSlider)
+    slider:setIncrementStep(VOLUME_PAGE)
+    slider.onClickSlider = UI.volumePage
+    volumePopup.zeroButton.onClick = function()
+        slider:setValue(0)
+    end
+    volumePopup.fullButton.onClick = function()
+        slider:setValue(100)
     end
     volumePopup.onMousePress = function(widget, mousePos)
         if not widget:containsPoint(mousePos) then

@@ -35,6 +35,8 @@ VoiceSmallButton < UIButton
     color: #ffe7b0
     border-color: #c99c53
 
+// the hint ("Hold Insert") ends at the button when it shows (voice_ui.lua
+// anchors it there and cuts it with "..."; the header's tooltip has it whole)
 VoiceSectionHeader < UIWidget
   height: 18
   margin-top: 4
@@ -50,11 +52,14 @@ VoiceSectionHeader < UIWidget
   Label
     id: hint
     anchors.left: title.right
+    anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
+    height: 14
     margin-left: 6
     font: verdana-11px-antialised
     color: #8f88a3
-    text-auto-resize: true
+    text-align: left
+    text-auto-resize: false
 
   VoiceSmallButton
     id: action
@@ -166,9 +171,10 @@ VoiceHeadIcon < UIWidget
   phantom: true
   focusable: false
 
-// the per-player volume popup (right-click > Volume)
+// the per-player volume popup (right-click > Volume): the track, the arrows
+// and the wheel move 10% (voice_ui.lua), the buttons go to 0% and 100%
 VoiceVolumePopup < UIWidget
-  size: 170 46
+  size: 170 66
   image-source: /images/mythos/popup
   image-border: 2
   padding: 6
@@ -178,18 +184,32 @@ VoiceVolumePopup < UIWidget
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
+    height: 14
     font: verdana-11px-antialised
     color: #e7e2ef
     text-align: center
 
   MythosHSlider
     id: slider
-    anchors.bottom: parent.bottom
+    anchors.top: label.bottom
     anchors.left: parent.left
     anchors.right: parent.right
+    margin-top: 4
     minimum: 0
     maximum: 200
     step: 10
+
+  VoiceSmallButton
+    id: zeroButton
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    text: 0%
+
+  VoiceSmallButton
+    id: fullButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    text: 100%
 
 VoiceReportReason < BrevesTab
   size: 72 22

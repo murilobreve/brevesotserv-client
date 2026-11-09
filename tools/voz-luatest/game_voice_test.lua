@@ -169,8 +169,8 @@ end)
 
 -- backoff ---------------------------------------------------------------------
 
-test('backoff steps stay within +-30%', function()
-    local steps = { 1, 2, 4, 8, 16, 30, 60, 60, 60, 60, 60 }
+test('backoff steps stay within +-30%, capped at 15 s', function()
+    local steps = { 1, 2, 4, 8, 15, 15, 15, 15, 15, 15, 15 }
     for n, step in ipairs(steps) do
         for _, r in ipairs({ 0, 0.25, 0.5, 0.75, 0.999999 }) do
             local d = S.backoffDelay(n, r)
@@ -179,6 +179,13 @@ test('backoff steps stay within +-30%', function()
         eq(S.backoffDelay(n, 0.5), step * 1000, 'no jitter at r=0.5')
     end
     eq(S.backoffDelay(0, 0.5), 1000, 'n=0 counts as the first step')
+    for n = 1, 100 do
+        assert(S.backoffDelay(n, 0.999999) <= 19500, 'never past 15 s +30% (n=' .. n .. ')')
+    end
+    for _, r in ipairs({ 0, 0.5, 0.999999 }) do
+        local d = S.failedDelay(r)
+        assert(d >= 42000 and d <= 78000, 'the slow retry of FAILED: ' .. d)
+    end
 end)
 
 -- the state machine -----------------------------------------------------------
@@ -340,32 +347,45 @@ test('close 1012: retry in 1-5 s, not counted as a failure', function()
     end
 end)
 
-test('the retry reuses a fresh unused token, else asks', function()
+-- online, then a token that came while connecting (kept for the auth) and a
+-- close before welcome: BACKOFF holding a fresh unused token
+local function backoffWithToken()
     local w = online()
     w.s:onEngineState('closed', 4429)
-    -- a pushed token arrives during the backoff: kept unused
+    w.advance(w.timers.retry - w.t) -- the token of online() is used: asks one
+    eq(w.s.state, ST.WAIT_TOKEN)
     w.s:onOpcode(tokMsg())
-    local asked = #w.sent142
-    w.advance(1000)
+    eq(w.s.state, ST.CONNECTING)
+    w.s:onOpcode(tokMsg()) -- kept, unused
+    w.s:onEngineState('closed', 4429)
+    eq(w.s.state, ST.BACKOFF)
+    assert(w.s:freshToken(), 'a fresh unused token kept')
+    return w
+end
+
+test('the retry reuses a fresh unused token, else asks', function()
+    local w = backoffWithToken()
+    local asked, connects = #w.sent142, #w.connects
+    w.advance(w.timers.retry - w.t)
     eq(w.s.state, ST.CONNECTING, 'connected with the kept token')
     eq(#w.sent142, asked, 'no token request')
+    eq(#w.connects, connects + 1)
     w.s:onEngineState('closed', 4429)
-    w.advance(3000)
+    w.advance(w.timers.retry - w.t)
     eq(w.s.state, ST.WAIT_TOKEN, 'the token is used: asks again')
     eq(w.last142().a, 'tok')
 end)
 
 test('a stale token is not reused', function()
-    local w = online()
-    w.s:onEngineState('closed', 4429)
-    w.s:onOpcode(tokMsg())
+    local w = backoffWithToken()
+    local connects = #w.connects
     -- the retry comes only after the kept token aged
     w.timers.retry = nil
     w.advance(S.TOKEN_FRESH_MS + 1)
     w.s:onTimer('retry')
     eq(w.s.state, ST.WAIT_TOKEN)
     eq(w.last142().a, 'tok')
-    eq(#w.connects, 1)
+    eq(#w.connects, connects)
 end)
 
 test('token requests: 3 s apart and 30 per 10 minutes', function()
@@ -398,24 +418,170 @@ test('token requests: 3 s apart and 30 per 10 minutes', function()
     end
 end)
 
-test('ten failures in a row: failed, manual retry only', function()
-    local w = online()
-    for i = 1, S.MAX_FAILURES do
+-- fails `n` times in a row from ONLINE: each retry asks a token and connects
+local function failTimes(w, n)
+    for i = 1, n do
         w.s:onEngineState('error', nil)
-        if i < S.MAX_FAILURES then
-            eq(w.s.state, ST.BACKOFF, 'failure ' .. i)
-            w.s:onOpcode(tokMsg())
+        if i < n then
+            eq(w.s.state, w.s.failures >= S.MAX_FAILURES and ST.FAILED or ST.BACKOFF, 'failure ' .. i)
             w.advance(w.timers.retry - w.t)
+            eq(w.s.state, ST.WAIT_TOKEN, 'retry ' .. i .. ' asks a token')
+            w.s:onOpcode(tokMsg())
             eq(w.s.state, ST.CONNECTING, 'retry ' .. i)
         end
     end
+end
+
+test('failures in a row: failed after about 4 minutes, still retrying once a minute', function()
+    local w = online()
+    failTimes(w, S.MAX_FAILURES)
     eq(w.s.state, ST.FAILED)
-    eq(w.timers.retry, nil)
-    w.advance(3600000)
-    eq(w.s.state, ST.FAILED, 'stays failed')
+    -- as long as the old 10 failures took (1+2+4+8+16+30+60*3 s = 241 s)
+    assert(w.t >= 200000 and w.t <= 300000, 'FAILED after ' .. w.t / 1000 .. ' s')
+    local wait = w.timers.retry - w.t
+    assert(wait >= 42000 and wait <= 78000, 'the slow retry is armed: ' .. tostring(wait))
+    eq(w.s.retryAt, w.timers.retry)
+    local connects = #w.connects
+    w.advance(wait)
+    eq(w.s.state, ST.WAIT_TOKEN, 'tried again by itself')
+    eq(w.last142().a, 'tok')
     w.s:onOpcode(tokMsg())
-    assert(w.s:retryNow())
-    eq(w.s.state, ST.CONNECTING)
+    eq(#w.connects, connects + 1)
+    -- still down: FAILED again, and again a minute later
+    w.s:onEngineState('error', nil)
+    eq(w.s.state, ST.FAILED)
+    assert(w.timers.retry, 'retry armed again')
+    w.advance(w.timers.retry - w.t)
+    eq(w.s.state, ST.WAIT_TOKEN)
+    w.s:onOpcode(tokMsg())
+    w.relay({ t = 'welcome', sid = 9 })
+    eq(w.s.state, ST.ONLINE, 'back without a click')
+    -- the button still works too
+    local m = online()
+    failTimes(m, S.MAX_FAILURES)
+    assert(m.s:retryNow())
+    eq(m.timers.retry, nil, 'the slow retry is replaced by the manual one')
+    eq(m.s.state, ST.WAIT_TOKEN)
+end)
+
+test('a token from canary while waiting to retry: the retry is now', function()
+    -- in BACKOFF
+    local w = online()
+    w.s:onEngineState('error', nil)
+    eq(w.s.state, ST.BACKOFF)
+    local connects = #w.connects
+    w.s:onOpcode(tokMsg())
+    eq(w.s.state, ST.CONNECTING, 'BACKOFF: connected at once')
+    eq(#w.connects, connects + 1)
+    eq(w.connects[#w.connects].tok, TOK)
+    eq(w.timers.retry, nil, 'the backoff timer is gone')
+    eq(w.s.retryAt, nil)
+    -- in FAILED
+    local f = online()
+    failTimes(f, S.MAX_FAILURES)
+    eq(f.s.state, ST.FAILED)
+    connects = #f.connects
+    f.s:onOpcode(tokMsg())
+    eq(f.s.state, ST.CONNECTING, 'FAILED: connected at once')
+    eq(#f.connects, connects + 1)
+    eq(f.timers.retry, nil)
+    f.relay({ t = 'welcome', sid = 9 })
+    eq(f.s.state, ST.ONLINE)
+    -- a malformed token changes nothing
+    local b = online()
+    b.s:onEngineState('error', nil)
+    b.s:onOpcode({ a = 'tok', tok = 'short' })
+    eq(b.s.state, ST.BACKOFF)
+end)
+
+test('cfg on from canary while waiting to retry: the retry is now, at its url', function()
+    for _, failures in ipairs({ 1, S.MAX_FAILURES }) do
+        local w = online()
+        failTimes(w, failures)
+        eq(w.s.state, failures == 1 and ST.BACKOFF or ST.FAILED)
+        local before = #w.sent142
+        w.s:onOpcode({ a = 'cfg', on = true, url = 'wss://voz2.mythosot.com.br/voz', psl = 50 })
+        eq(w.s.state, ST.WAIT_TOKEN, 'tries at once: asks a token')
+        eq(w.timers.retry, nil, 'not waiting for the backoff')
+        eq(w.s.retryAt, nil)
+        -- the request keeps canary's 3 s from the last one
+        if w.timers.tokreq then
+            w.advance(w.timers.tokreq - w.t)
+        end
+        eq(#w.sent142, before + 1)
+        eq(w.last142().a, 'tok')
+        w.s:onOpcode(tokMsg())
+        eq(w.s.state, ST.CONNECTING)
+        eq(w.connects[#w.connects].url, 'wss://voz2.mythosot.com.br/voz', 'the new address')
+    end
+end)
+
+-- a relay outage of `downMs` while online: canary answers every token
+-- request 100 ms later; a connect before the relay is up is refused 100 ms
+-- later, one after it gets welcome. Returns how long after the relay came
+-- back the session was online again (nil: never in 10 minutes), the world,
+-- and the times of the token requests.
+local function relayOutage(downMs, rand)
+    local w = online()
+    w.rand = rand
+    local relayUp, pending, tokTimes = false, {}, {}
+    w.s.io.send142 = function(t)
+        w.sent142[#w.sent142 + 1] = t
+        if t.a == 'tok' then
+            tokTimes[#tokTimes + 1] = w.t
+            pending[#pending + 1] = tokMsg()
+        end
+    end
+    w.s.io.connect = function(url, tok)
+        w.connects[#w.connects + 1] = { url = url, tok = tok }
+        pending[#pending + 1] = relayUp and 'welcome' or 'refused'
+    end
+    w.s:onEngineState('error', nil) -- the relay goes down
+    local upAt = w.t + downMs
+    while w.t < upAt + 600000 do
+        relayUp = w.t >= upAt
+        local batch = pending
+        pending = {}
+        for _, p in ipairs(batch) do
+            if p == 'welcome' then
+                w.relay({ t = 'welcome', sid = 9 })
+            elseif p == 'refused' then
+                w.s:onEngineState('error', nil)
+            else
+                w.s:onOpcode(p)
+            end
+        end
+        if relayUp and w.s.state == ST.ONLINE then
+            return w.t - upAt, w, tokTimes
+        end
+        assert(w.s.state ~= ST.READY and w.s.state ~= ST.BLOCKED, 'gave up: ' .. w.s.state)
+        w.advance(100)
+    end
+    return nil, w, tokTimes
+end
+
+test('a relay outage: back within 20 s, or a minute once FAILED, never only by hand', function()
+    -- the play-test: a one-minute outage came back only 39.8 s after the relay
+    for _, rand in ipairs({ 0, 0.5, 0.999999 }) do
+        -- short of FAILED (at least 168 s of retries, at the fastest jitter)
+        for _, downS in ipairs({ 10, 41, 62, 90, 120, 160 }) do
+            local lag, w = relayOutage(downS * 1000, rand)
+            assert(lag, string.format('down %d s, r=%s: never back (%s)', downS, rand, w.s.state))
+            assert(lag <= 20000, string.format('down %d s, r=%s: back after %.1f s', downS, rand, lag / 1000))
+        end
+        for _, downS in ipairs({ 241, 300, 600 }) do
+            local lag, w, tokTimes = relayOutage(downS * 1000, rand)
+            assert(lag, string.format('down %d s, r=%s: never back (%s)', downS, rand, w.s.state))
+            assert(lag <= 79000, string.format('down %d s, r=%s: back after %.1f s', downS, rand, lag / 1000))
+            -- canary's token limits hold all along
+            for i = 2, #tokTimes do
+                assert(tokTimes[i] - tokTimes[i - 1] >= S.TOKEN_GAP_MS, 'token gap')
+            end
+            for i = S.TOKEN_BUDGET + 1, #tokTimes do
+                assert(tokTimes[i] - tokTimes[i - S.TOKEN_BUDGET] >= S.TOKEN_WINDOW_MS, 'token budget')
+            end
+        end
+    end
 end)
 
 test('the failure count resets after 30 s online', function()
@@ -423,8 +589,8 @@ test('the failure count resets after 30 s online', function()
     w.s:onEngineState('error', nil)
     w.s:onEngineState('error', nil) -- ignored: in backoff
     eq(w.s.failures, 1)
-    w.s:onOpcode(tokMsg())
-    w.advance(w.timers.retry - w.t)
+    w.s:onOpcode(tokMsg()) -- connects at once
+    eq(w.s.state, ST.CONNECTING)
     w.relay({ t = 'welcome', sid = 8 })
     w.advance(S.STABLE_MS)
     w.s:onEngineState('error', nil)
@@ -585,8 +751,8 @@ test('reconnect joins the room of before again', function()
     assert(w.s:join('pub:geral'))
     roster(w, 'pub:geral', { { 7 }, { 20 } })
     w.s:onEngineState('closed', 1012)
-    w.s:onOpcode(tokMsg())
-    w.advance(w.timers.retry - w.t)
+    w.s:onOpcode(tokMsg()) -- a fresh token in the backoff: connects at once
+    eq(w.s.state, ST.CONNECTING)
     local n = #w.ctl
     w.relay({ t = 'welcome', sid = 9 })
     local rejoined = {}
@@ -1198,6 +1364,56 @@ test('push-to-talk keys taken elsewhere: actions, hotkeys, the hotkeys manager, 
     modules, Keybind, g_platform = nil, nil, nil
 end)
 
+test('push-to-talk keys: the key of an empty action bar button is free; a free key is offered', function()
+    KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta, KeyEscape = 22, 24, 21, 23, 25, 1
+    CHAT_MODE = { ON = 1, OFF = 2 }
+    KEY_CATEGORY = 'Voz'
+    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+    local actions = {}
+    Keybind = { currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
+        isKeyComboUsed = function(combo) return actions[combo] == true end }
+    g_platform = { isBrowser = function() return false end }
+    -- a new profile (the play-test): the bar has F1-F12 on its first twelve
+    -- buttons, spells on F1-F8 only
+    local hotkeys, mappings = {}, {}
+    for i = 1, 12 do
+        hotkeys[i] = { actionsetting = { action = 'TriggerActionButton_1.' .. i }, keysequence = 'F' .. i }
+    end
+    for i = 1, 8 do
+        mappings['1.' .. i] = { actionBar = 1, actionButton = i,
+            actionsetting = { chatText = 'exura vita', sendAutomatically = true } }
+    end
+    -- F9: no mapping at all; F10: emptied; F11: a multi action; F12: only a use type left
+    mappings['1.10'] = { actionBar = 1, actionButton = 10, actionsetting = {} }
+    mappings['1.11'] = { actionBar = 1, actionButton = 11,
+        actionsetting = { multiActions = { {}, { useObject = 3155, useType = 'UseOnTarget' }, {} } } }
+    mappings['1.12'] = { actionBar = 1, actionButton = 12, actionsetting = { useType = 'UseOnTarget', upgradeTier = 0 } }
+    hotkeys[#hotkeys + 1] = { keysequence = 'Ctrl+F1' } -- a hotkey of the bar that is no button's
+    hotkeys[#hotkeys + 1] = { actionsetting = { action = 'TriggerActionButton_2.1' }, keysequence = 'Ctrl+F2' }
+    mappings['2.1'] = { actionBar = 2, actionButton = 1, actionsetting = { useObject = 0, chatText = '' } }
+    modules = { game_actionbar = { ApiJson = { hasCurrentHotkeySet = function() return true end,
+        getHotkeyEntries = function() return hotkeys end,
+        getMapping = function(bar, button) return mappings[bar .. '.' .. button] end } } }
+    dofile(MODULE .. 'voice_settings.lua')
+    local taken = VoiceSettings.keyTaken
+    for i = 1, 8 do
+        assert(taken('F' .. i, 0, false), 'F' .. i .. ' casts a spell')
+    end
+    assert(not taken('F9', 0, false), 'F9: a button with nothing on it')
+    assert(not taken('F10', 0, false), 'F10: an emptied button')
+    assert(taken('F11', 0, false), 'F11: a multi action')
+    assert(not taken('F12', 0, false), 'F12: only its use type left')
+    assert(taken('Ctrl+F1', 0, false), 'a hotkey of the bar that is no button\'s')
+    assert(not taken('Ctrl+F2', 0, false), 'an item 0 and an empty text are nothing')
+    -- the key offered to a new player
+    eq(VoiceSettings.freeKey(0), 'Insert')
+    actions.Insert = true
+    eq(VoiceSettings.freeKey(0), 'Pause', 'the next one when Insert is taken')
+    actions.Pause = true
+    eq(VoiceSettings.freeKey(0), nil, 'none left')
+    modules, Keybind, g_platform = nil, nil, nil
+end)
+
 test('the voice strings never change the text of other windows', function()
     -- pt.lua runs in a box of its own: it calls client_locales at its end
     local env = setmetatable({}, { __index = _G })
@@ -1483,6 +1699,8 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
         bind = function(c, a) keybinds[c .. '_' .. a] = 'bound' end,
         delete = function(c, a) keybinds[c .. '_' .. a] = nil end,
         getKeybindKeys = function() return { primary = '', secondary = '' } end,
+        isKeyComboUsed = function() return false end,
+        setPrimaryActionKey = function() end,
     }
     -- a key the voice locale also has, with other words: pt.lua's stay
     local pt = { translation = { ['Turn voice on'] = 'Ligar a voz' } }
@@ -1710,6 +1928,557 @@ test('engine_full over the g_voice binding: every call bound, events end to end'
     dofile = realDofile
     g_voice = nil
     assert(ok, err)
+end)
+
+-- the panel, its popups and the onboarding over fake widgets ------------------
+
+-- a widget with the few behaviours these tests look at: text and its width
+-- (6 px a character), size, position, parent and children, anchors, and a
+-- side panel that stacks its visible children from its top (the client's
+-- UIMiniWindowContainer). Any other field is a child that does nothing
+-- when called.
+local Widget = {}
+local WidgetMeta = {}
+-- state of the fake itself, never a child
+local WIDGET_STATE = { parent = true, tip = true, savedAt = true, dead = true, marginRight = true, checked = true,
+    onValueChange = true }
+WidgetMeta.__index = function(t, k)
+    if Widget[k] then
+        return Widget[k]
+    end
+    if WIDGET_STATE[k] then
+        return nil
+    end
+    local c = Widget.new({ id = k })
+    rawset(t, k, c)
+    return c
+end
+WidgetMeta.__call = function() return nil end
+
+function Widget.new(p)
+    local w = setmetatable({ id = '', text = '', x = 0, y = 0, width = 100, height = 20, shown = true,
+        kids = {}, anchors = {}, class = 'UIWidget', minHeight = 0, saved = 0 }, WidgetMeta)
+    for k, v in pairs(p or {}) do
+        rawset(w, k, v)
+    end
+    return w
+end
+function Widget:getId() return self.id end
+function Widget:getClassName() return self.class end
+function Widget:setText(t) self.text = tostring(t) end
+function Widget:getText() return self.text end
+function Widget:getTextSize() return { width = 6 * #self.text, height = 14 } end
+function Widget:setTooltip(t) rawset(self, 'tip', t) end
+function Widget:setVisible(v) self.shown = v and true or false end
+function Widget:isVisible() return self.shown and (not self.parent or self.parent:isVisible()) end
+function Widget:getWidth() return self.width end
+function Widget:getHeight() return self.height end
+function Widget:setHeight(h) self.height = h end
+function Widget:getMinimumHeight() return self.minHeight end
+function Widget:setPosition(p) self.x, self.y = p.x, p.y end
+function Widget:getPosition() return { x = self.x, y = self.y } end
+function Widget:getX() return self:getRect().x end
+function Widget:getParent() return self.parent end
+function Widget:getChildren() return self.kids end
+function Widget:getChildById(id)
+    for _, c in ipairs(self.kids) do
+        if c.id == id then
+            return c
+        end
+    end
+    return rawget(self, id)
+end
+function Widget:recursiveGetChildById(id) return self:getChildById(id) or self[id] end
+function Widget:getChildIndex(c)
+    for i, k in ipairs(self.kids) do
+        if k == c then
+            return i
+        end
+    end
+    return -1
+end
+function Widget:insertChild(i, c)
+    assert(c.parent == nil, 'insertChild of a widget that has a parent')
+    table.insert(self.kids, math.max(1, math.min(i, #self.kids + 1)), c)
+    c.parent = self
+end
+function Widget:addChild(c) self:insertChild(#self.kids + 1, c) end
+function Widget:removeChild(c)
+    local i = self:getChildIndex(c)
+    assert(i > 0, 'removeChild of a widget that is not a child')
+    table.remove(self.kids, i)
+    c.parent = nil
+end
+function Widget:destroyChildren() self.kids = {} end
+function Widget:destroy() rawset(self, 'dead', true) end
+function Widget:isDestroyed() return rawget(self, 'dead') == true end
+function Widget:addAnchor(edge, id, hooked) self.anchors[edge] = { id, hooked } end
+function Widget:setMarginRight(m) rawset(self, 'marginRight', m) end
+function Widget:saveChildren() self.saved = self.saved + 1 end
+function Widget:saveParentPosition(id, pos) rawset(self, 'savedAt', { id = id, x = pos.x, y = pos.y }) end
+-- a side panel stacks its visible children; anything else is where it was put
+function Widget:getRect()
+    local parent = self.parent
+    if parent and parent.class == 'UIMiniWindowContainer' then
+        local pr = parent:getRect()
+        local y = pr.y
+        for _, c in ipairs(parent.kids) do
+            if c == self then
+                break
+            end
+            if c.shown then
+                y = y + c.height
+            end
+        end
+        return { x = pr.x, y = y, width = pr.width, height = self.height }
+    end
+    return { x = self.x, y = self.y, width = self.width, height = self.height }
+end
+-- the client's fits(): the room left for a child at its minimum height, or -1
+function Widget:fits(child, minHeight)
+    local used = 0
+    for _, c in ipairs(self.kids) do
+        if c.shown then
+            used = used + c.height
+        end
+    end
+    local left = self.height - used
+    return left >= minHeight and left or -1
+end
+
+-- a scroll bar as the client's UIScrollBar: a value clamped to its range, the
+-- arrows move `incrementValue`, a click on the track calls onClickSlider
+local function fakeSlider()
+    local bar = Widget.new({ id = 'slider', class = 'UIScrollBar', x = 6, y = 26, width = 158, height = 10,
+        value = 0, minimum = 0, maximum = 200, step = 10, incrementValue = 1 })
+    local thumb = Widget.new({ id = 'sliderButton', width = 57, height = 8 })
+    bar:addChild(thumb)
+    function bar:getValue() return self.value end
+    function bar:setValue(v)
+        v = math.max(self.minimum, math.min(self.maximum, v))
+        if v ~= self.value then
+            self.value = v
+            -- the thumb as the client places it: its share of the range
+            thumb.x = self.x + 10 + math.floor((v - self.minimum) / (self.maximum - self.minimum) * (138 - 57))
+            if self.onValueChange then
+                self.onValueChange(self, v)
+            end
+        end
+    end
+    function bar:setIncrementStep(n) self.incrementValue = n end
+    function bar:onClickSlider() end -- the stock jump, not modelled
+    function bar:clickTrack() self:onClickSlider() end
+    function bar:clickArrow(dir) self:setValue(self.value + dir * self.incrementValue) end
+    return bar, thumb
+end
+
+-- the client globals voice_ui.lua and voice_settings.lua read, and a session
+local function uiWorld(opts)
+    opts = opts or {}
+    local created = {}
+    local root = Widget.new({ id = 'root', width = 1280, height = 720 })
+    rootWidget = root
+    local gameRoot = Widget.new({ id = 'gameRootPanel', width = 1280, height = 720 })
+    root:addChild(gameRoot)
+    local map = Widget.new({ id = 'gameMapPanel', x = 176, y = 20, width = 928, height = 500 })
+    local function sidePanel(id, x, top, height)
+        local panel = Widget.new({ id = id, class = 'UIMiniWindowContainer', x = x, y = top, width = 176,
+            height = height })
+        gameRoot:addChild(panel)
+        return panel
+    end
+    -- 1280x720: the right panel under the minimap and inventory
+    local right = sidePanel('gameRightPanel', 1104, opts.rightTop or 200, opts.rightHeight or 500)
+    local left = sidePanel('gameLeftPanel', 0, 0, 720)
+    local panels = { right, left }
+    for _, h in ipairs(opts.rightWindows or { 200, 150, 150 }) do -- Battle List, Unjustified Points, VIP
+        right:addChild(Widget.new({ class = 'UIMiniWindow', height = h }))
+    end
+    for _, h in ipairs(opts.leftWindows or { 720 }) do
+        left:addChild(Widget.new({ class = 'UIMiniWindow', height = h }))
+    end
+    modules = {
+        game_interface = {
+            -- as gameinterface.lua: the selected panel, another with room, else the selected one
+            findContentPanelAvailable = function(child, minHeight)
+                if right:isVisible() and right:fits(child, minHeight) >= 0 then
+                    return right
+                end
+                for _, panel in ipairs(panels) do
+                    if panel ~= right and panel:isVisible() and panel:fits(child, minHeight) >= 0 then
+                        return panel
+                    end
+                end
+                return right
+            end,
+            getSelectedPanel = function() return right end,
+            getRootPanel = function() return gameRoot end,
+            getMapPanel = function() return map end,
+        },
+        client_topmenu = { addRightGameToggleButton = function() return Widget.new({ id = 'voiceButton' }) end },
+        game_textmessage = { displayGameMessage = function() end },
+    }
+    g_ui = {
+        loadUI = function()
+            local w = Widget.new({ id = 'voiceWindow', class = 'UIMiniWindow', width = 176, height = 220,
+                minHeight = 85 })
+            -- as UIMiniWindow: no saved place puts it at the end of the right panel
+            function w:setupOnStart()
+                if opts.noParent then
+                    return -- a saved index the panel could not take yet (scheduleInsert)
+                end
+                right:addChild(self)
+            end
+            function w:open()
+                self.shown = true
+                VoiceUI.onPanelOpen()
+            end
+            function w:close() self.shown = false end
+            created.window = w
+            return w
+        end,
+        createWidget = function(style, parent)
+            local w
+            if style == 'VoiceVolumePopup' then
+                w = Widget.new({ id = style, width = 170, height = 66 })
+                w.slider, w.thumb = fakeSlider()
+                w:addChild(w.slider)
+            elseif style == 'VoiceSectionHeader' then
+                w = Widget.new({ id = style, width = 160, height = 18 })
+            else
+                w = Widget.new({ id = style })
+            end
+            created[style] = created[style] or {}
+            table.insert(created[style], w)
+            if parent then
+                parent:addChild(w)
+            end
+            return w
+        end,
+        importStyle = function() end,
+    }
+    local mouse = { x = 0, y = 0 }
+    g_window = { getMousePosition = function() return mouse end }
+    g_clock = { millis = function() return events.now or 0 end }
+    g_platform = { isBrowser = function() return opts.browser == true end, isMobile = function() return false end }
+    g_game = { getLocalPlayer = function() return nil end }
+    g_map = { getCreatureById = function() return nil end }
+    tr = function(text, ...)
+        local ok, out = pcall(string.format, text, ...)
+        return ok and out or text
+    end
+    AnchorTop, AnchorBottom, AnchorLeft, AnchorRight, MouseRightButton, KeyEscape = 1, 2, 3, 4, 2, 1
+    KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta = 22, 24, 21, 23, 25
+    CHAT_MODE = { ON = 1, OFF = 2 }
+    KEY_CATEGORY = 'Voz'
+    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+    local keys, used = {}, opts.usedKeys or {}
+    Keybind = { chatMode = CHAT_MODE.OFF, currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
+        isKeyComboUsed = function(combo) return used[combo] == true end,
+        setPrimaryActionKey = function(category, action, preset, combo, mode)
+            keys[#keys + 1] = { action = action, combo = combo, mode = mode }
+        end }
+    determineKeyComboDesc = function(keyCode)
+        return ({ [65] = 'A', [137] = 'F9', [6] = 'Insert' })[keyCode]
+    end
+    local w = opts.world or online()
+    local prefs, set, wants = w.s.prefs, {}, {}
+    getSession = function() return w.s end
+    getPrefs = function() return prefs end
+    getEngineName = function() return opts.engine or 'full' end
+    hasAudio = function() return true end
+    isTesting = function() return false end
+    talkKey = function() return opts.talkKey or '' end
+    setPref = function(k, v) prefs[k] = v set[#set + 1] = { k, v } end
+    setWant = function(on) wants[#wants + 1] = on end
+    applyEnginePrefs = function() end
+    callEngine = function() end
+    notify = function() end
+    dofile(MODULE .. 'voice_ui.lua')
+    dofile(MODULE .. 'voice_settings.lua')
+    return { w = w, created = created, root = root, gameRoot = gameRoot, right = right, left = left, map = map,
+        mouse = mouse, keys = keys, used = used, set = set, wants = wants }
+end
+
+local function inside(r, root)
+    return r.x >= root.x and r.y >= root.y and r.x + r.width <= root.x + root.width and
+        r.y + r.height <= root.y + root.height
+end
+
+test('the panel opens where it shows: a side panel with room, else on top, else over the map', function()
+    -- 1280x720, Battle List, Unjustified Points and VIP fill the right panel,
+    -- the left one is full too: the top of the right (selected) panel
+    local u = uiWorld()
+    VoiceUI.create()
+    local win = u.created.window
+    eq(win:getParent(), u.right, 'made at the end of the right panel')
+    VoiceUI.toggle()
+    assert(win:isVisible(), 'opened')
+    eq(u.right:getChildIndex(win), 1, 'on top of the right panel, not under the screen')
+    assert(u.right.saved > 0, 'the place is kept for the next login')
+    runEvents(200)
+    eq(win:getParent(), u.right, 'it shows there: stays')
+    assert(inside(win:getRect(), u.root:getRect()), 'ends inside the screen')
+    VoiceUI.toggle()
+    assert(not win:isVisible(), 'closed again')
+    VoiceUI.destroy()
+
+    -- the left panel has room: it goes there
+    u = uiWorld({ leftWindows = { 300 } })
+    VoiceUI.create()
+    win = u.created.window
+    VoiceUI.toggle()
+    eq(win:getParent(), u.left, 'a side panel with room')
+    runEvents(200)
+    assert(inside(win:getRect(), u.root:getRect()))
+    VoiceUI.destroy()
+
+    -- the right panel has room itself: nothing moves
+    u = uiWorld({ rightWindows = { 200 } })
+    VoiceUI.create()
+    win = u.created.window
+    VoiceUI.toggle()
+    eq(win:getParent(), u.right)
+    eq(u.right:getChildIndex(win), 2, 'stays at its place')
+    VoiceUI.destroy()
+
+    -- not in any panel yet (a saved index the panel could not take): the top
+    u = uiWorld({ noParent = true })
+    VoiceUI.create()
+    win = u.created.window
+    eq(win:getParent(), nil)
+    VoiceUI.toggle()
+    eq(u.right:getChildIndex(win), 1)
+    VoiceUI.destroy()
+
+    -- a screen so short the top of the panel still ends under it: over the map
+    u = uiWorld({ rightTop = 600, rightHeight = 120, rightWindows = { 120 } })
+    VoiceUI.create()
+    win = u.created.window
+    VoiceUI.toggle()
+    runEvents(200)
+    eq(win:getParent(), u.gameRoot, 'floats')
+    assert(win:isVisible())
+    assert(inside(win:getRect(), u.root:getRect()), 'inside the screen')
+    assert(inside(win:getRect(), u.map:getRect()), 'over the map')
+    eq(win.savedAt and win.savedAt.id, 'gameRootPanel', 'the floating place is kept')
+    VoiceUI.toggle()
+    VoiceUI.toggle()
+    eq(win:getParent(), u.gameRoot, 'opened again where it floats')
+    VoiceUI.destroy()
+end)
+
+test('the party header hint stops at its button, cut with dots, whole in the tooltip', function()
+    local w = online()
+    roster(w, 'p:10:5', { { 7 }, { 8 } })
+    local u = uiWorld({ world = w, talkKey = 'Insert' })
+    VoiceUI.create()
+    u.created.window.shown = true
+    VoiceUI.refresh()
+    local headers = u.created.VoiceSectionHeader
+    assert(headers and #headers >= 2, 'party and rooms headers')
+    local party = headers[1]
+    eq(party.title.text, 'PARTY')
+    eq(party.action.text, 'Leave')
+    eq(party.hint.anchors[AnchorRight] and party.hint.anchors[AnchorRight][1], 'action',
+        'the hint ends where the button starts')
+    eq(party.tip, 'Hold Insert', 'the whole hint in the tooltip')
+    -- the layout gives the hint 60 px: "Hold Insert" needs 66
+    party.hint.width = 60
+    party.hint.onGeometryChange(party.hint)
+    local text = party.hint.text
+    assert(text:sub(-3) == '...', 'cut with dots: ' .. text)
+    assert(6 * #text <= 60, 'fits its 60 px: ' .. text)
+    eq(text, 'Hold In...')
+    -- room again: whole
+    party.hint.width = 120
+    party.hint.onGeometryChange(party.hint)
+    eq(party.hint.text, 'Hold Insert')
+    -- no room even for the dots: nothing
+    party.hint.width = 10
+    party.hint.onGeometryChange(party.hint)
+    eq(party.hint.text, '')
+    -- no width at all (not laid out yet): the text is set once, not again
+    -- on each geometry change (a label with no width takes its text's size)
+    local sets = 0
+    local setText = party.hint.setText
+    party.hint.setText = function(self, t)
+        sets = sets + 1
+        setText(self, t)
+    end
+    party.hint.width = 0
+    party.hint.onGeometryChange(party.hint)
+    eq(party.hint.text, 'Hold Insert')
+    party.hint.onGeometryChange(party.hint)
+    party.hint.onGeometryChange(party.hint)
+    eq(sets, 1, 'set once')
+    -- the rooms header has its button too
+    local rooms = headers[#headers]
+    eq(rooms.title.text, 'ROOMS')
+    eq(rooms.hint.anchors[AnchorRight] and rooms.hint.anchors[AnchorRight][1], 'action')
+    VoiceUI.destroy()
+    -- the otui: the hint does not grow with its text
+    local otui = io.open(MODULE .. 'voice.otui'):read('*a')
+    local block = otui:match('VoiceSectionHeader < UIWidget(.-)\nVoiceMemberIcon')
+    local hint = block:match('id: hint(.-)VoiceSmallButton')
+    assert(hint:find('text%-auto%-resize: false'), 'the hint has a fixed width')
+    assert(hint:find('anchors%.right:'), 'the hint has a right edge')
+end)
+
+test('volume popup: 10% a click on the track or the arrows, 0% and 100% buttons', function()
+    local w = online()
+    roster(w, 'p:10:5', { { 7 }, { 8, 0, 4242, 'Ana' } })
+    local u = uiWorld({ world = w })
+    VoiceUI.volumePopup('p:10:5', 8, { x = 100, y = 100 })
+    local popup = u.created.VoiceVolumePopup[1]
+    local slider, thumb = popup.slider, popup.thumb
+    eq(slider:getValue(), 100)
+    -- the play-test: 12 clicks took it to 88%
+    u.mouse.x = thumb:getX() - 5 -- left of the thumb
+    slider:clickTrack()
+    eq(slider:getValue(), 90, 'a click left of the thumb: 10% down')
+    eq(S.userPref(w.s.prefs, 4242).v, 90, 'saved for the player')
+    for _ = 1, 9 do
+        u.mouse.x = thumb:getX() - 5
+        slider:clickTrack()
+    end
+    eq(slider:getValue(), 0, '10 clicks from 100% to 0%')
+    u.mouse.x = thumb:getX() + thumb:getWidth() + 5
+    slider:clickTrack()
+    eq(slider:getValue(), 10, 'right of the thumb: up')
+    slider:setValue(88) -- a drag leaves it anywhere
+    u.mouse.x = thumb:getX() - 5
+    slider:clickTrack()
+    eq(slider:getValue(), 80, 'back on the 10% grid')
+    slider:clickArrow(1)
+    eq(slider:getValue(), 90, 'an arrow: 10%')
+    popup.zeroButton.onClick()
+    eq(slider:getValue(), 0, '0% at once')
+    eq(S.userPref(w.s.prefs, 4242).v, 0)
+    local last = w.engineCalls[#w.engineCalls]
+    eq(last[1], 'setUserVolume')
+    eq(last[3], 0)
+    popup.fullButton.onClick()
+    eq(slider:getValue(), 100, '100% at once')
+    eq(S.userPref(w.s.prefs, 4242), nil, 'back at the default: dropped')
+    VoiceUI.destroy()
+    -- the otui has the two buttons
+    local otui = io.open(MODULE .. 'voice.otui'):read('*a')
+    local block = otui:match('VoiceVolumePopup < UIWidget(.-)\nVoiceReportReason')
+    assert(block:find('id: zeroButton') and block:find('id: fullButton'), 'the buttons in voice.otui')
+end)
+
+test('onboarding: a free key offered (Insert), the chat hint without F1-F12, Mouse 4 in the browser', function()
+    local function onboardWorld(opts)
+        local u = uiWorld(opts)
+        local origCreate = g_ui.createWidget
+        g_ui.createWidget = function(style, parent)
+            local w = origCreate(style, parent)
+            if style == 'VoiceOnboardWindow' then
+                w.keyBox.grab = 0
+                function w.keyBox:grabKeyboard() end
+                function w.keyBox:ungrabKeyboard() end
+                function w.keyBox:focus() end
+                function w.mouseCheck:setChecked(v) self.checked = v end
+                function w.mouseCheck:isChecked() return self.checked == true end
+            end
+            return w
+        end
+        VoiceSettings.showOnboarding()
+        return u, u.created.VoiceOnboardWindow[1]
+    end
+    -- a new profile: Insert is offered and set when voice is turned on
+    local u, win = onboardWorld()
+    eq(win.keyBox.text, 'Insert', 'the box shows the free key')
+    assert(win.keyHint.text:find('Insert'), 'the hint says it is a suggestion: ' .. win.keyHint.text)
+    eq(win.mouseCheck.shown, false, 'no mouse option outside the browser')
+    VoiceSettings.closeOnboarding(true)
+    eq(#u.keys, 2, 'the party key, chat on and off')
+    eq(u.keys[1].combo, 'Insert')
+    eq(u.keys[1].action, 'Falar na party')
+    eq(u.wants[1], true)
+    -- "Not now": the suggestion is not taken
+    u, win = onboardWorld()
+    VoiceSettings.closeOnboarding(false)
+    eq(#u.keys, 0, 'no key the player did not choose')
+    -- Insert taken: Pause; a key already set: shown as it is, nothing offered
+    u, win = onboardWorld({ usedKeys = { Insert = true } })
+    eq(win.keyBox.text, 'Pause')
+    VoiceSettings.closeOnboarding(true)
+    u, win = onboardWorld({ talkKey = 'F8' })
+    eq(win.keyBox.text, 'F8')
+    eq(win.keyHint.text, '')
+    VoiceSettings.closeOnboarding(true)
+    eq(#u.keys, 0, 'the key the player had stays')
+    -- the chat hint and the "taken" message point to a free key, not to F1-F12
+    u, win = onboardWorld({ usedKeys = { F9 = true } })
+    Keybind.chatMode = CHAT_MODE.ON
+    win.keyBox.onClick()
+    win.keyBox.onKeyDown(win.keyBox, 65, 0) -- A types in the chat
+    assert(not win.keyStatus.text:find('F1%-F12'), 'no F1-F12 in: ' .. win.keyStatus.text)
+    assert(win.keyStatus.text:find('Insert'), 'Insert in: ' .. win.keyStatus.text)
+    win.keyBox.onClick()
+    win.keyBox.onKeyDown(win.keyBox, 137, 0) -- F9 (KeyF9), taken
+    eq(win.keyStatus.text, 'F9 is already used by another action. Try Insert.')
+    eq(win.keyBox.text, 'Insert', 'the suggestion stays in the box')
+    win.keyBox.onClick()
+    win.keyBox.onKeyDown(win.keyBox, 6, 0) -- Insert picked by hand
+    eq(win.keyHint.text, '', 'no longer a suggestion')
+    VoiceSettings.closeOnboarding(false)
+    eq(#u.keys, 2, 'a key the player picked is kept even with "Not now"')
+    -- the browser with the full engine: Mouse 4 can be the push-to-talk
+    u, win = onboardWorld({ browser = true })
+    eq(win.mouseCheck.shown, true)
+    win.mouseCheck:setChecked(true)
+    VoiceSettings.closeOnboarding(true)
+    local mouse
+    for _, s in ipairs(u.set) do
+        if s[1] == 'pttMouse' then
+            mouse = s[2]
+        end
+    end
+    eq(mouse, 3, 'Mouse 4 (the back button)')
+    -- left unticked: a side button set before is not touched
+    u, win = onboardWorld({ browser = true })
+    getPrefs().pttMouse = 4
+    VoiceSettings.closeOnboarding(true)
+    eq(getPrefs().pttMouse, 4, 'Mouse 5 stays')
+    u, win = onboardWorld({ browser = true, engine = 'lite' })
+    eq(win.mouseCheck.shown, false, 'presence mode cannot talk')
+    getPrefs().pttMouse = 3
+    VoiceSettings.closeOnboarding(true)
+    eq(getPrefs().pttMouse, 3, 'a box that did not show changes nothing')
+end)
+
+test('every widget the Lua reads by id exists in its otui', function()
+    local function read(file)
+        local f = assert(io.open(MODULE .. file))
+        local text = f:read('*a')
+        f:close()
+        return text
+    end
+    local function ids(block)
+        local out = {}
+        for id in block:gmatch('id: ([%w_]+)') do
+            out[id] = true
+        end
+        return out
+    end
+    local onboard = ids(read('voiceonboard.otui'))
+    for id in read('voice_settings.lua'):gmatch('onboard%.([%a_][%w_]*)') do
+        assert(onboard[id], 'voiceonboard.otui has no ' .. id)
+    end
+    local otui = read('voice.otui')
+    local popup = ids(otui:match('VoiceVolumePopup < UIWidget(.-)\nVoiceReportReason'))
+    for id in read('voice_ui.lua'):gmatch('volumePopup%.([%a_][%w_]*)') do
+        if id ~= 'onMousePress' and id ~= 'onKeyPress' then
+            assert(popup[id], 'VoiceVolumePopup has no ' .. id)
+        end
+    end
+    local headerIds = ids(otui:match('VoiceSectionHeader < UIWidget(.-)\nVoiceMemberIcon'))
+    for id in read('voice_ui.lua'):gmatch('%f[%w_]h%.([%a_][%w_]*)[:%.]') do
+        assert(headerIds[id], 'VoiceSectionHeader has no ' .. id)
+    end
 end)
 
 print(string.format('%d passed, %d failed', passed, failed))

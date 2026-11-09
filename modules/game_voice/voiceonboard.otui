@@ -1,9 +1,11 @@
 // Mythos Voz: shown once, the first time the server offers voice. It explains
-// push-to-talk, asks for headphones, links the rules and takes the party key.
+// push-to-talk, asks for headphones, links the rules and takes the party key
+// (a free one is offered: Insert on a new profile; in the browser the mouse
+// side button is an option too). The PT-BR texts fit the 348 px of content.
 
 VoiceOnboardWindow < MythosWindow
   !text: tr('Mythos Voice')
-  size: 380 330
+  size: 380 390
   @onEscape: modules.game_voice.VoiceSettings.closeOnboarding(false)
 
   Label
@@ -80,17 +82,42 @@ VoiceOnboardWindow < MythosWindow
     $focus:
       image-source: /images/mythos/input_focus
 
+  // the suggested key, until the player picks one
   Label
-    id: keyStatus
+    id: keyHint
     anchors.top: prev.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 4
     font: verdana-11px-antialised
+    color: #8f88a3
+    text-align: center
+    text-wrap: true
+    text-auto-resize: true
+
+  Label
+    id: keyStatus
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    font: verdana-11px-antialised
     color: #e0604a
     text-align: center
     text-wrap: true
     text-auto-resize: true
+
+  // the browser only (voice_settings.lua shows it)
+  QtCheckBox
+    id: mouseCheck
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    font: verdana-11px-antialised
+    color: #d1ccd9
+    visible: false
+    !text: tr('Also talk with the mouse side button (Mouse 4)')
 
   MythosPrimaryButton
     id: onButton

@@ -28,7 +28,7 @@ S.ST = {
     CONNECTING = 'connecting', -- the engine is opening the socket, waiting for welcome
     ONLINE = 'online',
     BACKOFF = 'backoff',       -- waiting retryAt before the next try
-    FAILED = 'failed',         -- too many failures in a row: only a manual retry
+    FAILED = 'failed',         -- too many failures in a row: a retry a minute, or a manual one
     BLOCKED = 'blocked',       -- banned, replaced or switched off: no retry by itself
 }
 local ST = S.ST
@@ -40,9 +40,17 @@ S.SLOT_OF = { party = 0, guild = 1, officers = 1, public = 2, stage = 2, echo = 
 S.F_SELF_MUTED, S.F_DEAF, S.F_SERVER_MUTED = 1, 2, 4
 S.F_STAGE, S.F_STAFF, S.F_MODERATOR, S.F_LITE = 8, 16, 32, 64
 
-S.BACKOFF_STEPS = { 1, 2, 4, 8, 16, 30, 60 } -- seconds
+-- seconds; capped at 15 s so a relay back after an outage is found within
+-- 20 s (the play-test: 40 s after a one-minute outage with steps up to 60 s)
+S.BACKOFF_STEPS = { 1, 2, 4, 8, 15 }
 S.JITTER = 0.3
-S.MAX_FAILURES = 10
+-- FAILED after about 4 minutes of retries, as with the old steps (10 tries
+-- up to 60 s): 1+2+4+8 s, then 16 tries 15 s apart
+S.MAX_FAILURES = 20
+-- FAILED still tries by itself, once a minute (+-30%): a relay restart or a
+-- VPS reboot of a few minutes must not leave every player without voice
+-- until each one clicks "Try again"
+S.FAILED_RETRY_MS = 60000
 S.STABLE_MS = 30000       -- online this long: the failure count starts again
 S.TOKEN_FRESH_MS = 100000 -- tokens live 120 s; 20 s of margin for the clocks
 S.TOKEN_GAP_MS = 3000     -- canary: 1 tok request per 3 s
@@ -154,10 +162,19 @@ function S.checkUrl(url)
     return nil
 end
 
--- the wait before the n-th retry, in ms: 1, 2, 4, 8, 16, 30, 60 s, +-30%
+local function jitter(ms, rand)
+    return math.floor(ms * (1 + (rand * 2 - 1) * S.JITTER))
+end
+
+-- the wait before the n-th retry, in ms: 1, 2, 4, 8, then 15 s, +-30%
 function S.backoffDelay(failures, rand)
     local step = S.BACKOFF_STEPS[math.max(1, math.min(failures, #S.BACKOFF_STEPS))]
-    return math.floor(step * 1000 * (1 + (rand * 2 - 1) * S.JITTER))
+    return jitter(step * 1000, rand)
+end
+
+-- the wait between the slow retries of FAILED, in ms: 60 s +-30%
+function S.failedDelay(rand)
+    return jitter(S.FAILED_RETRY_MS, rand)
 end
 
 -- what a close code asks of us (protocol H)
@@ -603,6 +620,12 @@ function Session:onCfg(data)
         self.cfg = { url = url, psl = S.num(data.psl, 0, 1000, 50) }
         self.everOn = true
         self:show()
+        -- canary says voice is on (a restart, a new relay address) while we
+        -- wait to retry: the retry is now
+        if self.state == ST.BACKOFF or self.state == ST.FAILED then
+            self:retryNow()
+            return
+        end
         -- a session replaced by another window stays so until the player
         -- reconnects by hand: two windows would replace each other forever
         if not self:isActive() and not (self.state == ST.BLOCKED and self.why == 'replaced') then
@@ -663,6 +686,10 @@ function Session:onTok(data)
     end
     if self.state == ST.WAIT_TOKEN then
         self:connectNow()
+    elseif self.state == ST.BACKOFF or self.state == ST.FAILED then
+        -- a fresh token while we wait to retry (canary pushes one every
+        -- 240 s, or answers a late request): the retry is now, with it
+        self:retryNow()
     elseif self.state == ST.ONLINE then
         self:useTokenForAuth()
         self:autoJoin()
@@ -802,7 +829,7 @@ function Session:onTimer(name)
             self:fail(nil)
         end
     elseif name == 'retry' then
-        if self.state == ST.BACKOFF then
+        if self.state == ST.BACKOFF or self.state == ST.FAILED then
             self:connectNow()
         end
     elseif name == 'ctl' then
@@ -846,20 +873,22 @@ function Session:fail(code)
     end
     self.failures = self.failures + 1
     if self.failures >= S.MAX_FAILURES then
-        self.retryAt = nil
-        self:setState(ST.FAILED)
+        -- still tries, once a minute: never only by hand
+        self:backoff(S.failedDelay(self.io.random()), ST.FAILED)
         return
     end
     self:backoff(S.backoffDelay(self.failures, self.io.random()))
 end
 
-function Session:backoff(delay)
+-- waits `delay` ms in BACKOFF (or FAILED) before the next try
+function Session:backoff(delay, state)
     self.retryAt = self.io.now() + delay
     self.io.schedule('retry', delay)
-    self:setState(ST.BACKOFF, nil, nil, true)
+    self:setState(state or ST.BACKOFF, nil, nil, true)
 end
 
--- "Try again now", in backoff, failed or replaced
+-- "Try again now", in backoff, failed or replaced; also a fresh token or a
+-- cfg on from canary while waiting to retry
 function Session:retryNow()
     local s = self.state
     if s == ST.BACKOFF or s == ST.FAILED or (s == ST.BLOCKED and self.why == 'replaced') then
