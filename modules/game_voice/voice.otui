@@ -1,0 +1,412 @@
+// Mythos Voz panel: a mini window on the right side, Discord-like. The rooms
+// and their member rows are built by voice_ui.lua from the styles below.
+
+VoiceIconButton < UIButton
+  size: 18 18
+  image-size: 16 16
+  image-offset: 1 1
+  border-width: 1
+  border-color: #514553
+  background-color: #1a1626
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    border-color: #b296f5
+
+  $on:
+    background-color: #3a1c22
+    border-color: #e0604a
+
+VoiceSmallButton < UIButton
+  height: 16
+  font: verdana-11px-antialised
+  color: #f1d399
+  text-offset: 0 0
+  padding: 0 6 0 6
+  text-auto-resize: true
+  border-width: 1
+  border-color: #6f5a3a
+  background-color: #241d16
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    color: #ffe7b0
+    border-color: #c99c53
+
+// the hint ("Hold Insert") ends at the button when it shows (voice_ui.lua
+// anchors it there and cuts it with "..."; the header's tooltip has it whole)
+VoiceSectionHeader < UIWidget
+  height: 18
+  margin-top: 4
+
+  Label
+    id: title
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    font: Verdana Bold-11px
+    color: #f3dcae
+    text-auto-resize: true
+
+  Label
+    id: hint
+    anchors.left: title.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    height: 14
+    margin-left: 6
+    font: verdana-11px-antialised
+    color: #8f88a3
+    text-align: left
+    text-auto-resize: false
+
+  VoiceSmallButton
+    id: action
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    visible: false
+
+VoiceMemberIcon < UIWidget
+  size: 12 12
+  margin-left: 2
+  phantom: true
+  visible: false
+
+VoiceMemberRow < UIWidget
+  height: 16
+  padding-left: 4
+  background-color: #00000000
+
+  $hover:
+    background-color: #ffffff0e
+
+  UIWidget
+    id: ring
+    size: 12 12
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    image-source: /game_voice/images/dot
+    phantom: true
+
+    $on:
+      image-source: /game_voice/images/speaking_ring
+
+  Label
+    id: name
+    anchors.left: ring.right
+    anchors.right: icons.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    font: verdana-11px-antialised
+    color: #d1ccd9
+    text-auto-resize: false
+    phantom: true
+
+  UIWidget
+    id: icons
+    anchors.right: parent.right
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    margin-top: 2
+    phantom: true
+    layout:
+      type: horizontalBox
+      fit-children: true
+
+    VoiceMemberIcon
+      id: selfmuted
+      image-source: /game_voice/images/s_selfmuted
+    VoiceMemberIcon
+      id: deaf
+      image-source: /game_voice/images/s_deaf
+    VoiceMemberIcon
+      id: srvmuted
+      image-source: /game_voice/images/s_srvmuted
+    VoiceMemberIcon
+      id: mutedforme
+      image-source: /game_voice/images/s_mutedforme
+    VoiceMemberIcon
+      id: lite
+      image-source: /game_voice/images/lite
+    VoiceMemberIcon
+      id: staff
+      image-source: /game_voice/images/s_staff
+
+VoiceMembers < UIWidget
+  layout:
+    type: verticalBox
+    fit-children: true
+
+VoiceNote < Label
+  font: verdana-11px-antialised
+  color: #8f88a3
+  text-wrap: true
+  text-auto-resize: true
+  margin-left: 4
+
+VoiceDirRow < UIWidget
+  height: 16
+  padding-left: 4
+  font: verdana-11px-antialised
+  color: #c9c0cf
+  text-align: left
+  text-offset: 4 0
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    color: #ffffff
+    background-color: #b296f520
+
+  $on:
+    color: #78d04c
+
+// over the head of who is talking (attached to the creature)
+VoiceHeadIcon < UIWidget
+  size: 18 16
+  margin-left: -9
+  margin-top: -44
+  image-source: /game_voice/images/speaker_head
+  phantom: true
+  focusable: false
+
+// the per-player volume popup (right-click > Volume): the track, the arrows
+// and the wheel move 10% (voice_ui.lua), the buttons go to 0% and 100%
+VoiceVolumePopup < UIWidget
+  size: 170 66
+  image-source: /images/mythos/popup
+  image-border: 2
+  padding: 6
+
+  Label
+    id: label
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 14
+    font: verdana-11px-antialised
+    color: #e7e2ef
+    text-align: center
+
+  MythosHSlider
+    id: slider
+    anchors.top: label.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    minimum: 0
+    maximum: 200
+    step: 10
+
+  VoiceSmallButton
+    id: zeroButton
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    text: 0%
+
+  VoiceSmallButton
+    id: fullButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    text: 100%
+
+VoiceReportReason < BrevesTab
+  size: 72 22
+  margin-right: 4
+
+VoiceReportWindow < MythosWindow
+  size: 340 250
+  @onEscape: self:destroy()
+
+  Label
+    id: help
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    font: verdana-11px-antialised
+    color: #c9c0cf
+    text-wrap: true
+    text-auto-resize: true
+
+  UIWidget
+    id: reasons
+    anchors.top: help.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 48
+    layout:
+      type: grid
+      cell-size: 72 22
+      cell-spacing: 4
+      flow: true
+
+  MythosTextEdit
+    id: text
+    anchors.top: reasons.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: status.top
+    margin-top: 6
+    margin-bottom: 4
+    multiline: true
+    text-wrap: true
+    max-length: 300
+    text-align: topLeft
+    padding: 5 6 5 6
+
+  Label
+    id: status
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: sendButton.top
+    margin-bottom: 6
+    height: 14
+    font: verdana-11px-antialised
+    color: #e0604a
+
+  MythosPrimaryButton
+    id: sendButton
+    !text: tr('Send')
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+
+  MythosButton
+    id: cancelButton
+    !text: tr('Cancel')
+    anchors.right: sendButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: self:getParent():destroy()
+
+MiniWindow
+  id: voiceWindow
+  height: 220
+  &save: true
+  @onOpen: modules.game_voice.VoiceUI.onPanelOpen()
+  @onClose: modules.game_voice.VoiceUI.onPanelClose()
+
+  UIWidget
+    id: miniwindowIcon
+    anchors.top: miniwindowHeader.top
+    anchors.left: miniwindowHeader.left
+    margin-top: 1
+    margin-left: 3
+    size: 12 12
+    image-source: /game_voice/images/s_mic
+    phantom: true
+
+  Label
+    id: miniwindowTitle
+    anchors.top: miniwindowHeader.top
+    anchors.left: miniwindowHeader.left
+    anchors.right: miniwindowHeader.right
+    margin-top: 2
+    margin-left: 20
+    margin-right: 50
+    font: verdana-11px-monochrome
+    height: 13
+    !text: tr('Voice')
+    color: #9d9d9dff
+
+  MiniWindowContents
+    padding-left: 4
+    padding-right: 4
+    padding-top: 2
+    layout: verticalBox
+
+    UIWidget
+      id: statusRow
+      height: 18
+
+      UIWidget
+        id: statusDot
+        size: 8 8
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 2
+        background-color: #6f688a
+
+      Label
+        id: statusText
+        anchors.left: statusDot.right
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 6
+        font: verdana-11px-antialised
+        color: #e6e0f2
+        text-auto-resize: false
+
+    UIWidget
+      id: toolbar
+      height: 22
+      margin-top: 2
+
+      VoiceIconButton
+        id: muteButton
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        image-source: /game_voice/images/mic
+        @onClick: modules.game_voice.toggleSelfMute()
+
+      VoiceIconButton
+        id: deafButton
+        anchors.left: prev.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 4
+        image-source: /game_voice/images/headset
+        @onClick: modules.game_voice.toggleDeafen()
+
+      VoiceIconButton
+        id: settingsButton
+        anchors.left: prev.right
+        anchors.verticalCenter: parent.verticalCenter
+        margin-left: 4
+        image-source: /game_voice/images/gear
+        @onClick: modules.game_voice.VoiceSettings.toggle()
+
+      // online: the microphone test; offline: the retry (never both)
+      VoiceSmallButton
+        id: testButton
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        !text: tr('Test')
+        !tooltip: tr('Test microphone')
+        @onClick: modules.game_voice.toggleMicTest()
+
+      VoiceSmallButton
+        id: retryButton
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        visible: false
+        @onClick: modules.game_voice.retryNow()
+
+    VoiceNote
+      id: note
+      margin-top: 2
+      visible: false
+
+    VoiceSmallButton
+      id: onButton
+      height: 20
+      margin-top: 4
+      !text: tr('Turn voice on')
+      visible: false
+      @onClick: modules.game_voice.setWant(true)
+
+    UIWidget
+      id: rooms
+      layout:
+        type: verticalBox
+        fit-children: true
+
+    UIButton
+      id: pttTouch
+      size: 48 48
+      margin-top: 6
+      image-source: /game_voice/images/ptt_touch
+      visible: false
+
+      $pressed:
+        opacity: 0.7

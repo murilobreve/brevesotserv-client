@@ -82,7 +82,7 @@ function handlers.charge(data)
             table.insert(charge, placed)
         end
     end
-    art.particles('carga', knight:getPosition())
+    art.particles('carga', layerCreaturePosition(id))
     -- (gone with the charge if it is let go or lost before)
     table.insert(charge, art.play('cheia_flash', knight, { moment = 'cheia', shift = ms, light = { keys = art.lightKeys('cheia'), color = LIGHT } }))
 end

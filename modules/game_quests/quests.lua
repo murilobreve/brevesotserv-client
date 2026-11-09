@@ -717,12 +717,13 @@ local function onGameStart()
         toolbarButton = modules.game_mainpanel.addToggleButton('questsButton', tr('Quests'),
             '/game_brevespanel/images/quests', toggle, false, 24)
     end
-    -- ask once, quietly, so the bar row can show how many are left to do
+    -- ask once, quietly, so the bar row can show how many are left to do;
+    -- each client at its own moment (g_game.spreadDelay): a login rush
     scheduleEvent(function()
         if g_game.isOnline() and not state then
             send({ action = 'open' })
         end
-    end, 4500)
+    end, g_game.spreadDelay and g_game.spreadDelay(4000, 10000) or 4500)
 end
 
 local function onGameEnd()

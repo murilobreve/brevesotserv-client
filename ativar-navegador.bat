@@ -9,13 +9,14 @@ rem   - liga a ponte do navegador para o jogo (porta 7180) e libera no firewall
 rem Basta rodar uma vez: depois o atualizar-servidor.bat mantem tudo em dia.
 rem Rodar de novo nao estraga nada.
 setlocal
-set "VPS=root@82.38.28.137"
 set "CHAVE=%USERPROFILE%\.ssh\baiak"
 
 if not exist "%CHAVE%" (
     echo ERRO: chave SSH nao encontrada em %CHAVE%
     goto :fim
 )
+rem o endereco da VPS fica neste PC, fora do git (vps-endereco.bat)
+call "%~dp0vps-endereco.bat" usar || goto :fim
 
 echo == ligando o jogo no navegador (a primeira vez baixa uns 270 MB na VPS)
 ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && bash tools/deploy/update-server.sh && bash tools/deploy/ativar-navegador.sh"

@@ -74,7 +74,8 @@ local SERVER_HOST = ('%s://%s/login.php'):format(SERVER_SCHEME, SERVER_IP)
 Services = {
     status = SERVER_HOST, --./client_entergame | ./client_topmenu
     -- the browser client reaches the game through a WebSocket bridge on the
-    -- site (websockify: wss://<site>:7180 -> the game port 7172; the server
+    -- site (tools/deploy/ponte-navegador.py in the server repository, one
+    -- asyncio process: wss://<site>:7180 -> the game port 7172; the server
     -- itself takes 7173 and 7174 for the older protocols)
     browserGameHost = BROWSER_ORIGIN ~= '' and SERVER_IP or nil, --./client_entergame
     browserGamePort = 7180, --./client_entergame

@@ -1,25 +1,33 @@
 @echo off
 rem Mythos - atualiza o servidor na VPS a partir deste PC.
 rem Entra por SSH, baixa do GitHub (main) os scripts, o site e o binario ja
-rem compilado, e reinicia o servidor. Dois cliques e pronto.
-rem   atualizar-servidor.bat           atualiza (o normal)
-rem   atualizar-servidor.bat compilar  compila o servidor na propria VPS
+rem compilado. O jogo so reinicia se algo dele mudou, e com aviso no jogo:
+rem 5 minutos antes (com ninguem online, na hora). Dois cliques e pronto.
+rem   atualizar-servidor.bat              atualiza (o normal)
+rem   atualizar-servidor.bat agora        reinicia sem esperar os 5 minutos
+rem   atualizar-servidor.bat sem-reiniciar  so baixa; vale no proximo reinicio
+rem   atualizar-servidor.bat compilar     compila o servidor na propria VPS
+rem                                       (devagar, para nao travar o jogo)
 rem No PC de um amigo, sem a chave: este bat cria uma e mostra o arquivo
 rem baiak.pub para ele mandar ao dono do servidor, que autoriza com o
 rem autorizar-amigo.bat. A chave do amigo so atualiza.
 setlocal
-set "VPS=root@82.38.28.137"
 set "CHAVE=%USERPROFILE%\.ssh\baiak"
 
 if not exist "%CHAVE%" goto :semchave
+rem o endereco da VPS fica neste PC, fora do git (vps-endereco.bat)
+call "%~dp0vps-endereco.bat" usar || goto :fim
 
+set "OPCAO="
+if /i "%~1"=="agora" set "OPCAO=RESTART_MINUTES=0 "
+if /i "%~1"=="sem-reiniciar" set "OPCAO=NO_RESTART=1 "
 if /i "%~1"=="compilar" (
-    echo == compilando o servidor na VPS, pode levar ate 30 minutos
+    echo == compilando o servidor na VPS, pode levar uns 40 minutos
     echo    nao feche esta janela
-    ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && bash tools/deploy/update-server.sh && bash tools/deploy/compilar-servidor.sh"
+    ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && NO_RESTART=1 bash tools/deploy/update-server.sh && bash tools/deploy/compilar-servidor.sh"
 ) else (
     echo == atualizando o servidor na VPS
-    ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && bash tools/deploy/update-server.sh && git log -1 --oneline"
+    ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && %OPCAO%bash tools/deploy/update-server.sh && git log -1 --oneline"
 )
 if errorlevel 1 (
     echo.

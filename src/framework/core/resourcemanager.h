@@ -89,6 +89,9 @@ public:
     std::string fileChecksum(const std::string& path);
     std::string fileSha256(const std::string& path);
     std::string fileSha256InWorkDir(const std::string& path);
+    // "<size>:<last write time>" of a file in the client folder, "" when it
+    // is not there: the updater hashes again only a file whose stamp changed
+    std::string fileStampInWorkDir(const std::string& path);
     bool writeDownloadedFile(const std::string& path, std::string destinationPath, bool decompressLzma);
     bool writeDownloadedFileToWorkDir(const std::string& path, std::string destinationPath, bool decompressLzma);
     bool installDownloadedFileInWorkDir(const std::string& path, std::string destinationPath);

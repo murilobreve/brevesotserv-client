@@ -585,15 +585,19 @@ int LuaInterface::lua_dofile(lua_State* L)
     ScopedState scopedState(g_lua, L);
     const auto& file = g_lua.popString();
 
+    std::string error;
     try {
         g_lua.loadScript(file);
         g_lua.call(0, LUA_MULTRET);
         return g_lua.stackSize();
     } catch (stdext::exception& e) {
-        g_lua.pushString(e.what());
-        scopedState.restore();
-        return lua_error(L);
+        error = e.what();
     }
+    // raised out of the catch block (see luaCppFunctionCallback)
+    g_lua.pushString(error);
+    std::string().swap(error);
+    scopedState.restore();
+    return lua_error(L);
 }
 
 int LuaInterface::lua_dofiles(lua_State* L)
@@ -621,15 +625,19 @@ int LuaInterface::lua_loadfile(lua_State* L)
     ScopedState scopedState(g_lua, L);
     const auto& fileName = g_lua.popString();
 
+    std::string error;
     try {
         g_lua.loadScript(fileName);
         return 1;
     } catch (stdext::exception& e) {
-        g_lua.pushNil();
-        g_lua.pushString(e.what());
-        scopedState.restore();
-        return lua_error(L);
+        error = e.what();
     }
+    // raised out of the catch block (see luaCppFunctionCallback)
+    g_lua.pushNil();
+    g_lua.pushString(error);
+    std::string().swap(error);
+    scopedState.restore();
+    return lua_error(L);
 }
 
 int LuaInterface::luaErrorHandler(lua_State* L)
@@ -658,6 +666,14 @@ int LuaInterface::luaCppFunctionCallback(lua_State* L)
 
     int numRets = 0;
 
+    // A failed call's Lua error is raised after its catch block, never in
+    // it: the Windows client's LuaJIT unwinds a Lua error with SEH, and
+    // leaving a catch block that way (the C++ exception still alive) closed
+    // the game. A C++ function handed a bad value from Lua (a dead
+    // creature's nil position to g_map.getTile) did it at every call.
+    const char* failure = nullptr;
+    std::string error;
+
     // do the call
     try {
         ++g_lua.m_cppCallbackDepth;
@@ -666,27 +682,26 @@ int LuaInterface::luaCppFunctionCallback(lua_State* L)
         assert(numRets == g_lua.stackSize());
     } catch (stdext::exception& e) {
         --g_lua.m_cppCallbackDepth;
+        failure = "C++ call failed: ";
+        error = e.what();
+    } catch (const std::exception& e) {
+        --g_lua.m_cppCallbackDepth;
+        failure = "C++ std::exception: ";
+        error = e.what();
+    } catch (...) {
+        --g_lua.m_cppCallbackDepth;
+        failure = "";
+        error = "Unknown C++ exception";
+    }
+
+    if (failure) {
         // cleanup stack
         while (g_lua.stackSize() > 0)
             g_lua.pop();
-        numRets = 0;
-        g_lua.pushString(fmt::format("C++ call failed: {}", g_lua.traceback(e.what())));
-        scopedState.restore();
-        return lua_error(L);
-    } catch (const std::exception& e) {
-        --g_lua.m_cppCallbackDepth;
-        while (g_lua.stackSize() > 0)
-            g_lua.pop();
-        numRets = 0;
-        g_lua.pushString(fmt::format("C++ std::exception: {}", g_lua.traceback(e.what())));
-        scopedState.restore();
-        return lua_error(L);
-    } catch (...) {
-        --g_lua.m_cppCallbackDepth;
-        while (g_lua.stackSize() > 0)
-            g_lua.pop();
-        numRets = 0;
-        g_lua.pushString(g_lua.traceback("Unknown C++ exception"));
+        g_lua.pushString(failure + g_lua.traceback(error));
+        // lua_error does not come back here: nothing of this frame may
+        // still own memory
+        std::string().swap(error);
         scopedState.restore();
         return lua_error(L);
     }
@@ -1413,11 +1428,19 @@ void LuaInterface::loadFiles(const std::string& directory, const bool recursive,
         if (!contains.empty() && fileName.find(contains) == std::string::npos)
             continue;
 
+        bool failed = false;
+        std::string error;
         try {
             g_lua.loadScript(fullPath);
             g_lua.call(0, 0);
         } catch (stdext::exception& e) {
-            g_lua.pushString(e.what());
+            failed = true;
+            error = e.what();
+        }
+        // raised out of the catch block (see luaCppFunctionCallback)
+        if (failed) {
+            g_lua.pushString(error);
+            std::string().swap(error);
             g_lua.error();
         }
     }

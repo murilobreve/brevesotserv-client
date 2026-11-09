@@ -72,7 +72,9 @@ enum class SpriteLoadState
 {
     NONE,
     LOADING,
-    LOADED
+    LOADED,
+    // the file is missing or broken: tried again only after a while
+    FAILED
 };
 
 class SpriteSheet
@@ -101,6 +103,10 @@ public:
     // since a full cache can free them (setMaxLoadedSheets)
     std::shared_ptr<uint8_t[]> data;
     std::atomic<ticks_t> lastUse{ 0 };
+    // FAILED: when the file may be read again
+    std::atomic<ticks_t> retryAt{ 0 };
+    // FAILED: the retry after the first failure failed too (final until retryAt)
+    std::atomic<bool> failedAgain{ false };
     std::string file;
 };
 
@@ -133,8 +139,8 @@ public:
     std::shared_ptr<uint8_t[]> getSheetData(const SpriteSheetPtr& sheet) const;
 
     // how many decoded sheets stay in memory (0: all of them). Each takes
-    // 576 KB and the client has thousands: the browser, with its fixed
-    // memory, keeps only the most recently used ones.
+    // 576 KB and the client has thousands, so only the most recently used
+    // ones are kept (MAX_LOADED_SHEETS).
     void setMaxLoadedSheets(const size_t max) { m_maxLoadedSheets = max; }
     size_t getLoadedSheets() const { return m_loadedSheets; }
     // frees the least recently used sheets until only `keep` are left

@@ -1,7 +1,10 @@
 # Mythos - o que o otservlist.org ve do servidor, testado deste PC (de fora,
 # como a lista testa) e da VPS. Rodado pelo checar-otservlist.bat.
-param([string]$Vps = "root@82.38.28.137", [string]$Chave = "$env:USERPROFILE\.ssh\baiak", [string]$Dominio = "mythosot.com.br")
+param([string]$Vps = "", [string]$Chave = "$env:USERPROFILE\.ssh\baiak", [string]$Dominio = "mythosot.com.br")
 $ErrorActionPreference = "Continue"
+# the VPS address stays on this PC, out of git (vps-endereco.bat writes it)
+$vpsFile = "$env:USERPROFILE\.ssh\mythos-vps.txt"
+if (-not $Vps -and (Test-Path $vpsFile)) { $Vps = (Get-Content $vpsFile -TotalCount 1).Trim() }
 $falhas = 0
 function Ok($t) { Write-Host "  [ok]    $t" -ForegroundColor Green }
 function Falha($t) { Write-Host "  [FALHA] $t" -ForegroundColor Red; $script:falhas++ }
@@ -52,10 +55,13 @@ try {
 } catch { Falha "instalador do client nao baixa ($($_.Exception.Message))" }
 
 Write-Host "== 4. Na VPS (firewall, portas, config)"
-if (Test-Path $Chave) {
-    $remote = 'cd /opt/brevesot; echo config:; grep -E ''^(ip|maxPlayers|ownerName|url|location|statusProtocolPort|loginProtocolPort|gameProtocolPort) *='' config.lua; echo portas:; ss -ltn | grep -E '':(7171|7172|80|443) ''; echo firewall:; ufw status 2>/dev/null | grep -E ''7171|7172|Status'' || echo sem-ufw; echo servico:; systemctl is-active canary'
-    ssh -i $Chave $Vps $remote
-} else { Aviso "chave SSH nao encontrada em $Chave: pulei a parte da VPS" }
+if ((Test-Path $Chave) -and $Vps) {
+    $remote = 'cd /opt/brevesot; echo config:; grep -hE ''^(ip|maxPlayers|ownerName|url|location|statusProtocolPort|loginProtocolPort|gameProtocolPort) *='' config.lua /etc/brevesot/config.prod.lua 2>/dev/null; echo portas:; ss -ltn | grep -E '':(7171|7172|80|443) ''; echo firewall:; ufw status 2>/dev/null | grep -E ''7171|7172|Status'' || echo sem-ufw; echo servico:; systemctl is-active canary'
+    $out = ssh -i $Chave $Vps $remote
+    $out | ForEach-Object { Write-Host "        $_" }
+    if ($out -match 'sem-ufw|Status: inactive') { Falha "firewall desligado na VPS: rode na VPS bash tools/deploy/firewall.sh aplicar" }
+} elseif (-not $Vps) { Aviso "endereco da VPS desconhecido (rode o vps-endereco.bat): pulei a parte da VPS" }
+else { Aviso "chave SSH nao encontrada em $Chave: pulei a parte da VPS" }
 
 Write-Host ""
 if ($falhas -eq 0) { Write-Host "Tudo certo para cadastrar no otservlist: endereco $Dominio, porta 7171." -ForegroundColor Green }

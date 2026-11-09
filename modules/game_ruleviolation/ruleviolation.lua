@@ -33,6 +33,7 @@ rvactions[6] = tr('Statement Report')
 ruleViolationWindow = nil
 reasonsTextList = nil
 actionsTextList = nil
+local FEEDBACK_OPCODE = 129 -- scripts/feedback/feedback.lua
 
 function init()
     connect(g_game, {
@@ -139,14 +140,34 @@ function report()
     local action = actionLabel.actionId
     local comment = ruleViolationWindow:getChildById('commentText'):getText()
     local statement = ruleViolationWindow:getChildById('statementText'):getText()
-    local statementId = 0 -- TODO: message unique id ?
     local ipBanishment = ruleViolationWindow:getChildById('ipBanCheckBox'):isChecked()
     if action == 6 and statement == '' then
         displayErrorBox(tr('Error'), tr('No statement has been selected.'))
     elseif comment == '' then
         displayErrorBox(tr('Error'), tr('You must enter a comment.'))
     else
-        g_game.reportRuleViolation(target, reason, action, comment, statement, statementId, ipBanishment)
+        -- the Mythos server reads no rule violation packet (the old one went
+        -- out as 0xE7, its Wheel gem action): the report goes to the staff
+        -- like the Feedback tab's, as a report against the player
+        -- (scripts/feedback/feedback.lua, opcode 129), and its answer shows
+        -- as a game message (game_feedback)
+        local protocol = g_game.getProtocolGame()
+        if not protocol then
+            displayErrorBox(tr('Error'), tr('You are not in the game.'))
+            return
+        end
+        local text = string.format('[%s / %s%s] %s', rvreasons[reason] or tostring(reason),
+            rvactions[action] or tostring(action), ipBanishment and ' + IP' or '', comment)
+        if statement ~= '' then
+            text = text .. ' | "' .. statement .. '"'
+        end
+        protocol:sendExtendedJSONOpcode(FEEDBACK_OPCODE, {
+            action = 'send',
+            kind = 'report',
+            target = target,
+            message = text:sub(1, 1000),
+            client = 'ruleviolation',
+        })
         hide()
     end
 end

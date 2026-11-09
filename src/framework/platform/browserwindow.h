@@ -60,6 +60,8 @@ public:
     void setVerticalSync(bool enable) override;
     void setIcon(const std::string& iconFile) override;
     void setClipboardText(const std::string_view text) override;
+    // what the page's paste event brought (UTF-8)
+    void setPastedText(std::string_view text);
     void setRunning(bool running) { m_running = running; }
 
     void handleResizeCallback(const EmscriptenUiEvent* event);

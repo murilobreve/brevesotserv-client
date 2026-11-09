@@ -1114,12 +1114,13 @@ local function onGameStart()
             '/game_brevespanel/images/bosses', toggle, false, 23)
     end
     loadFavorites()
-    -- ask once, quietly, so the bar row can show how many are ready
+    -- ask once, quietly, so the bar row can show how many are ready; each
+    -- client at its own moment (g_game.spreadDelay): a login rush
     scheduleEvent(function()
         if g_game.isOnline() and not state then
             send({ action = 'open' })
         end
-    end, 4000)
+    end, g_game.spreadDelay and g_game.spreadDelay(4000, 10000) or 4000)
 end
 
 local function onGameEnd()

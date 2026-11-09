@@ -194,11 +194,19 @@ void LoginHttp::Logger(const auto& req, const auto& res) {
     g_logger.debug("=========");
 }
 
+// Mythos: typed text is Latin-1 in both builds (the fonts draw one glyph per
+// byte) and the site keeps passwords as UTF-8, so an accented password must
+// go as UTF-8; json also throws on text that is not valid UTF-8. A password
+// saved by an older browser build is UTF-8 already and goes as it is.
+static std::string siteText(const std::string& text) {
+    return stdext::is_valid_utf8(text) ? text : stdext::latin1_to_utf8(text);
+}
+
 // The login field takes an e-mail or an account name; the website's login.php
 // looks an account up by "email" or by "accountname", so send the one it is.
 static json loginBody(const std::string& login, const std::string& password) {
-    json body = { {"password", password}, {"stayloggedin", true}, {"type", "login"} };
-    body[login.find('@') != std::string::npos ? "email" : "accountname"] = login;
+    json body = { {"password", siteText(password)}, {"stayloggedin", true}, {"type", "login"} };
+    body[login.find('@') != std::string::npos ? "email" : "accountname"] = siteText(login);
     return body;
 }
 
@@ -382,20 +390,17 @@ LoginHttp::HttpResponse LoginHttp::loginHttpsJson(const std::string& host,
                                                   const std::string& email,
                                                   const std::string& password,
                                                   const std::string& token) {
-    httplib::SSLClient client(host, port);
-
-    client.set_logger(
-        [this](const auto& req, const auto& res) { LoginHttp::Logger(req, res); });
-
     // check that the site is really the server's: without it anyone on the
     // same network (a public Wi-Fi) could pose as it and read the password.
-    // The CA list ships next to the client (an absolute path: the game can be
-    // started from another folder); without it, the system's list is used.
+    // The system's list of authorities comes first (on Windows, the Windows
+    // store, which Windows Update keeps current). The cacert.pem shipped next
+    // to the client (an absolute path: the game can be started from another
+    // folder) is only a fallback, tried once when the system's list cannot
+    // verify the site (an old Windows without the site's root): set as the
+    // only list, a bundle that went stale would lock every player out the day
+    // the site's certificate moves to a root it lacks.
     const auto caFile = g_resources.getWorkDir() + "cacert.pem";
-    if (g_resources.fileExistsInWorkDir("cacert.pem"))
-        client.set_ca_cert_path(caFile);
-    client.enable_server_certificate_verification(true);
-    client.enable_server_hostname_verification(true);
+    const bool hasBundle = g_resources.fileExistsInWorkDir("cacert.pem");
 
     json body = loginBody(email, password);
 
@@ -405,9 +410,24 @@ LoginHttp::HttpResponse LoginHttp::loginHttpsJson(const std::string& host,
     }
 
     const httplib::Headers headers = { {"User-Agent", "Mozilla/5.0"} };
+    const std::string payload = body.dump();
 
-    httplib::Result response =
-        client.Post(path, headers, body.dump(), "application/json");
+    const auto post = [&](const bool withBundle) {
+        httplib::SSLClient client(host, port);
+        client.set_logger(
+            [this](const auto& req, const auto& res) { LoginHttp::Logger(req, res); });
+        if (withBundle)
+            client.set_ca_cert_path(caFile);
+        client.enable_server_certificate_verification(true);
+        client.enable_server_hostname_verification(true);
+        return client.Post(path, headers, payload, "application/json");
+    };
+
+    httplib::Result response = post(false);
+    if (!response && response.error() == httplib::Error::SSLServerVerification && hasBundle) {
+        g_logger.warning("HTTPS: the system's certificate list could not verify {}, trying the client's cacert.pem", host);
+        response = post(true);
+    }
     if (!response) {
         this->errorMessage = "Failed to connect to server (HTTPS). Check the address and port.";
         g_logger.warning("HTTPS error: {}", to_string(response.error()));

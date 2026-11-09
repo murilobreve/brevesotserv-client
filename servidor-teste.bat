@@ -1,27 +1,55 @@
 @echo off
-rem Mythos - roda na VPS o servidor da branch de teste, ou volta ao main.
-rem Entra por SSH, troca a pasta /opt/brevesot de branch e reinicia o servidor.
-rem   servidor-teste.bat         liga a branch de teste
-rem   servidor-teste.bat main    volta para o main (o servidor normal)
+rem Mythos - roda na VPS o servidor de uma branch de teste, ou volta ao main.
+rem Entra por SSH, troca a pasta /opt/brevesot de branch e reinicia o servidor
+rem (com aviso no jogo).
+rem   servidor-teste.bat NOME-DA-BRANCH   liga essa branch (pergunta se faltar)
+rem   servidor-teste.bat main             volta para o main (o servidor normal)
 rem Os jogadores entram no mesmo servidor: enquanto a branch de teste estiver
-rem ligada, todo mundo joga nela.
+rem ligada, TODO MUNDO joga nela. Depois do lancamento, teste num servidor
+rem separado, nunca no de producao.
 setlocal
-set "VPS=root@82.38.28.137"
 set "CHAVE=%USERPROFILE%\.ssh\baiak"
-set "BRANCH=claude/funny-maxwell-kpy7sn"
+set "BRANCH="
 set "MODO=teste"
-if /i "%~1"=="main" set "MODO=main"
+if /i "%~1"=="main" (set "MODO=main") else (set "BRANCH=%~1")
 
 if not exist "%CHAVE%" (
     echo ERRO: chave SSH nao encontrada em %CHAVE%
     goto :fim
 )
+rem o endereco da VPS fica neste PC, fora do git (vps-endereco.bat)
+call "%~dp0vps-endereco.bat" usar || goto :fim
 
 if "%MODO%"=="main" (
     echo == voltando o servidor para o main
-) else (
-    echo == ligando a branch de teste %BRANCH%
+    goto :rodar
 )
+if not defined BRANCH set /p "BRANCH=Nome da branch de teste no GitHub: "
+if not defined BRANCH goto :fim
+rem only the characters of a branch name: nothing that is cmd or shell syntax,
+rem and no "-" at the start. Written with delayed expansion and outside a ( )
+rem block, so nothing typed runs before the check (resetar-servidor.bat does
+rem the same). The lines after it may expand the name: it passed.
+setlocal EnableDelayedExpansion
+> "%TEMP%\mythos-branch.txt" echo(!BRANCH!
+endlocal
+findstr /r /x "[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_][ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-]*" "%TEMP%\mythos-branch.txt" >nul
+if errorlevel 1 (
+    del "%TEMP%\mythos-branch.txt" >nul 2>&1
+    echo ERRO: nome de branch invalido.
+    goto :fim
+)
+del "%TEMP%\mythos-branch.txt" >nul 2>&1
+echo ATENCAO: todos os jogadores passam a jogar na branch %BRANCH%.
+echo O servidor reinicia com aviso de 5 minutos no jogo.
+set "RESP="
+set /p "RESP=Para continuar digite TESTE e Enter: "
+if not "%RESP%"=="TESTE" (
+    echo Cancelado, nada mudou.
+    goto :fim
+)
+echo == ligando a branch de teste %BRANCH%
+:rodar
 ssh -t -i "%CHAVE%" %VPS% "cd /opt/brevesot && git fetch -q origin main && git show origin/main:tools/deploy/test-branch.sh | bash -s %MODO% %BRANCH%"
 if errorlevel 1 (
     echo.

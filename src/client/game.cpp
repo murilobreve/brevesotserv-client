@@ -97,12 +97,19 @@ void Game::resetGameStates()
     g_map.resetAwareRange();
 }
 
+// Mythos: the server closes the connection a moment after a logout, and the
+// browser's WebSocket can end without a clean close: read as a lost
+// connection, it put "ERROR 15" over the game the relog after a death had
+// just entered. A drop this soon after the logout is that close.
+constexpr ticks_t LOGOUT_CLOSE_MS = 5000;
+
 void Game::processConnectionError(const std::error_code& ec)
 {
     // connection errors only have meaning if we still have a protocol
     if (m_protocolGame) {
         // eof = end of file, a clean disconnect
-        if (ec != asio::error::eof)
+        const bool loggingOut = m_logoutSentAt > 0 && stdext::millis() - m_logoutSentAt < LOGOUT_CLOSE_MS;
+        if (ec != asio::error::eof && !loggingOut)
             g_lua.callGlobalField("g_game", "onConnectionError", ec.message(), ec.value());
 
         processDisconnect();
@@ -604,6 +611,7 @@ void Game::loginWorld(const std::string_view account, const std::string_view pas
 
     // reset the new game state
     resetGameStates();
+    m_logoutSentAt = 0;
 
     m_localPlayer = std::make_shared<LocalPlayer>();
     m_localPlayer->onCreate();
@@ -666,6 +674,7 @@ void Game::safeLogout()
         return;
 
     m_protocolGame->sendLogout();
+    m_logoutSentAt = stdext::millis();
 }
 
 bool Game::walk(const Otc::Direction direction)

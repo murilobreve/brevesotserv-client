@@ -36,7 +36,7 @@ FeedbackTab < UIWidget
     phantom: true
 
 FeedbackKind < BrevesTab
-  width: 104
+  width: 78
   anchors.top: kindLabel.bottom
   margin-top: 5
 
@@ -82,6 +82,24 @@ FeedbackWindow < MythosWindow
     !text: tr('Feedback')
     anchors.left: prev.right
     margin-left: 4
+
+  FeedbackKind
+    id: report
+    !text: tr('Report')
+    anchors.left: prev.right
+    margin-left: 4
+
+  // the reported player's name, only for a report (feedback.lua moves the
+  // message under it)
+  MythosTextEdit
+    id: target
+    anchors.top: bug.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    max-length: 30
+    !placeholder: tr('Player name')
+    visible: false
 
   MythosTextEdit
     id: message

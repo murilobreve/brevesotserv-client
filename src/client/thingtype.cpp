@@ -876,6 +876,9 @@ void ThingType::loadTexture(const int animationPhase)
 
     static Color maskColors[] = { Color::red, Color::green, Color::blue, Color::yellow };
 
+    // one line per texture for sprites that cannot be read
+    bool fetchFailedLogged = false;
+
     textureData.pos.resize(indexSize);
     for (int z = 0; z < m_numPatternZ; ++z) {
         for (int y = 0; y < m_numPatternY; ++y) {
@@ -898,23 +901,29 @@ void ThingType::loadTexture(const int animationPhase)
                                 return;
 
                             if (!spriteImage) {
-                                g_logger.error("Failed to fetch sprite id {} for thing {} ({}, {}), layer {}, pattern {}x{}x{}, frame {}", spriteId, m_name, m_id, categoryName(m_category), l, x, y, z, animationPhase);
-                                return;
-                            }
-
-                            // verifies that the first block in the lower right corner is transparent.
-                            if (!spriteImage || spriteImage->hasTransparentPixel()) {
+                                // left blank, as the path below does: returning
+                                // here left the texture unbuilt, so a missing or
+                                // broken sheet was tried and logged on every frame
+                                if (!fetchFailedLogged) {
+                                    fetchFailedLogged = true;
+                                    g_logger.error("Failed to fetch sprite id {} for thing {} ({}, {}), layer {}, pattern {}x{}x{}, frame {}", spriteId, m_name, m_id, categoryName(m_category), l, x, y, z, animationPhase);
+                                }
                                 fullImage->setTransparentPixel(true);
+                            } else {
+                                // verifies that the first block in the lower right corner is transparent.
+                                if (spriteImage->hasTransparentPixel()) {
+                                    fullImage->setTransparentPixel(true);
+                                }
+
+                                if (spriteMask) {
+                                    spriteImage->overwriteMask(maskColors[(l - 1)]);
+                                }
+
+                                auto spriteSize = spriteImage->getSize() / g_gameConfig.getSpriteSize();
+
+                                const Point& spritePos = Point(m_size.width() - spriteSize.width(), m_size.height() - spriteSize.height()) * g_gameConfig.getSpriteSize();
+                                fullImage->blit(framePos + spritePos, spriteImage);
                             }
-
-                            if (spriteMask) {
-                                spriteImage->overwriteMask(maskColors[(l - 1)]);
-                            }
-
-                            auto spriteSize = spriteImage->getSize() / g_gameConfig.getSpriteSize();
-
-                            const Point& spritePos = Point(m_size.width() - spriteSize.width(), m_size.height() - spriteSize.height()) * g_gameConfig.getSpriteSize();
-                            fullImage->blit(framePos + spritePos, spriteImage);
                         } else {
                             for (int h = 0; h < m_size.height(); ++h) {
                                 for (int w = 0; w < m_size.width(); ++w) {

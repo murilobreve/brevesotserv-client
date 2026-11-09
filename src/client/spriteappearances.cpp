@@ -46,6 +46,32 @@
  // warnings related to protobuf
     // https://android.googlesource.com/platform/external/protobuf/+/brillo-m9-dev/vsprojects/readme.txt
 
+// how many decoded sheets stay in memory (576 KB each; the client has about
+// 4,900, 2.7 GB if all were decoded). The least recently used ones are freed
+// and decoded again when they come back on screen.
+#ifndef MAX_LOADED_SHEETS
+#ifdef __EMSCRIPTEN__
+// the browser has a fixed heap: walking through enough places ran it out and
+// the game stopped. 400 sheets are about 230 MB, far more than a screen needs.
+#define MAX_LOADED_SHEETS 400
+#else
+// the desktop kept every sheet: the Wiki, the Market and a few hunts left
+// 1 to 2 GB of them, never freed, on PCs with 4 GB. 800 are about 450 MB.
+#define MAX_LOADED_SHEETS 800
+#endif
+#endif
+
+// a sheet whose file is missing or broken is read again once after
+// SHEET_FIRST_RETRY_MS (an antivirus may hold the file for a moment), its
+// sprites waiting as if loading; then only every SHEET_RETRY_MS, drawn blank
+// meanwhile, so a frame that draws its sprites does not go to the disk each time
+#ifndef SHEET_FIRST_RETRY_MS
+#define SHEET_FIRST_RETRY_MS 2000
+#endif
+#ifndef SHEET_RETRY_MS
+#define SHEET_RETRY_MS 60000
+#endif
+
 using json = nlohmann::json;
 
 SpriteAppearances g_spriteAppearances;
@@ -55,12 +81,9 @@ void SpriteAppearances::init()
     // in tibia 12.81 there is currently 3482 sheets
     m_sheets.reserve(4000);
 
-#ifdef __EMSCRIPTEN__
-    // the browser has a fixed 1 GB: all the sheets decoded would take about
-    // 2.9 GB, so walking through enough places ran it out and the game
-    // stopped. 400 sheets are about 230 MB, far more than a screen needs.
-    setMaxLoadedSheets(400);
+    setMaxLoadedSheets(MAX_LOADED_SHEETS);
 
+#ifdef __EMSCRIPTEN__
     // once a minute, in the log (and so in crash reports): how much memory
     // is in use. Past 80% the cache gives half of its sheets back.
     g_dispatcher.cycleEvent([this] {
@@ -183,20 +206,38 @@ int SpriteSheet::getSpritesPerSheet() const
 
 bool SpriteAppearances::loadSpriteSheet(const SpriteSheetPtr& sheet) const
 {
-    if (sheet->m_loadingState.load(std::memory_order_acquire) == SpriteLoadState::LOADING)
+    const auto state = sheet->m_loadingState.load(std::memory_order_acquire);
+    if (state == SpriteLoadState::LOADING)
+        return false;
+
+    if (state == SpriteLoadState::FAILED && stdext::millis() < sheet->retryAt.load())
         return false;
 
     if (getSheetData(sheet))
         return true;
 
-    if (sheet->m_loadingState.exchange(SpriteLoadState::LOADING, std::memory_order_acq_rel) == SpriteLoadState::LOADING)
+    const auto previous = sheet->m_loadingState.exchange(SpriteLoadState::LOADING, std::memory_order_acq_rel);
+    if (previous == SpriteLoadState::LOADING)
         return false;
+
+    // a missing or broken file used to leave the sheet LOADING for good: its
+    // sprites stayed invisible with no line in the log. Now it is logged
+    // once, read again after SHEET_FIRST_RETRY_MS and then every SHEET_RETRY_MS.
+    const auto fail = [&](const std::string& reason) {
+        const bool first = previous != SpriteLoadState::FAILED;
+        sheet->failedAgain = !first;
+        sheet->retryAt = stdext::millis() + (first ? SHEET_FIRST_RETRY_MS : SHEET_RETRY_MS);
+        sheet->m_loadingState.store(SpriteLoadState::FAILED, std::memory_order_release);
+        if (first)
+            g_logger.error("Failed to load single sprite sheet '{}': {}", sheet->file, reason);
+        return false;
+    };
 
     try {
         // custom sheets (ThingTypeManager::loadCustomAppearances) carry a full path
         const auto& path = sheet->file.starts_with('/') ? sheet->file : fmt::format("{}{}", g_spriteAppearances.getPath(), sheet->file);
         if (!g_resources.fileExists(path))
-            return false;
+            return fail(fmt::format("file not found ({})", path));
 
         const auto& fin = g_resources.openFile(path);
         fin->cache(true);
@@ -312,9 +353,7 @@ bool SpriteAppearances::loadSpriteSheet(const SpriteSheetPtr& sheet) const
             releaseSheets(m_maxLoadedSheets - m_maxLoadedSheets / 10);
         return true;
     } catch (const std::exception& e) {
-        sheet->m_loadingState.store(SpriteLoadState::NONE, std::memory_order_release);
-        g_logger.error("Failed to load single sprite sheet '{}': {}", sheet->file, e.what());
-        return false;
+        return fail(e.what());
     }
 }
 
@@ -342,7 +381,10 @@ SpriteSheetPtr SpriteAppearances::getSheetBySpriteId(const int id, bool& isLoadi
     const auto& sheet = *sheetIt;
 
     if (load && !loadSpriteSheet(sheet)) {
-        isLoading = sheet->m_loadingState == SpriteLoadState::LOADING;
+        // only a sheet whose retry failed too is final (its sprites are drawn
+        // blank); any other state means it waits for that retry, or another
+        // thread is loading or has just loaded or freed it: tried again next frame
+        isLoading = sheet->m_loadingState != SpriteLoadState::FAILED || !sheet->failedAgain;
         return nullptr;
     }
 

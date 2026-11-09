@@ -1,0 +1,136 @@
+// Mythos Voz: shown once, the first time the server offers voice. It explains
+// push-to-talk, asks for headphones, links the rules and takes the party key
+// (a free one is offered: Insert on a new profile; in the browser the mouse
+// side button is an option too). The PT-BR texts fit the 348 px of content.
+
+VoiceOnboardWindow < MythosWindow
+  !text: tr('Mythos Voice')
+  size: 380 390
+  @onEscape: modules.game_voice.VoiceSettings.closeOnboarding(false)
+
+  Label
+    id: intro
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    font: verdana-11px-antialised
+    color: #e6e0f2
+    text-wrap: true
+    text-auto-resize: true
+    !text: tr('Talk with your party while you play. Hold a key to talk: nobody hears you while it is up.')
+
+  Label
+    id: headset
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    font: verdana-11px-antialised
+    color: #c9c0cf
+    text-wrap: true
+    text-auto-resize: true
+    !text: tr('Use headphones: speakers make an echo for the others.')
+
+  Label
+    id: rules
+    anchors.top: headset.bottom
+    anchors.left: parent.left
+    anchors.right: rulesButton.left
+    margin-top: 8
+    margin-right: 6
+    font: verdana-11px-antialised
+    color: #c9c0cf
+    text-wrap: true
+    text-auto-resize: true
+    !text: tr('Be respectful: insults, harassment and noise are punished.')
+
+  VoiceSmallButton
+    id: rulesButton
+    anchors.top: headset.bottom
+    anchors.right: parent.right
+    margin-top: 8
+    !text: tr('Rules')
+    @onClick: modules.game_voice.VoiceSettings.openRules()
+
+  Label
+    id: keyLabel
+    anchors.top: rules.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 14
+    font: verdana-11px-rounded
+    color: #f3dcae
+    text-wrap: true
+    text-auto-resize: true
+    !text: tr('Click the box and press the key to hold to talk in the party:')
+
+  UIWidget
+    id: keyBox
+    anchors.top: prev.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 6
+    size: 160 24
+    image-source: /images/mythos/input
+    image-border: 3
+    font: Verdana Bold-11px
+    color: #e6e2ee
+    text-align: center
+    focusable: true
+    change-cursor-image: true
+    cursor: pointer
+
+    $focus:
+      image-source: /images/mythos/input_focus
+
+  // the suggested key, until the player picks one
+  Label
+    id: keyHint
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 4
+    font: verdana-11px-antialised
+    color: #8f88a3
+    text-align: center
+    text-wrap: true
+    text-auto-resize: true
+
+  Label
+    id: keyStatus
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    font: verdana-11px-antialised
+    color: #e0604a
+    text-align: center
+    text-wrap: true
+    text-auto-resize: true
+
+  // the browser only (voice_settings.lua shows it)
+  QtCheckBox
+    id: mouseCheck
+    anchors.top: prev.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    font: verdana-11px-antialised
+    color: #d1ccd9
+    visible: false
+    !text: tr('Also talk with the mouse side button (Mouse 4)')
+
+  MythosPrimaryButton
+    id: onButton
+    !text: tr('Turn voice on')
+    width: 110
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_voice.VoiceSettings.closeOnboarding(true)
+
+  MythosButton
+    id: laterButton
+    !text: tr('Not now')
+    anchors.right: onButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: modules.game_voice.VoiceSettings.closeOnboarding(false)

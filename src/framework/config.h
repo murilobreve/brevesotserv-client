@@ -43,16 +43,21 @@ static constexpr float DEFAULT_DISPLAY_DENSITY = 1.f;
 #define ENCRYPTION_HEADER AY_OBFUSCATE("SET_YOUR_HEADER_HERE")
 
 // DISCORD RPC (https://discord.com/developers/applications)
+// Mythos keeps Rich Presence off (here and in the CMake option of the same
+// name). The values below are placeholders, not the upstream OTClient
+// application, whose id and texts would show players another project: before
+// turning it on, create a Mythos application on that page, put its
+// Application ID in RPC_API_KEY and upload the RPC_LARGE_IMAGE asset to it.
 // Enable Discord Rich Presence
 #ifndef ENABLE_DISCORD_RPC
 #define ENABLE_DISCORD_RPC 0 // 1 to enable | 0 to disable
 #endif
-#define RPC_API_KEY "1060650448522051664" // Your API Key
+#define RPC_API_KEY "SET_YOUR_DISCORD_APPLICATION_ID" // the Mythos application's ID (placeholder)
 // RPC Configs (https://youtu.be/zCHYtRlD58g) step by step to config your rich presence
 #define SHOW_CHARACTER_NAME_RPC 1 // 1 to enable | 0 to disable
 #define SHOW_CHARACTER_LEVEL_RPC 1 // 1 to enable | 0 to disable
 #define SHOW_CHARACTER_WORLD_RPC 1 // 1 to enable | 0 to disable
-#define OFFLINE_RPC_TEXT "Selecting Character..." // Message at client startup | offline character
-#define STATE_RPC_TEXT "github.com/mehah/otclient" // State Text
+#define OFFLINE_RPC_TEXT "Escolhendo personagem..." // Message at client startup | offline character
+#define STATE_RPC_TEXT "mythosot.com.br" // State Text
 #define RPC_LARGE_IMAGE "rpc-logo" // Large Image Name (Imported to API)
-#define RPC_LARGE_TEXT "OTClient - Redemption" // Large Text (Text showed at tooltip large image)
+#define RPC_LARGE_TEXT "Mythos" // Large Text (Text showed at tooltip large image)

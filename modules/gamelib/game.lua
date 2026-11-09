@@ -126,3 +126,29 @@ function g_game.closeContainerByItemId(itemId, tier)
     end
     return #containersToClose > 0
 end
+
+-- milliseconds to wait before a request a module sends by itself when the
+-- game starts (the Bosses, Quests, Hunt Board, Ascensao, Journey and Rarity
+-- windows ask the server for their state): each client picks its own moment
+-- in minMs..maxMs, so a login rush (a server start, a server save) does not
+-- bring every client's requests in the same second. math.random is not
+-- seeded the same way in every build, so the spread comes from the
+-- character and from how long the client has been open. The modules ask in
+-- the same frame, so each further call of that burst moves SPREAD_STEP
+-- later: one client's requests also stay apart.
+local SPREAD_STEP = 450      -- ms between the requests of one client
+local SPREAD_BURST = 3000    -- ms: calls closer than this are one burst
+local spreadCalls, spreadLastAt = 0, nil
+function g_game.spreadDelay(minMs, maxMs)
+    local player = g_game.getLocalPlayer()
+    local id = player and player:getId() or 0
+    local span = math.max(1, maxMs - minMs + 1)
+    local now = g_clock.millis()
+    if spreadLastAt and now - spreadLastAt <= SPREAD_BURST then
+        spreadCalls = spreadCalls + 1
+    else
+        spreadCalls = 0
+    end
+    spreadLastAt = now
+    return minMs + math.floor(id * 7919 + now + spreadCalls * SPREAD_STEP) % span
+end

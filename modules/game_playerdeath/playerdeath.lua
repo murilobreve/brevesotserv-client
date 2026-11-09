@@ -57,19 +57,20 @@ function openWindow(deathType, penalty)
     deathController.ui = destroyWindows()
     deathController.ui = g_ui.displayUI('deathwindow', rootWidget)
 
+    -- the texts go through tr(): the locale (data/locales) has them in PT-BR
     local textLabel = deathController.ui:getChildById('labelText')
     if deathType == DeathType.Regular then
         if penalty == 100 then
-            textLabel:setText(deathTexts.regular.text)
+            textLabel:setText(tr(deathTexts.regular.text))
             deathController.ui:setHeight(deathController.ui.baseHeight + deathTexts.regular.height)
             deathController.ui:setWidth(deathController.ui.baseWidth + deathTexts.regular.width)
         else
-            textLabel:setText(string.format(deathTexts.unfair.text, 100 - penalty))
+            textLabel:setText(tr(deathTexts.unfair.text, 100 - penalty))
             deathController.ui:setHeight(deathController.ui.baseHeight + deathTexts.unfair.height)
             deathController.ui:setWidth(deathController.ui.baseWidth + deathTexts.unfair.width)
         end
     elseif deathType == DeathType.Blessed then
-        textLabel:setText(deathTexts.blessed.text)
+        textLabel:setText(tr(deathTexts.blessed.text))
         deathController.ui:setHeight(deathController.ui.baseHeight + deathTexts.blessed.height)
         deathController.ui:setWidth(deathController.ui.baseWidth + deathTexts.blessed.width)
     end

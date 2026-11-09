@@ -137,6 +137,35 @@ local function applyVipStatus(info)
     end
 end
 
+-- typed text is Latin-1 in both builds (the fonts draw one glyph per byte)
+-- and the site reads UTF-8: an accented password goes as UTF-8, as the login
+-- does (httplogin.cpp). One saved by an older browser build is UTF-8 already.
+local function siteText(text)
+    text = tostring(text or '')
+    local i, n = 1, #text
+    while i <= n do
+        local c = text:byte(i)
+        local len = c < 0x80 and 1 or (c >= 0xC2 and c <= 0xDF) and 2 or (c >= 0xE0 and c <= 0xEF) and 3 or (c >= 0xF0 and c <= 0xF4) and 4 or 0
+        for k = 1, len - 1 do
+            local d = text:byte(i + k)
+            if not d or d < 0x80 or d > 0xBF then
+                len = 0
+                break
+            end
+        end
+        if len == 0 then
+            return (text:gsub('[\128-\255]', function(ch)
+                local b = ch:byte()
+                return string.char(0xC0 + math.floor(b / 64), 0x80 + b % 64)
+            end))
+        end
+        i = i + len
+    end
+    return text
+end
+-- createcharacter.lua sends the same login to the site
+CharacterList.siteText = siteText
+
 local function requestVipStatus()
     local url = Services and Services.website and (Services.website:gsub('/+$', '') .. '/plugins/brevesot/vip-status.php')
     if not url or not G.account or G.account == '' or not G.password or G.password == '' then
@@ -144,11 +173,11 @@ local function requestVipStatus()
     end
     vipRequest = vipRequest + 1
     local request = vipRequest
-    local body = { password = G.password }
+    local body = { password = siteText(G.password) }
     if G.account:find('@', 1, true) then
-        body.email = G.account
+        body.email = siteText(G.account)
     else
-        body.accountname = G.account
+        body.accountname = siteText(G.account)
     end
     HTTP.post(url, json.encode(body), function(data, err)
         if err or request ~= vipRequest then
@@ -563,6 +592,17 @@ function onGameSessionEnd(reason)
     CharacterList.showAgain()
 end
 
+-- a game that starts has nothing left to say about the connection before
+-- it: a box left from it (a relog after a death) must not stay over the new
+-- game, and its Ok would open the character list on top of it
+local function onGameStarted()
+    CharacterList.destroyLoadBox()
+    if errorBox then
+        errorBox:destroy()
+        errorBox = nil
+    end
+end
+
 function onGameConnectionError(message, code)
     CharacterList.destroyLoadBox()
     local text = translateNetworkError(code, g_game.getProtocolGame() and g_game.getProtocolGame():isConnecting(),
@@ -670,7 +710,7 @@ function CharacterList.init()
         onConnectionError = onGameConnectionError
     })
     connect(g_game, {
-        onGameStart = CharacterList.destroyLoadBox
+        onGameStart = onGameStarted
     })
     connect(g_game, {
         onLoginWait = onLoginWait
@@ -701,7 +741,7 @@ function CharacterList.terminate()
         onConnectionError = onGameConnectionError
     })
     disconnect(g_game, {
-        onGameStart = CharacterList.destroyLoadBox
+        onGameStart = onGameStarted
     })
     disconnect(g_game, {
         onLoginWait = onLoginWait

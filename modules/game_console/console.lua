@@ -171,6 +171,14 @@ local activeactiveReadOnlyTabName = ""
 local readOnlyModeEnabled = false
 local inviteNameWindow = nil
 local excludeNameWindow = nil
+local reportBox = nil -- the "Report <name>" question (confirmReport)
+
+local function closeReportBox()
+    if reportBox then
+        reportBox:destroy()
+        reportBox = nil
+    end
+end
 
 -- Option: show underline/dots for highlighted text in console
 local showHighlightedUnderline = false
@@ -695,6 +703,7 @@ function clear()
     end
 
     destroyOwnChannelNameWindows()
+    closeReportBox()
 
     if g_game.getClientVersion() < 862 then
         Keybind.delete("Dialogs", "Open Rule Violation")
@@ -1360,6 +1369,7 @@ function addTabText(text, speaktype, tab, creatureName)
         end
     end
     label.name = creatureName
+    label.npcChat = speaktype.npcChat and true or nil
     consoleBuffer.onMouseRelease = function(self, mousePos, mouseButton)
         processMessageMenu(mousePos, mouseButton, nil, nil, nil, tab)
     end
@@ -1529,6 +1539,73 @@ function processChannelTabMenu(tab, mousePos, mouseButton)
     menu:display(mousePos)
 end
 
+-- Mythos: a report of a player sent through the server's
+-- "!denunciar nome, motivo" talkaction, with the clicked message as the
+-- reason (the server answers in the console and holds the limits). It asks
+-- first (reportBox), so that a misclick files nothing.
+
+-- whether every byte of `text` is part of a whole UTF-8 letter
+local function isUtf8(text)
+    local i, n = 1, #text
+    while i <= n do
+        local byte = text:byte(i)
+        local size = byte < 128 and 1 or (byte >= 194 and byte <= 223 and 2) or
+                         (byte >= 224 and byte <= 239 and 3) or (byte >= 240 and byte <= 244 and 4) or nil
+        if not size or i + size - 1 > n then
+            return false
+        end
+        for j = i + 1, i + size - 1 do
+            local continuation = text:byte(j)
+            if continuation < 128 or continuation > 191 then
+                return false
+            end
+        end
+        i = i + size
+    end
+    return true
+end
+
+-- at most `max` bytes. A UTF-8 text loses a letter cut in half at the end;
+-- any other (the game's Latin-1, one byte a letter) is cut at `max`.
+local function cutText(text, max)
+    if #text <= max then
+        return text
+    end
+    local wholeLetters = isUtf8(text)
+    text = text:sub(1, max)
+    if wholeLetters then
+        local lead = text:find('[\192-\255][\128-\191]*$')
+        if lead then
+            local byte = text:byte(lead)
+            local size = byte >= 240 and 4 or (byte >= 224 and 3 or 2)
+            if #text - lead + 1 < size then
+                text = text:sub(1, lead - 1)
+            end
+        end
+    end
+    return text
+end
+
+function confirmReport(creatureName, text)
+    closeReportBox()
+    local statement = text and text:match('.+%:%s(.+)') or ''
+    local reason = statement ~= '' and ('mensagem: "' .. cutText(statement, 180) .. '"') or 'mensagem no chat'
+    local function send()
+        closeReportBox()
+        g_game.talk('!denunciar ' .. creatureName .. ', ' .. reason)
+    end
+    local question = string.format(tr('Report %s to the staff for this message?'), creatureName)
+    if statement ~= '' then
+        question = question .. '\n\n"' .. cutText(statement, 120) .. '"'
+    end
+    -- only a click on Yes sends: Enter (typed for the chat) closes it
+    reportBox = displayGeneralBox(tr('Report player'), question, {
+        { text = tr('Yes'), callback = send },
+        { text = tr('No'), callback = closeReportBox },
+        anchor = AnchorHorizontalCenter,
+    }, closeReportBox, closeReportBox)
+end
+
 function processMessageMenu(mousePos, mouseButton, creatureName, text, label, tab)
     if mouseButton == MouseRightButton then
         local menu = g_ui.createWidget('PopupMenu')
@@ -1559,6 +1636,13 @@ function processMessageMenu(mousePos, mouseButton, creatureName, text, label, ta
                 else
                     menu:addOption(tr('Ignore') .. ' ' .. creatureName, function()
                         addIgnoredPlayer(creatureName)
+                    end)
+                end
+                -- Mythos: reports the player to the staff (confirmReport);
+                -- an NPC's messages are not a player's
+                if not (tab.npcChat or (label and label.npcChat)) then
+                    menu:addOption(tr('Report') .. ' ' .. creatureName, function()
+                        confirmReport(creatureName, text)
                     end)
                 end
                 menu:addSeparator()

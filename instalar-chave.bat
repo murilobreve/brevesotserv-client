@@ -4,7 +4,6 @@ rem arquivo baiak), para os bats que entram na VPS funcionarem aqui:
 rem atualizar-servidor.bat, servidor-teste.bat e os outros.
 rem Arraste o arquivo da chave para cima deste bat.
 setlocal
-set "VPS=root@82.38.28.137"
 set "CHAVE=%USERPROFILE%\.ssh\baiak"
 
 set "ARQ=%~1"
@@ -37,6 +36,8 @@ rem o ssh do Windows recusa uma chave que outros usuarios do PC podem ler
 icacls "%CHAVE%" /inheritance:r /grant:r "%USERNAME%":F >nul
 if errorlevel 1 goto :erro
 
+rem o endereco da VPS fica neste PC, fora do git (vps-endereco.bat)
+call "%~dp0vps-endereco.bat" usar || goto :fim
 echo == testando a entrada na VPS
 ssh -i "%CHAVE%" -o StrictHostKeyChecking=accept-new %VPS% "echo OK: entrou na VPS $(hostname)"
 if errorlevel 1 goto :erro

@@ -11,7 +11,6 @@ rem de um nome e escolha A ou T.
 rem   autorizar-amigo.bat listar          quem entra, e como
 rem   autorizar-amigo.bat remover NOME    tira o acesso desse nome
 setlocal EnableDelayedExpansion
-set "VPS=root@82.38.28.137"
 set "CHAVE=%USERPROFILE%\.ssh\baiak"
 set "AK=/root/.ssh/authorized_keys"
 
@@ -19,6 +18,8 @@ if not exist "%CHAVE%" (
     echo ERRO: chave SSH nao encontrada em %CHAVE%
     goto :fim
 )
+rem o endereco da VPS fica neste PC, fora do git (vps-endereco.bat)
+call "%~dp0vps-endereco.bat" usar || goto :fim
 
 if /i "%~1"=="listar" goto :listar
 if /i "%~1"=="remover" goto :remover

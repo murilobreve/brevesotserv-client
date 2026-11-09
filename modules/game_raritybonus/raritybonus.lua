@@ -486,7 +486,7 @@ local function onGameStart()
         if g_game.isOnline() then
             send({ action = 'xp' })
         end
-    end, 1500)
+    end, g_game.spreadDelay and g_game.spreadDelay(4000, 10000) or 1500)
 end
 
 local function onGameEnd()

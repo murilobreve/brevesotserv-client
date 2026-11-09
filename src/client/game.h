@@ -539,6 +539,8 @@ private:
     stdext::timer m_pingTimer;
 
     ticks_t m_ping{ -1 };
+    // when safeLogout sent the logout (0: none since the last login)
+    ticks_t m_logoutSentAt{ 0 };
 };
 
 extern Game g_game;

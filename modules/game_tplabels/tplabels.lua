@@ -53,6 +53,38 @@ local function place(widget)
     widget:setMarginTop(-math.floor(widget:getHeight() * 0.5))
 end
 
+-- Labels of one row that would overlap (the temple's "Teleportes" and
+-- "Trainers" stand on next-door teleports, and both centred read
+-- "TelepoTrainers"): from left to right, a label that would run into the
+-- last one left on the line goes up one line. Runs after place().
+local function separate(wanted)
+    local tw = tileWidth()
+    local rows = {}
+    for k, label in pairs(wanted) do
+        local widget = shown[k]
+        if widget and not widget:isDestroyed() then
+            local row = label.pos.y .. ':' .. label.pos.z
+            rows[row] = rows[row] or {}
+            table.insert(rows[row], { x = label.pos.x, widget = widget })
+        end
+    end
+    for _, row in pairs(rows) do
+        if #row > 1 then
+            table.sort(row, function(a, b) return a.x < b.x end)
+            local lastRight
+            for _, entry in ipairs(row) do
+                local width = entry.widget:getWidth()
+                local left = entry.x * tw + (tw - width) / 2
+                if lastRight and left < lastRight + 2 then
+                    entry.widget:setMarginTop(entry.widget:getMarginTop() - entry.widget:getHeight())
+                else
+                    lastRight = left + width
+                end
+            end
+        end
+    end
+end
+
 local function alive(widget)
     -- the map drops attached widgets when it re-reads a tile from the server
     return widget and not widget:isDestroyed() and widget:getParent() ~= nil
@@ -115,6 +147,7 @@ local function refresh()
             place(widget)
         end
     end
+    separate(wanted)
 end
 
 local function scheduleRefresh()
