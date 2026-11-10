@@ -45,6 +45,7 @@ locale = {
     ["You need %d Rarity XP and have %d. Buy more here or kill Pale, Ashen, Obsidian and Lord of Death monsters."] = "Você precisa de %d Rarity XP e tem %d. Compre mais aqui ou mate monstros Pale, Ashen, Obsidian e Lord of Death.",
     ["The seal costs %s gold and you have %s."] = "O selo custa %s de gold e você tem %s.",
     ["Reforging..."] = "Reforjando...",
+    ["to"] = "a",
     ["Roll score: %d%%"] = "Nota da rolagem: %d%%",
     ["NEW RECORD for this item!"] = "NOVO RECORDE neste item!",
     ["Your record on this item: %d%%"] = "Seu recorde neste item: %d%%",

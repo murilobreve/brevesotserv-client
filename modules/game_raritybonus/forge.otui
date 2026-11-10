@@ -392,16 +392,115 @@ ForgeCard < UIButton
     font: Verdana Bold-13px
     color: #ece6dc
 
+  // where the roll fell in its range: the grades as zones (what is still
+  // ahead stays lit in its own colour), a marker, the top in gold
+  UIWidget
+    id: meter
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.top: value.bottom
+    margin-top: 7
+    size: 98 6
+    phantom: true
+
+    UIWidget
+      id: zone1
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      width: 29
+      background-color: #3a3540
+      phantom: true
+
+    UIWidget
+      id: zone2
+      anchors.left: zone1.right
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin-left: 1
+      width: 29
+      background-color: #57524d
+      phantom: true
+
+    UIWidget
+      id: zone3
+      anchors.left: zone2.right
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin-left: 1
+      width: 23
+      background-color: #2f5a39
+      phantom: true
+
+    UIWidget
+      id: zone4
+      anchors.left: zone3.right
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin-left: 1
+      width: 10
+      background-color: #2f5078
+      phantom: true
+
+    UIWidget
+      id: zone5
+      anchors.left: zone4.right
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      margin-left: 1
+      width: 3
+      background-color: #b8964a
+      phantom: true
+
+    UIWidget
+      id: fill
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      width: 0
+      phantom: true
+
+    UIWidget
+      id: mark
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      size: 2 12
+      background-color: #ffffff
+      phantom: true
+
   Label
-    id: range
+    id: rmin
+    anchors.left: meter.left
+    anchors.top: meter.bottom
+    margin-top: 5
+    height: 14
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #6e665e
+    phantom: true
+
+  Label
+    id: rmax
+    anchors.right: meter.right
+    anchors.top: meter.bottom
+    margin-top: 5
+    height: 14
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #e8c77a
+    phantom: true
+
+  // a line of the roll's colour along the top of the card
+  UIWidget
+    id: accent
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.top: value.bottom
-    margin-top: 4
-    height: 14
-    text-align: center
-    font: verdana-11px-antialised
-    color: #8f877c
+    anchors.top: parent.top
+    margin-left: 1
+    margin-right: 1
+    margin-top: 1
+    height: 2
+    phantom: true
+    visible: false
 
   UIWidget
     id: back

@@ -425,13 +425,22 @@ local function lockable(entry)
     return entry and (tonumber(entry.lockCost) or 0) > 0 and #(entry.bonuses or {}) >= 2
 end
 
+-- the range bar of a card: filled to `q` (0-1) in `color`, the marker on it
+local METER_W = 98
+local function setMeter(card, q, color)
+    local x = math.floor(math.max(0, math.min(1, q or 0)) * (METER_W - 2) + 0.5)
+    card.meter.fill:setWidth(x)
+    card.meter.fill:setBackgroundColor(color)
+    card.meter.mark:setMarginLeft(x)
+end
+
 local function fillCard(card, bonus, opts)
     card.delta:setVisible(false)
     card.back:setVisible(false)
     card.empty:setVisible(false)
     card.flash:setVisible(false)
     card.glow:setVisible(false)
-    for _, id in ipairs({ 'number', 'track', 'grade', 'name', 'value', 'range' }) do
+    for _, id in ipairs({ 'number', 'track', 'grade', 'name', 'value', 'meter', 'rmin', 'rmax' }) do
         card[id]:setVisible(true)
     end
     card.number:setText(tr('BONUS %d', opts.n))
@@ -451,7 +460,17 @@ local function fillCard(card, bonus, opts)
     card.name:setText(tr(bonus.label or ''))
     card.value:setText(plus(bonus.value, bonus.unit))
     card.value:setColor(q and look[3] or '#ece6dc')
-    card.range:setText((bonus.min and bonus.max) and tr('range %s to %s', plus(bonus.min, bonus.unit), plus(bonus.max, bonus.unit)) or '')
+    local ranged = q ~= nil and bonus.min ~= nil and bonus.max ~= nil
+    card.meter:setVisible(ranged)
+    card.rmin:setVisible(ranged)
+    card.rmax:setVisible(ranged)
+    card.accent:setVisible(q ~= nil)
+    card.accent:setBackgroundColor(look[3])
+    if ranged then
+        setMeter(card, q, look[3])
+        card.rmin:setText(plus(bonus.min, bonus.unit))
+        card.rmax:setText(plus(bonus.max, bonus.unit))
+    end
     if bonus.perfect then
         card.glow:setVisible(true)
         card.glow:setImageColor('#f3d38a')
@@ -517,7 +536,7 @@ local function spinReel(card)
     back.reelPrev:setText(tr(prev.label or ''))
     bonusIcon(back.reelIcon, cur.key)
     back.reelName:setText(tr(cur.label or ''))
-    back.reelRange:setText(plus(cur.min, cur.unit) .. '  ~  ' .. plus(cur.max, cur.unit))
+    back.reelRange:setColoredText(string.format('{%s, #8f877c}  {%s, #6e665e}  {%s, #f3d38a}', plus(cur.min, cur.unit), tr('to'), plus(cur.max, cur.unit)))
     back.reelNextRow:setText(tr(nxt.label or ''))
 end
 
@@ -550,7 +569,7 @@ local function emptyCard(card)
     card.flash:setVisible(false)
     card.glow:setVisible(false)
     card.sealed:setVisible(false)
-    for _, id in ipairs({ 'number', 'track', 'grade', 'name', 'value', 'range' }) do
+    for _, id in ipairs({ 'number', 'track', 'grade', 'name', 'value', 'meter', 'rmin', 'rmax' }) do
         card[id]:setVisible(false)
     end
     card.empty:setVisible(true)
@@ -594,6 +613,10 @@ local function countUp(card, bonus)
         card.track.percent:setColor(look[3])
         card.grade:setText(tr(look[2]):upper())
         card.grade:setColor(look[3])
+        card.accent:setBackgroundColor(look[3])
+        if card.meter:isVisible() then
+            setMeter(card, qe, look[3])
+        end
         if step < COUNT_STEPS then
             scheduleEvent(frame, math.floor(COUNT_MS / COUNT_STEPS))
         else
