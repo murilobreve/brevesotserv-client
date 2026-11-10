@@ -44,7 +44,8 @@ for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) 
 end
 
 local function bonusIcon(widget, key)
-    local name = BONUS_ICONS[key or '']
+    -- a bonus with no picture of its own (a vocation's spell) takes the wand
+    local name = BONUS_ICONS[key or ''] or (key and key ~= '' and 'wand' or nil)
     widget:setVisible(name ~= nil)
     if name then
         widget:setImageSource('/game_raritybonus/images/forge/bonus/' .. name)
@@ -278,6 +279,10 @@ local function pickItem(slot)
         confirmBox:destroy()
         confirmBox = nil
     end
+    -- what the status line says is about the item that was shown
+    if slot ~= selected then
+        setStatus('')
+    end
     selected = slot
     reforge, ascend = nil, nil
     Forge.refresh()
@@ -406,10 +411,24 @@ local function fillArsenal()
     end
     local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
     table.insert(info, max == 1 and tr('1 bonus') or tr('1 to %d bonuses', max))
-    c.info:setText(table.concat(info, '   '))
     -- the finder's +20%: on every value shown here, kept by any reforge
     if entry.finder then
-        c.info:setText(c.info:getText() .. '   ' .. tr('Found by you: +20%'))
+        table.insert(info, tr('Found by you: +20%'))
+    end
+    -- the item's quality: the mean of where its bonuses fell, in its colour
+    local sum, count = 0, 0
+    for _, bonus in ipairs(entry.bonuses or {}) do
+        local q = qualityOf(bonus)
+        if q then
+            sum, count = sum + q, count + 1
+        end
+    end
+    local line = table.concat(info, '   ')
+    if count > 0 then
+        local mean = sum / count
+        c.info:setColoredText(line .. '   {' .. tr('Quality %d%%', math.floor(mean * 100 + 0.5)) .. ', ' .. quality(mean)[3] .. '}')
+    else
+        c.info:setText(line)
     end
     fillReforge()
     fillAscend()
@@ -443,9 +462,10 @@ local function fillCard(card, bonus, opts)
     for _, id in ipairs({ 'number', 'track', 'grade', 'name', 'value', 'meter', 'rmin', 'rmax' }) do
         card[id]:setVisible(true)
     end
-    card.number:setText(tr('BONUS %d', opts.n))
+    card.number:setText(opts.locked and tr('SEALED') or tr('BONUS %d', opts.n))
+    card.number:setColor(opts.locked and '#e8c77a' or '#8f877c')
     bonusIcon(card.icon, bonus.key)
-    card.sealed:setVisible(opts.locked or false)
+    card.sealed:setVisible(false)
     card:setBorderWidth(opts.locked and 2 or 1)
     card:setBorderColor(opts.locked and '#e8c77a' or '#2e2833')
     local q = qualityOf(bonus)
@@ -474,11 +494,15 @@ local function fillCard(card, bonus, opts)
     if bonus.perfect then
         card.glow:setVisible(true)
         card.glow:setImageColor('#f3d38a')
+        card.glow:setOpacity(0.6)
+        card.grade:setColor('#f3d38a')
         card:setBorderColor('#f3d38a')
     elseif q and q >= 0.85 then
         -- an Excellent roll keeps a cold glow
         card.glow:setVisible(true)
         card.glow:setImageColor('#8cc4ff')
+        card.glow:setOpacity(0.45)
+        card.grade:setColor('#8cc4ff')
         card:setBorderColor('#5f8fc4')
     end
     -- the card's tooltip: what the bonus does and how much the character has
@@ -573,7 +597,9 @@ local function emptyCard(card)
         card[id]:setVisible(false)
     end
     card.empty:setVisible(true)
-    card:setBorderColor('#241f28')
+    card.emptyRune:setVisible(true)
+    card:setBackgroundColor('#131016')
+    card:setBorderColor('#201b24')
     card:setTooltip(nil)
 end
 
@@ -620,7 +646,7 @@ local function countUp(card, bonus)
         if step < COUNT_STEPS then
             scheduleEvent(frame, math.floor(COUNT_MS / COUNT_STEPS))
         else
-            card.grade:setColor('#a59d92')
+            card.grade:setColor(qe >= 0.85 and look[3] or '#a59d92')
         end
     end
     frame()
@@ -806,19 +832,44 @@ fillReforge = function()
         seal = tr('Seal: needs an item with 2 or more bonuses')
     end
     s.info:setTooltip(rules .. '\n\n' .. seal)
-    -- what a reforge can give, with the ranges, in the tooltip
+    -- what a reforge can give: one chip per bonus of the item's pool, the
+    -- ones the item has now (or that the reveal has shown) in gold
     local pool = entry.pool or {}
-    s.pool:setVisible(#pool > 0)
-    s.poolIcon:setVisible(#pool > 0)
-    if #pool > 0 then
-        s.pool:setText(tr('Can roll: %d bonuses (hover to see)', #pool))
-        local lines = {}
-        for _, bonus in ipairs(pool) do
-            lines[#lines + 1] = tr(bonus.label or '') .. ':  ' .. plus(bonus.min, bonus.unit) .. '  -  ' .. plus(bonus.max, bonus.unit)
+    local have = {}
+    if phase == 'idle' then
+        for _, bonus in ipairs(entry.bonuses or {}) do
+            have[bonus.key or ''] = true
         end
-        local tip = tr('What a reforge can give this item:\n(range at this grade; fewer bonuses come stronger)') .. '\n\n' .. table.concat(lines, '\n')
-        s.pool:setTooltip(tip)
-        s.poolIcon:setTooltip(tip)
+    elseif phase == 'rolling' then
+        have[reforge.lock or ''] = true
+    else
+        for n, bonus in ipairs(reforge.after or {}) do
+            if n <= reforge.shown or bonus.locked then
+                have[bonus.key or ''] = true
+            end
+        end
+    end
+    s.pool:setVisible(#pool > 0)
+    s.poolGrid:setVisible(#pool > 0)
+    s.poolGrid:destroyChildren()
+    s.pool:setText(tr('CAN ROLL') .. '   ' .. #pool)
+    for i, bonus in ipairs(pool) do
+        if i > 20 then
+            break
+        end
+        local chip = g_ui.createWidget('ForgePoolChip', s.poolGrid)
+        chip:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+        chip:addAnchor(AnchorTop, 'parent', AnchorTop)
+        chip:setMarginLeft(((i - 1) % 10) * 27)
+        chip:setMarginTop(math.floor((i - 1) / 10) * 27)
+        bonusIcon(chip.icon, bonus.key)
+        local tip = tr(bonus.label or '') .. '\n' .. plus(bonus.min, bonus.unit) .. '  -  ' .. plus(bonus.max, bonus.unit)
+        if have[bonus.key or ''] then
+            chip:setBorderColor('#e8c77a')
+            chip:setBackgroundColor('#2a2112')
+            tip = tip .. '\n' .. tr('On this item now')
+        end
+        chip:setTooltip(tip)
     end
     local cost = tonumber(entry.rerollCost) or 0
     s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
@@ -831,6 +882,10 @@ fillReforge = function()
     local lockGold = lock and (tonumber(entry.lockCost) or 0) or 0
     local busy = phase == 'rolling' or phase == 'reveal'
     s.rollButton:setText(lock and tr('Reforge  -  %d XP + %s gold', cost, formatGold(lockGold)) or tr(phase == 'done' and 'Reforge again  -  %d XP' or 'Reforge  -  %d XP', cost))
+    if busy then
+        -- the Skip button sits on the right of it while the cards turn
+        s.rollButton:setText(tr('Reforging...') .. '            ')
+    end
     s.rollButton:setEnabled(not busy and cost > 0 and rarityXp >= cost and gold >= lockGold)
     s.skipButton:setVisible(busy)
     if cost > 0 and rarityXp < cost then
