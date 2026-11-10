@@ -1066,7 +1066,7 @@ ForgeMiniChip < UIButton
 MythosWindow
   id: forgeWindow
   !text: tr('Rarity Forge')
-  size: 980 628
+  size: 980 650
   @onEscape: modules.game_raritybonus.hide()
 
   UIButton
@@ -1139,23 +1139,44 @@ MythosWindow
     font: Verdana Bold-11px
     color: #c9a4ff
 
-  Label
-    id: status
+  UIWidget
+    id: topRule
     anchors.top: tabs.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 6
+    margin-top: 8
+    height: 1
+    background-color: #2a2430
+    phantom: true
+
+  // what the last action did, as a status bar along the bottom
+  Label
+    id: status
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
     height: 16
     font: verdana-11px-antialised
     color: #7fd35a
 
   UIWidget
-    id: pages
-    anchors.top: status.bottom
+    id: footRule
+    anchors.bottom: status.top
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    margin-top: 4
+    margin-bottom: 5
+    height: 1
+    background-color: #2a2430
+    phantom: true
+
+  UIWidget
+    id: pages
+    anchors.top: topRule.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: footRule.top
+    margin-top: 10
+    margin-bottom: 8
 
     // ---------------------------------------------------------------- Arsenal
     // one page: the items worn (left), the item picked with its bonuses as
@@ -1179,23 +1200,29 @@ MythosWindow
           anchors.left: parent.left
           !text: tr('WORN')
 
+        ForgeDim
+          id: wornNote
+          anchors.verticalCenter: wornTitle.verticalCenter
+          anchors.right: parent.right
+          text-auto-resize: true
+
         UIWidget
           id: doll
           anchors.top: wornTitle.bottom
-          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.left: parent.left
           margin-top: 8
-          size: 156 210
+          size: 264 48
           layout:
             type: grid
             cell-size: 48 48
             cell-spacing: 6
-            num-columns: 3
+            num-columns: 5
 
         ForgeTitle
           id: bonusesTitle
           anchors.top: doll.bottom
           anchors.left: parent.left
-          margin-top: 10
+          margin-top: 16
           !text: tr('YOUR BONUSES')
 
         ForgeDim
@@ -1278,7 +1305,7 @@ MythosWindow
           id: name
           anchors.top: badge.bottom
           anchors.left: badge.left
-          anchors.right: hint.left
+          anchors.right: parent.right
           margin-top: 4
           height: 28
           ttf-font: cinzel-bold
@@ -1289,29 +1316,19 @@ MythosWindow
           id: info
           anchors.top: name.bottom
           anchors.left: badge.left
-          anchors.right: hint.left
+          anchors.right: parent.right
           margin-top: 2
           height: 16
           font: verdana-11px-antialised
           color: #a59d92
 
-        // what to do here, in one line or two
-        ForgeDim
-          id: hint
-          anchors.top: pedestal.top
-          anchors.right: parent.right
-          margin-top: 4
-          width: 250
-          height: 70
-          text-align: right
-          text-wrap: true
-
         UIWidget
           id: cards
           anchors.top: pedestal.bottom
-          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.left: parent.left
+          anchors.right: parent.right
           margin-top: 12
-          size: 680 212
+          height: 212
           layout:
             type: horizontalBox
             spacing: 10
@@ -1365,23 +1382,36 @@ MythosWindow
             image-source: /game_raritybonus/images/info
             image-color: #a59d92
 
-          ForgeText
-            id: costXp
+          // two rows, label and value: what it costs, what is sealed
+          ForgeDim
+            id: costKey
             anchors.top: icon.bottom
             anchors.left: parent.left
-            anchors.right: parent.right
             margin-top: 14
+            size: 48 14
+            !text: tr('Cost')
+
+          ForgeText
+            id: costXp
+            anchors.verticalCenter: costKey.verticalCenter
+            anchors.left: costKey.right
+            anchors.right: parent.right
             height: 14
 
-          // only with a card sealed: which one and its price
+          ForgeDim
+            id: sealKey
+            anchors.top: costKey.bottom
+            anchors.left: parent.left
+            margin-top: 7
+            size: 48 14
+            !text: tr('Seal')
+
           ForgeText
             id: costSeal
-            anchors.top: costXp.bottom
-            anchors.left: parent.left
+            anchors.verticalCenter: sealKey.verticalCenter
+            anchors.left: sealKey.right
             anchors.right: parent.right
-            margin-top: 8
-            height: 28
-            text-wrap: true
+            height: 14
 
           // what a reforge can give: a count, the list in its tooltip
           UIWidget
