@@ -380,15 +380,16 @@ local function fillArsenal()
             end
             w:setTooltip(titleCase(entry.name) .. '\n' .. g.label)
             w.onClick = function() pickItem(slot) end
-        else
-            g_ui.createWidget('ForgeEmptySlot', doll)
         end
     end
+    local worn = doll:getChildCount()
+    doll:setHeight(math.max(1, math.ceil(worn / 5)) * 54 - 6)
+    p.left.wornNote:setText(worn == 1 and tr('1 item') or tr('%d items', worn))
     fillMyBonuses()
 
     local c = p.center
     local entry = bySlot[selected]
-    for _, id in ipairs({ 'pedestal', 'badge', 'pips', 'name', 'info', 'hint', 'cards', 'reforgeBox', 'ascendBox' }) do
+    for _, id in ipairs({ 'pedestal', 'badge', 'pips', 'name', 'info', 'cards', 'reforgeBox', 'ascendBox' }) do
         c[id]:setVisible(entry ~= nil)
     end
     c.empty:setVisible(entry == nil)
@@ -412,21 +413,7 @@ local function fillArsenal()
     if entry.finder then
         table.insert(info, tr('Found by you: +20%'))
     end
-    -- the item's quality: the mean of where its bonuses fell, in its colour
-    local sum, count = 0, 0
-    for _, bonus in ipairs(entry.bonuses or {}) do
-        local q = qualityOf(bonus)
-        if q then
-            sum, count = sum + q, count + 1
-        end
-    end
-    local line = table.concat(info, '   ')
-    if count > 0 then
-        local mean = sum / count
-        c.info:setColoredText(line .. '   {' .. tr('Quality %d%%', math.floor(mean * 100 + 0.5)) .. ', ' .. quality(mean)[3] .. '}')
-    else
-        c.info:setText(line)
-    end
+    c.info:setText(table.concat(info, '   '))
     fillReforge()
     fillAscend()
 end
@@ -435,7 +422,6 @@ end
 -- Reforge
 -- ---------------------------------------------------------------------------
 
-local CARD_W = 116
 
 local function lockable(entry)
     return entry and (tonumber(entry.lockCost) or 0) > 0 and #(entry.bonuses or {}) >= 2
@@ -715,38 +701,18 @@ fillReforge = function()
     end
     local g = grade(entry.rarity)
     local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
-    cards:setWidth(max * CARD_W + (max - 1) * 10)
+    -- the cards share the row's width (five fill it), from the left
+    local avail = c:getWidth()
+    if avail < 300 then
+        avail = 636
+    end
+    local cardWidth = math.min(150, math.floor((avail - (max - 1) * 10) / max))
 
     local phase = reforge and reforge.slot == selected and reforge.phase or 'idle'
     local lock = locks[selected]
-    if phase == 'idle' then
-        if lockable(entry) then
-            c.hint:setText('')
-        else
-            c.hint:setText('')
-        end
-    elseif phase == 'rolling' or phase == 'reveal' then
-        c.hint:setText('')
-    elseif reforge and reforge.score then
-        local line = tr('Roll score: %d%%', reforge.score)
-        if reforge.newRecord then
-            line = line .. '\n' .. tr('NEW RECORD for this item!')
-        elseif reforge.record then
-            line = line .. '\n' .. tr('Your record on this item: %d%%', math.max(reforge.record, reforge.score))
-        else
-            line = line .. '\n' .. tr('Your first record on this item.')
-        end
-        c.hint:setText(line)
-        c.hint:setColor(reforge.newRecord and '#f3d38a' or quality(reforge.score / 100)[3])
-    else
-        c.hint:setText(tr('In each corner, how the bonus changed: green went up, red went down, violet is new.'))
-    end
-    if not (reforge and reforge.score and phase == 'done') then
-        c.hint:setColor('#8f877c')
-    end
-
     for n = 1, max do
         local card = g_ui.createWidget('ForgeCard', cards)
+        card:setWidth(cardWidth)
         if phase == 'idle' then
             local bonus = (entry.bonuses or {})[n]
             if bonus then
@@ -864,12 +830,17 @@ fillReforge = function()
         chip:setTooltip(tip)
     end
     local cost = tonumber(entry.rerollCost) or 0
-    s.costXp:setText(tr('Price: %d Rarity XP (you have %d)', cost, rarityXp))
+    s.costXp:setText(tr('%d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
-    s.costSeal:setVisible(lock ~= nil)
     if lock then
-        s.costSeal:setText(tr('Seal: %s gold, keeps %s with its value.', formatGold(entry.lockCost), tr(((sameKey(entry.bonuses, lock) or {}).label) or '')))
+        s.costSeal:setText(tr('%s (+%s gold)', tr(((sameKey(entry.bonuses, lock) or {}).label) or ''), formatGold(entry.lockCost)))
         s.costSeal:setColor('#e8c77a')
+    elseif lockable(entry) then
+        s.costSeal:setText(tr('click a card to seal it'))
+        s.costSeal:setColor('#8f877c')
+    else
+        s.costSeal:setText(tr('needs 2 or more bonuses'))
+        s.costSeal:setColor('#8f877c')
     end
     local lockGold = lock and (tonumber(entry.lockCost) or 0) or 0
     local busy = phase == 'rolling' or phase == 'reveal'
@@ -1003,36 +974,11 @@ local function landed(bonus)
     end
 end
 
--- the roll's score (the mean quality of the rolled bonuses, 0-100) and
--- this item's best on this computer
-local function scoreRoll()
-    local sum, n = 0, 0
-    for _, bonus in ipairs(reforge.after or {}) do
-        if not bonus.locked then
-            sum = sum + (bonus.perfect and 1 or (qualityOf(bonus) or 0))
-            n = n + 1
-        end
-    end
-    if n == 0 then
-        return
-    end
-    local score = math.floor(sum / n * 100 + 0.5)
-    local entry = bySlot[reforge.slot]
-    local key = string.format('forge_record_%s_%s', tostring(entry and entry.itemId or 0), tostring(reforge.slot))
-    local old = tonumber(g_settings.get(key))
-    reforge.score, reforge.record = score, old
-    reforge.newRecord = old ~= nil and score > old
-    if not old or score > old then
-        g_settings.set(key, score)
-    end
-end
-
 local function finishReforge()
     stopAnim()
     if not reforge then
         return
     end
-    scoreRoll()
     tellPending()
     reforge.phase = 'done'
     reforge.shown = #(reforge.after or {})
