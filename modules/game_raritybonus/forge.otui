@@ -269,6 +269,19 @@ ForgeItemChip < UIButton
     virtual: true
     phantom: true
 
+// one bonus the Reforge can give, in the "can roll" grid
+ForgePoolChip < UIWidget
+  size: 24 24
+  background-color: #17131a
+  border-width: 1
+  border-color: #2a2430
+
+  UIWidget
+    id: icon
+    size: 18 18
+    anchors.centerIn: parent
+    phantom: true
+
 // one bonus of the Reforge, as a card: face up or face down
 ForgeCard < UIButton
   size: 116 212
@@ -607,11 +620,24 @@ ForgeCard < UIButton
     phantom: true
     visible: false
 
+  UIWidget
+    id: emptyRune
+    size: 56 56
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.top: parent.top
+    margin-top: 58
+    image-source: /game_raritybonus/images/forge/rune
+    image-color: #2a2430
+    phantom: true
+    visible: false
+
   Label
     id: empty
-    anchors.centerIn: parent
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.top: emptyRune.bottom
+    margin-top: 10
     font: verdana-11px-antialised
-    color: #6e665e
+    color: #5d5568
     text-auto-resize: true
     !text: tr('no bonus')
     visible: false
@@ -1366,23 +1392,20 @@ MythosWindow
 
           // what a reforge can give: a count, the list in its tooltip
           UIWidget
-            id: poolIcon
+            id: poolGrid
             anchors.left: parent.left
-            anchors.bottom: rollButton.top
-            margin-bottom: 9
-            size: 14 14
-            image-source: /game_raritybonus/images/info
-            image-color: #8a6dd0
-
-          ForgeText
-            id: pool
-            anchors.left: poolIcon.right
             anchors.right: parent.right
-            anchors.verticalCenter: poolIcon.verticalCenter
-            margin-left: 6
+            anchors.bottom: rollButton.top
+            margin-bottom: 10
+            height: 51
+
+          ForgeDim
+            id: pool
+            anchors.left: parent.left
+            anchors.bottom: poolGrid.top
+            margin-bottom: 5
             height: 14
-            color: #cbbcf0
-            phantom: false
+            text-auto-resize: true
 
           ForgeGoldButton
             id: rollButton
