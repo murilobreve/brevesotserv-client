@@ -352,7 +352,7 @@ local function fillMyBonuses()
             local chip = g_ui.createWidget('ForgeMiniChip', row.chips)
             if it then
                 setItem(chip.item, it)
-                chip:setBorderColor(grade(it.rarity).color .. (it.slotId == selected and 'ff' or '66'))
+                chip:setBackgroundColor(it.slotId == selected and '#3a3140' or '#1f1a24')
                 chip.onClick = function() pickItem(it.slotId) end
             end
             chip.value:setText(plus(src.value, unit))
@@ -374,11 +374,9 @@ local function fillArsenal()
             local g = grade(entry.rarity)
             local w = g_ui.createWidget('ForgeSlot', doll)
             setItem(w.item, entry)
-            w:setBorderColor(g.color)
             w.pip:setImageColor(g.color)
             if slot == selected then
-                w:setBorderWidth(3)
-                w:setBorderColor('#f3d38a')
+                w:setBackgroundColor('#2a2430')
             end
             w:setTooltip(titleCase(entry.name) .. '\n' .. g.label)
             w.onClick = function() pickItem(slot) end
@@ -398,11 +396,10 @@ local function fillArsenal()
         return
     end
     local g = grade(entry.rarity)
-    c.pedestal:setBorderColor(g.color)
-    c.pedestal.inner:setBorderColor(g.color .. '55')
+    c.pedestal.glow:setImageColor(g.color)
     setItem(c.pedestal.item, entry)
     c.badge:setText(g.label:upper())
-    c.badge:setBackgroundColor(g.color)
+    c.badge:setColor(g.color)
     fillPips(c.pips, entry.rarity)
     c.name:setText(titleCase(entry.name))
     local info = { tr(entry.slot or '') }
@@ -466,8 +463,6 @@ local function fillCard(card, bonus, opts)
     card.number:setColor(opts.locked and '#e8c77a' or '#8f877c')
     bonusIcon(card.icon, bonus.key)
     card.sealed:setVisible(false)
-    card:setBorderWidth(opts.locked and 2 or 1)
-    card:setBorderColor(opts.locked and '#e8c77a' or '#2e2833')
     local q = qualityOf(bonus)
     local look = quality(q, bonus.perfect)
     local frame = math.floor((q or 0) * 20 + 0.5)
@@ -484,8 +479,9 @@ local function fillCard(card, bonus, opts)
     card.meter:setVisible(ranged)
     card.rmin:setVisible(ranged)
     card.rmax:setVisible(ranged)
-    card.accent:setVisible(q ~= nil)
-    card.accent:setBackgroundColor(look[3])
+    card.accent:setVisible(q ~= nil or opts.locked or false)
+    card.accent:setBackgroundColor(opts.locked and '#e8c77a' or look[3])
+    card.accent:setHeight(opts.locked and 3 or 2)
     if ranged then
         setMeter(card, q, look[3])
         card.rmin:setText(plus(bonus.min, bonus.unit))
@@ -496,14 +492,12 @@ local function fillCard(card, bonus, opts)
         card.glow:setImageColor('#f3d38a')
         card.glow:setOpacity(0.6)
         card.grade:setColor('#f3d38a')
-        card:setBorderColor('#f3d38a')
     elseif q and q >= 0.85 then
         -- an Excellent roll keeps a cold glow
         card.glow:setVisible(true)
         card.glow:setImageColor('#8cc4ff')
         card.glow:setOpacity(0.45)
         card.grade:setColor('#8cc4ff')
-        card:setBorderColor('#5f8fc4')
     end
     -- the card's tooltip: what the bonus does and how much the character has
     local tip = describe(bonus.key)
@@ -582,8 +576,6 @@ local function backCard(card, n)
     card.sealed:setVisible(false)
     card.glow:setVisible(false)
     card:setTooltip(nil)
-    card:setBorderWidth(1)
-    card:setBorderColor('#2e2833')
 end
 
 local function emptyCard(card)
@@ -598,8 +590,7 @@ local function emptyCard(card)
     end
     card.empty:setVisible(true)
     card.emptyRune:setVisible(true)
-    card:setBackgroundColor('#131016')
-    card:setBorderColor('#201b24')
+    card:setBackgroundColor('#13101666')
     card:setTooltip(nil)
 end
 
@@ -730,12 +721,12 @@ fillReforge = function()
     local lock = locks[selected]
     if phase == 'idle' then
         if lockable(entry) then
-            c.hint:setText(tr('Click a card to seal its bonus: the next reforge keeps it and rolls the others.'))
+            c.hint:setText('')
         else
-            c.hint:setText(tr('Reforge rolls the bonuses again. Ascension tries to raise the grade.'))
+            c.hint:setText('')
         end
     elseif phase == 'rolling' or phase == 'reveal' then
-        c.hint:setText(tr('The cards turn one by one, from left to right.'))
+        c.hint:setText('')
     elseif reforge and reforge.score then
         local line = tr('Roll score: %d%%', reforge.score)
         if reforge.newRecord then
@@ -791,6 +782,8 @@ fillReforge = function()
                 if text then
                     card.delta:setText(text)
                     card.delta:setColor(color)
+                    -- the corner note takes the header's place (they touched)
+                    card.number:setText('')
                 end
                 if n == reforge.flashAt then
                     flashCard(card, bonus.perfect and '#f3d38a' or quality(qualityOf(bonus), bonus.perfect)[3])
@@ -865,8 +858,7 @@ fillReforge = function()
         bonusIcon(chip.icon, bonus.key)
         local tip = tr(bonus.label or '') .. '\n' .. plus(bonus.min, bonus.unit) .. '  -  ' .. plus(bonus.max, bonus.unit)
         if have[bonus.key or ''] then
-            chip:setBorderColor('#e8c77a')
-            chip:setBackgroundColor('#2a2112')
+            chip.mark:setVisible(true)
             tip = tip .. '\n' .. tr('On this item now')
         end
         chip:setTooltip(tip)
@@ -909,7 +901,6 @@ local function pulse()
         local a = (math.sin((g_clock.millis() - t0) / 1100 * math.pi * 2) + 1) / 2
         for _, card in ipairs(window.pages.arsenal.center.cards:getChildren()) do
             if card.back:isVisible() then
-                card.back:setBorderColor(a > 0.5 and '#8a6dd0' or '#3d3346')
                 card.back.rune:setOpacity(0.55 + 0.45 * a)
             end
         end
@@ -1216,7 +1207,6 @@ fillAscend = function()
     box.dial.needle:setRotation(needleAngle)
 
     local phase = ascend and ascend.slot == selected and ascend.phase or 'idle'
-    box:setBorderColor('#2e2833')
     if phase == 'idle' then
         box.resultTitle:setText(tr('%d%% chance', chance))
         box.resultTitle:setColor('#ece6dc')
@@ -1229,12 +1219,10 @@ fillAscend = function()
         box.resultTitle:setText(tr('Now %s!', to.label))
         box.resultTitle:setColor(to.color)
         box.resultText:setText(tr('It went up a grade and its bonuses rolled again: see the cards above.'))
-        box:setBorderColor(to.color)
     else
         box.resultTitle:setText(tr('Not this time'))
         box.resultTitle:setColor('#ff9c8a')
         box.resultText:setText(tr('It stays %s, as it was. Spent: %s gold and %d Rarity XP.', from.label, formatGold(shownUp.gold), tonumber(shownUp.xp) or 0))
-        box:setBorderColor('#7a3a33')
     end
     -- this session's tries
     box.history:destroyChildren()

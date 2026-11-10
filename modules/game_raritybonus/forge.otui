@@ -26,8 +26,6 @@ ForgeTab < UIButton
 
 ForgeBox < UIWidget
   background-color: #141117
-  border-width: 1
-  border-color: #2e2833
 
 ForgeTitle < Label
   font: verdana-11px-antialised
@@ -95,9 +93,7 @@ ForgePip < UIWidget
 // one worn item on the Arsenal's paperdoll
 ForgeSlot < UIButton
   size: 48 48
-  background-color: #17131a
-  border-width: 2
-  border-color: #2a2430
+  background-color: #00000000
   change-cursor-image: true
   cursor: pointer
 
@@ -118,8 +114,6 @@ ForgeSlot < UIButton
 
 ForgeEmptySlot < UIWidget
   size: 48 48
-  border-width: 1
-  border-color: #241f28
   phantom: true
 
 // one bonus of the selected item: name, value, where the roll fell in the
@@ -272,9 +266,7 @@ ForgeItemChip < UIButton
 // one bonus the Reforge can give, in the "can roll" grid
 ForgePoolChip < UIWidget
   size: 24 24
-  background-color: #17131a
-  border-width: 1
-  border-color: #2a2430
+  background-color: #00000000
 
   UIWidget
     id: icon
@@ -282,12 +274,23 @@ ForgePoolChip < UIWidget
     anchors.centerIn: parent
     phantom: true
 
+  // on the item now: a gold line under the icon
+  UIWidget
+    id: mark
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin-left: 4
+    margin-right: 4
+    height: 2
+    background-color: #e8c77a
+    phantom: true
+    visible: false
+
 // one bonus of the Reforge, as a card: face up or face down
 ForgeCard < UIButton
   size: 116 212
-  background-color: #17141a
-  border-width: 1
-  border-color: #2e2833
+  background-color: #15121899
   change-cursor-image: true
   cursor: pointer
 
@@ -519,8 +522,6 @@ ForgeCard < UIButton
     id: back
     anchors.fill: parent
     background-color: #18131d
-    border-width: 1
-    border-color: #3d3346
     phantom: true
     visible: false
 
@@ -543,9 +544,7 @@ ForgeCard < UIButton
       anchors.top: parent.top
       margin-top: 78
       height: 72
-      background-color: #8a6dd018
-      border-width: 1
-      border-color: #8a6dd055
+      background-color: #8a6dd022
       phantom: true
       visible: false
 
@@ -975,9 +974,7 @@ ForgeFilter < UIButton
 // and the items that give it, each with its share
 ForgeMiniTotal < UIWidget
   height: 46
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
+  background-color: #00000000
 
   UIWidget
     id: icon
@@ -1044,8 +1041,6 @@ ForgeMiniTotal < UIWidget
 ForgeMiniChip < UIButton
   height: 18
   background-color: #1f1a24
-  border-width: 1
-  border-color: #2e2833
   change-cursor-image: true
   cursor: pointer
 
@@ -1244,14 +1239,14 @@ MythosWindow
           anchors.top: parent.top
           anchors.left: parent.left
           size: 76 76
-          background-color: #17141a
-          border-width: 2
 
           UIWidget
-            id: inner
-            anchors.fill: parent
-            margin: 4
-            border-width: 1
+            id: glow
+            size: 130 130
+            anchors.centerIn: parent
+            image-source: /game_raritybonus/images/forge/glow
+            opacity: 0.55
+            phantom: true
 
           UIItem
             id: item
@@ -1267,9 +1262,7 @@ MythosWindow
           margin-top: 4
           height: 18
           text-auto-resize: true
-          padding: 0 6
           font: Verdana Bold-11px
-          color: #120e14
 
         UIWidget
           id: pips
