@@ -1406,11 +1406,31 @@ MythosWindow
             size: 48 14
             !text: tr('Seal')
 
+          // takes the seal off (only with a bonus sealed)
+          UIButton
+            id: sealClear
+            anchors.verticalCenter: sealKey.verticalCenter
+            anchors.right: parent.right
+            size: 52 18
+            font: verdana-11px-antialised
+            color: #cbbcf0
+            background-color: #2a2430
+            change-cursor-image: true
+            cursor: pointer
+            !text: tr('remove')
+            !tooltip: tr('Take the seal off: the next reforge rolls every bonus.')
+            visible: false
+
+            $hover:
+              color: #ffffff
+              background-color: #3a3140
+
           ForgeText
             id: costSeal
             anchors.verticalCenter: sealKey.verticalCenter
             anchors.left: sealKey.right
-            anchors.right: parent.right
+            anchors.right: sealClear.left
+            margin-right: 6
             height: 14
 
           // what a reforge can give: a count, the list in its tooltip

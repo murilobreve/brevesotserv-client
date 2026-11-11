@@ -423,6 +423,16 @@ end
 -- ---------------------------------------------------------------------------
 
 
+-- seals a bonus of the item, or takes the seal off when it is the sealed one
+local function toggleSeal(entry, bonus)
+    locks[selected] = (locks[selected] == bonus.key) and nil or bonus.key
+    if locks[selected] then
+        setStatus(tr('%s sealed: the next reforge keeps it with this value and rolls the others, for %s gold more.', bonusText(bonus), formatGold(entry.lockCost)), '#e8c77a')
+    else
+        setStatus(tr('%s is no longer sealed.', bonusText(bonus)), '#ab9fc6')
+    end
+end
+
 local function lockable(entry)
     return entry and (tonumber(entry.lockCost) or 0) > 0 and #(entry.bonuses or {}) >= 2
 end
@@ -719,12 +729,7 @@ fillReforge = function()
                 fillCard(card, bonus, { n = n, locked = lock == bonus.key })
                 if lockable(entry) then
                     card.onClick = function()
-                        locks[selected] = (locks[selected] == bonus.key) and nil or bonus.key
-                        if locks[selected] then
-                            setStatus(tr('%s sealed: the next reforge keeps it with this value and rolls the others, for %s gold more.', bonusText(bonus), formatGold(entry.lockCost)), '#e8c77a')
-                        else
-                            setStatus(tr('%s is no longer sealed.', bonusText(bonus)), '#ab9fc6')
-                        end
+                        toggleSeal(entry, bonus)
                         fillReforge()
                     end
                 end
@@ -761,8 +766,14 @@ fillReforge = function()
                 backCard(card, n)
             end
             if phase == 'done' then
+                -- back to the item as it is now, and the card clicked is
+                -- sealed (or unsealed) at once: no second click
                 card.onClick = function()
                     reforge = nil
+                    local now = bySlot[selected]
+                    if bonus and now and lockable(now) and sameKey(now.bonuses, bonus.key, bonus.label) then
+                        toggleSeal(now, sameKey(now.bonuses, bonus.key, bonus.label))
+                    end
                     Forge.refresh()
                 end
             end
@@ -832,6 +843,17 @@ fillReforge = function()
     local cost = tonumber(entry.rerollCost) or 0
     s.costXp:setText(tr('%d Rarity XP (you have %d)', cost, rarityXp))
     s.costXp:setColor(rarityXp >= cost and '#d6cfc2' or '#ff9c8a')
+    local busySeal = phase == 'rolling' or phase == 'reveal'
+    s.sealClear:setVisible(lock ~= nil and not busySeal)
+    s.sealClear.onClick = function()
+        local sealed = sameKey(entry.bonuses, locks[selected])
+        locks[selected] = nil
+        if reforge and reforge.phase == 'done' then
+            reforge = nil
+        end
+        setStatus(sealed and tr('%s is no longer sealed.', bonusText(sealed)) or '', '#ab9fc6')
+        fillReforge()
+    end
     if lock then
         s.costSeal:setText(tr('%s (+%s gold)', tr(((sameKey(entry.bonuses, lock) or {}).label) or ''), formatGold(entry.lockCost)))
         s.costSeal:setColor('#e8c77a')
