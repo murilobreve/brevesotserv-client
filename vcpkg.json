@@ -20,6 +20,10 @@
     "libvorbis",
     "nlohmann-json",
     "openal-soft",
+    {
+      "name": "opus",
+      "platform": "!wasm32 & !android"
+    },
     "openssl",
     "parallel-hashmap",
     "physfs",

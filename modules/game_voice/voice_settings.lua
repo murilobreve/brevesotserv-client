@@ -166,17 +166,37 @@ local function applyTalkKey(slot, combo, chatKey)
     end
 end
 
+-- the client sends a key's press right after its down (PlatformWindow::
+-- processKeyDown): the box keeps the keyboard until then and eats it. Let
+-- go on the down, that press would reach the window, and Escape or Enter
+-- there closes it (UIWindow:onKeyPress): the settings window with the key
+-- unchanged, the onboarding as seen for good with voice off. The release a
+-- frame later only matters if a press never came.
+local function eatPress(widget)
+    widget.onKeyPress = nil
+    if not widget:isDestroyed() then
+        widget:ungrabKeyboard()
+    end
+    return true
+end
+
 -- turns `box` into a key catcher; done(combo, chatKey) or failed(text)
 local function captureKey(box, slot, done, failed)
     box:setText(tr('Press a key...'))
     box:focus()
     box:grabKeyboard()
+    box.onKeyPress = nil
     box.onKeyDown = function(widget, keyCode, modifiers)
         if MODIFIER_KEYS[keyCode] then
             return true -- waits for the key that goes with it
         end
-        widget:ungrabKeyboard()
         widget.onKeyDown = nil
+        widget.onKeyPress = eatPress
+        scheduleEvent(function()
+            if widget.onKeyPress == eatPress then
+                eatPress(widget)
+            end
+        end, 1)
         -- Escape cancels; so does a key the client has no name for (nil),
         -- which would otherwise clear the binding
         local combo = keyCode ~= KeyEscape and determineKeyComboDesc(keyCode, modifiers)
@@ -343,9 +363,11 @@ end
 
 local function keyRow(row, slot, label)
     row.label:setText(label)
+    -- the tooltip has the key whole: a combo longer than the box is cut
     local function show()
         local key = talkKey(slot)
         row.value:setText(key ~= '' and key or '-')
+        row.value:setTooltip(key)
     end
     show()
     row.change.onClick = function()
@@ -430,9 +452,10 @@ function VS.show()
         audio[id]:setEnabled(audioOk and (id ~= 'vad' or prefs.mode == 'vad'))
     end
 
-    keyRow(keys.keyParty, 0, tr('Party'))
-    keyRow(keys.keyGuild, 1, tr('Guild'))
-    keyRow(keys.keyRoom, 2, tr('Room / event'))
+    -- under "Push-to-talk keys": "In the party", "In the guild"...
+    keyRow(keys.keyParty, 0, tr('In the party'))
+    keyRow(keys.keyGuild, 1, tr('In the guild'))
+    keyRow(keys.keyRoom, 2, tr('In a room / event'))
     -- the browser's side buttons reach the page only (phase 4 forwards them)
     local browserFull = browserMouse()
     keys.mouseLabel:setVisible(browserFull)

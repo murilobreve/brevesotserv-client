@@ -6,10 +6,11 @@
  * manager queues the events and raises them in Lua on the game thread as
  * g_voice.onVoiceEvent(type, s, a, b) (modules/game_voice/engine_full.lua).
  *
- * Engines: voiceengine_web.cpp (browser: the page's MythosVoice), and
- * voiceengine_null.cpp (no audio: isSupported() is false and the Lua side
- * falls back to its presence-only engine). The native engine (libopus,
- * OpenAL, ixwebsocket) comes later and implements the same interface.
+ * Engines: voiceengine_web.cpp (browser: the page's MythosVoice),
+ * voiceengine_native.cpp (Windows, and any desktop with VOICE_NATIVE:
+ * libopus, OpenAL, ixwebsocket) and voiceengine_null.cpp (no audio:
+ * isSupported() is false and the Lua side falls back to its presence-only
+ * engine).
  *
  * Only the standard library here, so the engine files build on their own.
  */
@@ -100,5 +101,5 @@ public:
 };
 
 // The engine of this build: defined by exactly one of voiceengine_web.cpp,
-// voiceengine_null.cpp (and later voiceengine_native.cpp).
+// voiceengine_native.cpp and voiceengine_null.cpp.
 std::unique_ptr<VoiceEngine> createVoiceEngine(VoiceEngine::Sink sink);

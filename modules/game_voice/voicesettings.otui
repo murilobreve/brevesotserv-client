@@ -18,6 +18,11 @@ VoiceSettingCheck < QtCheckBox
   anchors.left: parent.left
   anchors.right: parent.right
 
+// a key row in the 278 px keys column: label 92 ("Na sala/evento" is 91), a
+// 6 px gap, the box (126 px in the client), Trocar 52. The box shows
+// "Aperte uma tecla..." (111 px) while it waits and keys as long as
+// "Ctrl+Shift+PageDown" (124 px); a longer one is whole in its tooltip.
+// The Lua test measures these with the font's glyph widths.
 VoiceKeyRow < UIWidget
   height: 22
   margin-top: 4
@@ -28,7 +33,7 @@ VoiceKeyRow < UIWidget
     id: label
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    width: 86
+    width: 92
     font: verdana-11px-antialised
     color: #c9c0cf
 
@@ -37,6 +42,7 @@ VoiceKeyRow < UIWidget
     anchors.left: label.right
     anchors.right: change.left
     anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
     margin-right: 4
     height: 20
     image-source: /images/mythos/input
@@ -57,7 +63,7 @@ VoiceKeyRow < UIWidget
 
 VoiceSettingsWindow < MythosWindow
   !text: tr('Voice settings')
-  size: 540 420
+  size: 574 420
   @onEscape: modules.game_voice.VoiceSettings.hide()
 
   // audio
@@ -215,7 +221,7 @@ VoiceSettingsWindow < MythosWindow
     anchors.top: parent.top
     anchors.right: parent.right
     anchors.bottom: closeButton.top
-    width: 244
+    width: 278
     margin-bottom: 8
 
     VoiceSettingSection

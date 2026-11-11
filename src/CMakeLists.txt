@@ -10,16 +10,28 @@ option(TOGGLE_FRAMEWORK_XML "Use XML " ON)
 option(TOGGLE_FRAMEWORK_NET "Use NET " ON)
 option(TOGGLE_FRAMEWORK_PROTOBUF "Use Protobuf" ON)
 option(TOGGLE_FRAMEWORK_EDITOR "Use Editor " OFF)
-# Voice chat (Mythos Voz, modules/game_voice). Only the browser engine exists
-# so far (browser/voice/mythos-voice.js + framework/voice/voiceengine_web.cpp):
-# on by default only in the WASM build. The desktop build compiles none of it
-# until the native engine (libopus/OpenAL) arrives; turned on there by hand it
-# builds the null engine (no audio, the Lua side uses its presence-only mode).
-if(WASM)
+# Voice chat (Mythos Voz, modules/game_voice). On by default in the WASM
+# build (the browser engine: browser/voice/mythos-voice.js +
+# framework/voice/voiceengine_web.cpp) and on Windows (the native engine:
+# libopus, OpenAL, ixwebsocket; VOICE_NATIVE below). Elsewhere off; turned on
+# by hand, a desktop build without libopus builds the null engine (no audio,
+# the Lua side uses its presence-only mode).
+if(WASM OR WIN32)
   set(_TOGGLE_FRAMEWORK_VOICE_DEFAULT ON)
 else()
   set(_TOGGLE_FRAMEWORK_VOICE_DEFAULT OFF)
 endif()
+# A Windows build folder configured before the native engine holds the old
+# default (OFF) in its CMakeCache.txt, which option() would keep: moved to ON
+# once. An OFF given on the command line (type UNINITIALIZED, not option()'s
+# BOOL) and any later change stay as they are.
+if(WIN32 AND NOT WASM AND DEFINED CACHE{TOGGLE_FRAMEWORK_VOICE} AND NOT DEFINED CACHE{_MYTHOS_VOICE_DEFAULTS})
+  get_property(_voice_cache_type CACHE TOGGLE_FRAMEWORK_VOICE PROPERTY TYPE)
+  if(_voice_cache_type STREQUAL "BOOL")
+    set(TOGGLE_FRAMEWORK_VOICE ON CACHE BOOL "Voice chat (Mythos Voz)" FORCE)
+  endif()
+endif()
+set(_MYTHOS_VOICE_DEFAULTS 2 CACHE INTERNAL "voice option defaults applied")
 option(TOGGLE_FRAMEWORK_VOICE "Voice chat (Mythos Voz)" ${_TOGGLE_FRAMEWORK_VOICE_DEFAULT})
 if(ANDROID)
   set(TOGGLE_FRAMEWORK_VOICE OFF)
@@ -298,6 +310,48 @@ if(TOGGLE_FRAMEWORK_SOUND)
     )
   endif()
 endif()
+# Mythos Voz native engine (framework/voice/voiceengine_native.cpp: libopus,
+# OpenAL capture and playback, ixwebsocket). On by default on Windows, where
+# vcpkg builds libopus from vcpkg.json; on other desktops on when libopus is
+# found, else the null engine. Never in the WASM build (the browser engine)
+# or on Android.
+set(OTCLIENT_OPUS_TARGET "")
+if(TOGGLE_FRAMEWORK_VOICE AND NOT WASM AND NOT ANDROID)
+  if(WIN32)
+    set(_VOICE_NATIVE_DEFAULT ON)
+  else()
+    find_package(Opus CONFIG QUIET)
+    if(NOT Opus_FOUND AND PKG_CONFIG_FOUND)
+      pkg_check_modules(OPUS QUIET IMPORTED_TARGET opus)
+    endif()
+    if(Opus_FOUND OR OPUS_FOUND)
+      set(_VOICE_NATIVE_DEFAULT ON)
+    else()
+      set(_VOICE_NATIVE_DEFAULT OFF)
+    endif()
+  endif()
+  option(VOICE_NATIVE "Native voice engine (libopus, OpenAL, ixwebsocket)" ${_VOICE_NATIVE_DEFAULT})
+  if(VOICE_NATIVE)
+    if(DEFINED VCPKG_TARGET_TRIPLET OR WIN32)
+      find_package(Opus CONFIG REQUIRED)
+      set(OTCLIENT_OPUS_TARGET Opus::opus)
+    elseif(TARGET Opus::opus)
+      set(OTCLIENT_OPUS_TARGET Opus::opus)
+    else()
+      if(NOT TARGET PkgConfig::OPUS)
+        pkg_check_modules(OPUS REQUIRED IMPORTED_TARGET opus)
+      endif()
+      set(OTCLIENT_OPUS_TARGET PkgConfig::OPUS)
+    endif()
+    if(NOT TARGET OpenAL::OpenAL)
+      find_package(OpenAL CONFIG REQUIRED) # game sound turned off
+    endif()
+    log_option_enabled("Voice: native engine (libopus, OpenAL, ixwebsocket)")
+  endif()
+else()
+  set(VOICE_NATIVE OFF)
+endif()
+
 if(ANDROID)
   # LuaJIT: pre-compiled via build_luajit_android.sh or setup_android_deps.sh
   # vcpkg LuaJIT port can't cross-compile for Android from x64 host
@@ -560,6 +614,15 @@ endif()
 if (TOGGLE_FRAMEWORK_VOICE)
   if (WASM)
     set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_web.cpp)
+  elseif (VOICE_NATIVE)
+    set(_VOICE_SOURCES
+            framework/voice/voicemanager.cpp
+            framework/voice/voiceengine_native.cpp
+            framework/voice/voicecodec.cpp
+            framework/voice/jitterbuffer.cpp
+            framework/voice/voicecapture_openal.cpp
+            framework/voice/voiceplayback_openal.cpp
+    )
   else()
     set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_null.cpp)
   endif()
@@ -831,6 +894,10 @@ if(MSVC)
           protobuf::libprotobuf
           protobuf
       )
+  endif()
+
+  if (VOICE_NATIVE)
+      target_link_libraries(otclient_core PUBLIC ${OTCLIENT_OPUS_TARGET})
   endif()
 elseif(ANDROID)
   target_include_directories(otclient_core
@@ -1121,6 +1188,10 @@ else() # Linux
           PUBLIC
           protobuf::libprotobuf protobuf
       )
+  endif()
+
+  if (VOICE_NATIVE)
+      target_link_libraries(otclient_core PUBLIC ${OTCLIENT_OPUS_TARGET})
   endif()
 
   if(APPLE AND NOT ANDROID AND NOT WASM)
