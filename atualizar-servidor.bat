@@ -5,6 +5,7 @@ rem compilado. O jogo so reinicia se algo dele mudou, e com aviso no jogo:
 rem 5 minutos antes (com ninguem online, na hora). Dois cliques e pronto.
 rem   atualizar-servidor.bat              atualiza (o normal)
 rem   atualizar-servidor.bat agora        reinicia sem esperar os 5 minutos
+rem                                       (ou dois cliques no atualizar-servidor-agora.bat)
 rem   atualizar-servidor.bat sem-reiniciar  so baixa; vale no proximo reinicio
 rem   atualizar-servidor.bat compilar     compila o servidor na propria VPS
 rem                                       (devagar, para nao travar o jogo)
