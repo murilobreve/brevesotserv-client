@@ -36,7 +36,9 @@ VoiceSmallButton < UIButton
     border-color: #c99c53
 
 // the hint ("Hold Insert") ends at the button when it shows (voice_ui.lua
-// anchors it there and cuts it with "..."; the header's tooltip has it whole)
+// anchors it there; when it does not fit only the key shows, "Insert" beside
+// "SUA PARTY" and "Sair" at the side panel's 150 px; the header's tooltip has
+// it whole)
 VoiceSectionHeader < UIWidget
   height: 18
   margin-top: 4
@@ -55,7 +57,7 @@ VoiceSectionHeader < UIWidget
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     height: 14
-    margin-left: 6
+    margin-left: 4
     font: verdana-11px-antialised
     color: #8f88a3
     text-align: left
@@ -161,15 +163,6 @@ VoiceDirRow < UIWidget
 
   $on:
     color: #78d04c
-
-// over the head of who is talking (attached to the creature)
-VoiceHeadIcon < UIWidget
-  size: 18 16
-  margin-left: -9
-  margin-top: -44
-  image-source: /game_voice/images/speaker_head
-  phantom: true
-  focusable: false
 
 // the per-player volume popup (right-click > Volume): the track, the arrows
 // and the wheel move 10% (voice_ui.lua), the buttons go to 0% and 100%

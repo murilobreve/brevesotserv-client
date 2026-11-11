@@ -25,7 +25,7 @@ has no `g_voice` until the native engine (phases 6 and 7), so there
 | `voice_ui.lua`, `voice.otui` | The panel, member rows, right-click menus, volume popup, report window, over-head icon. |
 | `voice_settings.lua`, `voicesettings.otui`, `voiceonboard.otui` | Settings window and the one-time onboarding. |
 | `voice_locale.lua` | Portuguese for every English string (Latin-1 as `\ddd` escapes), merged into the `pt` locale on first use, only for keys `pt.lua` lacks. |
-| `images/` | Icons (generated pixel art; 16x16 header buttons, 12x12 member icons, the 40x20 top-menu toggle). |
+| `images/` | Icons, pixel art in the client's palette (the `game_brevespanel` icons: ink outline `#090a10`, gold `#705035/#c99c53/#ffe0a0`, silver `#5b4d6a/#a99eb4/#e9dec7`, the panel's green and red): 16x16 header buttons, 12x12 member icons, the 18x16 over-head speaker, the 40x20 top-menu toggle (it sits in the right panel's grid of stock buttons, so it is drawn like them: `data/images/options/button_empty`'s stone frame and a flat `#c9c9c9` glyph, the right half pressed/on with the glyph 1 px down and right), the 48x48 touch button. Drawn by `tools/voz-luatest/icons_gen.py` (Python 3 with Pillow; kept out of the module so it does not ship): `python3 tools/voz-luatest/icons_gen.py modules/game_voice/images data/images/options/button_empty.png` from the repo root rebuilds all 17 files. |
 
 Tests: `luajit tools/voz-luatest/game_voice_test.lua` from the client repo root.
 
@@ -64,7 +64,7 @@ through one sink with the shape of `g_voice.onVoiceEvent(type, s, a, b)`:
 | `spk` | `a` = sid, `b` = 1/0 (speaking edges) |
 | `talk` | `a` = slot or -1 (the local gate) |
 | `level` | `a` = dBFS, only while the settings window is open (`setMeter`) |
-| `mic` | `s` = `ok`, `denied`, `nodevice`, `encoder` (the browser could not encode: listen only; `denied` and `encoder` show a notice) |
+| `mic` | `s` = `ok`, `denied`, `nodevice`, `encoder` (the browser or the native engine could not encode: listen only; `denied` and `encoder` show a notice) |
 | `devices` | the device lists changed |
 
 Contract for the phase 4/6 `g_voice` binding, used by `engine_full.lua`:
@@ -196,8 +196,34 @@ Where the plan left room, the simplest safe option was taken:
   and has a position, at most 8 at a time, and is destroyed on the off edge
   (destroying it detaches it). `speakers` 0 removes every icon but our own.
   Our own voice coming back from the echo room gets no second icon (the
-  local gate's `self` icon is there). Every icon is destroyed on the off
-  edge, when the speaker leaves our rooms, and at game end.
+  local gate's `self` icon is there). Every icon is removed on the off
+  edge, when the speaker leaves our rooms, and at game end. The icon is an
+  image the engine draws with the creature (an attached effect, id 65021,
+  registered once per client run), not a widget attached to it:
+  `Map::updateAttachedWidgets` reads `g_drawPool.getScaleFactor()` while no
+  draw pool is selected (`m_pools[LAST]`, one past the end), which in the
+  browser left such a widget at the tile's corner (10 px left of the name)
+  and in a 64-bit desktop build reads through a wild pointer. The effect
+  follows the walk and the jumps and goes with the creature. Its offsets
+  (sprite px, from the outfit's displacement and the map's tile size, found
+  by asking `UIMap:getPosition` where the drawn map starts and ends) centre
+  it over the name, 9 screen px above the creature's point; in the map's
+  top rows, where it would leave the drawn map (letterboxed in the classic
+  view), under the feet. Shown only while the name is (`UIMap:isInRange`:
+  the camera's floor, inside the view). A speaker's moves, appear,
+  disappear and death, and our own moves, check the icons once on the next
+  frame (`UI.placeHead`); no check runs while nobody talks.
+- **Member rows**: the 12 px icons are phantom; the row's tooltip says each
+  in words ("Membro da equipe", "Microfone desligado", "Áudio desligado",
+  "Silenciado pela equipe", "Silenciado para você", presence mode). The
+  header's switches use the same words: "Desligar/Ligar microfone",
+  "Desligar/Ligar áudio". Online, the status row and the Voz button say
+  "Conectado" (it said "Voz" under the title "Voz").
+- **Settings keys**: label 92 px ("Na sala/evento", as the Hotkeys list's
+  "Falar na sala/evento"), then the key box, 126 px in the client, which
+  shows "Aperte uma tecla..." and keys up to "Ctrl+Shift+PageDown" whole; the
+  box's tooltip has the key whole. The Lua test measures these with the
+  font's glyph widths.
 - A member row that leaves a room with hidden members gives its place to a
   hidden one in a redraw at most once a second, so a big room's churn does
   not redraw the panel every frame.
@@ -208,9 +234,13 @@ Where the plan left room, the simplest safe option was taken:
   appended at the end, it opened under the bottom of the screen). 100 ms
   later, once the layout settled, a panel that does not end inside
   `rootWidget` floats over the top right of the map (and is saved there).
-- **Section headers**: the key hint ("Segure Insert") ends where the
-  header's button (Sair, Entrar, Mostrar) starts, cut with "..." when it does
-  not fit; the header's tooltip has it whole.
+- **Section headers**: "SUA PARTY", "SUA GUILD", "SALAS", "EVENTOS" (the
+  client says "party" and "guild": the bosses window's "Sua party", pt.lua's
+  "Entrar na party do %s"; a bare "PARTY" read as English). The key hint
+  ("Segure Insert") ends where the header's button (Sair, Entrar, Mostrar)
+  starts; when it does not fit, only the key shows ("Insert"), and when not
+  even the key fits, nothing (a cut "Segure I..." read as a broken label).
+  The header's tooltip has it whole.
 - **Volume popup**: a click on the track or an arrow moves 10% (it moved 1%),
   on the 10% grid for the track; "0%" and "100%" buttons; the thumb still
   drags freely.
@@ -228,7 +258,10 @@ Where the plan left room, the simplest safe option was taken:
   button with a rune the character has none of yet, or a spell it cannot
   cast yet, still counts: its key will run it); in
   the browser, F11 (the page's full screen). A key the client has no name for
-  cancels the capture. The onboarding offers a free key when the party has
+  cancels the capture, and so does Escape. The box keeps the keyboard until
+  the press that follows the key's down, and eats it: Escape or Enter there
+  reached the window and closed it (the onboarding as seen for good with
+  voice off). The onboarding offers a free key when the party has
   none (`VoiceSettings.freeKey`: Insert, else Pause), set only when voice is
   turned on there; in the browser with the full engine it also offers the
   mouse side button (Mouse 4). A refused key names a free one ("Tente
@@ -252,7 +285,10 @@ Where the plan left room, the simplest safe option was taken:
   common word ("Other", "None", "Offense") keeps the meaning other windows
   give it; the report reasons and the mouse option use their own English
   keys ("Insults", "Other reason", "No side button"). A test checks that every
-  key both files define has the same text.
+  key both files define has the same text, that no string the module shows
+  keeps its English text in Portuguese (only "Spam", "Normal", "Volume",
+  "Mouse 4/5" are spelled the same), and walks the panel, its menus, the
+  report window and the settings drawn in Portuguese for English left over.
 - The rules link in the onboarding points to `https://mythosot.com.br/?subtopic=voz`
   (to be created with the rules text).
 
@@ -262,5 +298,12 @@ Where the plan left room, the simplest safe option was taken:
   Windows client (phase 6). "Testar microfone" calls the engine's local
   loopback (in the browser: microphone -> Opus -> mixer, nothing sent); the
   relay's echo room is the "Teste de eco" entry of the room list.
-- The over-head icon offset (`VoiceHeadIcon` margins) is a first guess and
-  must be checked on screen with the CI browser build.
+- The over-head icon is checked in the browser build (classic view, tiles
+  of 41 and 48 px). A window resize while someone talks moves it at the
+  speaker's next step or speaking edge. Once `Map::updateAttachedWidgets`
+  takes the map's own scale factor (`mapView->m_posInfo.scaleFactor`), an
+  attached widget would work too; the effect does not depend on it.
+- The Hotkeys list still names the mute and deafen actions "Silenciar
+  microfone" and "Ensurdecer" (`KEY_MUTE`, `KEY_DEAFEN` in `voice.lua`, the
+  saved keybind names); the buttons now say "Desligar microfone" and
+  "Desligar áudio".

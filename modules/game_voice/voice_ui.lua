@@ -90,12 +90,14 @@ function UI.create()
     if toggleButton then
         toggleButton:setOn(window:isVisible())
     end
+    UI.connectHeads()
     UI.onState()
     UI.scheduleRefresh()
 end
 
 function UI.destroy()
     UI.clearHeads()
+    UI.disconnectHeads()
     UI.closePopups()
     removeEvent(refreshEvent)
     removeEvent(roomsEvent)
@@ -300,7 +302,7 @@ local function statusOf(s)
             return tr('Presence mode'), COLOR_ON, nil,
                 tr('Presence mode: update the client (or use Chrome, Edge or Firefox) to talk and listen.')
         end
-        return tr('Voice'), COLOR_ON
+        return tr('Connected'), COLOR_ON
     elseif state == ST.WAIT_TOKEN or state == ST.CONNECTING then
         return tr('Connecting...'), COLOR_WAIT
     elseif state == ST.BACKOFF then
@@ -401,11 +403,13 @@ function UI.scheduleRefresh(delay)
     end, delay)
 end
 
--- the hint ("Hold Insert") ends where the header's button starts: cut with
--- "..." when it does not fit (a long key name, a narrow panel), the whole
--- text in the header's tooltip. Run again on each change of the hint's
--- width. The text is set only when it changes: a label without a width yet
--- takes the size of a new text, and that must not start another round.
+-- the hint ("Hold Insert") ends where the header's button starts. When it
+-- does not fit (a long title or key name, a narrow panel) only the key
+-- shows ("Insert"), and when not even the key fits, nothing: a cut text
+-- ("Hold I...") read as a broken label. The header's tooltip has it whole.
+-- Run again on each change of the hint's width. The text is set only when
+-- it changes: a label without a width yet takes the size of a new text, and
+-- that must not start another round.
 function UI.fitHint(h)
     local hint, full = h.hint, h.fullHint or ''
     local function put(text)
@@ -418,28 +422,24 @@ function UI.fitHint(h)
     if full == '' or room <= 0 or hint:getTextSize().width <= room then
         return
     end
-    -- the longest start of the text that fits with the dots (measured by
-    -- the label itself: the font has no call to measure from Lua)
-    local function cut(n)
-        return n > 0 and (full:sub(1, n):gsub('%s+$', '') .. '...') or ''
-    end
-    local lo, hi = 0, #full - 1
-    while lo < hi do
-        local mid = math.ceil((lo + hi) / 2)
-        put(cut(mid))
+    -- measured by the label itself: the font has no call to measure from Lua
+    local short = h.shortHint or ''
+    if short ~= '' and short ~= full then
+        put(short)
         if hint:getTextSize().width <= room then
-            lo = mid
-        else
-            hi = mid - 1
+            return
         end
     end
-    put(cut(lo))
+    put('')
 end
 
-local function header(parent, title, hint)
+-- hint: the whole key hint ("Hold Insert"); short: the key alone, shown when
+-- the whole one does not fit
+local function header(parent, title, hint, short)
     local h = g_ui.createWidget('VoiceSectionHeader', parent)
     h.title:setText(title)
     h.fullHint = hint or ''
+    h.shortHint = short or ''
     if h.fullHint ~= '' then
         h:setTooltip(h.fullHint)
     end
@@ -465,15 +465,19 @@ local function note(parent, text)
     return label
 end
 
--- "Hold F8" next to a section: only where this client can talk
+-- "Hold F8" next to a section, and the key alone for a narrow header: only
+-- where this client can talk
 local function keyHint(slot)
     local key = hasAudio() and talkKey(slot) or ''
-    return key ~= '' and fmt('Hold %s', key) or ''
+    if key == '' then
+        return '', ''
+    end
+    return fmt('Hold %s', key), key
 end
 
 local function roomLabel(room)
     if room.kind == 'party' then
-        return tr('Party')
+        return tr('Party room')
     elseif room.kind == 'officers' then
         return tr('Officers')
     elseif room.kind == 'echo' then
@@ -493,7 +497,18 @@ local function updateRow(row, m)
     row.icons.mutedforme:setVisible(m.mutedForMe)
     row.icons.lite:setVisible(S.hasFlag(f, S.F_LITE))
     row.icons.staff:setVisible(S.hasFlag(f, S.F_STAFF))
+    -- the icons are 12 px and phantom: the row's tooltip says each in words
+    -- (the slashed mic and the slashed headset look alike at that size)
     local tips = { S.latin1(m.name) }
+    if S.hasFlag(f, S.F_STAFF) then
+        tips[#tips + 1] = tr('Staff member')
+    end
+    if S.hasFlag(f, S.F_SELF_MUTED) then
+        tips[#tips + 1] = tr('Microphone off')
+    end
+    if S.hasFlag(f, S.F_DEAF) then
+        tips[#tips + 1] = tr('Sound off')
+    end
     if S.hasFlag(f, S.F_SERVER_MUTED) then
         tips[#tips + 1] = tr('Muted by the staff')
     end
@@ -613,7 +628,7 @@ local function guildSection(parent, s)
     for _, r in ipairs({ guild or false, officers or false }) do
         if r then
             local joined = room ~= nil and room.id == r.id
-            local label = r == officers and tr('Officers') or S.latin1(r.label or tr('Guild'))
+            local label = r == officers and tr('Officers') or S.latin1(r.label or tr('Guild room'))
             dirRow(parent, s, r.id, '# ' .. label, joined)
             if joined then
                 members(parent, room)
@@ -860,6 +875,175 @@ function UI.onTalk(slot)
 end
 
 -- over-head icons (edges only; a dead or vanished creature gets none) --------
+--
+-- The icon is an image the engine draws with the speaker (an attached effect
+-- of the creature), not a widget attached to it: Map::updateAttachedWidgets
+-- reads the draw pool's scale factor while no pool is selected (one past the
+-- end of its pool list). The browser build read 0 there and left such a
+-- widget at the tile's corner, 10 px left of the name and 13 px lower; in a
+-- 64-bit desktop build that read goes through a wild pointer. An effect is
+-- drawn inside the map's pool, follows the walk and the jumps, and goes with
+-- the creature: out of the map, dead or gone.
+--
+-- Its offsets are sprite px from the creature's tile (the map scales them):
+-- centred over the name, its bottom NAME_GAP screen px over the creature's
+-- point (where the name's box ends: Creature::drawInformation), so it sits
+-- just above the letters. In the map's top rows that would leave the drawn
+-- map, so there it goes under the feet (the outfit is drawn its displacement
+-- above its tile's bottom). Shown only while the speaker's name is (on the
+-- camera's floor, inside the view: UIMap:isInRange); an icon in the ring of
+-- tiles around the view would show inside the map over nobody.
+
+local HEAD_EFFECT = 65021 -- an attached-effect id nothing else registers (game_attachedeffects uses 1-99)
+local HEAD_IMAGE = '/game_voice/images/speaker_head'
+local HEAD_W, HEAD_H = 18, 16 -- the image, in sprite px
+local NAME_GAP = 9            -- screen px between the icon and the creature's point
+local FEET_GAP = 2            -- screen px between the feet and the icon under them
+local DRAW_ABOVE_ALL = 4      -- DrawOrder FIFTH: over walls and roofs, like a missile
+
+local checkEvent -- the pending check of every icon (checkHeadsSoon)
+
+-- a new icon for a creature. The image is registered once per client run
+-- (registering an id again logs an error): the flag lives in the real
+-- globals, which a module reload keeps (this module's own are new then);
+-- an id taken already is used as it is
+local function newHeadEffect()
+    if not g_attachedEffects then
+        return nil
+    end
+    if _G.VoiceHeadEffectRegistered == nil then
+        _G.VoiceHeadEffectRegistered = g_attachedEffects.registerByImage(HEAD_EFFECT, 'Mythos Voz', HEAD_IMAGE, false) ~= nil or
+            g_attachedEffects.getById(HEAD_EFFECT) ~= nil
+    end
+    if not _G.VoiceHeadEffectRegistered then
+        return nil
+    end
+    local effect = g_attachedEffects.getById(HEAD_EFFECT)
+    if effect then
+        effect:setOnTop(true)
+        effect:setFollowOwner(true) -- jumps too
+        effect:setDrawOrder(DRAW_ABOVE_ALL)
+    end
+    return effect
+end
+
+-- The map's drawn rect and its tile in UI px. UIMap:getPosition answers a
+-- point outside the drawn rect with nothing (MapView::getPosition), and the
+-- rect is centred in the padding rect (letterboxed in the classic view), so
+-- its edges are found by halving from the centre; a new frame checks them
+-- again with two calls an edge and looks for them anew only when one moved.
+-- The tile: the engine fits the drawn rect into the visible tiles keeping
+-- its shape (MapView::calcFramebufferSource), so it is the larger ratio.
+local drawn = { at = -1 }
+
+local function inMap(map, x, y)
+    return map:getPosition({ x = x, y = y })
+end
+
+-- the last coordinate inside from `inside` towards `outside`
+local function edge(test, inside, outside)
+    while math.abs(outside - inside) > 1 do
+        local mid = math.floor((inside + outside) / 2)
+        if test(mid) then
+            inside = mid
+        else
+            outside = mid
+        end
+    end
+    return inside
+end
+
+local function mapView(map)
+    local now = g_clock.millis()
+    if drawn.at == now and drawn.map == map then
+        return drawn.ok and drawn or nil
+    end
+    drawn.at, drawn.map = now, map
+    local function row(x) return inMap(map, x, drawn.cy) ~= nil end
+    local function column(y) return inMap(map, drawn.cx, y) ~= nil end
+    if not (drawn.ok and column(drawn.top) and not column(drawn.top - 1) and column(drawn.bottom) and
+            not column(drawn.bottom + 1) and row(drawn.left) and not row(drawn.left - 1) and row(drawn.right) and
+            not row(drawn.right + 1)) then
+        local pad = map:getPaddingRect()
+        drawn.cx, drawn.cy = pad.x + math.floor(pad.width / 2), pad.y + math.floor(pad.height / 2)
+        drawn.ok = pad.width > 0 and pad.height > 0 and column(drawn.cy)
+        if not drawn.ok then
+            return nil -- no camera yet
+        end
+        drawn.top = edge(column, drawn.cy, pad.y - 1)
+        drawn.bottom = edge(column, drawn.cy, pad.y + pad.height)
+        drawn.left = edge(row, drawn.cx, pad.x - 1)
+        drawn.right = edge(row, drawn.cx, pad.x + pad.width)
+    end
+    local dim = map:getVisibleDimension()
+    if not dim or dim.width <= 0 or dim.height <= 0 then
+        return nil
+    end
+    drawn.tile = math.max((drawn.right - drawn.left + 1) / dim.width, (drawn.bottom - drawn.top + 1) / dim.height)
+    return drawn
+end
+
+-- the screen y where the row `y` of the camera's floor starts (the drawn top
+-- when it starts above it)
+local function rowTop(map, view, y)
+    local first = inMap(map, view.cx, view.top)
+    if not first or first.y >= y then
+        return view.top
+    end
+    return edge(function(at)
+        local pos = inMap(map, view.cx, at)
+        return pos ~= nil and pos.y < y
+    end, view.top, view.bottom + 1) + 1
+end
+
+-- the outfit's displacement, the mount's when it rides (the creature is
+-- drawn that far up and left; the name's point leaves it out on servers
+-- with negative offsets)
+local function displacement(creature)
+    local outfit = creature:getOutfit()
+    local id = outfit and ((outfit.mount or 0) > 0 and outfit.mount or outfit.type)
+    local kind = id and g_things.getThingType(id, ThingCategoryCreature)
+    if not kind or g_game.getFeature(GameNegativeOffset) then
+        return 8, 8
+    end
+    return kind:getDisplacementX(), kind:getDisplacementY()
+end
+
+-- shows, hides and places one icon
+function UI.placeHead(head)
+    local creature = g_map.getCreatureById(head.cid)
+    local pos = creature and not creature:isDead() and creature:getPosition()
+    local map = modules.game_interface.getMapPanel()
+    local seen = pos and map and map:isInRange(pos) or false
+    -- a creature the client made anew (out of view and back) gets it again
+    if head.on and (not seen or creature ~= head.creature) then
+        head.creature:detachEffect(head.effect)
+        head.on = false
+    end
+    if not seen then
+        return
+    end
+    -- UI px a sprite px (32 px a tile until the map is measured), and the
+    -- screen px of the UI's: the name is drawn in screen px
+    local view = mapView(map)
+    local scale = view and view.tile / 32 or 1
+    local screen = scale * g_window.getDisplayDensity()
+    local dx, dy = displacement(creature)
+    local ox = HEAD_W / 2 - (16 - dx)
+    local oy = HEAD_H + dy + 2 + NAME_GAP / screen
+    if view and rowTop(map, view, pos.y) - oy * scale < view.top then
+        oy = -(32 - dy) - FEET_GAP / screen
+    end
+    ox, oy = math.floor(ox + 0.5), math.floor(oy + 0.5)
+    if head.ox ~= ox or head.oy ~= oy then
+        head.ox, head.oy = ox, oy
+        head.effect:setOffset(ox, oy)
+    end
+    if not head.on then
+        creature:attachEffect(head.effect)
+        head.creature, head.on = creature, true
+    end
+end
 
 function UI.attachHead(key, cid)
     if heads[key] or headCount >= MAX_HEADS then
@@ -869,21 +1053,25 @@ function UI.attachHead(key, cid)
     if not creature or creature:isDead() or not creature:getPosition() then
         return
     end
-    local widget = g_ui.createWidget('VoiceHeadIcon')
-    creature:attachWidget(widget)
-    heads[key] = widget
+    local effect = newHeadEffect()
+    if not effect then
+        return
+    end
+    local head = { cid = cid, effect = effect, creature = creature, on = false }
+    heads[key] = head
     headCount = headCount + 1
+    UI.placeHead(head)
 end
 
 function UI.detachHead(key)
-    local widget = heads[key]
-    if not widget then
+    local head = heads[key]
+    if not head then
         return
     end
     heads[key] = nil
     headCount = headCount - 1
-    if not widget:isDestroyed() then
-        widget:destroy() -- also detaches it from the creature
+    if head.on then
+        head.creature:detachEffect(head.effect)
     end
 end
 
@@ -894,6 +1082,55 @@ function UI.clearHeads(keepSelf)
             UI.detachHead(key)
         end
     end
+end
+
+-- A speaker who walks, changes floor, leaves or comes back, and our own
+-- moves (the camera), check the icons once on the next frame, when the
+-- creature's new position is known (a creature's position is dropped only
+-- after its onDisappear).
+local function checkHeadsSoon()
+    if headCount == 0 or checkEvent then
+        return
+    end
+    checkEvent = scheduleEvent(function()
+        checkEvent = nil
+        for _, head in pairs(heads) do
+            UI.placeHead(head)
+        end
+    end, 1)
+end
+
+local function onCreatureChange(creature)
+    if headCount == 0 then
+        return
+    end
+    if creature:isLocalPlayer() then
+        checkHeadsSoon()
+        return
+    end
+    local cid = creature:getId()
+    for _, head in pairs(heads) do
+        if head.cid == cid then
+            checkHeadsSoon()
+            return
+        end
+    end
+end
+
+local CREATURE_EVENTS = { onAppear = onCreatureChange, onDisappear = onCreatureChange, onDeath = onCreatureChange,
+    onPositionChange = onCreatureChange }
+local PLAYER_EVENTS = { onPositionChange = checkHeadsSoon }
+
+function UI.connectHeads()
+    connect(Creature, CREATURE_EVENTS)
+    connect(LocalPlayer, PLAYER_EVENTS)
+end
+
+function UI.disconnectHeads()
+    disconnect(Creature, CREATURE_EVENTS)
+    disconnect(LocalPlayer, PLAYER_EVENTS)
+    removeEvent(checkEvent)
+    checkEvent = nil
 end
 
 -- messages --------------------------------------------------------------------
@@ -1141,9 +1378,11 @@ function UI.onReport(ok, code, secs)
     if code == 'sent' then
         text = tr('Report sent to the staff. Thank you!')
     elseif code == 'wait' then
-        text = fmt('Wait %d seconds before sending another report.', secs > 0 and secs or 30)
+        -- keys of their own: pt.lua's "another report" ones belong to the bug
+        -- report (game_feedback) and say "relato"; a voice report is a denuncia
+        text = fmt('Wait %d seconds before reporting again.', secs > 0 and secs or 30)
     elseif code == 'limit' then
-        text = tr('You sent many reports today. Thank you! Try again tomorrow.')
+        text = tr('You reported many players today. Thank you! Try again tomorrow.')
     else
         text = tr('The report could not be sent.')
     end

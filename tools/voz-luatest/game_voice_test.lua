@@ -1287,40 +1287,114 @@ test('virtual keys for push-to-talk in the background', function()
     eq(S.virtualKey(nil), 0)
 end)
 
-test('every string of the module has its Portuguese', function()
-    local pt = dofile(MODULE .. 'voice_locale.lua')
-    local missing = {}
-    local function need(s)
-        if not pt[s] then
-            missing[#missing + 1] = s
+-- every English string the module shows: tr('...') and fmt('...') in the Lua
+-- and the otui, and the English kept in tables or handed to a helper that
+-- translates it
+local function moduleStrings()
+    local out, seen = {}, {}
+    local function add(s)
+        if not seen[s] then
+            seen[s] = true
+            out[#out + 1] = s
         end
     end
     for _, file in ipairs({ 'voice.lua', 'voice_ui.lua', 'voice_settings.lua', 'voice.otui', 'voicesettings.otui',
         'voiceonboard.otui' }) do
         local src = io.open(MODULE .. file):read('*a')
         for s in src:gmatch("[%W]tr%(%s*'([^']*)'") do
-            need(s)
+            add(s)
         end
         for s in src:gmatch("fmt%(%s*'([^']*)'") do
-            need(s)
+            add(s)
         end
-        -- English kept in tables or passed to a helper that translates it
         for s in src:gmatch("slider%([^,]+,[^,]+,%s*'([^']*)'") do
-            need(s)
+            add(s)
         end
         for block in src:gmatch('local %u+_?%u* = (%b{})') do
             for s in block:gmatch("= '([^']*)'") do
-                need(s)
+                add(s)
             end
             for s in block:gmatch(", '([^']*)' }") do
-                need(s)
+                add(s)
             end
+        end
+    end
+    return out
+end
+
+-- the Portuguese the client shows: pt.lua, then the voice strings it lacks
+-- (merged as voice.lua does). pt.lua runs in a box of its own: it calls
+-- client_locales at its end.
+local function portuguese()
+    local env = setmetatable({}, { __index = _G })
+    env.modules = setmetatable({}, { __index = function()
+        return setmetatable({}, { __index = function() return function() end end })
+    end })
+    local chunk = assert(loadfile(ROOT .. '/data/locales/pt.lua'))
+    setfenv(chunk, env)
+    assert(pcall(chunk))
+    local pt = {}
+    for k, v in pairs(env.locale.translation) do
+        pt[k] = v
+    end
+    for k, v in pairs(dofile(MODULE .. 'voice_locale.lua')) do
+        if pt[k] == nil then
+            pt[k] = v
+        end
+    end
+    return pt
+end
+
+-- words spelled the same in Portuguese: the only strings whose text may stay
+local SAME_IN_PT = { ['Spam'] = true, ['Normal'] = true, ['Volume: %d%%'] = true, ['Mouse 4'] = true,
+    ['Mouse 5'] = true }
+
+test('every string of the module has its Portuguese', function()
+    local pt = dofile(MODULE .. 'voice_locale.lua')
+    local missing = {}
+    for _, s in ipairs(moduleStrings()) do
+        if not pt[s] then
+            missing[#missing + 1] = s
         end
     end
     for _, v in pairs(pt) do
         assert(not v:find('[\128-\255][\128-\191]'), 'UTF-8 left in a translation: ' .. v)
     end
     assert(#missing == 0, 'no Portuguese for: ' .. table.concat(missing, ' | '))
+end)
+
+test('no string of the module stays in English in Portuguese', function()
+    local pt = portuguese()
+    local same = {}
+    for _, s in ipairs(moduleStrings()) do
+        if pt[s] == s and not SAME_IN_PT[s] then
+            same[#same + 1] = s
+        end
+    end
+    assert(#same == 0, 'still English in Portuguese: ' .. table.concat(same, ' | '))
+    -- the section headers the owner saw: "PARTY" read as English
+    eq(pt['PARTY'], 'SUA PARTY')
+    eq(pt['GUILD'], 'SUA GUILD')
+    eq(pt['ROOMS'], 'SALAS')
+    eq(pt['EVENTS'], 'EVENTOS')
+    -- the word the client uses for a party: "party" (the bosses window's
+    -- "Sua party", game_hunttasks, pt.lua's "Entrar na party do %s")
+    for _, s in ipairs({ 'No party', 'Party room', 'In the party', 'Join the party room by itself' }) do
+        assert(pt[s]:find('party'), s .. ': ' .. pt[s])
+    end
+    -- every unused entry is gone from the voice locale (a renamed key left behind)
+    local used = {}
+    for _, s in ipairs(moduleStrings()) do
+        used[s] = true
+    end
+    local stale = {}
+    for k in pairs(dofile(MODULE .. 'voice_locale.lua')) do
+        if not used[k] then
+            stale[#stale + 1] = k
+        end
+    end
+    table.sort(stale)
+    assert(#stale == 0, 'voice_locale.lua keys no file uses: ' .. table.concat(stale, ' | '))
 end)
 
 test('push-to-talk keys taken elsewhere: actions, hotkeys, the hotkeys manager, the action bar', function()
@@ -1682,6 +1756,7 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
     }
     function connect(obj, slots) for k, v in pairs(slots) do obj[k] = v end end
     function disconnect(obj, slots) for k in pairs(slots) do obj[k] = nil end end
+    Creature, LocalPlayer = {}, {}
     g_platform = { isBrowser = function() return false end, isMobile = function() return false end }
     g_app = { getVersion = function() return '1.0' end }
     g_clock = { millis = function() return events.now or 0 end }
@@ -1753,7 +1828,7 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
         eq(#tracked, 2, 'the panel and its top-menu button')
         eq(keybinds['Voz_Falar na party'], 'bound')
         eq(pt.translation['Turn voice on'], 'Ligar a voz', 'pt.lua text kept')
-        eq(pt.translation['Mute microphone'], 'Silenciar microfone', 'voice text added')
+        eq(pt.translation['Mute microphone'], 'Desligar microfone', 'voice text added')
         runEvents(3000)
         eq(#tracked, 3, 'the onboarding window')
         -- turned on: want, token, the lite socket, welcome and a roster
@@ -1941,7 +2016,8 @@ local Widget = {}
 local WidgetMeta = {}
 -- state of the fake itself, never a child
 local WIDGET_STATE = { parent = true, tip = true, savedAt = true, dead = true, marginRight = true, checked = true,
-    onValueChange = true }
+    onValueChange = true, marginTop = true, onGeometryChange = true, baseMarginTop = true, marginLeft = true,
+    opacity = true, cid = true, onKeyPress = true, onKeyDown = true }
 WidgetMeta.__index = function(t, k)
     if Widget[k] then
         return Widget[k]
@@ -2014,6 +2090,13 @@ function Widget:destroy() rawset(self, 'dead', true) end
 function Widget:isDestroyed() return rawget(self, 'dead') == true end
 function Widget:addAnchor(edge, id, hooked) self.anchors[edge] = { id, hooked } end
 function Widget:setMarginRight(m) rawset(self, 'marginRight', m) end
+function Widget:getMarginTop() return rawget(self, 'marginTop') or 0 end
+function Widget:setMarginTop(m) rawset(self, 'marginTop', m) end
+function Widget:getPaddingRect() return self:getRect() end
+function Widget:getMarginLeft() return rawget(self, 'marginLeft') or 0 end
+function Widget:setMarginLeft(m) rawset(self, 'marginLeft', m) end
+function Widget:getOpacity() return rawget(self, 'opacity') or 1 end
+function Widget:setOpacity(o) rawset(self, 'opacity', o) end
 function Widget:saveChildren() self.saved = self.saved + 1 end
 function Widget:saveParentPosition(id, pos) rawset(self, 'savedAt', { id = id, x = pos.x, y = pos.y }) end
 -- a side panel stacks its visible children; anything else is where it was put
@@ -2157,8 +2240,33 @@ local function uiWorld(opts)
         end,
         importStyle = function() end,
     }
+    -- corelib's connect and disconnect: one slot or a list of them
+    function connect(obj, slots)
+        for k, v in pairs(slots) do
+            local old = obj[k]
+            obj[k] = old == nil and v or type(old) == 'table' and old or { old, v }
+            if type(old) == 'table' then
+                old[#old + 1] = v
+            end
+        end
+    end
+    function disconnect(obj, slots)
+        for k, v in pairs(slots) do
+            local old = obj[k]
+            if old == v then
+                obj[k] = nil
+            elseif type(old) == 'table' then
+                for i = #old, 1, -1 do
+                    if old[i] == v then
+                        table.remove(old, i)
+                    end
+                end
+            end
+        end
+    end
+    Creature, LocalPlayer = {}, {}
     local mouse = { x = 0, y = 0 }
-    g_window = { getMousePosition = function() return mouse end }
+    g_window = { getMousePosition = function() return mouse end, getDisplayDensity = function() return 1 end }
     g_clock = { millis = function() return events.now or 0 end }
     g_platform = { isBrowser = function() return opts.browser == true end, isMobile = function() return false end }
     g_game = { getLocalPlayer = function() return nil end }
@@ -2268,7 +2376,7 @@ test('the panel opens where it shows: a side panel with room, else on top, else 
     VoiceUI.destroy()
 end)
 
-test('the party header hint stops at its button, cut with dots, whole in the tooltip', function()
+test('the party header hint stops at its button, the key alone when narrow, whole in the tooltip', function()
     local w = online()
     roster(w, 'p:10:5', { { 7 }, { 8 } })
     local u = uiWorld({ world = w, talkKey = 'Insert' })
@@ -2283,21 +2391,19 @@ test('the party header hint stops at its button, cut with dots, whole in the too
     eq(party.hint.anchors[AnchorRight] and party.hint.anchors[AnchorRight][1], 'action',
         'the hint ends where the button starts')
     eq(party.tip, 'Hold Insert', 'the whole hint in the tooltip')
-    -- the layout gives the hint 60 px: "Hold Insert" needs 66
+    -- the layout gives the hint 60 px: "Hold Insert" needs 66, the key alone 36
     party.hint.width = 60
     party.hint.onGeometryChange(party.hint)
-    local text = party.hint.text
-    assert(text:sub(-3) == '...', 'cut with dots: ' .. text)
-    assert(6 * #text <= 60, 'fits its 60 px: ' .. text)
-    eq(text, 'Hold In...')
+    eq(party.hint.text, 'Insert', 'the key alone, never a cut "Hold In..."')
     -- room again: whole
     party.hint.width = 120
     party.hint.onGeometryChange(party.hint)
     eq(party.hint.text, 'Hold Insert')
-    -- no room even for the dots: nothing
-    party.hint.width = 10
+    -- no room even for the key: nothing (the tooltip has it)
+    party.hint.width = 30
     party.hint.onGeometryChange(party.hint)
     eq(party.hint.text, '')
+    eq(party.tip, 'Hold Insert')
     -- no width at all (not laid out yet): the text is set once, not again
     -- on each geometry change (a label with no width takes its text's size)
     local sets = 0
@@ -2323,6 +2429,157 @@ test('the party header hint stops at its button, cut with dots, whole in the too
     local hint = block:match('id: hint(.-)VoiceSmallButton')
     assert(hint:find('text%-auto%-resize: false'), 'the hint has a fixed width')
     assert(hint:find('anchors%.right:'), 'the hint has a right edge')
+end)
+
+-- every text and tooltip of a fake widget and of the widgets under it
+local function widgetTexts(roots)
+    local out, seen = {}, {}
+    local function walk(w)
+        if type(w) ~= 'table' or seen[w] or getmetatable(w) ~= WidgetMeta then
+            return
+        end
+        seen[w] = true
+        for _, t in ipairs({ rawget(w, 'text'), rawget(w, 'tip'), rawget(w, 'caption') }) do
+            if type(t) == 'string' and t ~= '' then
+                out[#out + 1] = t
+            end
+        end
+        for _, k in ipairs(rawget(w, 'kids') or {}) do
+            walk(k)
+        end
+        for k, v in pairs(w) do
+            if k ~= 'parent' then
+                walk(v)
+            end
+        end
+    end
+    for _, r in ipairs(roots) do
+        walk(r)
+    end
+    return out
+end
+
+test('the panel, its menus, the report and the settings in Portuguese: no English left', function()
+    local pt = portuguese()
+    -- the English the module shows whose Portuguese differs, as patterns:
+    -- "Hold %s" also catches "Hold Insert"
+    local english = {}
+    for _, s in ipairs(moduleStrings()) do
+        if pt[s] and pt[s] ~= s then
+            local pat = s:gsub('[%^%$%(%)%.%[%]%*%+%-%?]', '%%%0'):gsub('%%(.)', function(c)
+                return c == 'd' and '%d+' or c == 's' and '.+' or '%' .. c
+            end)
+            english[#english + 1] = { s, '^' .. pat .. '$' }
+        end
+    end
+    local function englishIn(texts)
+        local found = {}
+        for _, t in ipairs(texts) do
+            for line in (t .. '\n'):gmatch('([^\n]*)\n') do
+                for _, e in ipairs(english) do
+                    if line:find(e[2]) then
+                        found[#found + 1] = line .. ' (' .. e[1] .. ')'
+                    end
+                end
+            end
+        end
+        return found
+    end
+    -- party, guild and officers in the token; we are staff (the moderation
+    -- entries), Ana has every flag
+    local w = online(nil, { { id = 'p:10:5', k = 'party', l = 'Party' }, { id = 'g:7', k = 'guild' },
+        { id = 'g:7:o', k = 'officers', l = 'Oficiais' } })
+    roster(w, 'p:10:5', { { 7, 0, nil, nil, 16 }, { 8, 0, 4242, 'Ana', 1 + 2 + 4 + 16 + 64 } })
+    local u = uiWorld({ world = w, talkKey = 'Insert' })
+    tr = function(text, ...)
+        local t = pt[text] or text
+        local ok, out = pcall(string.format, t, ...)
+        return ok and out or t
+    end
+    local menus = {}
+    local createWidget = g_ui.createWidget
+    g_ui.createWidget = function(style, parent)
+        local widget = createWidget(style, parent)
+        if style == 'PopupMenu' then
+            local menu = { texts = {} }
+            menus[#menus + 1] = menu
+            function widget:addOption(text) menu.texts[#menu.texts + 1] = text end
+        elseif style == 'VoiceReportWindow' then
+            -- its text box is the child "text": the window's own text goes aside
+            rawset(widget, 'text', Widget.new({ id = 'text' }))
+            function widget:setText(t) rawset(self, 'caption', t) end
+        elseif style == 'VoiceSettingsWindow' then
+            for _, id in ipairs({ 'preset', 'inDevice', 'outDevice', 'mouse' }) do
+                local combo = id == 'mouse' and widget.keys.mouse or widget.audio[id]
+                function combo:addOption(text) menus[#menus + 1] = { texts = { text } } end
+            end
+        end
+        return widget
+    end
+    local voiceButton
+    modules.client_topmenu.addRightGameToggleButton = function(id, text)
+        voiceButton = Widget.new({ id = id, tip = text })
+        return voiceButton
+    end
+    VoiceUI.create()
+    u.created.window.shown = true
+    VoiceUI.refresh()
+    -- connected: the state, not "Voz" again under the title "Voz"
+    VoiceUI.onState()
+    eq(u.created.window.statusText.text, 'Conectado', 'the status row')
+    eq(voiceButton.tip, 'Voz: Conectado', 'the Voz button')
+    -- the switches over the rooms and a member's row say the same thing:
+    -- "Desligar microfone" / "Microfone desligado", "Desligar \225udio" /
+    -- "\193udio desligado"
+    for _, pair in ipairs({ { 'Mute microphone', 'Microphone off', 'microfone' },
+        { 'Unmute microphone', 'Microphone off', 'microfone' }, { 'Deafen', 'Sound off', '\225udio' },
+        { 'Undeafen', 'Sound off', '\225udio' } }) do
+        local button, row = pt[pair[1]], pt[pair[2]]:gsub('^\193', '\225'):lower()
+        assert(button:lower():find(pair[3], 1, true) and row:find(pair[3], 1, true),
+            'the same word in "' .. button .. '" and "' .. pt[pair[2]] .. '"')
+    end
+    local headers = u.created.VoiceSectionHeader
+    eq(headers[1].title.text, 'SUA PARTY')
+    eq(headers[1].tip, 'Segure Insert')
+    eq(headers[2].title.text, 'SUA GUILD')
+    eq(headers[3].title.text, 'SALAS')
+    -- the rooms unfolded, with a public room, an event and the echo test
+    headers[3].action.onClick()
+    w.relay({ t = 'dir', rooms = { { 'pub:geral', 'Geral', 12, 100, 50, 0 }, { 'ev:eventos', 'Eventos', 45, 300, 0, 1 } } })
+    runEvents(50)
+    local titles = {}
+    for _, h in ipairs(u.created.VoiceSectionHeader) do
+        titles[#titles + 1] = h.title.text
+    end
+    assert(table.concat(titles, ','):find('EVENTOS'), 'the events header: ' .. table.concat(titles, ','))
+    -- the right-click menu, the volume popup, the report window, the settings
+    VoiceUI.memberMenu('p:10:5', 8, { x = 10, y = 10 })
+    VoiceUI.volumePopup('p:10:5', 8, { x = 10, y = 10 })
+    VoiceUI.reportWindowFor('p:10:5', 8)
+    local report = u.created.VoiceReportWindow[1]
+    report.sendButton.onClick() -- no reason picked: a status line
+    VoiceSettings.show()
+    local roots = { u.created.window, voiceButton }
+    for _, list in pairs(u.created) do
+        if type(list) == 'table' and getmetatable(list) ~= WidgetMeta then
+            for _, widget in ipairs(list) do
+                roots[#roots + 1] = widget
+            end
+        end
+    end
+    local texts = widgetTexts(roots)
+    for _, menu in ipairs(menus) do
+        for _, t in ipairs(menu.texts) do
+            texts[#texts + 1] = t
+        end
+    end
+    assert(#texts > 30, 'texts seen: ' .. #texts)
+    local found = englishIn(texts)
+    assert(#found == 0, 'English in the Portuguese client: ' .. table.concat(found, ' | '))
+    -- and the check itself sees English when tr does not translate
+    eq(#englishIn({ 'PARTY', 'Hold Insert', 'Mute for me' }), 3)
+    VoiceSettings.hide()
+    VoiceUI.destroy()
 end)
 
 test('volume popup: 10% a click on the track or the arrows, 0% and 100% buttons', function()
@@ -2448,6 +2705,673 @@ test('onboarding: a free key offered (Insert), the chat hint without F1-F12, Mou
     getPrefs().pttMouse = 3
     VoiceSettings.closeOnboarding(true)
     eq(getPrefs().pttMouse, 3, 'a box that did not show changes nothing')
+end)
+
+-- The client's keyboard for a key box: a key's down goes to the widget that
+-- grabbed the keyboard, and its press follows at once (PlatformWindow::
+-- processKeyDown) to that widget, or with nothing grabbed down the focus
+-- chain: the focused box, then its window (UIWindow:onKeyPress: Escape
+-- calls onEscape, Enter onEnter).
+local function fakeKeyboard(window, box)
+    local kb = { receiver = nil }
+    function box:grabKeyboard() kb.receiver = self end
+    function box:ungrabKeyboard()
+        if kb.receiver == self then
+            kb.receiver = nil
+        end
+    end
+    function box:focus() end
+    function kb.press(keyCode)
+        local r = kb.receiver
+        if r and r.onKeyDown then
+            r.onKeyDown(r, keyCode, 0)
+        end
+        r = kb.receiver
+        if r then
+            if r.onKeyPress then
+                r.onKeyPress(r, keyCode, 0, 0)
+            end
+            return
+        end
+        if box.onKeyPress and box.onKeyPress(box, keyCode, 0, 0) then
+            return
+        end
+        if keyCode == KeyEscape and window.onEscape then
+            window.onEscape(window)
+        elseif keyCode == KeyEnter and window.onEnter then
+            window.onEnter(window)
+        end
+    end
+    return kb
+end
+
+test('Escape during a key capture only cancels it: the window stays, the onboarding is not over', function()
+    KeyEnter = 5
+    -- the onboarding: its Escape is "Not now"
+    local u = uiWorld()
+    local createWidget = g_ui.createWidget
+    local kb
+    g_ui.createWidget = function(style, parent)
+        local w = createWidget(style, parent)
+        if style == 'VoiceOnboardWindow' then
+            kb = fakeKeyboard(w, w.keyBox)
+            w.onEscape = function() VoiceSettings.closeOnboarding(false) end
+        elseif style == 'VoiceSettingsWindow' then
+            local box = w.keys.keyParty.value
+            kb = fakeKeyboard(w, box)
+            w.onEscape = function() VoiceSettings.hide() end
+        end
+        return w
+    end
+    VoiceSettings.showOnboarding()
+    local win = u.created.VoiceOnboardWindow[1]
+    win.keyBox.onClick()
+    eq(kb.receiver, win.keyBox, 'the box has the keyboard')
+    kb.press(KeyEscape)
+    eq(kb.receiver, nil, 'the keyboard let go after the press')
+    eq(win.keyBox.text, 'Insert', 'the capture cancelled: the suggestion again')
+    eq(win:isDestroyed(), false, 'the onboarding stays')
+    for _, set in ipairs(u.set) do
+        assert(set[1] ~= 'onboarded', 'the onboarding is not over')
+    end
+    -- a key picked, then Escape with nothing captured: "Not now"
+    win.keyBox.onClick()
+    kb.press(6) -- Insert
+    eq(kb.receiver, nil)
+    eq(win.keyBox.text, 'Insert')
+    kb.press(KeyEscape)
+    local over = false
+    for _, set in ipairs(u.set) do
+        over = over or set[1] == 'onboarded'
+    end
+    assert(over, 'Escape outside a capture still closes it')
+    -- the settings window: Escape and Enter while capturing close nothing
+    u = uiWorld({ talkKey = 'F8' })
+    createWidget = g_ui.createWidget
+    g_ui.createWidget = function(style, parent)
+        local w = createWidget(style, parent)
+        if style == 'VoiceSettingsWindow' then
+            kb = fakeKeyboard(w, w.keys.keyParty.value)
+            w.onEscape = function() VoiceSettings.hide() end
+            w.onEnter = function() VoiceSettings.hide() end
+        end
+        return w
+    end
+    VoiceSettings.show()
+    local settings = u.created.VoiceSettingsWindow[1]
+    local row = settings.keys.keyParty
+    row.change.onClick()
+    kb.press(KeyEscape)
+    eq(settings:isDestroyed(), false, 'Escape: the settings window stays')
+    eq(row.value.text, 'F8', 'the key unchanged')
+    row.change.onClick()
+    kb.press(KeyEnter)
+    eq(settings:isDestroyed(), false, 'Enter: the settings window stays')
+    -- a press that never comes: the keyboard is let go on the next frame
+    row.change.onClick()
+    row.value.onKeyDown(row.value, KeyEscape, 0)
+    eq(kb.receiver, row.value)
+    runEvents(16)
+    eq(kb.receiver, nil, 'let go a frame later')
+    eq(row.value.onKeyPress, nil)
+    -- outside a capture Escape closes it, as before
+    kb.press(KeyEscape)
+    eq(settings:isDestroyed(), true, 'Escape outside a capture closes the window')
+end)
+
+-- a bitmap font's glyph widths as the client works them out
+-- (BitmapFont::calculateGlyphsWidthsAutomatically): the rightmost column
+-- with a pixel in the glyph's cell over the font's height (the whole cell
+-- when empty), space-width for the space. The PNG goes through zlib with
+-- LuaJIT's ffi; with no zlib the measuring tests say SKIP.
+local zlib
+do
+    local okFfi, ffi = pcall(require, 'ffi')
+    if okFfi then
+        pcall(ffi.cdef, 'int uncompress(uint8_t *dest, unsigned long *destLen, const char *source, unsigned long sourceLen);')
+        for _, name in ipairs({ 'z', 'libz.so.1', 'zlib1', 'zlib' }) do
+            local okLib, lib = pcall(ffi.load, name)
+            if okLib then
+                zlib = { ffi = ffi, lib = lib }
+                break
+            end
+        end
+    end
+end
+
+-- an 8-bit RGBA PNG: width, height and its pixels (an ffi byte array)
+local function readPng(path)
+    local f = assert(io.open(path, 'rb'))
+    local data = f:read('*a')
+    f:close()
+    assert(data:sub(1, 8) == '\137PNG\r\n\26\n', path .. ' is not a PNG')
+    local function u32(i)
+        local a, b, c, d = data:byte(i, i + 3)
+        return ((a * 256 + b) * 256 + c) * 256 + d
+    end
+    local pos, w, h, idat = 9, nil, nil, {}
+    while pos <= #data do
+        local len, kind = u32(pos), data:sub(pos + 4, pos + 7)
+        if kind == 'IHDR' then
+            w, h = u32(pos + 8), u32(pos + 12)
+            assert(data:byte(pos + 16) == 8 and data:byte(pos + 17) == 6 and data:byte(pos + 20) == 0,
+                path .. ': 8-bit RGBA, not interlaced')
+        elseif kind == 'IDAT' then
+            idat[#idat + 1] = data:sub(pos + 8, pos + 7 + len)
+        elseif kind == 'IEND' then
+            break
+        end
+        pos = pos + 12 + len
+    end
+    local ffi, src, stride = zlib.ffi, table.concat(idat), w * 4
+    local size = h * (stride + 1)
+    local raw, n = ffi.new('uint8_t[?]', size), ffi.new('unsigned long[1]', size)
+    assert(zlib.lib.uncompress(raw, n, src, #src) == 0 and n[0] == size, path .. ': inflate')
+    local px = ffi.new('uint8_t[?]', h * stride)
+    for y = 0, h - 1 do
+        local filter, from, to = raw[y * (stride + 1)], y * (stride + 1) + 1, y * stride
+        for x = 0, stride - 1 do
+            local v = raw[from + x]
+            local a = x >= 4 and px[to + x - 4] or 0
+            local b = y > 0 and px[to - stride + x] or 0
+            local c = (x >= 4 and y > 0) and px[to - stride + x - 4] or 0
+            if filter == 1 then
+                v = v + a
+            elseif filter == 2 then
+                v = v + b
+            elseif filter == 3 then
+                v = v + math.floor((a + b) / 2)
+            elseif filter == 4 then
+                local p = a + b - c
+                local pa, pb, pc = math.abs(p - a), math.abs(p - b), math.abs(p - c)
+                v = v + ((pa <= pb and pa <= pc) and a or (pb <= pc and b or c))
+            end
+            px[to + x] = v % 256
+        end
+    end
+    return w, h, px
+end
+
+local fonts = {}
+-- the width of a Latin-1 text in a font of data/fonts/otfont, as the client draws it
+local function textWidth(font, text)
+    local glyphs = fonts[font]
+    if not glyphs then
+        local f = assert(io.open(ROOT .. '/data/fonts/otfont/' .. font .. '.otfont'))
+        local def = f:read('*a')
+        f:close()
+        local texture = def:match('texture: ([^\r\n]+)')
+        local height = tonumber(def:match('height: (%d+)'))
+        local gw, gh = def:match('glyph%-size: (%d+) (%d+)')
+        gw, gh = tonumber(gw), tonumber(gh)
+        local first = tonumber(def:match('first%-glyph: (%d+)')) or 32
+        local spacing = tonumber(def:match('\n%s*spacing: (%d+)')) or 0
+        local w, h, px = readPng(ROOT .. '/data/fonts/otfont/' .. texture .. '.png')
+        local cols = math.floor(w / gw)
+        glyphs = { spacing = spacing }
+        for g = first, 255 do
+            local x0, y0 = ((g - first) % cols) * gw, math.floor((g - first) / cols) * gh
+            local width = gw
+            for x = 0, gw - 1 do
+                for y = y0, math.min(y0 + height, h) - 1 do
+                    if px[(y * w + x0 + x) * 4 + 3] ~= 0 then
+                        width = x + 1
+                        break
+                    end
+                end
+            end
+            glyphs[g] = width
+        end
+        glyphs[32] = tonumber(def:match('space%-width: (%d+)')) or gw
+        glyphs[127] = 1
+        fonts[font] = glyphs
+    end
+    local total = 0
+    for i = 1, #text do
+        total = total + (glyphs[text:byte(i)] or 0) + glyphs.spacing
+    end
+    return total
+end
+
+local REGULAR, BOLD = 'verdana-11px-antialised', 'Verdana Bold-11px'
+
+test('the font measure agrees with the client', function()
+    if not zlib then
+        print('SKIP the font measure: no zlib for LuaJIT ffi')
+        return
+    end
+    -- widths seen in the client (AGENTS.md: rightmost filled column + 1)
+    eq(textWidth(REGULAR, 'Insert'), 36, 'Insert')
+    eq(textWidth(REGULAR, 'Na sala / evento'), 99, 'Na sala / evento')
+    eq(textWidth(REGULAR, 'Aperte uma tecla...'), 111, 'Aperte uma tecla...')
+    eq(textWidth(BOLD, 'SUA PARTY'), 72, 'SUA PARTY')
+    assert(textWidth(REGULAR, '\193') < 16, 'the font has an A with acute (an empty cell is 16 wide)')
+end)
+
+test('the Portuguese texts fit their boxes: the key rows, the onboarding key box, the party header', function()
+    if not zlib then
+        print('SKIP the Portuguese texts fit: no zlib for LuaJIT ffi')
+        return
+    end
+    local pt = portuguese()
+    local function read(file)
+        local f = assert(io.open(file))
+        local text = f:read('*a')
+        f:close()
+        return text
+    end
+    local settings = read(MODULE .. 'voicesettings.otui')
+    local voice = read(MODULE .. 'voice.otui')
+    local styles = read(ROOT .. '/data/styles/50-breves.otui')
+    local function num(text, pattern, what)
+        return assert(tonumber(text:match(pattern)), 'no ' .. what .. ' in the otui')
+    end
+    local row = settings:match('VoiceKeyRow < UIWidget(.-)\nVoiceSettingsWindow')
+    local labelWidth = num(row, 'id: label.-width: (%d+)', 'key label width')
+    local boxGap = num(row, 'id: value.-margin%-left: (%d+)', 'key box margin') +
+        num(row, 'id: value.-margin%-right: (%d+)', 'key box margin')
+    local keysWidth = num(settings, 'id: keys.-width: (%d+)', 'keys column width')
+    local audioWidth = num(settings, 'id: audio.-width: (%d+)', 'audio column width')
+    local windowWidth = num(settings, 'VoiceSettingsWindow < MythosWindow.-size: (%d+) %d+', 'window size')
+    local mythos = styles:match('MythosWindow < MainWindow(.-)\n%S')
+    local content = windowWidth - num(mythos, 'padding%-left: (%d+)', 'padding') -
+        num(mythos, 'padding%-right: (%d+)', 'padding')
+    assert(audioWidth + keysWidth + 8 <= content, 'the two columns fit the window with a gap')
+    -- the change button: "Trocar" and its padding (VoiceSmallButton, text-auto-resize)
+    local small = voice:match('VoiceSmallButton < UIButton(.-)\n%S')
+    local pr, pl = small:match('padding: %d+ (%d+) %d+ (%d+)')
+    local function button(text)
+        return textWidth(REGULAR, text) + tonumber(pl) + tonumber(pr)
+    end
+    local box = keysWidth - labelWidth - boxGap - button(pt['Change'])
+    -- the text is centred and cut to the box's rect on both sides
+    for _, text in ipairs({ pt['Press a key...'], 'Ctrl+Shift+Insert', 'Ctrl+Shift+PageDown', 'Alt+Shift+Insert',
+        'Ctrl+PageDown', 'Shift+Pause' }) do
+        local tw = textWidth(REGULAR, text)
+        assert(tw <= box, string.format('"%s" (%d px) in the %d px key box', text, tw, box))
+    end
+    for _, key in ipairs({ 'In the party', 'In the guild', 'In a room / event' }) do
+        local tw = textWidth(REGULAR, pt[key])
+        assert(tw <= labelWidth, string.format('"%s" (%d px) in the %d px label', pt[key], tw, labelWidth))
+    end
+    -- the check boxes of the keys column (text after the box: text-offset 18)
+    for _, key in ipairs({ 'Join the party room by itself', 'Join the guild room by itself',
+        'Show an icon over who is talking', 'Lower the game sounds while someone talks',
+        'Push to talk with the game in the background' }) do
+        local tw = textWidth(REGULAR, pt[key]) + 18
+        assert(tw <= keysWidth, string.format('"%s" (%d px) in the %d px column', pt[key], tw, keysWidth))
+    end
+    -- the onboarding key box (bold)
+    local onboard = read(MODULE .. 'voiceonboard.otui')
+    local keyBox = num(onboard, 'id: keyBox.-size: (%d+) %d+', 'onboarding key box')
+    for _, text in ipairs({ pt['Press a key...'], 'Ctrl+Shift+Insert', pt['Click here'] }) do
+        local tw = textWidth(BOLD, text)
+        assert(tw <= keyBox, string.format('"%s" (%d px) in the %d px onboarding box', text, tw, keyBox))
+    end
+    -- the party header at the side panel's content width (150 px in a 176 px
+    -- panel): the title, the key alone and "Sair" side by side. An edge
+    -- anchored to another shares its last pixel (Rect::right is x + width - 1),
+    -- so the hint gets 2 px more than the sum: 37 px in the client for
+    -- "SUA PARTY" and "Sair", read from the live panel
+    local header = voice:match('VoiceSectionHeader < UIWidget(.-)\nVoiceMemberIcon')
+    local hintGap = num(header:match('id: hint(.-)VoiceSmallButton'), 'margin%-left: (%d+)', 'hint margin')
+    for _, title in ipairs({ 'PARTY', 'GUILD' }) do
+        local room = 150 - textWidth(BOLD, pt[title]) - hintGap - 4 - button(pt['Leave']) + 2
+        local tw = textWidth(REGULAR, 'Insert')
+        assert(tw <= room, string.format('%s, Insert (%d px) and %s: %d px of room', pt[title], tw, pt['Leave'], room))
+    end
+end)
+
+test('a member row says its icons in words: staff, microphone off, sound off', function()
+    local w = online()
+    roster(w, 'p:10:5', { { 7 }, { 8, 0, 4242, 'Ana', 1 + 2 + 16 }, { 9, 0, 4243, 'Bia' } })
+    local u = uiWorld({ world = w })
+    VoiceUI.create()
+    u.created.window.shown = true
+    VoiceUI.refresh()
+    local tips = {}
+    for _, row in ipairs(u.created.VoiceMemberRow or {}) do
+        tips[row.name.text] = row.tip
+    end
+    eq(tips.Ana, 'Ana\nStaff member\nMicrophone off\nSound off')
+    eq(tips.Bia, 'Bia', 'no flags: the name alone')
+    VoiceUI.destroy()
+end)
+
+-- The map as the engine draws it, over the fake map widget: W x H visible
+-- tiles of T screen px in a rect centred in the padding rect (letterboxed
+-- when the window has another shape), the camera in the middle tile.
+-- UIMap:getPosition answers only inside that rect, UIMap:isInRange as the
+-- names do (the camera's floor, inside the view). Each frame the engine
+-- places an attached widget at its creature's point plus the widget's
+-- margins and calls onGeometryChange when that moved it: the point is a
+-- quarter tile right of the tile's left and 10/32 of a tile above its top,
+-- a floor of difference moves it a tile down-right (below) or up-left
+-- (above), and a creature with no position is not placed at all. The ring
+-- of tiles around the view (column or row -1, W, H) is placed, never seen.
+local function fire(object, name, ...)
+    local slot = object[name]
+    if type(slot) == 'function' then
+        slot(...)
+    elseif type(slot) == 'table' then
+        for _, fn in ipairs(slot) do
+            fn(...)
+        end
+    end
+end
+
+local function engineMap(u)
+    local m = { camera = { x = 100, y = 100, z = 7 } }
+    function m:layout(x, y, width, height, W, H, T)
+        u.map.x, u.map.y, u.map.width, u.map.height = x, y, width, height
+        self.W, self.H, self.T = W, H, T
+        local w, h = math.min(width, W * T), math.min(height, H * T)
+        self.rect = { x = x + math.floor((width - w) / 2), y = y + math.floor((height - h) / 2), width = w, height = h }
+    end
+    function u.map:getCameraPosition() return m.camera end
+    function u.map:getVisibleDimension() return { width = m.W, height = m.H } end
+    function u.map:getPosition(p)
+        local r = m.rect
+        if p.x < r.x or p.y < r.y or p.x >= r.x + r.width or p.y >= r.y + r.height then
+            return nil
+        end
+        return { x = m.camera.x - (m.W - 1) / 2 + math.floor((p.x - r.x) / m.T),
+            y = m.camera.y - (m.H - 1) / 2 + math.floor((p.y - r.y) / m.T), z = m.camera.z }
+    end
+    function u.map:isInRange(pos)
+        return pos.z == m.camera.z and math.abs(pos.x - m.camera.x) <= (m.W - 1) / 2 and
+            math.abs(pos.y - m.camera.y) <= (m.H - 1) / 2
+    end
+    -- the tile's top left and the point of a creature at pos
+    function m:tile(pos)
+        local dz = self.camera.z - pos.z
+        local col = pos.x - self.camera.x + (self.W - 1) / 2 - dz
+        local row = pos.y - self.camera.y + (self.H - 1) / 2 - dz
+        return self.rect.x + col * self.T, self.rect.y + row * self.T
+    end
+    function m:point(pos)
+        local tx, ty = self:tile(pos)
+        return tx + math.floor(self.T / 4), ty - math.floor(10 * self.T / 32 + 0.5)
+    end
+    -- the position at a row and column of the view (0 is the top left tile)
+    function m:at(row, col, z)
+        return { x = self.camera.x - (self.W - 1) / 2 + col, y = self.camera.y - (self.H - 1) / 2 + row, z = z or 7 }
+    end
+    return m
+end
+
+test('the over-head icon: drawn with the speaker, over the name, under the feet in the top rows, none outside the view', function()
+    local u = uiWorld()
+    local density = 1
+    g_window.getDisplayDensity = function() return density end
+    -- the engine's attached effects: one registration, a copy each time
+    local registered, registrationErrors = {}, 0
+    g_attachedEffects = {
+        registerByImage = function(id, name, path, smooth)
+            if registered[id] then
+                registrationErrors = registrationErrors + 1 -- the client logs an error
+                return nil
+            end
+            registered[id] = { path = path, smooth = smooth }
+            return {}
+        end,
+        getById = function(id)
+            if not registered[id] then
+                return nil
+            end
+            local e = { id = id }
+            function e:setOffset(x, y) self.ox, self.oy = x, y end
+            function e:setOnTop(v) self.onTop = v end
+            function e:setFollowOwner(v) self.follow = v end
+            function e:setDrawOrder(v) self.order = v end
+            return e
+        end,
+    }
+    g_things = { getThingType = function() return { getDisplacementX = function() return 8 end,
+        getDisplacementY = function() return 8 end } end }
+    g_game.getFeature = function() return false end
+    ThingCategoryCreature, GameNegativeOffset = 1, 116
+    VoiceHeadEffectRegistered = nil
+    VoiceUI.create()
+    local m = engineMap(u)
+    -- 1280x720 in the browser: 29x15 tiles of 32 px in the 928x500 map,
+    -- 10 px of bar above and under them
+    m:layout(176, 20, 928, 500, 29, 15, 32)
+    local function newCreature(id)
+        local c = { id = id, effects = {}, dead = false }
+        function c:getId() return self.id end
+        function c:isLocalPlayer() return false end
+        function c:isDead() return self.dead end
+        function c:getPosition() return self.pos end
+        function c:getOutfit() return { type = 128 } end
+        function c:attachEffect(e) self.effects[#self.effects + 1] = e end
+        function c:detachEffect(e)
+            for i, x in ipairs(self.effects) do
+                if x == e then
+                    table.remove(self.effects, i)
+                    return true
+                end
+            end
+            return false
+        end
+        return c
+    end
+    local creature = newCreature(5)
+    creature.pos = m:at(7, 14)
+    local me = newCreature(1)
+    function me:isLocalPlayer() return true end
+    local known = { [5] = creature }
+    g_map = { getCreatureById = function(cid) return known[cid] end }
+    VoiceUI.attachHead('k', 5)
+    eq(#creature.effects, 1, 'the icon is drawn with the creature')
+    local effect = creature.effects[1]
+    eq(registered[effect.id].path, '/game_voice/images/speaker_head')
+    assert(effect.onTop and effect.follow and effect.order == 4, 'over the creature, following its jumps, over walls')
+    -- where the engine draws it: the creature's tile, minus the offsets in
+    -- sprite px (the map scales them); the name is centred on the point
+    -- and ends there, its letters start about 5 px lower
+    local function icon()
+        local e = creature.effects[1]
+        if not e then
+            return nil
+        end
+        local S = m.T / 32
+        local tx, ty = m:tile(creature.pos)
+        return { x = tx - e.ox * S, y = ty - e.oy * S, w = 18 * S, h = 16 * S, S = S, tx = tx, ty = ty }
+    end
+    local function frame()
+        runEvents(16)
+    end
+    local function move(row, col, z)
+        local old = creature.pos
+        creature.pos = m:at(row, col or 14, z)
+        fire(Creature, 'onPositionChange', creature, creature.pos, old)
+        frame()
+        return icon()
+    end
+    local function checkAbove(r, what)
+        assert(r, what .. ': drawn')
+        local px, py = m:point(creature.pos)
+        assert(math.abs(r.x + r.w / 2 - px) <= 1, what .. ': centred over the name (' .. (r.x + r.w / 2) .. ' / ' .. px .. ')')
+        local bottom = r.y + r.h
+        assert(bottom <= py - 9 + r.S and bottom >= py - 9 - r.S, what .. ': just above the name (' .. bottom .. ', point ' .. py .. ')')
+        assert(r.y >= m.rect.y, what .. ': inside the drawn map')
+    end
+    local function checkUnder(r, what)
+        assert(r, what .. ': drawn')
+        local feet = r.ty + 24 * r.S -- an outfit drawn 8 sprite px above its tile's bottom
+        assert(r.y >= feet and r.y <= feet + 2 + r.S, what .. ': under the feet (' .. r.y .. ', feet ' .. feet .. ')')
+        assert(r.y >= m.rect.y, what .. ': inside the drawn map')
+    end
+    checkAbove(icon(), 'the middle')
+    -- third row: room above the name; second and first: under the feet
+    checkAbove(move(2), 'third row')
+    checkUnder(move(1), 'second row')
+    checkUnder(move(0), 'first row')
+    -- the row the client keeps above the visible map: not drawn, no icon
+    eq(move(-1), nil, 'the hidden row above')
+    checkAbove(move(3), 'fourth row')
+    -- the hidden columns and the hidden row under the map
+    eq(move(3, -1), nil, 'the hidden column on the left')
+    eq(move(3, 29), nil, 'the hidden column on the right')
+    checkAbove(move(3, 28), 'the last column')
+    eq(move(15), nil, 'the hidden row under the map')
+    checkAbove(move(14), 'the last row')
+    -- another floor: no name there, no icon (the engine would draw it over
+    -- the creature seen through a hole, a tile off the name's place)
+    eq(move(5, 14, 8), nil, 'a floor below')
+    eq(move(5, 14, 6), nil, 'a floor above')
+    checkAbove(move(5, 14, 7), 'the camera\'s floor')
+    eq(#creature.effects, 1, 'one icon, never two')
+    -- the camera changes floor and the speaker does not move: our move checks
+    m.camera = { x = 101, y = 101, z = 6 }
+    fire(LocalPlayer, 'onPositionChange', me, m.camera, { x = 100, y = 100, z = 7 })
+    frame()
+    eq(icon(), nil, 'the speaker is a floor under the camera now')
+    m.camera = { x = 100, y = 100, z = 7 }
+    fire(LocalPlayer, 'onPositionChange', me, m.camera, { x = 101, y = 101, z = 6 })
+    frame()
+    checkAbove(icon(), 'the same floor again')
+    -- the speaker leaves in mid-sentence: the engine calls onDisappear and
+    -- then drops the position; it comes back as a new creature object
+    fire(Creature, 'onDisappear', creature)
+    local old = creature
+    old.pos = nil
+    frame()
+    eq(#old.effects, 0, 'gone: no icon')
+    creature = newCreature(5)
+    creature.pos = m:at(6, 10)
+    known[5] = creature
+    fire(Creature, 'onAppear', creature)
+    frame()
+    checkAbove(icon(), 'back in view, on the new creature')
+    -- dead in mid-sentence: no icon over the corpse
+    creature.dead = true
+    fire(Creature, 'onDeath', creature)
+    frame()
+    eq(icon(), nil, 'dead')
+    creature.dead = false
+    fire(Creature, 'onAppear', creature)
+    frame()
+    checkAbove(icon(), 'alive again')
+    -- made anew within one frame (dropped from the known creatures and back)
+    local older = creature
+    creature = newCreature(5)
+    creature.pos = m:at(6, 10)
+    known[5] = creature
+    fire(Creature, 'onDisappear', older)
+    fire(Creature, 'onAppear', creature)
+    frame()
+    eq(#older.effects, 0, 'not left on the old object')
+    checkAbove(icon(), 'on the new object in the same frame')
+    -- other creatures walking schedule nothing
+    local pending = #events
+    local other = newCreature(9)
+    fire(Creature, 'onPositionChange', other, m:at(3, 3), m:at(3, 4))
+    eq(#events, pending, 'a creature that is not talking: nothing')
+
+    -- the classic view in a window of another shape: 15x11 tiles of 44 px
+    -- in 660x524, letterboxed 20 px above and under. On the second row the
+    -- icon above the name would start in the bar, under the padding rect's
+    -- top but over the drawn map's: under the feet
+    m:layout(176, 20, 660, 524, 15, 11, 44)
+    eq(m.rect.y, 40, 'the drawn rect')
+    local _, ty = m:tile(m:at(1, 7))
+    local aboveTop = ty - (16 + 8 + 2 + 9 / (44 / 32)) * 44 / 32
+    assert(aboveTop >= 20 and aboveTop < 40, 'the case: above would be in the bar (' .. aboveTop .. ')')
+    checkUnder(move(1, 7), 'second row in the classic view')
+    checkAbove(move(2, 7), 'third row in the classic view')
+    -- a big window on the desktop: 15x11 tiles of 77 px (2.4 times)
+    m:layout(0, 0, 1155, 847, 15, 11, 77)
+    checkUnder(move(0, 7), 'first row at 77 px a tile')
+    checkAbove(move(1, 7), 'second row at 77 px a tile')
+    checkAbove(move(5, 7), 'the middle at 77 px a tile')
+    -- the fill view cuts the edge tiles: 21x11 tiles of 64 px in 1300x704
+    m:layout(0, 0, 1300, 704, 21, 11, 64)
+    eq(m.rect.width, 1300, 'the fill view draws the whole width')
+    checkUnder(move(0, 10), 'the fill view, first row')
+    checkAbove(move(4, 10), 'the fill view')
+    -- no camera yet: the 32 px offsets, still centred over the name
+    m:layout(176, 20, 928, 500, 29, 15, 32)
+    local getPosition = u.map.getPosition
+    u.map.getPosition = function() return nil end
+    VoiceUI.clearHeads()
+    VoiceUI.attachHead('k', 5)
+    checkAbove(move(5), 'no camera')
+    u.map.getPosition = getPosition
+    -- a speaker the client does not know: no icon
+    VoiceUI.attachHead('gone', 6)
+    -- a speaker on another floor when it starts: not drawn from the start
+    VoiceUI.clearHeads()
+    eq(#creature.effects, 0, 'cleared')
+    creature.pos = m:at(5, 14, 8)
+    VoiceUI.attachHead('k', 5)
+    eq(#creature.effects, 0, 'another floor from the start')
+    -- a module reload keeps the registration (registering again is an error)
+    VoiceUI.destroy()
+    eq(#creature.effects, 0, 'nothing left at the end')
+    eq(LocalPlayer.onPositionChange, nil, 'disconnected')
+    eq(Creature.onDisappear, nil)
+    dofile(MODULE .. 'voice_ui.lua')
+    VoiceUI.create()
+    creature.pos = m:at(5, 14)
+    VoiceUI.attachHead('k', 5)
+    eq(#creature.effects, 1, 'after a reload')
+    VoiceUI.destroy()
+    eq(registrationErrors, 0, 'registered once')
+    -- a reload that lost the global: the id is taken, and used
+    VoiceHeadEffectRegistered = nil
+    dofile(MODULE .. 'voice_ui.lua')
+    VoiceUI.create()
+    VoiceUI.attachHead('k', 5)
+    eq(#creature.effects, 1, 'the registered image is used')
+    VoiceUI.destroy()
+end)
+
+test('every image the module draws exists at the size its widget gives it', function()
+    -- the width and height from a PNG's header, and its colour type (6: RGBA)
+    local function png(path)
+        local f = io.open(path, 'rb')
+        if not f then
+            return nil
+        end
+        local head = f:read(29)
+        f:close()
+        assert(head and head:sub(2, 4) == 'PNG', path .. ' is not a PNG')
+        local function u32(i)
+            local a, b, c, d = head:byte(i, i + 3)
+            return ((a * 256 + b) * 256 + c) * 256 + d
+        end
+        return u32(17), u32(21), head:byte(26)
+    end
+    local SIZES = {
+        mic = '16x16', mic_off = '16x16', headset = '16x16', headset_off = '16x16', gear = '16x16',
+        s_mic = '12x12', s_selfmuted = '12x12', s_deaf = '12x12', s_srvmuted = '12x12', s_mutedforme = '12x12',
+        s_staff = '12x12', lite = '12x12', dot = '12x12', speaking_ring = '12x12',
+        speaker_head = '18x16', button = '40x20', ptt_touch = '48x48',
+    }
+    local used = {}
+    for _, file in ipairs({ 'voice.lua', 'voice_ui.lua', 'voice_settings.lua', 'voice.otui', 'voicesettings.otui',
+        'voiceonboard.otui' }) do
+        local src = io.open(MODULE .. file):read('*a')
+        for name in src:gmatch('/game_voice/images/([%w_]+)') do
+            used[name] = true
+        end
+    end
+    for name in pairs(used) do
+        assert(SIZES[name], 'an image with no size here: ' .. name)
+    end
+    for name, size in pairs(SIZES) do
+        assert(used[name], 'an image nothing draws: ' .. name)
+        local w, h, kind = png(MODULE .. 'images/' .. name .. '.png')
+        assert(w, 'missing: images/' .. name .. '.png')
+        eq(w .. 'x' .. h, size, name)
+        eq(kind, 6, name .. ': RGBA, a transparent background')
+    end
+    -- the sizes the otui gives them
+    local otui = io.open(MODULE .. 'voice.otui'):read('*a')
+    assert(otui:match('VoiceIconButton < UIButton.-image%-size: 16 16'), 'header buttons draw 16x16')
+    assert(otui:match('VoiceMemberIcon < UIWidget%s+size: 12 12'), 'member icons are 12x12')
 end)
 
 test('every widget the Lua reads by id exists in its otui', function()
