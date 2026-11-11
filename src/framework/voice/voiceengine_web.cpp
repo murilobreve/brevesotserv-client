@@ -216,6 +216,16 @@ namespace
             send(c);
         }
 
+        // the page clamps and smooths it (mv-mixer, slot 3 only)
+        void setUserSpatial(const int sid, const float gain, const float pan) override
+        {
+            auto c = webVoiceCommand("spatial");
+            c["sid"] = sid;
+            c["g"] = std::isfinite(gain) ? gain : 1.0f;
+            c["p"] = std::isfinite(pan) ? pan : 0.0f;
+            send(c);
+        }
+
         void setDeafened(const bool on) override
         {
             auto c = webVoiceCommand("deaf");

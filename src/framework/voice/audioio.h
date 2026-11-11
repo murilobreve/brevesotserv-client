@@ -62,6 +62,11 @@ public:
     // queues one buffer and (re)starts the stream if it was not playing
     virtual bool queue(int stream, const int16_t* pcm, int samples) = 0;
     virtual void setGain(int stream, float gain) = 0; // 0-1
+    // where the stream is heard: placed false = at the listener, centred
+    // (every voice but a near one with a place: as it always was); true = on
+    // a circle in front of the listener at pan -1 (left) .. 1 (right). Cheap
+    // when nothing changed (called on every playback tick).
+    virtual void setPan(int stream, bool placed, float pan) = 0;
 
     virtual std::vector<std::string> devices() = 0;
 };

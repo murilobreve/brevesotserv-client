@@ -19,6 +19,10 @@
 //       --loss/--jitter/--stall: injected on the engine's inbox side.
 //       --terminate-at: terminate() at that second, timed (talking and
 //       receiving at once is the shutdown test).
+//       --near-cids 3001,3002: once the roster of --room arrives, the
+//       creature ids "on screen" ({"t":"near","c":[...]}, the near room);
+//       --place 1,-1: setUserSpatial(sid, gain, pan) for the first speaker
+//       heard (its first 'spk' on)
 //   voz-native-test --local-test --send in.wav --recv out.wav [--wav-out] [--meter] [--dur 6]
 //       the "Testar microfone" path: no relay; the microphone plays back
 //       through the codec and the jitter buffer; --meter counts 'level'
@@ -38,6 +42,16 @@
 //   voz-native-test --openal-check
 //       OpenAL Soft: devices, a playback device of our own with a
 //       thread-local context, 1 s of tone through a stream (wave backend)
+//   voz-native-test --spatial-test --out out.wav [--port 7395] [--plain]
+//       the near room (slot 3) without a relay that has it: a stand-in relay
+//       on 127.0.0.1:port (the hello gets a welcome) plays a script of tone
+//       spurts from sid 7 on slots 0 and 3 while the harness calls
+//       setUserSpatial; the real OpenAL playback goes to out.wav (run it with
+//       ALSOFT_DRIVERS=wave and an ALSOFT_CONF with channels = stereo and
+//       [wave] file= out.wav). Checks the left/right energy for pan -1, 0, +1
+//       and gain 0.5, slot 0 untouched by a place, the 50 ms ramp without a
+//       click, and a slot change inside a spurt heard when its frames play.
+//       --plain: the same frames all on slot 0 and no place (CPU baseline)
 //
 // Every line on stdout is one JSON object.
 
@@ -61,13 +75,17 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <ixwebsocket/IXNetSystem.h>
+#include <ixwebsocket/IXWebSocketServer.h>
 #include <nlohmann/json.hpp>
 #include <unistd.h>
 
@@ -259,6 +277,7 @@ namespace
             if (stream >= 0 && stream < 8)
                 m_streams[stream].gain = gain;
         }
+        void setPan(int, bool, float) override {} // mono: the stereo test uses OpenAL (wave backend)
         std::vector<std::string> devices() override { return { "wav" }; }
 
         void finish()
@@ -385,8 +404,10 @@ namespace
               "proto: packUp header and payload", std::to_string(n));
         check(packUp(buf, 0, false, false, 0, opus, 0) == 0, "proto: packUp refuses an empty payload");
         check(packUp(buf, 0, false, false, 0, opus, 241) == 0, "proto: packUp refuses 241 B");
-        check(packUp(buf, 3, false, false, 0, opus, 10) == 0 && packUp(buf, -1, false, false, 0, opus, 10) == 0,
-              "proto: packUp refuses slot 3 and -1");
+        n = packUp(buf, 3, true, false, 7, opus, 10);
+        check(n == 13 && buf[1] == (3 | kEnd), "proto: packUp takes slot 3 (near)", std::to_string(n));
+        check(packUp(buf, 4, false, false, 0, opus, 10) == 0 && packUp(buf, -1, false, false, 0, opus, 10) == 0,
+              "proto: packUp refuses slot 4 and -1");
         check(packUp(buf, 2, false, false, 0, opus, 240) == 243, "proto: packUp takes 240 B");
 
         // relay AUDIO
@@ -403,6 +424,10 @@ namespace
             good = slot == 2 && end && !vad && sid == 0x1234 && seq == 9 && len == 50 && std::memcmp(p, opus, 50) == 0;
         });
         check(good && calls == 1, "proto: parseDown AUDIO (sid little-endian, flags, seq)");
+        down[1] = makeFlags(3, false, true);
+        int slot3 = -1;
+        parseDown(down, 55, [&](int slot, bool, bool vad, uint16_t, uint8_t, const uint8_t*, size_t) { slot3 = vad ? slot : -2; });
+        check(slot3 == 3, "proto: parseDown AUDIO on slot 3 (near)", std::to_string(slot3));
         auto count = [&](const uint8_t* p, size_t len, bool& ok) {
             int c = 0;
             ok = parseDown(p, len, [&](int, bool, bool, uint16_t, uint8_t, const uint8_t*, size_t) { ++c; });
@@ -597,6 +622,23 @@ namespace
                 calm.push(static_cast<uint8_t>(i), false, p, sizeof(p), 1920, 40 * i);
             check(t1 > 150 && t1 <= 240 && calm.targetMs() == 80, "jitter: the target follows J (80 + 2J, capped at 240)",
                   "jittery " + std::to_string(t1) + " ms, calm " + std::to_string(calm.targetMs()) + " ms");
+        }
+        {
+            // every frame keeps its slot (near, slot 3, then the party);
+            // a concealment has the slot of the frame before it
+            JitterBuffer jb;
+            uint8_t p[80] = {};
+            jb.push(0, false, p, sizeof(p), 1920, 0, 3);
+            jb.push(1, false, p, sizeof(p), 1920, 40, 3);
+            jb.push(2, false, p, sizeof(p), 1920, 80, 0);
+            jb.push(4, true, p, sizeof(p), 1920, 120, 0);
+            std::string got;
+            for (int64_t t = 121; t < 400; t += 40) {
+                const auto r = jb.pull(t);
+                if (r.kind == K::Frame || r.kind == K::Conceal)
+                    got += (r.kind == K::Frame ? 'F' : 'C') + std::to_string(r.slot);
+            }
+            check(got == "F3F3F0C0F0", "jitter: frames keep their room slot (a concealment the one before)", got);
         }
         {
             // 60 ms frames (eco)
@@ -845,6 +887,375 @@ namespace
         }
     };
 
+    // ---------------------------------------------------------------------
+    // --spatial-test: the near room (slot 3) through the real OpenAL output
+
+    struct ScriptFrame
+    {
+        int64_t atMs = 0;
+        std::string msg; // relay AUDIO: [0x01][flags][sid lo][sid hi][seq][opus]
+    };
+
+    struct ScriptCall
+    {
+        int64_t atMs = 0;
+        int sid = 0;
+        float gain = 1.0f;
+        float pan = 0.0f;
+    };
+
+    struct Phase
+    {
+        std::string name;
+        int64_t atMs = 0;
+        int frames = 0;
+    };
+
+    double dbOfPower(const double p) { return 10.0 * std::log10(p + 1e-12); }
+
+    // mean power of x[a, b)
+    double powerOf(const std::vector<float>& x, const size_t a, const size_t b)
+    {
+        double s = 0;
+        for (size_t i = a; i < b && i < x.size(); ++i)
+            s += static_cast<double>(x[i]) * x[i];
+        return b > a ? s / static_cast<double>(b - a) : 0.0;
+    }
+
+    int runSpatial(const Args& a)
+    {
+        const int port = static_cast<int>(a.num("--port", 7395));
+        const std::string outPath = a.str("--out");
+        const bool plain = a.has("--plain");
+        const bool quiet = a.has("--quiet");
+        if (outPath.empty()) {
+            out({ { "error", "--out (the wave backend's file) is needed" } });
+            return 2;
+        }
+
+        // the script: tone spurts (440 Hz) from sid 7, frames 40 ms apart,
+        // encoded before anything starts (the stand-in relay only sends)
+        constexpr double kA = 0.3; // tone amplitude
+        constexpr double kB = 0.12; // the second half of the slot-change spurt
+        constexpr uint16_t kSid = 7;
+        std::vector<ScriptFrame> frames;
+        std::vector<ScriptCall> calls;
+        std::vector<Phase> phases;
+        OpusEnc enc;
+        if (!enc.open(0)) {
+            out({ { "error", "opus encoder" } });
+            return 2;
+        }
+        double ph = 0;
+        uint8_t seq = 0;
+        int64_t t = 500;
+        auto spurt = [&](const std::string& name, const int count, const auto& slotOf, const auto& ampOf) {
+            phases.push_back({ name, t, count });
+            int16_t pcm[1920];
+            uint8_t opus[240];
+            for (int i = 0; i < count; ++i) {
+                const double level = ampOf(i);
+                for (int k = 0; k < 1920; ++k) {
+                    pcm[k] = static_cast<int16_t>(std::lrint(level * 32767.0 * std::sin(ph)));
+                    ph += 6.283185307179586 * 440.0 / 48000.0;
+                }
+                const int n = enc.encode(pcm, opus, 240);
+                if (n <= 0)
+                    continue;
+                ScriptFrame f;
+                f.atMs = t;
+                const int slot = plain ? 0 : slotOf(i);
+                f.msg.push_back(static_cast<char>(voiceproto::kAudio));
+                f.msg.push_back(static_cast<char>(voiceproto::makeFlags(slot, i == count - 1, false)));
+                f.msg.push_back(static_cast<char>(kSid & 255));
+                f.msg.push_back(static_cast<char>(kSid >> 8));
+                f.msg.push_back(static_cast<char>(seq++));
+                f.msg.append(reinterpret_cast<const char*>(opus), static_cast<size_t>(n));
+                frames.push_back(std::move(f));
+                t += 40;
+            }
+        };
+        // a gap between spurts; the place, if any, is given 350 ms into it
+        // (the spurt before has played out, the next one has not started)
+        auto gap = [&](const bool place, const float g, const float p) {
+            if (place && !plain)
+                calls.push_back({ t + 350, kSid, g, p });
+            t += 600;
+        };
+        const auto on = [](const int slot) { return [slot](int) { return slot; }; };
+        const auto amp = [](const double x) { return [x](int) { return x; }; };
+        spurt("slot 0 (reference)", 30, on(0), amp(kA));
+        gap(false, 0, 0);
+        spurt("slot 3, no place", 30, on(3), amp(kA));
+        gap(true, 1.0f, -1.0f);
+        spurt("slot 3, pan -1", 30, on(3), amp(kA));
+        gap(true, 1.0f, 1.0f);
+        spurt("slot 3, pan +1", 30, on(3), amp(kA));
+        gap(true, 0.5f, 0.0f);
+        spurt("slot 3, pan 0 gain 0.5", 30, on(3), amp(kA));
+        gap(true, 1.0f, -1.0f);
+        spurt("slot 0 with a place (pan -1) set", 30, on(0), amp(kA));
+        gap(false, 0, 0);
+        const int64_t rampCallAt = t + 20 * 40; // in the middle of the next spurt
+        if (!plain)
+            calls.push_back({ rampCallAt, kSid, 1.0f, 1.0f });
+        spurt("slot 3, pan -1 -> +1 while talking", 40, on(3), amp(kA));
+        gap(false, 0, 0);
+        spurt("slot 3 (pan +1) then slot 0 in one spurt", 40, [](int i) { return i < 20 ? 3 : 0; }, [](int i) { return i < 20 ? kA : kB; });
+        const int64_t scriptEnd = t + 1500;
+
+        // the stand-in relay
+        ix::initNetSystem();
+        ix::WebSocketServer server(port, "127.0.0.1");
+        server.disablePerMessageDeflate();
+        server.setOnClientMessageCallback([](const std::shared_ptr<ix::ConnectionState>&, ix::WebSocket& ws, const ix::WebSocketMessagePtr& msg) {
+            if (msg->type == ix::WebSocketMessageType::Message && !msg->binary && msg->str.find("\"hello\"") != std::string::npos)
+                ws.sendText(R"({"t":"welcome","sid":1,"now":0,"exp":0,"lim":{"pl":240,"fps":30,"bps":6000,"lastN":4},"near":{"lvl":8}})");
+        });
+        const auto listened = server.listen();
+        if (!listened.first) {
+            out({ { "error", "stand-in relay: " + listened.second } });
+            return 2;
+        }
+        server.start();
+
+        std::mutex m;
+        std::condition_variable cv;
+        bool welcome = false;
+        bool closed = false;
+        json lastStats;
+        NativeVoiceOptions o;
+        o.makeInput = [] { return std::make_unique<NoInput>(); };
+        o.log = [](int level, const std::string& text) { out({ { "log", text }, { "level", level } }); };
+        const ProcSample before = procSelf();
+        auto engine = createNativeVoiceEngine(
+            [&](VoiceEvent&& e) {
+                std::lock_guard<std::mutex> lock(m);
+                if (e.type == "ctl" && e.s.find("\"welcome\"") != std::string::npos)
+                    welcome = true;
+                else if (e.type == "state" && e.s == "closed")
+                    closed = true;
+                else if (e.type == "stats")
+                    lastStats = json::parse(e.s, nullptr, false);
+                if (!quiet && e.type != "stats")
+                    out({ { "ev", e.type }, { "s", e.s.substr(0, 120) }, { "a", e.a }, { "b", e.b } });
+                cv.notify_all();
+            },
+            o);
+        engine->setOutputVolume(1.0f);
+        engine->setSlotVolume(3, 1.0f);
+        engine->connect("ws://127.0.0.1:" + std::to_string(port) + "/voz", "tok", "win", "voz-native-test");
+        {
+            std::unique_lock<std::mutex> lock(m);
+            cv.wait_for(lock, std::chrono::seconds(5), [&] { return welcome || closed; });
+        }
+        std::shared_ptr<ix::WebSocket> client;
+        for (const auto& c : server.getClients())
+            client = c;
+        if (!welcome || !client) {
+            engine->terminate();
+            server.stop();
+            out({ { "error", "no welcome from the stand-in relay" } });
+            return 2;
+        }
+        const int64_t t0 = nowMs();
+        const ProcSample p0 = procSelf();
+        size_t nf = 0, nc = 0;
+        while (nf < frames.size() || nc < calls.size()) {
+            const bool callFirst = nc < calls.size() && (nf >= frames.size() || calls[nc].atMs <= frames[nf].atMs);
+            const int64_t at = callFirst ? calls[nc].atMs : frames[nf].atMs;
+            const int64_t wait = t0 + at - nowMs();
+            if (wait > 0)
+                std::this_thread::sleep_for(std::chrono::milliseconds(wait));
+            if (callFirst) {
+                engine->setUserSpatial(calls[nc].sid, calls[nc].gain, calls[nc].pan);
+                ++nc;
+            } else {
+                client->sendBinary(frames[nf].msg);
+                ++nf;
+            }
+        }
+        const int64_t rest = t0 + scriptEnd - nowMs();
+        if (rest > 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(rest));
+        const ProcSample p1 = procSelf();
+        const int64_t t1 = nowMs();
+        engine->requestStats();
+        {
+            std::unique_lock<std::mutex> lock(m);
+            cv.wait_for(lock, std::chrono::seconds(2), [&] { return lastStats.is_object(); });
+        }
+        engine->disconnect(); // closes the output: the wave file is finished
+        engine->terminate();
+        engine.reset();
+        client.reset();
+        server.stop();
+        const double cpu = t1 > t0 ? (p1.cpuMs - p0.cpuMs) * 100.0 / static_cast<double>(t1 - t0) : 0.0;
+        json summary = { { "summary", "spatial" }, { "plain", plain }, { "frames", frames.size() }, { "calls", calls.size() },
+                         { "cpuPctOfCore", cpu }, { "rssKbBefore", before.rssKb }, { "rssKb", p1.rssKb }, { "threads", p1.threads },
+                         { "stats", lastStats } };
+
+        // what OpenAL played
+        std::vector<std::vector<float>> ch;
+        int rate = 0;
+        std::string err;
+        if (!wavio::readWavChannels(outPath, ch, rate, err) || ch.size() != 2 || rate != 48000) {
+            check(false, "near: stereo 48 kHz output from OpenAL", err.empty() ? "channels " + std::to_string(ch.size()) + ", rate " + std::to_string(rate) : err);
+            out(summary);
+            return 1;
+        }
+        const auto& L = ch[0];
+        const auto& R = ch[1];
+        // the spurts: 10 ms windows over -45 dBFS, gaps under 150 ms bridged
+        constexpr size_t kWin = 480;
+        std::vector<std::pair<size_t, size_t>> spans;
+        size_t from = 0, lastLoud = 0;
+        bool inSpan = false;
+        for (size_t i = 0; i + kWin <= L.size(); i += kWin) {
+            const bool loudW = dbOfPower((powerOf(L, i, i + kWin) + powerOf(R, i, i + kWin)) / 2) > -45;
+            if (loudW) {
+                if (!inSpan) {
+                    inSpan = true;
+                    from = i;
+                }
+                lastLoud = i + kWin;
+            } else if (inSpan && i - lastLoud >= 15 * kWin) {
+                inSpan = false;
+                if (lastLoud - from >= 600 * 48)
+                    spans.emplace_back(from, lastLoud);
+            }
+        }
+        if (inSpan && lastLoud - from >= 600 * 48)
+            spans.emplace_back(from, lastLoud);
+        json found = json::array();
+        for (const auto& sp : spans)
+            found.push_back({ sp.first / 48, (sp.second - sp.first) / 48 });
+        summary["spurtsMs"] = found;
+        const bool all = spans.size() == phases.size();
+        check(all, "near: every spurt heard (" + std::to_string(phases.size()) + ")", "found " + std::to_string(spans.size()) + ": " + found.dump());
+        if (!all) {
+            out(summary);
+            return 1;
+        }
+        // left and right level (dB, 0 = the tone at full scale) of a spurt's middle
+        constexpr double kRef = kA * kA / 2;
+        auto levels = [&](const size_t k) {
+            const size_t a0 = spans[k].first + 200 * 48;
+            const size_t b0 = spans[k].second - 200 * 48;
+            return std::pair<double, double>(dbOfPower(powerOf(L, a0, b0) / kRef), dbOfPower(powerOf(R, a0, b0) / kRef));
+        };
+        auto fmt = [](const std::pair<double, double>& v) {
+            char b[96];
+            std::snprintf(b, sizeof(b), "L %.1f dB R %.1f dB", v.first, v.second);
+            return std::string(b);
+        };
+        json lv = json::object();
+        std::vector<std::pair<double, double>> lev;
+        for (size_t k = 0; k < spans.size(); ++k) {
+            lev.push_back(levels(k));
+            lv[phases[k].name] = { std::round(lev[k].first * 10) / 10, std::round(lev[k].second * 10) / 10 };
+        }
+        summary["levels"] = lv;
+        const auto& ref = lev[0];
+        const auto near = [](const std::pair<double, double>& x, const std::pair<double, double>& y, const double db) {
+            return std::fabs(x.first - y.first) <= db && std::fabs(x.second - y.second) <= db;
+        };
+        const auto power = [](const std::pair<double, double>& x) { return 10 * std::log10(std::pow(10, x.first / 10) + std::pow(10, x.second / 10)); };
+        if (plain) {
+            // the last spurt changes its sound half way: not compared
+            bool same = true;
+            for (size_t k = 0; k + 1 < lev.size(); ++k)
+                same = same && near(lev[k], ref, 1.0);
+            check(same, "near (--plain): every spurt of one sound centred, as the first", fmt(ref));
+            out(summary);
+            return g_failures == 0 ? 0 : 1;
+        }
+        check(std::fabs(ref.first - ref.second) <= 0.5, "near: slot 0 plays centred (reference)", fmt(ref));
+        check(near(lev[1], ref, 0.5), "near: slot 3 with no place sounds as slot 0", fmt(lev[1]) + " vs " + fmt(ref));
+        check(lev[2].first - lev[2].second >= 40 && std::fabs(power(lev[2]) - power(ref)) <= 2.0, "near: pan -1: on the left only, about the power of the centre",
+              fmt(lev[2]) + ", power " + std::to_string(power(lev[2]) - power(ref)).substr(0, 5) + " dB vs the centre");
+        check(lev[3].second - lev[3].first >= 40 && std::fabs(power(lev[3]) - power(ref)) <= 2.0, "near: pan +1: on the right only, about the power of the centre",
+              fmt(lev[3]) + ", power " + std::to_string(power(lev[3]) - power(ref)).substr(0, 5) + " dB vs the centre");
+        check(std::fabs(lev[4].first - lev[4].second) <= 0.5 && std::fabs(lev[4].first - ref.first + 6.02) <= 0.7,
+              "near: pan 0 gain 0.5: centred, 6 dB down", fmt(lev[4]) + " vs " + fmt(ref));
+        check(near(lev[5], ref, 0.5), "near: a place (pan -1) leaves the same speaker's slot-0 frames centred", fmt(lev[5]) + " vs " + fmt(ref));
+
+        // the ramp: balance (R^2 - L^2) / (R^2 + L^2) in 5 ms windows
+        constexpr size_t kBal = 240;
+        auto balance = [&](const size_t i) {
+            const double l = powerOf(L, i, i + kBal), r = powerOf(R, i, i + kBal);
+            return (r - l) / (r + l + 1e-12);
+        };
+        {
+            const auto [a0, b0] = spans[6];
+            size_t leave = 0, arrive = 0;
+            for (size_t i = a0 + 200 * 48; i + kBal <= b0; i += kBal) {
+                const double b = balance(i);
+                if (!leave && b > -0.9)
+                    leave = i;
+                if (leave && b > 0.9) {
+                    arrive = i;
+                    break;
+                }
+            }
+            const double rampMs = leave && arrive ? static_cast<double>(arrive - leave) / 48.0 : -1;
+            // a click: a sample step well over the steady tone's own (the
+            // left side, 300 ms before the change)
+            auto maxStep = [&](const std::vector<float>& x, const size_t p, const size_t q) {
+                float mx = 0;
+                for (size_t i = p + 1; i < q && i < x.size(); ++i)
+                    mx = (std::max)(mx, std::fabs(x[i] - x[i - 1]));
+                return mx;
+            };
+            const size_t c0 = leave > 100 * 48 ? leave - 100 * 48 : leave;
+            const float steady = leave > 400 * 48 ? maxStep(L, leave - 400 * 48, leave - 100 * 48) : 0;
+            const float during = (std::max)(maxStep(L, c0, arrive + 100 * 48), maxStep(R, c0, arrive + 100 * 48));
+            const double at = leave ? static_cast<double>(leave - a0) / static_cast<double>(b0 - a0) : 0;
+            char d[200];
+            std::snprintf(d, sizeof(d), "left -> right in %.0f ms (balance -0.9 to 0.9), at %.0f%% of the spurt; largest sample step %.4f, steady tone's %.4f",
+                          rampMs, at * 100, during, steady);
+            check(rampMs >= 10 && rampMs <= 120 && at > 0.3 && at < 0.7 && steady > 0 && during <= 1.5f * steady,
+                  "near: a new place while talking moves smoothly (about 50 ms, no click)", d);
+            summary["rampMs"] = rampMs;
+        }
+        // the slot change inside one spurt: the side follows the frames
+        // being heard (their slot), so it changes with the sound itself
+        {
+            const auto [a0, b0] = spans[7];
+            std::vector<double> pw, bl;
+            for (size_t i = a0; i + kBal <= b0; i += kBal) {
+                pw.push_back(dbOfPower((powerOf(L, i, i + kBal) + powerOf(R, i, i + kBal)) / 2));
+                bl.push_back(balance(i));
+            }
+            const size_t nW = pw.size();
+            auto median = [](std::vector<double> v) {
+                std::sort(v.begin(), v.end());
+                return v.empty() ? 0.0 : v[v.size() / 2];
+            };
+            const double hi = median(std::vector<double>(pw.begin() + static_cast<long>(nW / 10), pw.begin() + static_cast<long>(nW * 4 / 10)));
+            const double lo = median(std::vector<double>(pw.begin() + static_cast<long>(nW * 6 / 10), pw.begin() + static_cast<long>(nW * 9 / 10)));
+            const double mid = (hi + lo) / 2;
+            auto settle = [&](const auto& pred) {
+                for (size_t i = nW / 5; i + 10 < nW; ++i) {
+                    bool all10 = true;
+                    for (size_t k = i; k < i + 10 && all10; ++k)
+                        all10 = pred(k);
+                    if (all10)
+                        return static_cast<double>(i) * 5.0;
+                }
+                return -1.0;
+            };
+            const double tSound = settle([&](size_t k) { return pw[k] < mid; });
+            const double tSide = settle([&](size_t k) { return bl[k] < 0.5; });
+            char d[200];
+            std::snprintf(d, sizeof(d), "sound %.1f -> %.1f dB at %.0f ms, right -> centre at %.0f ms (%+.0f ms)", hi, lo, tSound, tSide, tSide - tSound);
+            check(tSound > 0 && tSide > 0 && std::fabs(tSide - tSound) <= 60 && hi - lo > 5, "near: slot 3 -> 0 inside a spurt: the side changes when those frames play", d);
+            summary["slotSwitchMs"] = tSide - tSound;
+        }
+        out(summary);
+        return g_failures == 0 ? 0 : 1;
+    }
+
     std::atomic<bool> g_interrupted{ false };
 
     int runSession(const Args& a)
@@ -992,6 +1403,25 @@ namespace
         bool terminated = false;
         int64_t micOkAt = -1, devicesAt = -1;
         json timeline = json::array();
+        bool nearOffered = false;
+        int nearIn = 0;
+        int placedSid = 0;
+        std::vector<int64_t> nearCids;
+        {
+            const std::string v = a.str("--near-cids");
+            for (size_t at = 0; at < v.size();) {
+                const size_t comma = v.find(',', at);
+                const std::string one = v.substr(at, comma == std::string::npos ? std::string::npos : comma - at);
+                if (!one.empty())
+                    nearCids.push_back(std::atoll(one.c_str()));
+                if (comma == std::string::npos)
+                    break;
+                at = comma + 1;
+            }
+        }
+        double placeGain = 1, placePanD = 0;
+        const bool place = window("--place", placeGain, placePanD);
+        const auto placePan = static_cast<float>(placePanD);
 
         auto handle = [&](VoiceEvent& e) {
             ++counts[e.type];
@@ -1023,19 +1453,28 @@ namespace
                 const auto type = msg.value("t", std::string());
                 if (type == "welcome") {
                     sid = msg.value("sid", 0);
+                    nearOffered = msg.contains("near");
                     if (!room.empty())
                         engine->sendControl(json({ { "t", "join" }, { "room", room } }).dump());
                 } else if (type == "roster" && msg.value("room", std::string()) == room && !joined) {
                     joined = true;
                     joinedAt = t;
                     joinedAtAbs = nowMs();
+                    if (!nearCids.empty())
+                        engine->sendControl(json({ { "t", "near" }, { "c", nearCids } }).dump());
                     if (send && !vad && !pttWindow && !globalKey)
                         engine->setTransmit(slot); // push-to-talk held for the run
+                } else if (type == "in" && msg.value("room", std::string()) == "near") {
+                    ++nearIn;
                 }
             } else if (e.type == "talk" && e.a >= 0 && !talkOnAt) {
                 talkOnAt = t;
             } else if (e.type == "spk" && e.b == 1 && !firstSpkAt) {
                 firstSpkAt = t;
+                if (place && !placedSid) {
+                    placedSid = e.a;
+                    engine->setUserSpatial(e.a, static_cast<float>(placeGain), placePan);
+                }
             }
         };
 
@@ -1155,6 +1594,9 @@ namespace
                          { "inputsAtEnd", inputsAtEnd },
                          { "timeline", timeline },
                          { "talkEdges", counts["talk"] },
+                         { "nearOffered", nearOffered },
+                         { "nearIn", nearIn },
+                         { "placedSid", placedSid },
                          { "stats", lastStats } };
         out(summary);
         if (a.has("--stats-out")) {
@@ -1178,6 +1620,7 @@ int main(int argc, char** argv)
         if (k.rfind("--", 0) == 0) {
             const bool flag = k == "--unit" || k == "--loop" || k == "--vad" || k == "--wav-out" || k == "--quiet" ||
                               k == "--openal-check" || k == "--local-test" || k == "--meter" || k == "--meter-only" ||
+                              k == "--spatial-test" || k == "--plain" ||
                               (k == "--recv" && (i + 1 >= argc || std::string(argv[i + 1]).rfind("--", 0) == 0));
             if (flag || i + 1 >= argc)
                 a.v[k] = "";
@@ -1193,6 +1636,8 @@ int main(int argc, char** argv)
         return runCompare(a.str("--compare"), positional.empty() ? std::string() : positional[0], a.num("--min-db", -35));
     if (a.has("--openal-check"))
         return runOpenALCheck();
+    if (a.has("--spatial-test"))
+        return runSpatial(a);
     if (a.has("--url") || a.has("--local-test") || a.has("--meter-only"))
         return runSession(a);
     std::cerr << "usage: see the comment at the top of main.cpp\n";

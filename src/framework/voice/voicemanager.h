@@ -43,6 +43,7 @@ public:
     void setOutputVolume(float volume);
     void setUserVolume(int sid, float volume);
     void setSlotVolume(int slot, float volume);
+    void setUserSpatial(int sid, float gain, float pan);
     void setDeafened(bool on);
     void setSelfMuted(bool on);
     void setMeter(bool on);

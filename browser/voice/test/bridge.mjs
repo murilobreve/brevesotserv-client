@@ -11,9 +11,12 @@
 // both ways; AUDIO and BUNDLE parsing and the speaking edges; generation tags;
 // a replaced or closed socket reports nothing; close codes; the side mouse
 // button listeners and the push-to-talk key held across them; the relay's
-// payload limit; a game that stops polling (a full inbox refuses batches):
-// nothing is lost while it is short, and a long one ends the connection with
-// one 'closed', the newest 'mic'/'devices'/'caps' kept.
+// payload limit; the near room (slot 3: roster, push-to-talk key and mouse
+// button, frames, slot volume) and the 'spatial' command (clamped, kept per
+// sid, forgotten with the connection); a game that stops polling (a full
+// inbox refuses batches): nothing is lost while it is short, and a long one
+// ends the connection with one 'closed', the newest 'mic'/'devices'/'caps'
+// kept.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -282,6 +285,44 @@ mouse('mouseup', 3);
 check('the key let go while the button is held: the button goes on, then all stops', txHeld === 0 && V.stats().tx === -1, `held ${txHeld}, after ${V.stats().tx}`);
 cmd({ op: 'pttMouse', btn: 0, slot: -1 });
 
+// the near room: slot 3 everywhere, and a near speaker's place (spatial)
+ws4.text('{"t":"roster","room":"near","slot":3,"u":[[9,1,1,"Ana",0],[12,2,2,"Bia",0]]}');
+await tick();
+check('a roster on slot 3 is the near room', V.stats().rooms[3] === 'near' && V.stats().rooms.length === 4, JSON.stringify(V.stats().rooms));
+cmd({ op: 'tx', slot: 3 });
+const tx3 = V.stats().tx;
+cmd({ op: 'tx', slot: -1 });
+cmd({ op: 'tx', slot: 4 });
+const tx4 = V.stats().tx;
+cmd({ op: 'tx', slot: -1 });
+cmd({ op: 'pttMouse', btn: 4, slot: 3 });
+mouse('mousedown', 4);
+const txMouse3 = V.stats().tx;
+mouse('mouseup', 4);
+cmd({ op: 'pttMouse', btn: 0, slot: -1 });
+check('push-to-talk key and mouse button on slot 3 (4 is clamped to 3)', tx3 === 3 && tx4 === 3 && txMouse3 === 3 && V.stats().tx === -1, `key ${tx3}, key 4 -> ${tx4}, mouse ${txMouse3}`);
+cmd({ op: 'svol', slot: 3, x: 0.4 });
+cmd({ op: 'svol', slot: 4, x: 0.1 });
+check('svol takes slot 3 (and no slot 4)', JSON.stringify(V.stats().slots) === '[1,1,1,0.4]', JSON.stringify(V.stats().slots));
+const fBefore = V.stats().down.f;
+ws4.bin(audio(3, 12, 1, 20)); // slot 3
+ws4.bin([0x02, 2, ...entry(3 | 4, 12, 2, 20), ...entry(3, 13, 1, 30)]);
+await tick();
+check('frames on slot 3 are received (AUDIO and BUNDLE), speaking edges as any slot', V.stats().down.f - fBefore === 3 && events().some((e) => e.t === 'spk' && e.a === 12 && e.b === 1) && events().some((e) => e.t === 'spk' && e.a === 12 && e.b === 0) && events().some((e) => e.t === 'spk' && e.a === 13 && e.b === 1), `+${V.stats().down.f - fBefore} frames`);
+cmd({ op: 'spatial', sid: 12, g: 0.25, p: -0.5 });
+cmd({ op: 'spatial', sid: 13, g: 7, p: 9 });
+cmd({ op: 'spatial', sid: 14, g: -1, p: -9 });
+cmd({ op: 'spatial', sid: 15, g: 'x', p: null });
+const sp = V.stats().spatial;
+check('spatial: kept per sid, gain clamped to 0..1 and pan to -1..1 (defaults 1 and 0)', JSON.stringify(sp) === JSON.stringify({ 12: [0.25, -0.5], 13: [1, 1], 14: [0, -1], 15: [1, 0] }), JSON.stringify(sp));
+const nSp = events().length;
+cmd({ op: 'spatial', sid: 12, g: 0.25, p: -0.5 }); // the same again: nothing
+await tick();
+check('spatial: no event comes back, and a repeated value changes nothing', events().length === nSp && V.stats().spatial[12][0] === 0.25);
+ws4.text('{"t":"left","room":"near","why":"leave"}');
+await tick();
+check('left near: slot 3 has no room again', V.stats().rooms[3] === null);
+
 // a game thread that stops polling: its inbox refuses batches
 await tick();
 const nStall = events().length;
@@ -320,6 +361,7 @@ ws4.drop(1006);
 await tick();
 check('...after which the old socket says nothing', events().length === nEnd, `+${events().length - nEnd}`);
 check('...and the newest mic state was kept through it', tail.some((e) => e.t === 'mic'), JSON.stringify(tail.map((e) => e.t)));
+check('...and the near speakers\' places went with the connection (sids are per session)', Object.keys(V.stats().spatial).length === 0 && V.stats().rooms.every((r) => r === null), JSON.stringify(V.stats().spatial));
 check('the engine did not reconnect by itself', sockets.length === 4);
 
 // stats goes through the same path
@@ -329,7 +371,7 @@ const stats = events().find((e) => e.t === 'stats');
 check('stats: a JSON snapshot', stats && JSON.parse(stats.s).v === 1);
 
 // garbage commands do nothing
-for (const junk of ['', '{', 'null', '[]', '{"op":5}', '{"op":"nope"}', '{"op":"tx","slot":"x"}', '{"op":"uvol","sid":null,"x":"nan"}']) V.cmd(junk);
+for (const junk of ['', '{', 'null', '[]', '{"op":5}', '{"op":"nope"}', '{"op":"tx","slot":"x"}', '{"op":"uvol","sid":null,"x":"nan"}', '{"op":"spatial"}', '{"op":"spatial","sid":"a","g":{},"p":[]}']) V.cmd(junk);
 await tick();
 check('malformed commands are ignored', true);
 

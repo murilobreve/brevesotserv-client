@@ -3,7 +3,7 @@
 // readWav takes RIFF/WAVE PCM 16-bit or IEEE float 32-bit, plain or
 // WAVE_FORMAT_EXTENSIBLE (what OpenAL Soft's wave backend writes), any
 // channel count (channel 0 is kept) and any rate (linear resampling to
-// 48 kHz). A data chunk whose size was never written (0 or 0xFFFFFFFF, a
+// 48 kHz); readWavChannels keeps every channel (the stereo pan test). A data chunk whose size was never written (0 or 0xFFFFFFFF, a
 // writer that did not close) is read to the end of the file.
 #pragma once
 
@@ -26,7 +26,8 @@ namespace wavio
     inline uint32_t le32(const uint8_t* p) { return p[0] | (p[1] << 8) | (p[2] << 16) | (static_cast<uint32_t>(p[3]) << 24); }
     inline uint16_t le16(const uint8_t* p) { return static_cast<uint16_t>(p[0] | (p[1] << 8)); }
 
-    inline bool readWav(const std::string& path, Audio& out, std::string& err)
+    // every channel of a WAV file at its own rate, as floats in -1..1
+    inline bool readWavChannels(const std::string& path, std::vector<std::vector<float>>& chans, int& rateOut, std::string& err)
     {
         FILE* f = std::fopen(path.c_str(), "rb");
         if (!f) {
@@ -69,21 +70,36 @@ namespace wavio
             err = "unsupported WAV (need PCM16 or float32)";
             return false;
         }
-        const size_t frameBytes = static_cast<size_t>(channels) * (bits / 8);
+        const size_t sampleBytes = static_cast<size_t>(bits / 8);
+        const size_t frameBytes = static_cast<size_t>(channels) * sampleBytes;
         const size_t frames = dataLen / frameBytes;
-        std::vector<float> mono(frames);
+        chans.assign(static_cast<size_t>(channels), std::vector<float>(frames));
         for (size_t i = 0; i < frames; ++i) {
-            const uint8_t* p = data + i * frameBytes;
-            if (format == 1) {
-                mono[i] = static_cast<int16_t>(le16(p)) / 32768.0f;
-            } else {
-                float v;
-                std::memcpy(&v, p, 4);
-                mono[i] = v;
+            for (int k = 0; k < channels; ++k) {
+                const uint8_t* p = data + i * frameBytes + static_cast<size_t>(k) * sampleBytes;
+                if (format == 1) {
+                    chans[static_cast<size_t>(k)][i] = static_cast<int16_t>(le16(p)) / 32768.0f;
+                } else {
+                    float v;
+                    std::memcpy(&v, p, 4);
+                    chans[static_cast<size_t>(k)][i] = v;
+                }
             }
         }
+        rateOut = rate;
+        return true;
+    }
+
+    inline bool readWav(const std::string& path, Audio& out, std::string& err)
+    {
+        std::vector<std::vector<float>> chans;
+        int rate = 0;
+        if (!readWavChannels(path, chans, rate, err))
+            return false;
+        const std::vector<float>& mono = chans[0];
+        const size_t frames = mono.size();
         out.rate = rate;
-        out.channels = channels;
+        out.channels = static_cast<int>(chans.size());
         out.pcm.clear();
         if (rate == 48000) {
             out.pcm.reserve(frames);

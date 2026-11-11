@@ -20,6 +20,9 @@
  *   spurt is over: Silence once, then Idle until the next frame.
  * - Late frames (behind the play position) and duplicates are dropped; a
  *   frame 32 or more ahead is a new spurt after a gap we did not see end.
+ * - Each frame keeps its room slot: pull() says the slot of what it hands
+ *   out (a concealment: the slot of the frame before), so the gains follow
+ *   the frame being played, not the last one that arrived.
  *
  * Standard library only.
  */
@@ -51,6 +54,7 @@ public:
         const uint8_t* data = nullptr; // valid until the next push or pull
         size_t size = 0;
         int samples = 0;
+        int slot = 0; // the room slot of this frame (0-3)
     };
 
     enum class Push : uint8_t
@@ -76,8 +80,9 @@ public:
 
     explicit JitterBuffer(int leadMs = 0) : m_leadMs(leadMs) {}
 
-    // samples: the packet's duration at 48 kHz (opus_packet_get_nb_samples)
-    Push push(uint8_t seq, bool end, const uint8_t* data, size_t size, int samples, int64_t nowMs);
+    // samples: the packet's duration at 48 kHz (opus_packet_get_nb_samples);
+    // room: its room slot (voiceproto flags bits 0-1)
+    Push push(uint8_t seq, bool end, const uint8_t* data, size_t size, int samples, int64_t nowMs, int room = 0);
     Out pull(int64_t nowMs);
 
     void reset();
@@ -111,6 +116,7 @@ private:
         bool end = false;
         uint8_t seq = 0;
         uint8_t size = 0;
+        uint8_t room = 0; // the frame's slot
         uint16_t samples = 0;
         uint8_t data[kMaxBytes] = {};
     };
@@ -138,6 +144,7 @@ private:
     int64_t m_lastAt = 0;
     bool m_hasLast = false; // a frame of this spurt was played
     int m_lastSamples = 1920;
+    int m_lastSlot = 0;
     int m_miss = 0;
     bool m_endAfter = false; // the frame played last carried END
     bool m_hasEnd = false; // an END frame is buffered

@@ -53,6 +53,10 @@ namespace
     constexpr int kRate = 48000;
     constexpr int kTestSid = 65536; // outside the relay's u16 sids
     constexpr int kTestSlot = 2;
+    constexpr int kSlots = voiceproto::kSlots; // 0 party, 1 guild, 2 public, 3 near
+    constexpr int kNearSlot = 3;
+    constexpr int64_t kPlaceRampMs = 50; // a near speaker's new place: there in this long
+    constexpr int kMaxQueued = 8; // buffers one stream holds in OpenAL (4) or the harness (4)
     constexpr size_t kMaxSpeakers = 8; // decoders and OpenAL streams
     constexpr int kLeadBuffers = 2; // decoded frames queued in OpenAL per speaker
     constexpr int64_t kSpeakerIdleMs = 10000; // decoder freed
@@ -231,9 +235,28 @@ namespace
         JitterBuffer jb{ 40 };
         OpusDec dec;
         int stream = -1;
-        int slot = 0;
         int64_t lastAt = 0;
         bool queuedSpurt = false; // something went to OpenAL in this spurt
+        // the slots of the buffers queued in OpenAL, the one playing first:
+        // the gain and the place follow the frame being heard (frames carry
+        // their slot), not the last one that arrived
+        uint8_t queued[kMaxQueued] = {};
+        int queuedN = 0;
+        int playSlot = 0; // the slot of the buffer playing now (or the last one)
+    };
+
+    // a near speaker's place (setUserSpatial), for its slot-3 frames: the
+    // target, and what is heard now, moving to it in kPlaceRampMs
+    struct Place
+    {
+        float gain = 1.0f;
+        float pan = 0.0f;
+        float curGain = 1.0f;
+        float curPan = 0.0f;
+        float fromGain = 1.0f;
+        float fromPan = 0.0f;
+        int64_t rampAt = 0;
+        bool ramp = false;
     };
 
     struct SpeakingEdge
@@ -339,7 +362,7 @@ namespace
 
         void setTransmit(const int slot) override
         {
-            const int k = slot >= 0 && slot <= 2 ? slot : -1;
+            const int k = slot >= 0 && slot < kSlots ? slot : -1;
             post([this, k] { m_keyTx = k >= 0 && (m_deaf || m_smute) ? -1 : k; });
         }
 
@@ -436,13 +459,22 @@ namespace
 
         void setSlotVolume(const int slot, const float volume) override
         {
-            if (slot < 0 || slot > 2)
+            if (slot < 0 || slot >= kSlots)
                 return;
             const float g = clampGain(volume, 1.0f);
             if (m_ui.slots[slot] == g)
                 return;
             m_ui.slots[slot] = g;
             post([this, slot, g] { m_slotGain[slot] = g; });
+        }
+
+        void setUserSpatial(const int sid, const float gain, const float pan) override
+        {
+            // no change check here: forgotten with each connection, as the
+            // user volumes (Lua sends only changes, a few a second)
+            const float g = std::isfinite(gain) ? std::clamp(gain, 0.0f, 1.0f) : 1.0f;
+            const float p = std::isfinite(pan) ? std::clamp(pan, -1.0f, 1.0f) : 0.0f;
+            post([this, sid, g, p] { placeSpeaker(sid, g, p, nowMs()); });
         }
 
         void setDeafened(const bool on) override
@@ -545,7 +577,7 @@ namespace
             std::string outDev;
             float inGain = NAN;
             float outVol = NAN;
-            float slots[3] = { NAN, NAN, NAN };
+            float slots[kSlots] = { NAN, NAN, NAN, NAN };
             int deaf = -1;
             int smute = -1;
             int meter = -1;
@@ -737,7 +769,9 @@ namespace
 
         bool connOpen() const { return m_conn && m_conn->open; }
 
-        bool hasRoom() const { return !m_rooms[0].empty() || !m_rooms[1].empty() || !m_rooms[2].empty(); }
+        // voice activation never talks in near (slot 3) by itself: with only
+        // near joined it would send to strangers on screen without a key
+        bool hasVadRoom() const { return !m_rooms[0].empty() || !m_rooms[1].empty() || !m_rooms[2].empty(); }
 
         bool canSend() const { return connOpen() && m_sid != 0 && !m_deaf && !m_smute; }
 
@@ -888,6 +922,7 @@ namespace
                 r.clear();
             m_maxOpus = voiceproto::kMaxOpus;
             m_users.clear(); // sids belong to one relay session; the game sends them again
+            m_places.clear();
             m_keyTx = -1;
             speakersOff();
             for (auto& [sid, sp] : m_speakers) {
@@ -1047,7 +1082,7 @@ namespace
                     return;
                 const int k = slot->get<int>();
                 const auto room = m.find(type == "roster" ? "room" : "to");
-                if (k >= 0 && k <= 2 && room != m.end() && room->is_string())
+                if (k >= 0 && k < kSlots && room != m.end() && room->is_string())
                     m_rooms[k] = room->get<std::string>();
             } else if (type == "left") {
                 forgetRoom(m.value("room", std::string()));
@@ -1118,10 +1153,9 @@ namespace
             Speaker* sp = speaker(sid, t);
             if (!sp)
                 return;
-            sp->slot = slot;
             sp->lastAt = t;
             sp->jb.setLeadMs((samples + 24) / 48); // one frame: OpenAL holds two
-            sp->jb.push(seq, end, data, len, samples, t);
+            sp->jb.push(seq, end, data, len, samples, t, slot);
             m_outActiveAt = t;
         }
 
@@ -1227,8 +1261,81 @@ namespace
                 return 0.0f;
             const auto it = m_users.find(sid);
             const float user = it != m_users.end() ? it->second : 1.0f;
-            const float room = slot >= 0 && slot <= 2 ? m_slotGain[slot] : 1.0f;
+            const float room = slot >= 0 && slot < kSlots ? m_slotGain[slot] : 1.0f;
             return user * room * m_outVol;
+        }
+
+        // a near speaker's new place; heard now on slot 3: there in
+        // kPlaceRampMs (each playback tick moves it, OpenAL fades each step),
+        // else at once (its next slot-3 frame starts there)
+        void placeSpeaker(const int sid, const float gain, const float pan, const int64_t t)
+        {
+            const auto [it, fresh] = m_places.try_emplace(sid);
+            Place& pl = it->second;
+            if (!fresh && pl.gain == gain && pl.pan == pan)
+                return;
+            pl.gain = gain;
+            pl.pan = pan;
+            const auto sp = m_speakers.find(sid);
+            if (sp != m_speakers.end() && sp->second->queuedSpurt && sp->second->playSlot == kNearSlot) {
+                advancePlace(pl, t); // from where it is heard now
+                pl.fromGain = pl.curGain;
+                pl.fromPan = pl.curPan;
+                pl.rampAt = t;
+                pl.ramp = true;
+            } else {
+                pl.curGain = gain;
+                pl.curPan = pan;
+                pl.ramp = false;
+            }
+        }
+
+        static void advancePlace(Place& pl, const int64_t t)
+        {
+            if (!pl.ramp)
+                return;
+            const float f = std::clamp(static_cast<float>(t - pl.rampAt) / static_cast<float>(kPlaceRampMs), 0.0f, 1.0f);
+            if (f >= 1.0f) {
+                pl.curGain = pl.gain;
+                pl.curPan = pl.pan;
+                pl.ramp = false;
+                return;
+            }
+            pl.curGain = pl.fromGain + (pl.gain - pl.fromGain) * f;
+            pl.curPan = pl.fromPan + (pl.pan - pl.fromPan) * f;
+        }
+
+        // the gain and the place of what the stream plays now, a frame of
+        // `slot`: centred at the listener, except slot 3 of a speaker with a
+        // place. Base gains above 1 are on the samples (queue time).
+        void hear(const Speaker& sp, const int sid, const int slot, const int64_t t)
+        {
+            const float g = (std::min)(1.0f, gainOf(sid, slot));
+            if (slot == kNearSlot && !m_places.empty()) {
+                const auto it = m_places.find(sid);
+                if (it != m_places.end()) {
+                    advancePlace(it->second, t);
+                    m_out->setGain(sp.stream, g * it->second.curGain);
+                    m_out->setPan(sp.stream, true, it->second.curPan);
+                    return;
+                }
+            }
+            m_out->setGain(sp.stream, g);
+            m_out->setPan(sp.stream, false, 0.0f);
+        }
+
+        // the buffers OpenAL finished playing (pending() left `pend`) leave
+        // the front of the stream's list; the first one left is heard now
+        static void played(Speaker& sp, const int pend)
+        {
+            const int done = sp.queuedN - (std::max)(0, pend);
+            if (done > 0) {
+                for (int i = done; i < sp.queuedN; ++i)
+                    sp.queued[i - done] = sp.queued[i];
+                sp.queuedN -= done;
+            }
+            if (sp.queuedN > 0)
+                sp.playSlot = sp.queued[0];
         }
 
         bool openOutput(const int64_t t)
@@ -1256,6 +1363,7 @@ namespace
             for (auto& [sid, sp] : m_speakers) {
                 sp->stream = -1; // their sources go with the device
                 sp->queuedSpurt = false;
+                sp->queuedN = 0;
             }
             m_out->close();
         }
@@ -1269,6 +1377,7 @@ namespace
                     break;
             }
             sp.queuedSpurt = false;
+            sp.queuedN = 0;
         }
 
         void playbackTick(const int64_t t)
@@ -1290,21 +1399,22 @@ namespace
                 sp.jb.maintain(t); // the 400 ms cap also while OpenAL is full
                 if (sp.stream < 0) {
                     sp.stream = m_out->openStream();
+                    sp.queuedN = 0;
                     if (sp.stream < 0) {
                         discard(sp, t);
                         continue;
                     }
                 }
-                const float g = gainOf(sid, sp.slot);
-                m_out->setGain(sp.stream, (std::min)(1.0f, g));
-                const float boost = g > 1.0f ? g : 1.0f; // above 1: on the samples, saturating
                 int pend = m_out->pending(sp.stream);
+                played(sp, pend);
                 if (pend == 0 && sp.queuedSpurt) {
                     if (sp.jb.playing())
                         ++m_n.underruns;
                     else if (sp.jb.idle())
                         sp.queuedSpurt = false; // the spurt played out
                 }
+                if (sp.queuedN > 0)
+                    hear(sp, sid, sp.playSlot, t);
                 while (pend < kLeadBuffers && m_out->canQueue(sp.stream)) {
                     const auto r = sp.jb.pull(t);
                     int n = 0;
@@ -1324,12 +1434,20 @@ namespace
                     }
                     if (n <= 0)
                         break;
+                    const float boost = gainOf(sid, r.slot); // above 1: on the samples, saturating
                     if (boost > 1.0f) {
                         for (int i = 0; i < n; ++i)
                             pcm[i] = saturate(pcm[i] * boost);
                     }
+                    if (sp.queuedN == 0) {
+                        // nothing queued: this one plays at once
+                        sp.playSlot = r.slot;
+                        hear(sp, sid, r.slot, t);
+                    }
                     if (!m_out->queue(sp.stream, pcm, n))
                         break;
+                    if (sp.queuedN < kMaxQueued)
+                        sp.queued[sp.queuedN++] = static_cast<uint8_t>(r.slot);
                     sp.queuedSpurt = true;
                     ++pend;
                     m_outActiveAt = t;
@@ -1352,12 +1470,14 @@ namespace
 
         // voice activation listens only while it could send: connected, in a
         // room, not self-muted (in no room every spurt would be dropped)
-        bool vadArmed() const { return m_vad && !m_smute && connOpen() && hasRoom(); }
+        bool vadArmed() const { return m_vad && !m_smute && connOpen() && hasVadRoom(); }
 
         bool needMic() const { return effTx() >= 0 || m_test || m_meter || vadArmed(); }
 
         bool capturing() const { return m_gate || needMic(); }
 
+        // voice activation talks in the party room, else the first room
+        // joined (guild, public); never near, which needs its key
         int vadSlot() const
         {
             for (int i = 0; i < 3; ++i) {
@@ -1534,7 +1654,7 @@ namespace
             const double db = dbOf(sum, n);
             const int hang = (std::max)(1, static_cast<int>(std::lround(300.0 * kRate / n / 1000.0)));
             const bool muted = m_smute || m_deaf;
-            if (m_vad && connOpen() && hasRoom() && !muted) {
+            if (m_vad && connOpen() && hasVadRoom() && !muted) {
                 if (db >= m_vadDb) {
                     m_vadOn = true;
                     m_hang = hang;
@@ -1614,7 +1734,7 @@ namespace
                          const bool first, const int64_t t)
         {
             bool net = netWanted && canSend();
-            if (net && (slot < 0 || slot > 2 || m_rooms[slot].empty())) {
+            if (net && (slot < 0 || slot >= kSlots || m_rooms[slot].empty())) {
                 net = false; // no room on that slot: the relay would drop it
                 ++m_n.upNoRoom;
             }
@@ -1815,6 +1935,8 @@ namespace
                 { "tls", m_tlsUsed },
                 { "tlsRetries", n.tlsRetries },
                 { "decoders", m_speakers.size() },
+                { "slots", { m_slotGain[0], m_slotGain[1], m_slotGain[2], m_slotGain[3] } },
+                { "spatial", m_places.size() },
                 { "speaking", speakingList },
                 { "mix", { { "late", mix.late }, { "conceal", mix.conceal }, { "trimmed", mix.trimmed }, { "played", mix.played },
                            { "spurts", mix.spurts }, { "dup", mix.dup }, { "resets", mix.resets }, { "speakers", m_speakers.size() },
@@ -1859,7 +1981,8 @@ namespace
         float m_inGain = 1.0f;
         float m_outVol = 1.0f;
         std::map<int, float> m_users;
-        float m_slotGain[3] = { 1.0f, 1.0f, 1.0f };
+        std::map<int, Place> m_places; // near speakers' places (setUserSpatial)
+        float m_slotGain[kSlots] = { 1.0f, 1.0f, 1.0f, 1.0f };
         bool m_deaf = false;
         bool m_smute = false;
         bool m_meter = false;
@@ -1874,7 +1997,7 @@ namespace
         bool m_preferSystem = false;
         std::string m_tlsUsed;
         int m_sid = 0;
-        std::string m_rooms[3];
+        std::string m_rooms[kSlots]; // party, guild, public, near
         size_t m_maxOpus = voiceproto::kMaxOpus;
         uint8_t m_seq = 0;
 

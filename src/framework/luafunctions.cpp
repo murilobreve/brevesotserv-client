@@ -1169,6 +1169,7 @@ void Application::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_voice", "setOutputVolume", &VoiceManager::setOutputVolume, &g_voice);
     g_lua.bindSingletonFunction("g_voice", "setUserVolume", &VoiceManager::setUserVolume, &g_voice);
     g_lua.bindSingletonFunction("g_voice", "setSlotVolume", &VoiceManager::setSlotVolume, &g_voice);
+    g_lua.bindSingletonFunction("g_voice", "setUserSpatial", &VoiceManager::setUserSpatial, &g_voice);
     g_lua.bindSingletonFunction("g_voice", "setDeafened", &VoiceManager::setDeafened, &g_voice);
     g_lua.bindSingletonFunction("g_voice", "setSelfMuted", &VoiceManager::setSelfMuted, &g_voice);
     g_lua.bindSingletonFunction("g_voice", "setMeter", &VoiceManager::setMeter, &g_voice);

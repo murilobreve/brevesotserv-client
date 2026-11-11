@@ -39,8 +39,8 @@ result() { # name ok detail
     if [ "$2" = 1 ]; then PASS=$((PASS + 1)); say "PASS  $1  $3"; else FAIL=$((FAIL + 1)); say "FAIL  $1  $3"; fi
 }
 tok() { "$MINT" -key "$KEY" -claims "$1"; }
-conf() { # name wav -> prints the env for OpenAL Soft's wave backend
-    printf '[general]\ndrivers = wave\nchannels = mono\nsample-type = int16\nfrequency = 48000\n[wave]\nfile = %s\n' "$2" > "$WORK/$1.conf"
+conf() { # name wav [channels] -> prints the env for OpenAL Soft's wave backend
+    printf '[general]\ndrivers = wave\nchannels = %s\nsample-type = int16\nfrequency = 48000\n[wave]\nfile = %s\n' "${3:-mono}" "$2" > "$WORK/$1.conf"
     printf 'ALSOFT_DRIVERS=wave ALSOFT_CONF=%s' "$WORK/$1.conf"
 }
 summary() { grep '"summary":"session"' "$1" | tail -1; }
@@ -257,6 +257,65 @@ r2=$(summary "$WORK/preset-recv.out" | py "import json,sys; d=json.loads(sys.std
 set -- $r $r2
 result "preset change while talking: same encoder to the end of the spurt, new one on the next" $([ "$1" = 1 ] && [ "$2" = 2 ] && [ "$4" -gt $(($3 + 20)) ] && [ "$5" = 4 ] && [ "$7" = "$6" ] && [ "$8" = 0 ] && [ "$9" = 2 ] && sanitized "$WORK/preset-send.out" && echo 1 || echo 0) "encoders made by 3-5 s: $1, at the end: $2; bytes/frame first spurt $3, second $4; talk edges $5; sent $6, heard $7, decErr $8, END $9"
 
+# 5g. the near room (slot 3) through the real OpenAL output, stereo: a stand-in relay
+# on PORT+4 sends tone spurts on slots 0 and 3 while the harness gives the speaker
+# places (setUserSpatial); the relay of this run may not have the near room yet
+env $(conf near "$WORK/out-near.wav" stereo) "$BIN" --spatial-test --out "$WORK/out-near.wav" --port $((PORT + 4)) --quiet > "$WORK/near.out" 2>&1
+hx=$?
+n=$(py "import json,sys
+c=f=0
+for l in open('$WORK/near.out'):
+    try: j=json.loads(l)
+    except Exception: continue
+    if 'check' in j:
+        c+=1; f+= not j['ok']
+        print('      %s %s  %s' % ('ok  ' if j['ok'] else 'FAIL', j['check'], j.get('detail','')), file=sys.stderr)
+print(c, f)" 2>"$WORK/near.checks")
+cat "$WORK/near.checks"
+set -- $n
+result "near (slot 3): pan -1/0/+1, gain, slot 0 untouched, 50 ms ramp, slot change heard with its frames" $([ $hx = 0 ] && [ "${1:-0}" -ge 9 ] && [ "${2:-1}" = 0 ] && sanitized "$WORK/near.out" && echo 1 || echo 0) "$1 checks, $2 failed (stereo OpenAL output, wave backend)"
+
+# 5h. the near room through the relay, when it has it (the welcome's "near"): native
+# -> native on slot 3, each listing the other's creature; the listener places the
+# speaker hard left (stereo OpenAL output); a bystander lists the speaker, who
+# does not list it back: it hears nothing
+env $(conf nearrelay "$WORK/out-nearrelay.wav" stereo) "$BIN" --url $URL --tok "$(tok '{"a":41,"c":321,"i":3021,"n":"PertoL","lv":60}')" \
+    --room near --near-cids 3022 --place 1,-1 --recv "$WORK/out-nearrelay.wav" --dur 10 --quiet > "$WORK/nearrelay-recv.out" 2>&1 &
+lp=$!
+"$BIN" --url $URL --tok "$(tok '{"a":43,"c":323,"i":3023,"n":"PertoX","lv":60}')" --room near --near-cids 3022 \
+    --recv "$WORK/out-nearrelay-x.wav" --wav-out --dur 10 --quiet > "$WORK/nearrelay-x.out" 2>&1 &
+xp=$!
+sleep 1.2
+"$BIN" --url $URL --tok "$(tok '{"a":42,"c":322,"i":3022,"n":"PertoT","lv":60}')" --room near --near-cids 3021 --slot 3 \
+    --send "$WAV" --dur 7 --quiet > "$WORK/nearrelay-send.out" 2>&1
+SEND_EXIT=$?
+wait $lp
+RECV_EXIT=$?
+wait $xp
+xf=$(summary "$WORK/nearrelay-x.out" | py "import json,sys; print(json.loads(sys.stdin.read())['stats']['down']['f'])")
+r=$(summary "$WORK/nearrelay-recv.out" | py "import json,sys,wave,array,math
+j=json.loads(sys.stdin.read())
+if not j['nearOffered']:
+    print('skip'); sys.exit()
+s=j['stats']; d=s['down']; m=s['mix']
+L=R=n=0.0
+try:
+    w=wave.open('$WORK/out-nearrelay.wav'); a=array.array('h', w.readframes(w.getnframes())); ch=w.getnchannels()
+    l=a[0::2]; r=a[1::2]
+    for i in range(0, len(l)-4800, 4800):
+        pl=sum(x*x for x in l[i:i+4800])/4800.0; pr=sum(x*x for x in r[i:i+4800])/4800.0
+        if (pl+pr)/2 > (32768*0.01)**2: L+=pl; R+=pr; n+=1
+except Exception as e:
+    ch=0
+db=lambda p: 10*math.log10(p/n/32768/32768+1e-12) if n else -120
+print(1 if ch==2 and d['f']>=100 and m['played']>=d['f']-2 and n>=10 and db(L)-db(R)>20 and j['nearIn']>=1 and j['placedSid']>0 and '$xf'=='0' else 0,
+      'in near %d, got %d, played %d, decErr %d; %d loud windows: left %.1f dB, right %.1f dB; the bystander not listed back got $xf frames' % (j['nearIn'], d['f'], m['played'], d['decErr'], n, db(L), db(R)))")
+if [ "$r" = skip ]; then
+    say "SKIP  near through the relay: this relay has no near room (welcome without \"near\")"
+else
+    result "near through the relay: slot 3 heard only near, placed on the left (stereo OpenAL)" $([ $SEND_EXIT = 0 ] && [ $RECV_EXIT = 0 ] && [ "${r%% *}" = 1 ] && sanitized "$WORK/nearrelay-recv.out" && sanitized "$WORK/nearrelay-send.out" && echo 1 || echo 0) "${r#* }"
+fi
+
 # 6. injected loss and jitter (listener side) ---------------------------------------
 native_pair loss p:7:4 --loss 0.05 --jitter 60 --seed 7
 r=$(summary "$WORK/loss-recv.out" | py "import json,sys; s=json.loads(sys.stdin.read())['stats']; m=s['mix']; i=s['inject']; print(i['lost'], i['delayed'], m['played'], m['conceal'], m['late'], m['maxBuffered'], max(m['targets'].values()) if m['targets'] else 0, m['underruns'])")
@@ -309,6 +368,25 @@ if [ -n "$REL" ]; then
     done
     ok=$(py "import json; a=json.load(open('$WORK/rel-talk.json')); b=json.load(open('$WORK/rel-listen.json')); print(1 if (a['rssKb']-a['rssKbBefore'])<=5*1024 and (b['rssKb']-b['rssKbBefore'])<=5*1024 and a['cpuPctOfCore']<=5 and b['cpuPctOfCore']<=5 else 0)")
     result "release: RSS added by the engine <= 5 MB, CPU <= 5% of a core (talking / listening)" "$ok" "see the two lines above"
+    # listening to a near speaker with a place (stereo OpenAL) against the same frames
+    # on slot 0 with no place: the place adds no measurable work
+    for v in near plain; do
+        env $(conf rel-$v "$WORK/out-rel-$v.wav" stereo) "$REL" --spatial-test --out "$WORK/out-rel-$v.wav" --port $((PORT + 4)) --quiet $([ $v = plain ] && echo --plain) > "$WORK/rel-$v.out" 2>&1
+    done
+    r=$(py "import json
+bad=0
+def s(n):
+    global bad
+    out=None
+    for l in open('$WORK/rel-%s.out' % n):
+        try: j=json.loads(l)
+        except Exception: continue
+        if 'check' in j and not j['ok']: bad+=1
+        if j.get('summary')=='spatial': out=j
+    return out
+a=s('near'); b=s('plain')
+print(1 if a and b and not bad and a['cpuPctOfCore']<=5 and a['cpuPctOfCore']<=b['cpuPctOfCore']+0.5 else 0, 'near with places %.2f%%, the same frames on slot 0 %.2f%% of one core; RSS +%.1f / +%.1f MB; failed checks %d' % (a['cpuPctOfCore'], b['cpuPctOfCore'], (a['rssKb']-a['rssKbBefore'])/1024, (b['rssKb']-b['rssKbBefore'])/1024, bad) if a and b else 'no summary')")
+    result "release: listening on slot 3 with places costs what slot 0 does" "${r%% *}" "${r#* }"
 fi
 
 # 10. the browser engine ------------------------------------------------------------

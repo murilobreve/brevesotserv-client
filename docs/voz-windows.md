@@ -173,6 +173,18 @@ segunda pessoa (ou o client do navegador em `/play`) na mesma party.
     de 100 ms (o Windows pode demorar com fone Bluetooth). Se aparecerem com
     mais de uns 200 ms, mande para mim: nessa hora a voz dos outros pode
     falhar por um instante, e dá para mudar isso.
+15. **Perto de você (voz por proximidade):** com duas pessoas com fone, cada
+    uma com o personagem na tela da outra (a poucos passos, no mesmo andar),
+    as duas entram em "Perto de você" no painel e escolhem uma tecla para
+    "Falar perto" (ela não tem tecla padrão). Fale com essa tecla: a outra
+    pessoa ouve do lado em que o seu personagem está na tela dela (à
+    esquerda, no lado esquerdo do fone) e mais baixo quanto mais longe. Ande
+    de um lado para o outro falando: o som passa de um lado para o outro
+    aos poucos, sem estalo. Ao mesmo tempo, a party e a guild continuam no
+    meio e com o volume de sempre. Fora da tela um do outro (outro andar, ou
+    longe), não se ouvem pela "Perto de você". Com fone, o OpenAL pode ligar
+    o som 3D (HRTF) sozinho: o lado fica mais natural e não some de todo do
+    outro ouvido; nas caixas de som, quem está bem ao lado sai só de uma.
 
 Se algo falhar, mande: o que fez, o que esperava, e o arquivo de log do
 client (as linhas que começam com `voice:`).
@@ -212,8 +224,8 @@ os arquivos da voz sozinhos, com AddressSanitizer e UBSan):
 
 - testes de unidade do protocolo, do buffer de jitter (ordem trocada,
   perda com ocultação, teto de 400 ms, recomeço a cada fala, volta do número
-  de sequência) e do Opus: 42 de 42; ao todo, 25 de 25 testes do roteiro
-  automático;
+  de sequência, a sala de cada pacote) e do Opus: 45 de 45; ao todo, 28 de
+  28 testes do roteiro automático;
 - client nativo para `vozbot` e de volta, nativo para nativo, e nativo com o
   client do navegador (Chromium) nos dois sentidos, todos pelo relay local:
   todos os pacotes chegaram, sem buracos, e o volume da voz tocada pelo
@@ -230,8 +242,20 @@ os arquivos da voz sozinhos, com AddressSanitizer e UBSan):
 - TLS com o `cacert.pem` do client e com a lista do sistema como reserva;
 - fechar o jogo falando e ouvindo ao mesmo tempo: fecha em cerca de 10 ms,
   sem travar;
-- memória e CPU: +2,1 MB e 0,9% de um núcleo falando; +3,9 MB e 0,8%
-  ouvindo;
+- "Perto de você" (sala 3), com o OpenAL de verdade gravando em estéreo: a
+  voz de quem ainda não tem posição sai no meio, igual às outras salas; na
+  posição -1 sai só na esquerda (mais de 80 dB de diferença), na +1 só na
+  direita, com ganho 0,5 cai 6 dB; a mesma pessoa falando na party continua
+  no meio; mudar a posição com a pessoa falando leva uns 50 ms, sem estalo;
+  e, quando a mesma fala passa da sala 3 para a party, o lado muda junto com
+  o som (não antes). Pelo relay com a sala "near": dois clients nativos que
+  se veem se ouvem (com a posição), e um terceiro que o outro não vê não
+  ouve nada;
+- memória e CPU: +2,3 MB e 1,3% de um núcleo falando; +3,9 MB e 1,4%
+  ouvindo (nesta máquina, dividida com outros programas; antes da "Perto de
+  você", na mesma máquina: +2,1 MB e 1,35%, +3,8 MB e 1,36%); ouvir alguém
+  na "Perto de você" com posição custa o mesmo que ouvir na party (1,26% e
+  1,33% de um núcleo, +3,4 MB nos dois);
 - os arquivos da voz compilam com o compilador MinGW para Windows, com os
   cabeçalhos do Windows na frente (como no build do Visual Studio).
 

@@ -171,6 +171,12 @@ void VoiceManager::setSlotVolume(const int slot, const float volume)
         e->setSlotVolume(slot, volume);
 }
 
+void VoiceManager::setUserSpatial(const int sid, const float gain, const float pan)
+{
+    if (auto* e = engine())
+        e->setUserSpatial(sid, gain, pan);
+}
+
 void VoiceManager::setDeafened(const bool on)
 {
     if (auto* e = engine())

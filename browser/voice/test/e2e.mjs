@@ -1,6 +1,7 @@
 // End-to-end test of the browser voice engine (mythos-voice.js) against a
 // local mythos-voz relay, with headless Chromium, its fake microphone playing
-// fala.wav, two pages (A talks, B listens) and vozbots.
+// fala.wav, two pages (A talks, B listens) and vozbots. The near step (slot 3,
+// stereo places) runs only when the relay's welcome has "near".
 //
 //   node e2e.mjs [--only ptt,vad,...] [--json report.json]
 //
@@ -1088,6 +1089,57 @@ steps.denied = async () => {
   }
 };
 
+// the near room (slot 3), when the relay has it (the welcome's "near"): A and
+// B join near and list each other's creature on screen; A talks on slot 3
+// while B gives A a place (hard left, hard right, centred at gain 0.5), and
+// once on slot 0 for the reference. B's output per side: the probe's rms
+// (left) and rmsR (right) over each spurt, and its peak
+steps.near = async () => {
+  const has = await ev(B, () => !!(harness.welcome && harness.welcome.near));
+  if (!has) {
+    console.log('near: this relay has no near room (no "near" in the welcome): skipped');
+    report.measures.near = 'skipped: relay without near';
+    return;
+  }
+  const t0 = await pageNow(B);
+  await ctl(A, { t: 'join', room: 'near' });
+  await ctl(B, { t: 'join', room: 'near' });
+  for (const p of [A, B]) await p.page.waitForFunction((t) => harness.ctl.some((m) => m.t === 'roster' && m.room === 'near' && m.at >= t), t0, { timeout: 5000 });
+  await ctl(A, { t: 'near', c: [claimsB.i] });
+  await ctl(B, { t: 'near', c: [claimsA.i] });
+  const seen = await B.page.waitForFunction(([t, sid]) => harness.ctl.some((m) => m.t === 'in' && m.room === 'near' && m.at >= t && JSON.stringify(m).includes(String(sid))), [t0, A.sid], { timeout: 5000 }).then(() => true, () => false);
+  check('near: A and B see each other (in, room near)', seen, `B saw A in near: ${seen}`);
+  const rooms = await ev(A, () => MythosVoice.stats().rooms);
+  check('near: the engine tracks the near room on slot 3', rooms[3] === 'near', JSON.stringify(rooms));
+  await cmd(B, { op: 'probe', on: true });
+  const spurt = async (slot, place) => {
+    if (place) await cmd(B, { op: 'spatial', sid: A.sid, g: place[0], p: place[1] });
+    await sleep(300);
+    await fresh(B); // clears B's level window
+    await cmd(A, { op: 'tx', slot });
+    await sleep(2200);
+    await cmd(A, { op: 'tx', slot: -1 });
+    await sleep(500);
+    const m = (await fresh(B)).mix || {};
+    return { l: r1(m.rms), r: r1(m.rmsR), peak: m.peak };
+  };
+  const ref = await spurt(0, null);
+  const left = await spurt(3, [1, -1]);
+  const right = await spurt(3, [1, 1]);
+  const half = await spurt(3, [0.5, 0]);
+  report.measures.near = { ref, left, right, half };
+  const db = (x) => r1(20 * Math.log10(x));
+  check('near: slot 0 reference centred on B', ref.l > -45 && Math.abs(ref.l - ref.r) < 0.5, JSON.stringify(ref));
+  check('near: A on slot 3 placed hard left: B hears it on the left', left.l > -45 && left.l - left.r > 20, JSON.stringify(left));
+  check('near: placed hard right: on the right', right.r > -45 && right.r - right.l > 20, JSON.stringify(right));
+  check('near: centred at gain 0.5: both sides, 6 dB down (peak)', Math.abs(half.l - half.r) < 0.5 && Math.abs(db(half.peak / ref.peak) + 6) < 2, `${JSON.stringify(half)}, peak ${db(half.peak / ref.peak)} dB vs the reference`);
+  await cmd(B, { op: 'probe', on: false });
+  await cmd(B, { op: 'spatial', sid: A.sid, g: 1, p: 0 });
+  await ctl(A, { t: 'leave', room: 'near' });
+  await ctl(B, { t: 'leave', room: 'near' });
+  await sleep(300);
+};
+
 // --- run ---------------------------------------------------------------------
 
 let work;
@@ -1103,7 +1155,7 @@ async function main() {
   await startRelay();
   let browser;
   try {
-    const order = ['ptt', 'vad', 'smute', 'mute', 'deaf', 'blur', 'test', 'prefs', 'eco', 'lastn', 'cpu', 'wake', 'asleep', 'vadroom', 'devices', 'meterperm', 'encfail', 'gesture', 'restart'];
+    const order = ['ptt', 'near', 'vad', 'smute', 'mute', 'deaf', 'blur', 'test', 'prefs', 'eco', 'lastn', 'cpu', 'wake', 'asleep', 'vadroom', 'devices', 'meterperm', 'encfail', 'gesture', 'restart'];
     const todo = order.filter((s) => !only || only.has(s));
     if (todo.length) {
       browser = await chromium.launch({

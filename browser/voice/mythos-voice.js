@@ -10,9 +10,11 @@
  * Capture: microphone -> 'mv-capture' worklet (frames of 40 or 60 ms at
  * 48 kHz, the push-to-talk / voice-activation gate) -> AudioEncoder (Opus) ->
  * WebSocket [0x01][flags][seq][opus]. Playback: WebSocket -> one AudioDecoder
- * per speaker -> 'mv-mixer' worklet (jitter buffer per speaker, gains,
- * limiter) -> speakers. Wire format and jitter policy: protocol C, D, E and I
- * of the voice plan (tools/voz in the server repository).
+ * per speaker -> 'mv-mixer' worklet (jitter buffer per speaker, gains, the
+ * place of a proximity voice in the stereo field, limiter) -> speakers. Wire
+ * format and jitter policy: protocol C, D, E and I of the voice plan (tools/voz
+ * in the server repository). Room slots: 0 party, 1 guild/officers, 2
+ * public/stage/echo, 3 near (proximity, "Perto de voce").
  *
  * This file is pasted into index.html by src/CMakeLists.txt, inside the
  * emscripten shell, so it must never hold three braces in a row, the end of a
@@ -247,13 +249,21 @@
       }
     }
 
-    // per-speaker jitter buffers (protocol I), gains, the limiter
+    // per-speaker jitter buffers (protocol I), gains, the limiter. Stereo
+    // out: every voice is centred (left = right, as the mono mix it was),
+    // except a speaker's frames on slot 3 (near) once the game gave that
+    // speaker a place (spatial: gain 0-1, pan -1 left .. 1 right).
     class MvMixer extends AudioWorkletProcessor {
       constructor() {
         super();
         this.sp = new Map();
         this.users = new Map();
-        this.slots = [1, 1, 1];
+        // sid -> left/right gains of its slot-3 frames: target (tl, tr),
+        // current (cl, cr), per-sample step (dl, dr) for n more samples
+        this.spatial = new Map();
+        this.ramp = Math.max(1, Math.round(0.05 * sampleRate)); // 50 ms
+        this.sd = null; // one block of right - left of the voices with a place
+        this.slots = [1, 1, 1, 1];
         this.master = 1;
         this.deaf = false;
         this.probe = false;
@@ -261,6 +271,7 @@
         this.ms = IN / 1000; // samples per ms at 48 kHz
         this.st = { late: 0, conceal: 0, trimmed: 0, played: 0, spurts: 0, dup: 0, resets: 0 };
         this.psum = 0;
+        this.psumR = 0;
         this.pn = 0;
         this.peak = 0;
         this.quiet = 0;
@@ -290,25 +301,57 @@
           } else {
             this.users.set(m.sid, m.x);
           }
+        } else if (m.t === 'sp') {
+          this.place(m.sid, m.g, m.p);
         } else if (m.t === 'drop') {
           this.sp.delete(m.sid);
         } else if (m.t === 'reset') {
           this.sp.clear();
           this.users.clear();
+          this.spatial.clear();
         } else if (m.t === 's') {
           var st = this.st;
-          var out = { t: 's', late: st.late, conceal: st.conceal, trimmed: st.trimmed, played: st.played, spurts: st.spurts, dup: st.dup, resets: st.resets, speakers: this.sp.size, targets: {} };
+          var out = { t: 's', late: st.late, conceal: st.conceal, trimmed: st.trimmed, played: st.played, spurts: st.spurts, dup: st.dup, resets: st.resets, speakers: this.sp.size, spatial: this.spatial.size, targets: {} };
           this.sp.forEach(function (s, sid) {
             out.targets[sid] = Math.round(s.target / 48);
           });
           if (this.pn > 0) {
-            out.rms = dbOf(this.psum, this.pn);
+            out.rms = dbOf(this.psum, this.pn); // the left channel (both, for a centred voice)
+            out.rmsR = dbOf(this.psumR, this.pn);
             out.peak = this.peak;
             this.psum = 0;
+            this.psumR = 0;
             this.pn = 0;
             this.peak = 0;
           }
           this.port.postMessage(out);
+        }
+      }
+
+      // A speaker's place for its slot-3 frames (gain 0-1, pan -1..1, the
+      // page clamps them): constant power, scaled so the centre at gain 1 is
+      // exactly a centred voice (left = right = 1). Playing on slot 3 now:
+      // there in 50 ms; otherwise its next slot-3 frame starts there.
+      place(sid, g, p) {
+        var a = (p + 1) * Math.PI / 4;
+        var tl = g * Math.SQRT2 * Math.cos(a);
+        var tr = g * Math.SQRT2 * Math.sin(a);
+        var z = this.spatial.get(sid);
+        if (!z) {
+          z = { tl: 1, tr: 1, cl: 1, cr: 1, dl: 0, dr: 0, n: 0 };
+          this.spatial.set(sid, z);
+        }
+        z.tl = tl;
+        z.tr = tr;
+        var s = this.sp.get(sid);
+        if (s && s.state === 2 && s.slot === 3) {
+          z.n = this.ramp;
+          z.dl = (tl - z.cl) / z.n;
+          z.dr = (tr - z.cr) / z.n;
+        } else {
+          z.cl = tl;
+          z.cr = tr;
+          z.n = 0;
         }
       }
 
@@ -341,7 +384,6 @@
         var now = this.clock();
         var s = this.speaker(m.sid);
         var len = m.pcm.length;
-        s.slot = m.slot;
         if (s.state === 0) {
           s.state = 1; // buffering
           s.next = m.seq;
@@ -377,7 +419,8 @@
           this.st.dup++;
           return;
         }
-        s.frames[m.seq] = { pcm: m.pcm, end: m.end };
+        // each frame keeps its slot: the gains follow the frame being played
+        s.frames[m.seq] = { pcm: m.pcm, end: m.end, slot: m.slot };
         s.count++;
         s.buffered += len;
         s.len = len;
@@ -417,6 +460,7 @@
           s.pos = 0;
           s.miss = 0;
           s.endAfter = !!f.end;
+          s.slot = f.slot; // a concealment keeps the slot of the frame before
           this.st.played++;
           return true;
         }
@@ -450,14 +494,103 @@
         return true;
       }
 
+      // the current frame of s from out[i] on, at most to n: where it
+      // stopped. Mixed into out, the left channel (copied to the right once
+      // the block is mixed); z: the speaker's place (a slot-3 frame), its
+      // left gain into out and right - left into sd
+      run(s, z, g, out, sd, i, n) {
+        var cur = s.cur;
+        var len = cur.length;
+        var p = s.pos;
+        var step = this.step;
+        var a, b, v;
+        if (!z) {
+          if (step === 1) {
+            var take = Math.min(n - i, len - p);
+            for (var k = 0; k < take; k++) {
+              out[i + k] += cur[p + k] * g;
+            }
+            s.pos = p + take;
+            return i + take;
+          }
+          // 48 kHz frames into another context rate
+          while (i < n && p < len) {
+            a = Math.floor(p);
+            b = a + 1 < len ? cur[a + 1] : cur[a];
+            out[i++] += (cur[a] + (b - cur[a]) * (p - a)) * g;
+            p += step;
+          }
+          s.pos = p;
+          return i;
+        }
+        var cl = z.cl;
+        var cr = z.cr;
+        var rn = z.n;
+        if (step === 1 && rn === 0) {
+          // where it settled (nearly always): two gains, as tight as a centred voice
+          var cnt = Math.min(n - i, len - p);
+          var gl = g * cl;
+          var gd = g * (cr - cl);
+          for (var q = 0; q < cnt; q++) {
+            v = cur[p + q];
+            out[i + q] += v * gl;
+            sd[i + q] += v * gd;
+          }
+          s.pos = p + cnt;
+          return i + cnt;
+        }
+        while (i < n && p < len) {
+          if (step === 1) {
+            v = cur[p++] * g;
+          } else {
+            a = Math.floor(p);
+            b = a + 1 < len ? cur[a + 1] : cur[a];
+            v = (cur[a] + (b - cur[a]) * (p - a)) * g;
+            p += step;
+          }
+          if (rn > 0) {
+            // a new place: one linear step per sample, 50 ms in all
+            if (--rn === 0) {
+              cl = z.tl;
+              cr = z.tr;
+            } else {
+              cl += z.dl;
+              cr += z.dr;
+            }
+          }
+          out[i] += v * cl;
+          sd[i++] += v * (cr - cl);
+        }
+        z.cl = cl;
+        z.cr = cr;
+        z.n = rn;
+        s.pos = p;
+        return i;
+      }
+
+      // soft limiter: transparent up to 0.9, never past 1
+      limit(out, n) {
+        for (var i = 0; i < n; i++) {
+          var x = out[i];
+          if (x > 0.9) {
+            out[i] = 0.9 + 0.1 * Math.tanh((x - 0.9) * 10);
+          } else if (x < -0.9) {
+            out[i] = -0.9 - 0.1 * Math.tanh((-x - 0.9) * 10);
+          }
+        }
+      }
+
       process(inputs, outputs) {
-        var out = outputs[0] && outputs[0][0];
+        var o = outputs[0];
+        var out = o && o[0];
         if (!out) {
           return true;
         }
+        var outR = o[1]; // stereo (outputChannelCount [2]); absent: a mono node
         var n = out.length;
         var now = this.clock();
         var self = this;
+        var wide = false; // a voice with a place in this block: left and right differ
         if (this.sp.size > 0) {
           this.sp.forEach(function (s, sid) {
             if (s.state !== 0) {
@@ -474,58 +607,71 @@
             if (s.state !== 2) {
               return;
             }
-            var g = (self.users.has(sid) ? self.users.get(sid) : 1) * (self.slots[s.slot] === undefined ? 1 : self.slots[s.slot]) * self.master;
+            var ug = (self.users.has(sid) ? self.users.get(sid) : 1) * self.master;
             if (self.deaf && sid !== 65536) { // TEST_SID: the local test still plays
-              g = 0;
+              ug = 0;
             }
             var i = 0;
-            var step = self.step;
             while (i < n) {
               if (!s.cur || s.pos >= s.cur.length) {
                 if (!self.advance(s)) {
                   break;
                 }
               }
-              var cur = s.cur;
-              if (step === 1) {
-                var take = Math.min(n - i, cur.length - s.pos);
-                for (var k = 0; k < take; k++) {
-                  out[i + k] += cur[s.pos + k] * g;
+              // the gains of the frame being played (its own slot)
+              var sv = self.slots[s.slot];
+              var z = s.slot === 3 ? self.spatial.get(sid) : undefined;
+              if (z && !wide) {
+                wide = true;
+                if (!self.sd || self.sd.length !== n) {
+                  self.sd = new Float32Array(n);
+                } else {
+                  self.sd.fill(0);
                 }
-                i += take;
-                s.pos += take;
-              } else {
-                // 48 kHz frames into another context rate
-                var p = s.pos;
-                var a = Math.floor(p);
-                var b = a + 1 < cur.length ? cur[a + 1] : cur[a];
-                out[i++] += (cur[a] + (b - cur[a]) * (p - a)) * g;
-                s.pos = p + step;
               }
+              i = self.run(s, z, ug * (sv === undefined ? 1 : sv), out, self.sd, i, n);
             }
           });
-          // soft limiter: transparent up to 0.9, never past 1
-          for (var i = 0; i < n; i++) {
-            var x = out[i];
-            if (x > 0.9) {
-              out[i] = 0.9 + 0.1 * Math.tanh((x - 0.9) * 10);
-            } else if (x < -0.9) {
-              out[i] = -0.9 - 0.1 * Math.tanh((-x - 0.9) * 10);
+          if (wide) {
+            var sd = this.sd;
+            if (outR) {
+              for (var w = 0; w < n; w++) {
+                outR[w] = out[w] + sd[w];
+              }
+              this.limit(outR, n);
+            } else {
+              for (var m = 0; m < n; m++) {
+                out[m] += 0.5 * sd[m]; // the middle of left and right
+              }
+            }
+            this.limit(out, n);
+          } else {
+            this.limit(out, n);
+            if (outR) {
+              outR.set(out); // centred: the mono mix on both sides
             }
           }
         }
         if (this.probe) {
+          var r = outR || out;
           var sum = 0;
+          var sumR = 0;
           for (var j = 0; j < n; j++) {
             sum += out[j] * out[j];
+            sumR += r[j] * r[j];
             var ax = out[j] < 0 ? -out[j] : out[j];
+            var ay = r[j] < 0 ? -r[j] : r[j];
             if (ax > this.peak) {
               this.peak = ax;
             }
+            if (ay > this.peak) {
+              this.peak = ay;
+            }
           }
           this.psum += sum;
+          this.psumR += sumR;
           this.pn += n;
-          if (dbOf(sum, n) > ONSET_DB) {
+          if (dbOf((sum + sumR) / 2, n) > ONSET_DB) {
             if (this.quiet >= 0.3 * sampleRate) {
               this.port.postMessage({ t: 'o' });
             }
@@ -564,7 +710,8 @@
     inGain: 1,
     outVol: 1,
     users: new Map(),
-    slotGain: [1, 1, 1],
+    spatial: new Map(), // sid -> { g, p }: the place of its slot-3 (near) frames
+    slotGain: [1, 1, 1, 1],
     deaf: false,
     smute: false,
     meter: false,
@@ -578,7 +725,7 @@
     conn: null,
     connAt: -1e9, // the last time there was a connection (or a try)
     sid: 0,
-    rooms: [null, null, null],
+    rooms: [null, null, null, null], // per slot: party, guild, public, near
     seq: 0,
     maxOpus: MAX_OPUS, // the relay's limit (welcome lim.pl)
     // audio
@@ -954,7 +1101,8 @@
       if (st.ctx !== ctx) {
         throw new Error('stale context');
       }
-      var mixer = new AudioWorkletNode(ctx, 'mv-mixer', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1] });
+      // stereo: a proximity voice has a side; every other voice is centred
+      var mixer = new AudioWorkletNode(ctx, 'mv-mixer', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
       mixer.onprocessorerror = safe(function () {
         note('mixer stopped');
       });
@@ -964,6 +1112,9 @@
       pushMixer();
       st.users.forEach(function (x, sid) {
         mixer.port.postMessage({ t: 'u', sid: sid, x: x });
+      });
+      st.spatial.forEach(function (v, sid) {
+        mixer.port.postMessage({ t: 'sp', sid: sid, g: v.g, p: v.p });
       });
       applySink();
       wake();
@@ -1116,14 +1267,16 @@
     return st.tx >= 0 || st.mouseTx || st.test || (st.meter && micQuiet()) || st.probe || vadArmed();
   }
 
-  function hasRoom() {
+  // voice activation never talks in near (slot 3) by itself: with only near
+  // joined it would send to strangers on screen without a key press
+  function hasVadRoom() {
     return !!(st.rooms[0] || st.rooms[1] || st.rooms[2]);
   }
 
   // voice activation listens only while it could send: connected, in a
   // room, not self-muted (in no room every spurt would be dropped)
   function vadArmed() {
-    return st.vad && !st.smute && !!st.conn && hasRoom();
+    return st.vad && !st.smute && !!st.conn && hasVadRoom();
   }
 
   // something is captured or played on purpose: the context must run (the
@@ -1280,7 +1433,7 @@
   function pushCapture(now) {
     if (st.cap) {
       var tx = st.deaf || st.smute ? -1 : st.tx;
-      st.cap.port.postMessage({ t: 'cfg', tx: tx, vad: st.vad && !!st.conn && hasRoom(), vadDb: st.vadDb, gain: st.inGain, muted: st.smute || st.deaf, test: st.test, meter: st.meter, frame: PRESETS[usePreset()].frame, vadSlot: vadSlot(), probe: st.probe, now: !!now });
+      st.cap.port.postMessage({ t: 'cfg', tx: tx, vad: st.vad && !!st.conn && hasVadRoom(), vadDb: st.vadDb, gain: st.inGain, muted: st.smute || st.deaf, test: st.test, meter: st.meter, frame: PRESETS[usePreset()].frame, vadSlot: vadSlot(), probe: st.probe, now: !!now });
     }
   }
 
@@ -1304,6 +1457,7 @@
   }
 
   // voice activation talks in the party room, else the first room joined
+  // (guild, public); never near, which needs its key
   function vadSlot() {
     for (var i = 0; i < 3; i++) {
       if (st.rooms[i]) {
@@ -1793,9 +1947,10 @@
 
   function endConnection() {
     st.sid = 0;
-    st.rooms = [null, null, null];
+    st.rooms = [null, null, null, null];
     st.maxOpus = MAX_OPUS;
     st.users.clear(); // sids belong to one relay session; the game sends them again
+    st.spatial.clear();
     st.tx = -1;
     st.keyTx = -1;
     st.mouseTx = false;
@@ -1842,12 +1997,12 @@
     }
     if (m.t === 'welcome') {
       st.sid = m.sid | 0;
-      st.rooms = [null, null, null];
+      st.rooms = [null, null, null, null];
       var pl = m.lim && Number(m.lim.pl);
       st.maxOpus = pl >= 1 ? Math.min(MAX_OPUS, Math.floor(pl)) : MAX_OPUS;
     } else if (m.t === 'roster' || m.t === 'moved') {
       var slot = m.slot | 0;
-      if (slot >= 0 && slot <= 2) {
+      if (slot >= 0 && slot <= 3) {
         st.rooms[slot] = m.t === 'roster' ? m.room : m.to;
       }
     } else if (m.t === 'left') {
@@ -1861,7 +2016,7 @@
   }
 
   function forgetRoom(id) {
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       if (st.rooms[i] === id) {
         st.rooms[i] = null;
       }
@@ -1956,7 +2111,7 @@
   function setPttMouse(btn, slot) {
     btn = btn | 0;
     slot = slot | 0;
-    var on = (btn === 3 || btn === 4) && slot >= 0 && slot <= 2;
+    var on = (btn === 3 || btn === 4) && slot >= 0 && slot <= 3;
     st.pttBtn = on ? btn : 0;
     st.pttSlot = on ? slot : -1;
     if (on !== mouseOn) {
@@ -2171,7 +2326,7 @@
         sendCtl(c.json);
         break;
       case 'tx':
-        var k = clamp(c.slot, -1, 2, -1) | 0;
+        var k = clamp(c.slot, -1, 3, -1) | 0;
         if (k >= 0 && (st.deaf || st.smute)) {
           k = -1;
         }
@@ -2245,9 +2400,23 @@
         break;
       case 'svol':
         var slot = c.slot | 0;
-        if (slot >= 0 && slot <= 2) {
+        if (slot >= 0 && slot <= 3) {
           st.slotGain[slot] = clamp(c.x, 0, 2, 1);
           pushMixer();
+        }
+        break;
+      // a near speaker's place, for its frames on slot 3 only (game_voice
+      // calls it a few times a second while that speaker talks, on a change)
+      case 'spatial':
+        var psid = c.sid | 0;
+        var pg = clamp(c.g, 0, 1, 1);
+        var pp = clamp(c.p, -1, 1, 0);
+        var was = st.spatial.get(psid);
+        if (!was || was.g !== pg || was.p !== pp) {
+          st.spatial.set(psid, { g: pg, p: pp });
+          if (st.mixer) {
+            st.mixer.port.postMessage({ t: 'sp', sid: psid, g: pg, p: pp });
+          }
         }
         break;
       case 'deaf':
@@ -2325,6 +2494,8 @@
       state: st.conn ? (st.conn.open ? 'open' : 'connecting') : 'idle',
       sid: st.sid,
       rooms: st.rooms.slice(),
+      slots: st.slotGain.slice(),
+      spatial: spatialList(),
       ctx: ctx ? ctx.state : 'none',
       wake: { want: st.wantRun, needPress: st.needGesture, armed: gestureArmed },
       rate: ctx ? ctx.sampleRate : 0,
@@ -2356,6 +2527,15 @@
       lastError: lastError,
       probe: { cap: st.lat.cap.slice(), out: st.lat.out.slice() }
     };
+  }
+
+  // the places the game gave: { sid: [gain, pan] }
+  function spatialList() {
+    var o = {};
+    st.spatial.forEach(function (v, sid) {
+      o[sid] = [v.g, v.p];
+    });
+    return o;
   }
 
   // asks the mixer for its counters, then emits (or answers fn)

@@ -53,7 +53,7 @@ void JitterBuffer::drop(Slot& s)
 }
 
 JitterBuffer::Push JitterBuffer::push(const uint8_t seq, const bool end, const uint8_t* data, const size_t size,
-                                      const int samples, const int64_t nowMs)
+                                      const int samples, const int64_t nowMs, const int room)
 {
     if (!data || size < 1 || size > kMaxBytes || samples < 1 || samples > 5760)
         return Push::Invalid;
@@ -100,6 +100,7 @@ JitterBuffer::Push JitterBuffer::push(const uint8_t seq, const bool end, const u
     s.end = end;
     s.seq = seq;
     s.size = static_cast<uint8_t>(size);
+    s.room = static_cast<uint8_t>(room & 3);
     s.samples = static_cast<uint16_t>(samples);
     std::memcpy(s.data, data, size);
     ++m_count;
@@ -160,6 +161,8 @@ JitterBuffer::Out JitterBuffer::advance(const int depth)
         out.data = m_out;
         out.size = s.size;
         out.samples = s.samples;
+        out.slot = s.room;
+        m_lastSlot = s.room;
         m_endAfter = s.end;
         if (s.end)
             m_hasEnd = false;
@@ -195,5 +198,6 @@ JitterBuffer::Out JitterBuffer::advance(const int depth)
     Out out;
     out.kind = Kind::Conceal;
     out.samples = m_lastSamples;
+    out.slot = m_lastSlot;
     return out;
 }

@@ -6,9 +6,9 @@
  *   relay -> client  AUDIO  [0x01][flags][sid lo][sid hi][seq][opus]
  *   relay -> client  BUNDLE [0x02][n 2-8] n x ([len = 4+opus][flags][sid lo][sid hi][seq][opus])
  *
- * flags: bits 0-1 room slot (0 party, 1 guild/officers, 2 public/stage/echo),
- * bit 2 END (last frame of a talk spurt), bit 3 VAD (voice activation),
- * bits 4-7 zero.
+ * flags: bits 0-1 room slot (0 party, 1 guild/officers, 2 public/stage/echo,
+ * 3 near), bit 2 END (last frame of a talk spurt), bit 3 VAD (voice
+ * activation), bits 4-7 zero.
  *
  * The browser engine does this in mythos-voice.js; this header is for the
  * native engine (voiceengine_native.cpp) and its Linux test harness
@@ -29,6 +29,7 @@ namespace voiceproto
     constexpr size_t kMaxOpus = 240;
     constexpr size_t kMaxBundle = 8;
     constexpr size_t kSpeechMin = 10; // payloads over this are speech
+    constexpr int kSlots = 4; // room slots 0-3 (3: near, proximity voice)
 
     constexpr uint8_t kSlotMask = 0x03;
     constexpr uint8_t kEnd = 0x04;
@@ -43,7 +44,7 @@ namespace voiceproto
     // Returns its length, or 0 when the payload is empty or too big.
     inline size_t packUp(uint8_t* out, int slot, bool end, bool vad, uint8_t seq, const uint8_t* opus, size_t n)
     {
-        if (n < 1 || n > kMaxOpus || slot < 0 || slot > 2)
+        if (n < 1 || n > kMaxOpus || slot < 0 || slot >= kSlots)
             return 0;
         out[0] = kAudio;
         out[1] = makeFlags(slot, end, vad);

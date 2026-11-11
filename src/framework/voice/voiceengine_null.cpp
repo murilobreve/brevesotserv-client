@@ -28,6 +28,7 @@ namespace
         void setOutputVolume(float) override {}
         void setUserVolume(int, float) override {}
         void setSlotVolume(int, float) override {}
+        void setUserSpatial(int, float, float) override {}
         void setDeafened(bool) override {}
         void setSelfMuted(bool) override {}
         void setMeter(bool) override {}

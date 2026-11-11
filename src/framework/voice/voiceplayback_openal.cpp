@@ -11,7 +11,15 @@
  *
  * One streaming source per speaker (at most 8): AL_SOURCE_RELATIVE at the
  * listener, no distance model; 4 buffers each, refilled as they finish;
- * a source that ran dry is started again by the next queue().
+ * a source that ran dry is started again by the next queue(). A near
+ * speaker with a place (setPan) is moved onto the unit circle in front of
+ * the listener, x = pan, z = -sqrt(1 - pan^2) (rolloff 0: no distance
+ * attenuation, the gain is ours), and OpenAL Soft pans it for the output
+ * (stereo, surround or HRTF). Measured with OpenAL Soft 1.23 on a stereo
+ * output: at pan 0 it is the very same as a source at the listener (each side
+ * -4.5 dB); the near side follows a constant-power law within 0.5 dB, the far
+ * side falls faster (-13 dB at pan 0.5) and is gone from pan 0.87; the total
+ * power is 1.5 dB over the centre's at the sides.
  */
 
 #include "audioio.h"
@@ -21,6 +29,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <mutex>
+#include <string>
+#include <vector>
 
 #ifndef ALC_CONNECTED
 #define ALC_CONNECTED 0x313 // ALC_EXT_disconnect
@@ -160,6 +172,8 @@ namespace
                 alSourcei(s.source, AL_LOOPING, AL_FALSE);
                 s.free.assign(s.buffers.begin(), s.buffers.end());
                 s.gain = 1.0f;
+                s.placed = false;
+                s.pan = 0.0f;
                 s.used = true;
                 return i;
             }
@@ -238,6 +252,22 @@ namespace
             }
         }
 
+        void setPan(const int stream, const bool placed, const float pan) override
+        {
+            Stream* s = get(stream);
+            if (!s)
+                return;
+            const float p = placed && std::isfinite(pan) ? std::clamp(pan, -1.0f, 1.0f) : 0.0f;
+            if (placed == s->placed && p == s->pan)
+                return;
+            s->placed = placed;
+            s->pan = p;
+            if (placed)
+                alSource3f(s->source, AL_POSITION, p, 0.0f, -std::sqrt((std::max)(0.0f, 1.0f - p * p)));
+            else
+                alSource3f(s->source, AL_POSITION, 0.0f, 0.0f, 0.0f);
+        }
+
         std::vector<std::string> devices() override
         {
             std::lock_guard<std::mutex> lock(openalListMutex());
@@ -254,6 +284,8 @@ namespace
             std::array<ALuint, kBuffers> buffers{};
             std::vector<ALuint> free;
             float gain = 1.0f;
+            bool placed = false; // setPan: on the circle in front, at pan
+            float pan = 0.0f;
         };
 
         Stream* get(const int stream)
