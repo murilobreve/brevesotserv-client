@@ -25,6 +25,11 @@ end
 -- info: { cl = 'win'|'web', build = text }
 function EngineFull.create(sink, info)
     local self = setmetatable({ name = 'full', audio = true, sink = sink, info = info, live = false }, EngineFull)
+    -- proximity's distance and pan came with the slot-3 engines: an older
+    -- executable has no such binding (looked up once, here)
+    local spatial = g_voice.setUserSpatial
+    self.spatial = type(spatial) == 'function'
+    self.spatialFn = self.spatial and spatial or nil
     self.handler = function(kind, s, a, b)
         self:onEvent(kind, s, a, b)
     end
@@ -67,6 +72,14 @@ for _, name in ipairs({ 'setTransmit', 'setMode', 'setVadThreshold', 'setPreset'
         if f then
             return f(...)
         end
+    end
+end
+
+-- a near speaker's gain (0-1) and pan (-1 left, 1 right), for its slot-3
+-- frames only; nothing on an executable without it
+function EngineFull:setUserSpatial(sid, gain, pan)
+    if self.spatialFn then
+        self.spatialFn(sid, gain, pan)
     end
 end
 

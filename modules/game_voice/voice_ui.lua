@@ -1,13 +1,14 @@
 -- Mythos Voz panel: the mini window with the status, the switches and the
--- rooms (party, guild, public rooms, events) with their members; the
--- right-click menus (volume, mute for me, report, moderation); the icon over
--- the head of who is talking.
+-- rooms (party, guild, near you, public rooms, events) with their members;
+-- the right-click menus (volume, mute for me, report, moderation); the icon
+-- over the head of who is talking.
 --
 -- Cost rules (AGENTS.md, per-kill hot paths): the room list is rebuilt only
 -- when the rooms themselves change (a roster, a join, a move), once on the
 -- next frame behind a pending flag, and only while the panel is open. Member
 -- rows are kept by sid and changed in place on speaking edges, flags, joins
--- and leaves. Nothing runs every frame.
+-- and leaves (near's in and out come whenever someone walks past: never a
+-- redraw). Nothing runs every frame.
 
 VoiceUI = {}
 local UI = VoiceUI
@@ -27,13 +28,15 @@ local VOLUME_PAGE = 10     -- a click on the volume track or its arrows: 10%
 
 local window, toggleButton
 local sections = {} -- [slot] = { room, panel, rows = { [sid] = row }, shown, hidden, more, over }
-local boxes = {}    -- party, guild, rooms: one container each, so a directory update leaves the others alone
+local boxes = {}    -- party, guild, near, rooms: one container each, so a directory update leaves the others alone
 local heads, headCount = {}, 0
 local refreshEvent, roomsEvent, countdownEvent, dirEvent, placeEvent
 local refreshAt = 0 -- when the pending refresh runs (g_clock.millis)
 local dirty = false
 local dirSig = '' -- the directory as last drawn
-local roomsOpen = false
+-- the public rooms list starts open: hidden behind "Show", players thought
+-- there were no rooms (it costs one small dir request every 15 s while shown)
+local roomsOpen = true
 local volumePopup, reportWindow, reportWait
 
 local function session()
@@ -105,7 +108,7 @@ function UI.destroy()
     removeEvent(dirEvent)
     removeEvent(placeEvent)
     refreshEvent, roomsEvent, countdownEvent, dirEvent, placeEvent = nil, nil, nil, nil, nil
-    sections, boxes, roomsOpen, dirty, dirSig = {}, {}, false, false, ''
+    sections, boxes, roomsOpen, dirty, dirSig = {}, {}, true, false, ''
     -- a panel that went with its parent is not destroyed twice (a warning)
     if window then
         if not window:isDestroyed() then
@@ -381,6 +384,10 @@ function UI.onState()
     if dirty or s.state ~= ST.ONLINE then
         UI.scheduleRefresh()
     end
+    -- the list is open from the start: ask for it once we are online
+    if online and roomsOpen and not dirEvent then
+        UI.startDir()
+    end
 end
 
 -- rooms -----------------------------------------------------------------------
@@ -637,6 +644,30 @@ local function guildSection(parent, s)
     end
 end
 
+-- proximity, when this relay has it (welcome.near): who sees us and we see,
+-- from the near roster and its in and out. The level note shows only while
+-- the character is under it (read when the panel is drawn).
+local function nearSection(parent, s)
+    if not s.near then
+        return
+    end
+    local h = header(parent, tr('NEAR YOU'), keyHint(S.SLOT_NEAR))
+    local room = s.rooms[S.SLOT_NEAR]
+    if room then
+        leaveButton(h, room)
+        members(parent, room)
+    else
+        headerAction(h, tr('Join'), function()
+            s:join(S.NEAR_ROOM)
+        end)
+    end
+    local lvl = s.near.lvl
+    local player = g_game.getLocalPlayer()
+    if hasAudio() and lvl > 0 and not (player and player:getLevel() >= lvl) then
+        note(parent, fmt('Talking nearby: level %d+', lvl))
+    end
+end
+
 -- public rooms and events, from the relay's directory (only while unfolded)
 local function roomsSection(parent, s)
     local h = header(parent, tr('ROOMS'), keyHint(2))
@@ -721,11 +752,12 @@ function UI.refresh()
     if not s or s.state ~= ST.ONLINE then
         return
     end
-    for _, name in ipairs({ 'party', 'guild', 'rooms' }) do
+    for _, name in ipairs({ 'party', 'guild', 'near', 'rooms' }) do
         boxes[name] = g_ui.createWidget('VoiceMembers', list)
     end
     partySection(boxes.party, s)
     guildSection(boxes.guild, s)
+    nearSection(boxes.near, s)
     UI.refreshRooms()
 end
 
@@ -823,7 +855,9 @@ function UI.onEvent(what, a, b, c)
             row:destroy()
             sec.rows[b.sid] = nil
             sec.shown = sec.shown - 1
-            if sec.hidden > 0 then
+            if sec.hidden > 0 and a.slot == S.SLOT_NEAR then
+                UI.fillRow(sec) -- near: people walk past all the time, never a redraw
+            elseif sec.hidden > 0 then
                 UI.scheduleRefresh(REFILL_MS) -- someone hidden gets the free row
             end
         elseif sec.hidden > 0 then
@@ -835,9 +869,21 @@ function UI.onEvent(what, a, b, c)
     end
 end
 
+-- a hidden member of the room takes a free row, in place
+function UI.fillRow(sec)
+    for sid, m in pairs(sec.room.members) do
+        if not sec.rows[sid] then
+            createRow(sec, m)
+            sec.hidden = sec.hidden - 1
+            updateMore(sec)
+            return
+        end
+    end
+end
+
 function UI.onSpeaking(sid, on, member)
     if visible() then
-        for slot = 0, 2 do
+        for slot = 0, S.LAST_SLOT do
             local sec = sections[slot]
             local row = sec and sec.rows[sid]
             if row then
@@ -858,7 +904,7 @@ end
 function UI.onTalk(slot)
     local s = session()
     if visible() and s.sid then
-        for i = 0, 2 do
+        for i = 0, S.LAST_SLOT do
             local sec = sections[i]
             local row = sec and sec.rows[s.sid]
             if row then
@@ -1160,7 +1206,9 @@ function UI.notice(kind, a, b)
     elseif kind == 'err' then
         local s = session()
         -- refused while talking in a room already joined (level, stage)
-        if a == 'room_denied' and b and s and s:roomById(b) then
+        if a == 'room_denied' and b == S.NEAR_ROOM and s and s.near and s:roomById(b) then
+            notify(fmt('Voice: talking nearby needs level %d.', s.near.lvl))
+        elseif a == 'room_denied' and b and s and s:roomById(b) then
             notify(tr('Voice: you cannot talk in this room.'))
         elseif ERR_TEXT[a] then
             notify(tr(ERR_TEXT[a]))
@@ -1204,7 +1252,8 @@ function UI.memberMenu(roomId, sid, pos)
     local me = room.members[s.sid]
     local myFlags = me and me.flags or 0
     local staff = S.hasFlag(myFlags, S.F_STAFF)
-    if staff or S.hasFlag(myFlags, S.F_MODERATOR) then
+    -- near has no moderators of its own: only the staff
+    if staff or (S.hasFlag(myFlags, S.F_MODERATOR) and room.kind ~= 'near') then
         menu:addSeparator()
         -- the party leader may only mute in the party room
         if staff or room.kind ~= 'party' then

@@ -1,8 +1,9 @@
 -- Tests for modules/game_voice without the client: the state machine and
 -- every close code, the backoff bounds, the token rules, auto-join and moves,
--- the roster model and the 40-row cap, mute persistence by guid, the report
+-- the roster model and the 40-row cap, proximity (the near room, its list,
+-- the spatial values and their timers), mute persistence by guid, the report
 -- limits, opcode/control parsing with malformed JSON, the control rate limit,
--- and the lite and mock engines over stubs.
+-- and the lite, mock and full engines over stubs.
 --
 --   luajit tools/voz-luatest/game_voice_test.lua      (from the client repo)
 
@@ -34,7 +35,8 @@ end
 -- a fake io: a clock we move by hand, named timers, and logs of what went out
 local function newWorld(prefs)
     local w = { t = 0, timers = {}, sent142 = {}, ctl = {}, connects = {}, disconnects = 0, emits = {},
-        engineCalls = {}, saves = 0, rand = 0.5 }
+        engineCalls = {}, saves = 0, rand = 0.5, nearIds = {}, offsets = {}, spatialOk = true, nearbyCalls = 0,
+        offsetCalls = 0 }
     local io = {
         now = function() return w.t end,
         time = function() return 1700000000 + math.floor(w.t / 1000) end,
@@ -47,7 +49,20 @@ local function newWorld(prefs)
         cancel = function(name) w.timers[name] = nil end,
         savePrefs = function() w.saves = w.saves + 1 end,
         emit = function(what, a, b, c) w.emits[#w.emits + 1] = { what, a, b, c } end,
-        engine = function(method, a, b) w.engineCalls[#w.engineCalls + 1] = { method, a, b } end,
+        engine = function(method, a, b, c) w.engineCalls[#w.engineCalls + 1] = { method, a, b, c } end,
+        -- proximity: what the map shows around us, by hand
+        nearby = function()
+            w.nearbyCalls = w.nearbyCalls + 1
+            return w.nearIds
+        end,
+        offset = function(cid)
+            w.offsetCalls = w.offsetCalls + 1
+            local o = w.offsets[cid]
+            if o then
+                return o[1], o[2]
+            end
+        end,
+        canSpatial = function() return w.spatialOk end,
     }
     w.s = S.new(io, prefs)
     -- moves the clock, firing due timers in order
@@ -895,6 +910,527 @@ test('dir is validated and capped', function()
     assert(w.s:requestDir() == true)
 end)
 
+-- proximity ("Near you", slot 3) ------------------------------------------------
+
+-- online on a relay with proximity: `near` is welcome's near ({ lvl = 8 } by
+-- default, false for a relay without it)
+local function nearWelcome(near)
+    if near == false then
+        return nil
+    end
+    return near or { lvl = 8 }
+end
+
+local function nearOnline(prefs, rooms, near)
+    local w = newWorld(prefs)
+    w.s:gameStart('win', 'full', ME)
+    w.s:onOpcode(CFG)
+    if w.s.state == ST.READY then
+        w.s:setWant(true)
+    end
+    w.s:onOpcode(tokMsg(rooms))
+    w.relay({ t = 'welcome', sid = 7, now = 1700000000, exp = 1700000300, near = nearWelcome(near) })
+    assert(w.s.state == ST.ONLINE, 'online: ' .. tostring(w.s.state))
+    return w
+end
+
+-- a relay restart and the welcome again (a fresh token pushed meanwhile)
+local function reconnect(w, near)
+    w.s:onEngineState('closed', 1012)
+    w.s:onOpcode(tokMsg())
+    eq(w.s.state, ST.CONNECTING)
+    w.relay({ t = 'welcome', sid = 7, near = nearWelcome(near) })
+    eq(w.s.state, ST.ONLINE)
+end
+
+-- the near roster: us (sid 7, creature 70) and members { sid, cid, guid, name, flags }
+local function nearRoster(w, members)
+    local u = { { 7, 70, 1007, ME, 0 } }
+    for _, m in ipairs(members or {}) do
+        u[#u + 1] = { m[1], m[2] or m[1] * 10, m[3] or m[1] + 1000, m[4] or ('P' .. m[1]), m[5] or 0 }
+    end
+    w.relay({ t = 'roster', room = 'near', slot = 3, u = u })
+end
+
+local function joinsOf(w, id)
+    local n = 0
+    for _, m in ipairs(w.ctlOf('join')) do
+        n = n + (m.room == id and 1 or 0)
+    end
+    return n
+end
+
+local function spatialCalls(w)
+    local out = {}
+    for _, c in ipairs(w.engineCalls) do
+        if c[1] == 'setUserSpatial' then
+            out[#out + 1] = c
+        end
+    end
+    return out
+end
+
+local function near(a, b, what)
+    if type(a) ~= 'number' or math.abs(a - b) > 1e-9 then
+        error(string.format('%s: expected %s, got %s', what or 'value', tostring(b), tostring(a)), 2)
+    end
+end
+
+test('near: its kind and slot, and the welcome that has it or not', function()
+    eq(S.roomKind('near'), 'near')
+    eq(S.SLOT_OF.near, 3)
+    eq(S.SLOT_NEAR, 3)
+    eq(S.LAST_SLOT, 3)
+    eq(S.roomKind('near:1'), nil)
+    eq(S.roomKind('Near'), nil)
+    eq(S.roomKind('prox'), nil)
+    local w = nearOnline(nil, nil, { lvl = 12 })
+    eq(w.s.near.lvl, 12)
+    local o = online()
+    eq(o.s.near, nil, 'no near in the welcome: this relay has no proximity')
+    eq(joinsOf(o, 'near'), 0, 'and nothing is joined')
+    for junk, lvl in pairs({ [{ lvl = 'nan' }] = 8, [{}] = 8, [{ lvl = -5 }] = 0, [{ lvl = 9.5 }] = 9 }) do
+        eq(nearOnline(nil, nil, junk).s.near.lvl, lvl, 'lvl ' .. tostring(junk.lvl))
+    end
+    local inf = newWorld()
+    inf.s:gameStart('win', 'full', ME)
+    inf.s:onOpcode(CFG)
+    inf.s:setWant(true)
+    inf.s:onOpcode(tokMsg())
+    inf.s:onControl('{"t":"welcome","sid":7,"near":{"lvl":1e999}}') -- rxi's json reads an infinity
+    eq(inf.s.near.lvl, 65535)
+    for _, junk in ipairs({ true, 8, 'near' }) do
+        eq(nearOnline(nil, nil, junk).s.near, nil, 'near = ' .. tostring(junk))
+    end
+    -- a reconnect to a relay without it: gone
+    reconnect(w, false)
+    eq(w.s.near, nil)
+    eq(S.normalizePrefs(nil).autoNear, true, 'autoNear on by default')
+    eq(S.normalizePrefs({ autoNear = 'false' }).autoNear, false)
+    eq(S.serializePrefs(S.normalizePrefs({ autoNear = false })).autoNear, false, 'saved')
+end)
+
+test('near: autoNear joins after every welcome, unless the player left it by hand', function()
+    local w = nearOnline()
+    eq(joinsOf(w, 'p:10:5'), 1, 'the party')
+    eq(joinsOf(w, 'near'), 1, 'and near')
+    w.s:onOpcode(tokMsg()) -- a token pushed before the rosters: nothing twice
+    eq(joinsOf(w, 'p:10:5'), 1)
+    eq(joinsOf(w, 'near'), 1)
+    nearRoster(w, {})
+    eq(w.s.rooms[3].id, 'near')
+    eq(w.s.rooms[3].kind, 'near')
+    eq(w.s.rooms[3].slot, 3)
+    w.s:onOpcode(tokMsg())
+    eq(joinsOf(w, 'near'), 1, 'in it: not again')
+    reconnect(w)
+    eq(joinsOf(w, 'near'), 2, 'after every welcome')
+    nearRoster(w, {})
+    -- left by hand: not again in this login
+    assert(w.s:leave('near'))
+    eq(w.lastCtl().t, 'leave')
+    eq(w.lastCtl().room, 'near')
+    eq(w.s.rooms[3], nil)
+    eq(w.s.optOut[3], 'near')
+    reconnect(w)
+    eq(joinsOf(w, 'near'), 2, 'left by hand: stays out')
+    -- joined by hand: the opt-out goes, and the next welcome joins it again
+    assert(w.s:join('near'))
+    eq(w.s.optOut[3], nil)
+    nearRoster(w, {})
+    reconnect(w)
+    eq(joinsOf(w, 'near'), 4)
+    -- the next login starts with no opt-out
+    w.s:leave('near')
+    w.s:gameEnd()
+    eq(w.s.optOut[3], nil)
+    -- autoNear off: not joined; joined by hand, it comes back after a drop
+    local o = nearOnline(S.normalizePrefs({ autoNear = false }))
+    eq(joinsOf(o, 'near'), 0)
+    assert(o.s:join('near'))
+    nearRoster(o, {})
+    eq(o.s.intents[3], 'near')
+    reconnect(o)
+    eq(joinsOf(o, 'near'), 2, 'the room of before the drop')
+    reconnect(o, false)
+    eq(joinsOf(o, 'near'), 2, 'a relay without proximity: nothing')
+    eq(o.s.intents[3], nil)
+end)
+
+test('near: a refused join or a kick holds the auto-join until the next welcome', function()
+    local w = nearOnline()
+    w.relay({ t = 'err', code = 'room_denied', room = 'near' })
+    eq(w.s.nearHold, true)
+    w.s:onOpcode(tokMsg({ { id = 'p:10:6', k = 'party' } })) -- a token push runs the auto-join
+    eq(joinsOf(w, 'near'), 1, 'not again in this relay session')
+    reconnect(w)
+    eq(joinsOf(w, 'near'), 2, 'tried again after the next welcome')
+    nearRoster(w, { { 8 } })
+    -- under its level: refused while talking, the room stays
+    w.relay({ t = 'err', code = 'room_denied', room = 'near' })
+    assert(w.s.rooms[3], 'a talk spurt under the level keeps the room')
+    eq(w.s.nearHold, false)
+    w.relay({ t = 'left', room = 'near', why = 'kicked' })
+    eq(w.s.rooms[3], nil)
+    eq(w.s.nearHold, true)
+    w.s:onOpcode(tokMsg())
+    eq(joinsOf(w, 'near'), 2, 'kicked: not back by itself')
+    eq(w.timers.near, nil, 'no list any more')
+    -- by hand it may (the relay keeps its 60 s block)
+    assert(w.s:join('near'))
+    nearRoster(w, {})
+    eq(w.s.nearHold, false)
+end)
+
+test('near: roster, in, out and st; walking out of sight drops the speaking state and the spatial values', function()
+    local w = nearOnline()
+    roster(w, 'p:10:5', { { 7 }, { 8, 80 } })
+    nearRoster(w, { { 8, 80 }, { 9, 90 } })
+    local room = w.s.rooms[3]
+    eq(room.count, 3, 'us and the two near us')
+    eq(room.members[9].cid, 90)
+    w.relay({ t = 'in', room = 'near', u = { { 10, 100, 1010, 'Caio', 0 } } })
+    eq(room.count, 4)
+    local last = w.emits[#w.emits]
+    eq(last[1], 'in', 'told to the panel, one member')
+    eq(last[2], room)
+    eq(last[3].sid, 10)
+    w.relay({ t = 'st', room = 'near', sid = 10, f = 1 })
+    eq(room.members[10].flags, 1)
+    w.offsets[80], w.offsets[90] = { 1, 1 }, { 2, 0 }
+    w.s:onSpeaking(9, true) -- near only
+    w.s:onSpeaking(8, true) -- party and near
+    eq(w.s.speakingCount, 2)
+    assert(w.s.spatial[9] and w.s.spatial[8], 'both placed')
+    local calls = #spatialCalls(w)
+    w.relay({ t = 'out', room = 'near', sid = 9 })
+    eq(room.members[9], nil)
+    eq(room.count, 3)
+    eq(w.s.speaking[9], nil, 'out of sight: no longer speaking')
+    eq(w.s.spatial[9], nil, 'its values forgotten')
+    eq(w.s.speakingCount, 1)
+    w.relay({ t = 'out', room = 'near', sid = 8 })
+    eq(w.s.speaking[8], true, 'still talking in the party')
+    eq(w.s.rooms[0].members[8].speaking, true)
+    eq(w.s.spatial[8], nil)
+    eq(#spatialCalls(w), calls, 'nothing sent to the engine for those who left')
+    -- back in sight while talking in the party: placed at once
+    w.offsets[80] = { -3, 0 }
+    w.relay({ t = 'in', room = 'near', u = { { 8, 80, 1008, 'P8', 0 } } })
+    eq(room.members[8].speaking, true)
+    last = spatialCalls(w)[#spatialCalls(w)]
+    eq(last[2], 8)
+    near(last[4], -3 / 7 * 0.75, 'pan')
+    -- a join again: the members of before that are gone are forgotten too
+    w.offsets[100] = { 0, 2 }
+    w.s:onSpeaking(10, true)
+    assert(w.s.spatial[10])
+    nearRoster(w, { { 8, 80 } })
+    eq(w.s.spatial[10], nil)
+    eq(w.s.speaking[10], nil)
+end)
+
+test('near list: from the map, nearest first, same floor, 7 x 5 tiles, never us, at most 40', function()
+    local function creature(id, x, y, z, o)
+        o = o or {}
+        return {
+            getId = function() return id end,
+            getPosition = function() return not o.nopos and { x = x, y = y, z = z or 7 } or nil end,
+            isPlayer = function() return o.monster ~= true end,
+            isLocalPlayer = function() return o.me == true end,
+            isDead = function() return o.dead == true end,
+        }
+    end
+    local me = { id = 1, pos = { x = 100, y = 100, z = 7 } }
+    local list = S.nearList(me, {
+        creature(1, 100, 100, 7, { me = true }),
+        creature(2, 103, 100),          -- 3 right
+        creature(3, 101, 101),          -- diagonal
+        creature(4, 107, 105),          -- the far corner: in
+        creature(5, 108, 100),          -- 8 right: out
+        creature(6, 100, 106),          -- 6 down: out
+        creature(7, 101, 100, 6),       -- a floor up
+        creature(8, 99, 100, 7, { monster = true }),
+        creature(9, 100, 99, 7, { dead = true }),
+        creature(10, 0, 0, 7, { nopos = true }),
+        creature(3, 101, 101),          -- the same twice
+        creature(11, 93, 95),           -- the other far corner
+        creature(12, 101, 100),         -- next to us
+        creature(1, 100, 100),          -- our id again (not the local player object)
+    })
+    eq(table.concat(list, ','), '12,3,2,4,11', 'nearest first, then by id')
+    eq(#S.nearList(nil, {}), 0)
+    eq(#S.nearList(me, nil), 0)
+    -- a crowd: the nearest 40
+    local crowd = {}
+    for x = -7, 7 do
+        for y = -5, 5 do
+            crowd[#crowd + 1] = creature(1000 + (x + 7) * 11 + (y + 5), 100 + x, 100 + y)
+        end
+    end
+    list = S.nearList(me, crowd)
+    eq(#list, S.NEAR_MAX)
+    local function d2(id)
+        local i = id - 1000
+        local x, y = math.floor(i / 11) - 7, i % 11 - 5
+        return x * x + y * y
+    end
+    for i = 2, #list do
+        assert(d2(list[i - 1]) <= d2(list[i]), 'nearest first at ' .. i)
+    end
+    eq(d2(list[1]), 0, 'one on our own tile (a player we walk through)')
+    -- 37 are at most sqrt(10) away, 8 more at sqrt(13): three of those
+    eq(d2(list[37]), 10)
+    eq(d2(list[38]), 13)
+    eq(d2(list[40]), 13)
+end)
+
+test('near list: once right after the roster, then every 500 ms and only on a change', function()
+    local w = nearOnline()
+    w.nearIds = { 30, 20, 10 }
+    eq(w.nearbyCalls, 0, 'nothing before the near roster')
+    nearRoster(w, {})
+    local lists = w.ctlOf('near')
+    eq(#lists, 1, 'right after the roster')
+    eq(table.concat(lists[1].c, ','), '30,20,10', 'nearest first, as the map gave them')
+    eq(w.timers.near, w.t + 500)
+    w.advance(500)
+    eq(#w.ctlOf('near'), 1, 'the same: nothing sent')
+    eq(w.nearbyCalls, 2)
+    w.nearIds = { 10, 20, 30 } -- the same players, the nearest walked
+    w.advance(500)
+    eq(#w.ctlOf('near'), 1, 'the set, not the order')
+    w.nearIds = { 10, 20 }
+    w.advance(499)
+    eq(#w.ctlOf('near'), 1)
+    w.advance(1)
+    eq(#w.ctlOf('near'), 2, 'a change at the next tick')
+    eq(table.concat(w.lastCtl().c, ','), '10,20')
+    w.nearIds = {}
+    w.advance(500)
+    eq(#w.ctlOf('near'), 3)
+    eq(json.encode(w.lastCtl()):find('"c":%[%]') ~= nil, true, 'nobody: "c":[]')
+    -- the map could not be read: the last list stands
+    w.nearIds = nil
+    w.advance(500)
+    eq(#w.ctlOf('near'), 3)
+    -- a crowd: the first 40 the map gave (the nearest)
+    local crowd = {}
+    for i = 1, 45 do
+        crowd[i] = 2000 + i
+    end
+    w.nearIds = crowd
+    w.advance(500)
+    eq(#w.ctlOf('near'), 4)
+    eq(#w.lastCtl().c, 40)
+    eq(w.lastCtl().c[40], 2040)
+    -- the same 40 and others past them: nothing new
+    crowd[46] = 1
+    w.advance(500)
+    eq(#w.ctlOf('near'), 4, 'only the 40 count')
+    -- joined again 100 ms after a list: the list again, 500 ms after the last
+    w.nearIds = { 5 }
+    w.advance(500)
+    eq(#w.ctlOf('near'), 5)
+    w.advance(100)
+    nearRoster(w, {})
+    eq(#w.ctlOf('near'), 5, 'never twice within 500 ms')
+    w.advance(399)
+    eq(#w.ctlOf('near'), 5)
+    w.advance(1)
+    eq(#w.ctlOf('near'), 6, 'the same set again for the new join')
+    -- joined again long after the last: at once
+    w.advance(1000)
+    nearRoster(w, {})
+    eq(#w.ctlOf('near'), 7, 'at once')
+    -- at most once per 500 ms all along, the one just sent included
+    local at, sent = { w.t }, #w.ctlOf('near')
+    for i = 1, 40 do
+        w.nearIds = { 3000 + i }
+        w.advance(125)
+        if #w.ctlOf('near') ~= sent then
+            sent = #w.ctlOf('near')
+            at[#at + 1] = w.t
+        end
+    end
+    assert(#at >= 10, 'a list each tick while it changes: ' .. #at)
+    for i = 2, #at do
+        assert(at[i] - at[i - 1] >= 500, 'two lists ' .. (at[i] - at[i - 1]) .. ' ms apart')
+    end
+    -- a pending list is replaced by a newer one in the control queue
+    w.s.bucket, w.s.bucketAt = 0, w.t
+    w.s:send({ t = 'near', c = { 1 } })
+    w.s:send({ t = 'near', c = { 2 } })
+    eq(#w.s.queue, 1)
+    eq(w.s.queue[1].c[1], 2)
+end)
+
+test('spatial: the gain and pan of a speaker near us', function()
+    local gain, pan = S.spatial(0, 1)
+    eq(gain, 1, 'd = 1: full')
+    eq(pan, 0, 'straight up: centred')
+    gain, pan = S.spatial(5, 0)
+    near(gain, 1 - 3.5 * 0.11, 'd = 5')
+    near(gain, 0.615, 'd = 5')
+    near(pan, (5 / 7) * 0.75, 'dx = 5')
+    gain, pan = S.spatial(-1, 1)
+    eq(gain, 1, 'd = 1.41: still full')
+    near(pan, -0.75 / 7, 'left is negative')
+    gain, pan = S.spatial(-7, -5)
+    near(gain, 1 - (math.sqrt(74) - 1.5) * 0.11, 'the far corner')
+    near(pan, -0.75, 'full left at 7 tiles')
+    gain, pan = S.spatial(12, 12)
+    eq(gain, 0.2, 'never under 0.2')
+    eq(pan, 0.75, 'pan clamped')
+end)
+
+test('spatial: near members who talk, every 200 ms, only on a change; nothing while nobody near talks', function()
+    local w = nearOnline()
+    roster(w, 'p:10:5', { { 7 }, { 20, 200 } })
+    nearRoster(w, { { 8, 80 }, { 9, 90 } })
+    eq(w.timers.spatial, nil, 'nobody talks: no timer')
+    w.s:onSpeaking(20, true) -- in the party, not near us
+    eq(#spatialCalls(w), 0)
+    eq(w.timers.spatial, nil)
+    eq(w.offsetCalls, 0)
+    -- 8 talks five tiles to the right: placed at once
+    w.offsets[80] = { 5, 0 }
+    w.s:onSpeaking(8, true)
+    local c = spatialCalls(w)
+    eq(#c, 1)
+    eq(c[1][2], 8)
+    near(c[1][3], 0.615, 'gain')
+    near(c[1][4], (5 / 7) * 0.75, 'pan')
+    eq(w.timers.spatial, w.t + 200)
+    w.advance(1000)
+    eq(#spatialCalls(w), 1, 'standing still: no call')
+    eq(w.offsetCalls, 6, 'looked up every 200 ms')
+    w.offsets[80] = { 4, 0 }
+    w.advance(200)
+    eq(#spatialCalls(w), 2, 'a step: called')
+    w.offsets[80] = { 4, 1 } -- gain 0.725 to 0.711
+    w.advance(200)
+    eq(#spatialCalls(w), 2, 'a change under 0.02 is not sent')
+    -- gone from our floor (or from the map): silent, the pan kept
+    w.offsets[80] = nil
+    w.advance(200)
+    c = spatialCalls(w)
+    eq(#c, 3)
+    eq(c[3][3], 0, 'gain 0')
+    near(c[3][4], (4 / 7) * 0.75, 'pan kept')
+    w.advance(1000)
+    eq(#spatialCalls(w), 3)
+    -- we never place ourselves
+    w.s:onSpeaking(7, true)
+    eq(#spatialCalls(w), 3)
+    -- a second speaker joins the same tick; each at most once a tick
+    w.offsets[80], w.offsets[90] = { 1, 0 }, { -6, 2 }
+    w.s:onSpeaking(9, true)
+    eq(#spatialCalls(w), 4, '9 at once')
+    local before = #spatialCalls(w)
+    for i = 1, 10 do
+        w.offsets[80] = { i % 2 == 0 and 3 or -3, 0 }
+        w.offsets[90] = { i % 2 == 0 and -6 or 6, 0 }
+        w.advance(200)
+    end
+    eq(#spatialCalls(w) - before, 20, 'two walkers: 5 calls a second each')
+    -- the last near speaker stops: the next tick stops for good
+    w.s:onSpeaking(8, false)
+    w.s:onSpeaking(9, false)
+    w.advance(200)
+    eq(w.timers.spatial, nil, 'nobody near talks: no timer')
+    local n = w.offsetCalls
+    w.advance(10000)
+    eq(w.offsetCalls, n, 'nothing runs')
+    -- talking again from where it stopped: the engine has it already
+    w.s:onSpeaking(8, true)
+    eq(#spatialCalls(w) - before, 20, 'no change: nothing')
+    -- an engine that cannot pan (an old executable): never asked
+    local o = nearOnline()
+    o.spatialOk = false
+    nearRoster(o, { { 8, 80 } })
+    o.offsets[80] = { 2, 2 }
+    o.s:onSpeaking(8, true)
+    o.advance(1000)
+    eq(#spatialCalls(o), 0)
+    eq(o.offsetCalls, 0)
+    eq(o.timers.spatial, nil)
+end)
+
+test('near: the timers stop on leaving, on a drop and at game end, and never run outside near', function()
+    -- not in near (autoNear off): nothing runs, whoever talks
+    local o = nearOnline(S.normalizePrefs({ autoNear = false }))
+    roster(o, 'p:10:5', { { 7 }, { 8, 80 } })
+    o.s:onSpeaking(8, true)
+    o.advance(5000)
+    eq(o.timers.near, nil)
+    eq(o.timers.spatial, nil)
+    eq(o.nearbyCalls + o.offsetCalls, 0)
+    -- a relay without proximity: nothing either
+    local p = nearOnline(nil, nil, false)
+    p.advance(5000)
+    eq(p.nearbyCalls, 0)
+    local function busy()
+        local w = nearOnline()
+        nearRoster(w, { { 8, 80 } })
+        w.offsets[80] = { 1, 1 }
+        w.s:onSpeaking(8, true)
+        assert(w.timers.near and w.timers.spatial, 'both running')
+        return w
+    end
+    local function stopped(w, what)
+        eq(w.timers.near, nil, what .. ': the list')
+        eq(w.timers.spatial, nil, what .. ': the spatial values')
+        local a, b = w.nearbyCalls, w.offsetCalls
+        w.advance(10000)
+        eq(w.nearbyCalls, a, what .. ': no list read')
+        eq(w.offsetCalls, b, what .. ': no creature looked up')
+    end
+    local w = busy()
+    w.s:leave('near')
+    stopped(w, 'left by hand')
+    eq(next(w.s.spatial), nil)
+    w = busy()
+    w.relay({ t = 'left', room = 'near', why = 'rights' })
+    stopped(w, 'sent out')
+    w = busy()
+    w.s:onEngineState('closed', 1012)
+    stopped(w, 'a drop')
+    w = busy()
+    w.s:onEngineState('error', nil)
+    stopped(w, 'a network error')
+    w = busy()
+    w.s:setWant(false)
+    stopped(w, 'voice off')
+    w = busy()
+    w.s:gameEnd()
+    stopped(w, 'game end')
+    eq(next(w.timers), nil, 'no timer at all')
+    -- back online: the list again only once the near roster came
+    w = busy()
+    reconnect(w)
+    local a = w.nearbyCalls
+    w.advance(2000)
+    eq(w.nearbyCalls, a, 'joined again but no roster yet')
+    nearRoster(w, {})
+    eq(w.nearbyCalls, a + 1)
+end)
+
+test('near: slot 3 everywhere the session walks the slots (members, mutes, the gate, reports)', function()
+    local w = nearOnline(S.normalizePrefs({ autoParty = false }))
+    nearRoster(w, { { 8, 80, 4242, 'Ana' } })
+    eq(w.s:roomById('near'), w.s.rooms[3])
+    eq(w.s:memberAnywhere(8), w.s.rooms[3].members[8])
+    w.s:setUserMuted(w.s.rooms[3].members[8], true)
+    eq(w.s.rooms[3].members[8].mutedForMe, true, 'mute for me in near')
+    eq(w.lastCtl().t, 'mute')
+    w.s:onTalk(3)
+    eq(w.s.talkSlot, 3)
+    assert(w.s:moderate('kick', 'near', 8), 'the staff may kick in near (the relay checks)')
+    assert(w.s:report('near', 8, 'spam', 'x'), 'a report from near')
+    eq(w.last142().room, 'near')
+end)
+
 -- hostile or broken input, and the limits behind it -----------------------------
 
 local function emitCount(w, what)
@@ -1402,7 +1938,7 @@ test('push-to-talk keys taken elsewhere: actions, hotkeys, the hotkeys manager, 
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta, KeyEscape = 22, 24, 21, 23, 25, 1
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
     local actions = { ['Ctrl+K'] = true }
     Keybind = {
         currentPreset = 'Druid',
@@ -1442,7 +1978,7 @@ test('push-to-talk keys: the key of an empty action bar button is free; a free k
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta, KeyEscape = 22, 24, 21, 23, 25, 1
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
     local actions = {}
     Keybind = { currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
         isKeyComboUsed = function(combo) return actions[combo] == true end }
@@ -1641,20 +2177,37 @@ test('mock engine: welcome, roster, speaking, then a whole session over it', fun
     eq(w.s.state, ST.CONNECTING)
     runEvents(300)
     eq(w.s.state, ST.ONLINE)
+    eq(w.s.near.lvl, 8, 'the mock relay has proximity')
     runEvents(100)
     local room = w.s.rooms[0]
     assert(room, 'party roster from the mock')
     eq(room.id, 'p:1:1')
     eq(room.count, 5)
+    local nearRoom = w.s.rooms[3]
+    assert(nearRoom, 'near roster from the mock (autoNear)')
+    eq(nearRoom.count, 4, 'us and three around us')
+    assert(nearRoom.members[11].cid > 0, 'made-up creature ids')
+    eq(type(engine.nearIds), 'table', 'our near list reached the mock')
     runEvents(60000)
-    assert(w.s.speakingCount >= 0 and w.s.speakingCount <= 4)
-    local edges = 0
+    assert(w.s.speakingCount >= 0 and w.s.speakingCount <= 8)
+    local edges, nearEdges = 0, 0
     for _, e in ipairs(w.emits) do
         if e[1] == 'speaking' then
             edges = edges + 1
+            nearEdges = nearEdges + ((e[2] >= 11 and e[2] <= 14) and 1 or 0)
         end
     end
     assert(edges >= 10, 'speaking edges: ' .. edges)
+    assert(nearEdges >= 2, 'near speaking edges: ' .. nearEdges)
+    -- nobody is on our map: a near speaker is silent (gain 0)
+    local placed = false
+    for _, c in ipairs(w.engineCalls) do
+        if c[1] == 'setUserSpatial' then
+            placed = true
+            eq(c[3], 0, 'not on our screen')
+        end
+    end
+    assert(placed, 'the near speakers were placed')
     w.s:moderate('mute', 'p:1:1', 3, 600)
     runEvents(100)
     assert(S.hasFlag(room.members[3].flags, S.F_SERVER_MUTED), 'mock moderation')
@@ -1688,6 +2241,53 @@ test('mock engine: speaking edges come back after a reconnect', function()
     edges = 0
     session()
     assert(edges > 0, 'edges after the reconnect')
+    e:terminate()
+end)
+
+test('mock engine: near, with members whose speaking toggles and a passer-by', function()
+    local got, ctls = {}, {}
+    local e = EngineMock.create(function(kind, s, a, b)
+        got[#got + 1] = { kind, s, a, b }
+        if kind == 'ctl' then
+            ctls[#ctls + 1] = json.decode(s)
+        end
+    end, { self = { cid = 5, name = 'Eu' } })
+    e:connect('ws://x/voz', TOK)
+    runEvents(300)
+    eq(ctls[1].t, 'welcome')
+    eq(ctls[1].near.lvl, 8)
+    e:send({ t = 'join', room = 'near' })
+    runEvents(100)
+    local r = ctls[#ctls]
+    eq(r.t, 'roster')
+    eq(r.room, 'near')
+    eq(r.slot, 3)
+    eq(#r.u, 4)
+    eq(r.u[1][2], 5, 'us, with our creature')
+    for i = 2, 4 do
+        assert(r.u[i][2] > 0, 'a made-up creature id')
+    end
+    e:send({ t = 'near', c = { 10, 20 } })
+    eq(e.nearIds[2], 20, 'the list is kept')
+    e:setUserSpatial(11, 0.5, -0.25)
+    eq(e.spatialOf[11].pan, -0.25)
+    eq(e.spatial, true)
+    runEvents(120000)
+    local edges, passes = {}, 0
+    for _, g in ipairs(got) do
+        if g[1] == 'spk' then
+            edges[g[3]] = true
+        end
+    end
+    for _, c in ipairs(ctls) do
+        if (c.t == 'in' or c.t == 'out') and c.room == 'near' then
+            passes = passes + 1
+        end
+    end
+    assert(edges[11] or edges[12] or edges[13], 'the near members talk')
+    assert(passes >= 1, 'someone walks past')
+    e:send({ t = 'leave', room = 'near' })
+    eq(e.nearIds, nil)
     e:terminate()
 end)
 
@@ -1827,6 +2427,8 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
         handler(protocol, 142, json.encode(CFG))
         eq(#tracked, 2, 'the panel and its top-menu button')
         eq(keybinds['Voz_Falar na party'], 'bound')
+        eq(keybinds['Voz_Falar perto'], 'bound', 'the near key (no default key)')
+        eq(KEY_TALK[3], 'Falar perto')
         eq(pt.translation['Turn voice on'], 'Ligar a voz', 'pt.lua text kept')
         eq(pt.translation['Mute microphone'], 'Desligar microfone', 'voice text added')
         runEvents(3000)
@@ -1839,13 +2441,78 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
         sockets[1].callbacks.onOpen()
         eq(sockets[1].sent[1].t, 'hello')
         eq(sockets[1].sent[1].a, 0)
-        sockets[1].callbacks.onMessage(json.encode({ t = 'welcome', sid = 7 }))
+        -- the map around us, where the near list comes from
+        local function player(id, x, y, z, o)
+            local c = { id = id, pos = x and { x = x, y = y, z = z } or nil, dead = false, me = o == 'me' }
+            function c:getId() return self.id end
+            function c:getPosition() return self.pos end
+            function c:isPlayer() return true end
+            function c:isLocalPlayer() return self.me end
+            function c:isDead() return self.dead end
+            return c
+        end
+        local me = player(70, 100, 100, 7, 'me')
+        local ana, bia = player(80, 102, 100, 7), player(90, 100, 101, 7)
+        local spectators, asked = { me, ana, bia, player(95, 99, 99, 6) }, nil
+        g_game.getLocalPlayer = function() return me end
+        g_map = {
+            getSpectatorsInRange = function(pos, multiFloor, rangeX, rangeY)
+                asked = { pos = pos, multiFloor = multiFloor, x = rangeX, y = rangeY }
+                return spectators
+            end,
+            getCreatureById = function() return nil end,
+        }
+        local so = sockets[1]
+        local function sentOf(t)
+            local out = {}
+            for _, m in ipairs(so.sent) do
+                if m.t == t then
+                    out[#out + 1] = m
+                end
+            end
+            return out
+        end
+        so.callbacks.onMessage(json.encode({ t = 'welcome', sid = 7, near = { lvl = 8 } }))
         eq(getSession().state, ST.ONLINE)
-        sockets[1].callbacks.onMessage(json.encode({ t = 'roster', room = 'p:10:5',
+        local joined = {}
+        for _, m in ipairs(sentOf('join')) do
+            joined[m.room] = true
+        end
+        assert(joined['p:10:5'] and joined.near, 'the party and near joined')
+        eq(#sentOf('near'), 0, 'no list before the near roster')
+        so.callbacks.onMessage(json.encode({ t = 'roster', room = 'near', slot = 3,
+            u = { { 7, 70, 1, ME, 0 }, { 9, 90, 3, 'Bia', 0 } } }))
+        eq(touchSlot(), 3, 'only near joined: the touch button talks near')
+        local lists = sentOf('near')
+        eq(#lists, 1, 'the list right after the roster')
+        eq(table.concat(lists[1].c, ','), '90,80', 'nearest first, not us, not another floor')
+        eq(asked.multiFloor, false)
+        eq(asked.x, 7)
+        eq(asked.y, 5)
+        eq(asked.pos.z, 7)
+        -- Bia walks off the screen and Ana dies (found, dead, no position)
+        bia.pos = { x = 108, y = 101, z = 7 }
+        ana.dead, ana.pos = true, nil
+        runEvents(500)
+        lists = sentOf('near')
+        eq(#lists, 2)
+        eq(#lists[2].c, 0, 'nobody on our screen')
+        -- dead ourselves (no position): nothing breaks, nothing new
+        me.pos = nil
+        runEvents(1000)
+        eq(#sentOf('near'), 2)
+        me.pos = { x = 100, y = 100, z = 7 }
+        so.callbacks.onMessage(json.encode({ t = 'roster', room = 'p:10:5',
             u = { { 7, 0, 1, ME, 0 }, { 8, 0, 2, 'Ana', 0 } } }))
         eq(getSession().rooms[0].count, 2)
+        eq(touchSlot(), 0, 'the party first')
+        -- presence mode: nobody is ever placed (lite has no audio)
+        eq(getSession():canSpatial(), false)
         -- the game ends
+        local before = #sentOf('near')
         g_game.onGameEnd()
+        runEvents(5000)
+        eq(#sentOf('near'), before, 'the near list stopped at game end')
         for i, w in ipairs(tracked) do
             assert(w:isDestroyed(), 'top-level widget ' .. i .. ' left behind')
         end
@@ -1878,12 +2545,14 @@ test('engine_full over the g_voice binding: every call bound, events end to end'
         bound[name] = true
     end
     assert(bound.isSupported and bound.connect and bound.sendControl, 'g_voice bound in luafunctions.cpp')
-    -- every g_voice function engine_full.lua calls is one the C++ binds
+    -- every g_voice function engine_full.lua calls or looks up (setUserSpatial,
+    -- checked once at create) is one the C++ binds
     local src = io.open(MODULE .. 'engine_full.lua'):read('*a')
-    for name in src:gmatch('g_voice%.([%a_]+)%(') do
+    for name in src:gmatch('g_voice%.([%a_]+)') do
         -- onVoiceEvent is the Lua callback the C++ calls, not a binding
-        assert(bound[name] or name == 'onVoiceEvent', 'engine_full calls g_voice.' .. name .. ', which is not bound')
+        assert(bound[name] or name == 'onVoiceEvent', 'engine_full uses g_voice.' .. name .. ', which is not bound')
     end
+    assert(src:find('g_voice%.setUserSpatial'), 'the slot-3 call is looked up')
     local list = src:match('for _, name in ipairs%((%b{})%)')
     for name in list:gmatch("'([%a_]+)'") do
         assert(bound[name], 'engine_full maps ' .. name .. ', which is not bound')
@@ -2003,6 +2672,160 @@ test('engine_full over the g_voice binding: every call bound, events end to end'
     dofile = realDofile
     g_voice = nil
     assert(ok, err)
+end)
+
+test('voice.lua on the full engine: near speakers placed from the map, dead or gone ones silent', function()
+    local calls = {}
+    -- g_voice as luafunctions.cpp binds it, with or without the slot-3 call
+    local function fakeVoice(spatial)
+        local gv = {}
+        for _, name in ipairs({ 'connect', 'disconnect', 'sendControl', 'setTransmit', 'setMode', 'setVadThreshold',
+            'setPreset', 'setInputDevice', 'setOutputDevice', 'setInputGain', 'setOutputVolume', 'setUserVolume',
+            'setSlotVolume', 'setDeafened', 'setSelfMuted', 'setMeter', 'setPttMouse', 'setGlobalPtt',
+            'startLocalTest', 'stats', spatial and 'setUserSpatial' or nil }) do
+            gv[name] = function(...) calls[#calls + 1] = { name, ... } end
+        end
+        gv.isSupported = function() return true end
+        gv.getInputDevices = function() return {} end
+        gv.getOutputDevices = function() return {} end
+        return gv
+    end
+    local function count(name)
+        local n = 0
+        for _, c in ipairs(calls) do
+            n = n + (c[1] == name and 1 or 0)
+        end
+        return n
+    end
+    local function last(name)
+        for i = #calls, 1, -1 do
+            if calls[i][1] == name then
+                return calls[i]
+            end
+        end
+    end
+    -- the wrapper alone: the binding is looked up once, at create
+    g_voice = fakeVoice(false)
+    local old = EngineFull.create(function() end, { cl = 'web', build = '' })
+    eq(old.spatial, false, 'an old executable')
+    old:setUserSpatial(8, 0.5, 0.5)
+    g_voice.setUserSpatial = function() error('looked up again') end
+    old:setUserSpatial(8, 0.5, 0.5)
+    eq(#calls, 0, 'nothing called')
+    old:terminate()
+    g_voice = fakeVoice(true)
+    local new = EngineFull.create(function() end, { cl = 'web', build = '' })
+    eq(new.spatial, true)
+    new:setUserSpatial(8, 0.615, 0.5)
+    local c = last('setUserSpatial')
+    eq(c[2], 8)
+    eq(c[3], 0.615)
+    eq(c[4], 0.5)
+    new:terminate()
+
+    -- the whole module: the map, a speaker who walks and one who dies
+    local function creature(id, x, y, z)
+        local cr = { id = id, pos = x and { x = x, y = y, z = z } or nil, dead = false }
+        function cr:getId() return self.id end
+        function cr:getPosition() return self.pos end
+        function cr:isPlayer() return true end
+        function cr:isLocalPlayer() return self.id == 70 end
+        function cr:isDead() return self.dead end
+        function cr:getOutfit() return { type = 128 } end
+        return cr
+    end
+    local me = creature(70, 100, 100, 7)
+    -- Caio died a moment ago: found by id, dead, its position not yet dropped
+    local ana, bia, caio = creature(80, 105, 100, 7), creature(90, 101, 100, 6), creature(100, 101, 101, 7)
+    caio.dead = true
+    local known = { [70] = me, [80] = ana, [90] = bia, [100] = caio }
+    g_map = {
+        getSpectatorsInRange = function() return { me, ana, bia, caio } end,
+        getCreatureById = function(id) return known[id] end,
+    }
+    local handlers, errors = {}, {}
+    ProtocolGame = {
+        registerExtendedOpcode = function(op, fn) handlers[op] = fn end,
+        unregisterExtendedOpcode = function(op) handlers[op] = nil end,
+    }
+    local protocol = { sendExtendedOpcode = function() end }
+    g_game = {
+        isOnline = function() return true end,
+        getProtocolGame = function() return protocol end,
+        getCharacterName = function() return ME end,
+        getLocalPlayer = function() return me end,
+    }
+    g_platform = { isBrowser = function() return true end, isMobile = function() return false end }
+    g_logger = { error = function(m) errors[#errors + 1] = m end }
+    local function run(spatial)
+        calls = {}
+        g_voice = fakeVoice(spatial)
+        init()
+        handlers[142](protocol, 142, json.encode(CFG))
+        setWant(true)
+        handlers[142](protocol, 142, json.encode(tokMsg()))
+        g_voice.onVoiceEvent('state', 'open', 0, 0)
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'welcome', sid = 7, near = { lvl = 8 } }), 0, 0)
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'roster', room = 'near', slot = 3, u = {
+            { 7, 70, 1, ME, 0 }, { 8, 80, 2, 'Ana', 0 }, { 9, 90, 3, 'Bia', 0 }, { 10, 100, 4, 'Caio', 0 },
+            { 11, 110, 5, 'Duda', 0 } } }), 0, 0)
+        local list
+        for _, call in ipairs(calls) do
+            local m = call[1] == 'sendControl' and json.decode(call[2])
+            if m and m.t == 'near' then
+                list = m.c
+            end
+        end
+        eq(table.concat(list or {}, ','), '80', 'the list: Ana only (Bia upstairs, Caio dead)')
+        for sid = 8, 11 do
+            g_voice.onVoiceEvent('spk', '', sid, 1)
+        end
+    end
+    run(true)
+    local placed = {}
+    for _, call in ipairs(calls) do
+        if call[1] == 'setUserSpatial' then
+            placed[call[2]] = { call[3], call[4] }
+        end
+    end
+    near(placed[8][1], 0.615, 'Ana, 5 tiles right: gain')
+    near(placed[8][2], (5 / 7) * 0.75, 'Ana: pan')
+    eq(placed[9][1], 0, 'Bia upstairs: silent')
+    eq(placed[10][1], 0, 'Caio dead: silent')
+    eq(placed[11][1], 0, 'Duda unknown to the map: silent')
+    -- Ana walks to our left, then dies in mid-sentence
+    ana.pos = { x = 97, y = 100, z = 7 }
+    runEvents(200)
+    c = last('setUserSpatial')
+    eq(c[2], 8)
+    near(c[4], (-3 / 7) * 0.75, 'pan to the left')
+    ana.dead, ana.pos = true, nil
+    runEvents(200)
+    c = last('setUserSpatial')
+    eq(c[2], 8)
+    eq(c[3], 0, 'dead: silent, no position handed anywhere')
+    local n = count('setUserSpatial')
+    runEvents(2000)
+    eq(count('setUserSpatial'), n, 'nothing changes: nothing called')
+    -- leaving near: nothing runs any more
+    getSession():leave('near')
+    local sends = count('sendControl')
+    runEvents(5000)
+    eq(count('setUserSpatial'), n)
+    eq(count('sendControl'), sends, 'no near list after leaving')
+    g_game.onGameEnd()
+    terminate()
+    eq(#errors, 0, 'errors: ' .. table.concat(errors, ' | '))
+    -- an old executable: the same session, never asked to place anyone
+    ana.dead, ana.pos = false, { x = 105, y = 100, z = 7 }
+    run(false)
+    runEvents(2000)
+    eq(count('setUserSpatial'), 0)
+    eq(getSession():canSpatial(), false)
+    g_game.onGameEnd()
+    terminate()
+    eq(#errors, 0, 'errors: ' .. table.concat(errors, ' | '))
+    g_voice, g_map = nil, nil
 end)
 
 -- the panel, its popups and the onboarding over fake widgets ------------------
@@ -2279,7 +3102,7 @@ local function uiWorld(opts)
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta = 22, 24, 21, 23, 25
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
     local keys, used = {}, opts.usedKeys or {}
     Keybind = { chatMode = CHAT_MODE.OFF, currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
         isKeyComboUsed = function(combo) return used[combo] == true end,
@@ -2431,6 +3254,187 @@ test('the party header hint stops at its button, the key alone when narrow, whol
     assert(hint:find('anchors%.right:'), 'the hint has a right edge')
 end)
 
+test('the near section: after the guild, its key, join and leave, rows in and out in place, the level note', function()
+    local w = nearOnline(nil, { { id = 'p:10:5', k = 'party' }, { id = 'g:7', k = 'guild', l = 'Os Bravos' } })
+    roster(w, 'p:10:5', { { 7 }, { 8 } })
+    local u = uiWorld({ world = w })
+    talkKey = function(slot) return slot == 3 and 'F7' or '' end
+    -- the session's events reach the panel, as voice.lua passes them on
+    local emit = w.s.io.emit
+    w.s.io.emit = function(what, a, b, c)
+        emit(what, a, b, c)
+        VoiceUI.onEvent(what, a, b, c)
+    end
+    local refreshes = 0
+    local refresh = VoiceUI.refresh
+    VoiceUI.refresh = function()
+        refreshes = refreshes + 1
+        refresh()
+    end
+    local shown = {}
+    notify = function(text) shown[#shown + 1] = text end
+    VoiceUI.create()
+    u.created.window.shown = true
+    VoiceUI.refresh()
+    local function lastHeader(title)
+        local list = u.created.VoiceSectionHeader or {}
+        for i = #list, 1, -1 do
+            if list[i].title.text == title then
+                return list[i]
+            end
+        end
+    end
+    local function nearBox()
+        return u.created.window.rooms.kids[3]
+    end
+    local function texts(widget, out)
+        out = out or {}
+        for _, k in ipairs(widget.kids) do
+            if not k:isDestroyed() then
+                out[#out + 1] = k.text
+                texts(k, out)
+            end
+        end
+        return out
+    end
+    local function hasText(widget, text)
+        for _, t in ipairs(texts(widget)) do
+            if t == text then
+                return true
+            end
+        end
+        return false
+    end
+    local function nearRows()
+        local out, n = {}, 0
+        local function walk(widget)
+            for _, k in ipairs(widget.kids) do
+                if k.id == 'VoiceMemberRow' and not k:isDestroyed() then
+                    out[k.name.text] = k
+                    n = n + 1
+                end
+                walk(k)
+            end
+        end
+        walk(nearBox())
+        return out, n
+    end
+    local h = lastHeader('NEAR YOU')
+    assert(h, 'the near section')
+    eq(#u.created.window.rooms.kids, 4, 'party, guild, near, rooms')
+    eq(h.parent, nearBox(), 'after the guild, before the rooms')
+    eq(h.action.text, 'Join', 'joining (autoNear): no roster yet')
+    eq(h.tip, 'Hold F7', 'the key hint of slot 3')
+    eq(lastHeader('PARTY').tip, nil, 'the party has its own key')
+    assert(hasText(nearBox(), 'Talking nearby: level 8+'), 'the level note (no level known)')
+    h.action.onClick()
+    eq(w.lastCtl().t, 'join')
+    eq(w.lastCtl().room, 'near')
+    nearRoster(w, { { 8, 80, 1008, 'Ana' }, { 9, 90, 1009, 'Bia' } })
+    runEvents(1)
+    eq(lastHeader('NEAR YOU').action.text, 'Leave')
+    local rows, count = nearRows()
+    eq(count, 3)
+    assert(rows[ME] and rows.Ana and rows.Bia, 'us and the two near us')
+    -- walking past: rows in place, never a redraw
+    local n = refreshes
+    w.relay({ t = 'in', room = 'near', u = { { 10, 100, 1010, 'Caio', 0 } } })
+    assert(nearRows().Caio, 'a row for who came into sight')
+    w.relay({ t = 'out', room = 'near', sid = 9 })
+    eq(nearRows().Bia, nil, 'and none for who went')
+    for i = 1, 20 do
+        w.relay({ t = 'in', room = 'near', u = { { 200 + i, 2000 + i, 3000 + i, 'W' .. i, 0 } } })
+        w.relay({ t = 'out', room = 'near', sid = 200 + i })
+    end
+    runEvents(3000)
+    eq(refreshes, n, 'no redraw for in and out')
+    -- a near speaker gets the icon over its head
+    local heads = {}
+    local attach = VoiceUI.attachHead
+    VoiceUI.attachHead = function(key, cid) heads[key] = cid end
+    w.s:onSpeaking(10, true)
+    eq(heads[10], 100, 'the icon over a near speaker')
+    VoiceUI.attachHead = attach
+    -- the relay's 40 and us: 40 rows and "+1"; the row of one who walks
+    -- away goes to the hidden one, in place
+    local many = {}
+    for i = 1, 40 do
+        many[i] = { 100 + i, 1000 + i, nil, string.format('N%02d', i) }
+    end
+    nearRoster(w, many)
+    runEvents(1)
+    n = refreshes
+    rows, count = nearRows()
+    eq(count, S.ROW_CAP)
+    eq(rows.N40, nil, 'the last by name is hidden')
+    assert(hasText(nearBox(), '+1 in the room'))
+    w.relay({ t = 'out', room = 'near', sid = 101 })
+    rows, count = nearRows()
+    eq(count, S.ROW_CAP)
+    eq(rows.N01, nil)
+    assert(rows.N40, 'the hidden one took the free row')
+    eq(hasText(nearBox(), '+1 in the room'), false, 'nobody hidden')
+    runEvents(3000)
+    eq(refreshes, n, 'still no redraw')
+    -- talking under the level: the level, once a spurt
+    w.relay({ t = 'err', code = 'room_denied', room = 'near' })
+    eq(shown[#shown], 'Voice: talking nearby needs level 8.')
+    -- at the level: no note
+    g_game.getLocalPlayer = function() return { getLevel = function() return 8 end } end
+    VoiceUI.refresh()
+    eq(hasText(nearBox(), 'Talking nearby: level 8+'), false, 'level 8: no note')
+    -- leaving
+    lastHeader('NEAR YOU').action.onClick()
+    eq(w.lastCtl().t, 'leave')
+    runEvents(1)
+    eq(lastHeader('NEAR YOU').action.text, 'Join')
+    eq(select(2, nearRows()), 0)
+    VoiceUI.destroy()
+    -- a relay without proximity: no section
+    local o = online()
+    local u2 = uiWorld({ world = o })
+    VoiceUI.create()
+    u2.created.window.shown = true
+    VoiceUI.refresh()
+    for _, header in ipairs(u2.created.VoiceSectionHeader or {}) do
+        assert(header.title.text ~= 'NEAR YOU', 'no near section')
+    end
+    eq(#u2.created.window.rooms.kids, 4)
+    eq(#u2.created.window.rooms.kids[3].kids, 0, 'its box stays empty')
+    VoiceUI.destroy()
+end)
+
+test('the near menu: a room moderator has no moderation there, the staff has', function()
+    local function menuFor(myFlags)
+        local w = nearOnline()
+        w.relay({ t = 'roster', room = 'near', slot = 3,
+            u = { { 7, 70, 1007, ME, myFlags }, { 8, 80, 1008, 'Ana', 0 } } })
+        roster(w, 'pub:geral', { { 7, 70, 1007, ME, myFlags }, { 8, 80, 1008, 'Ana', 0 } })
+        uiWorld({ world = w })
+        local menus = {}
+        local createWidget = g_ui.createWidget
+        g_ui.createWidget = function(style, parent)
+            local widget = createWidget(style, parent)
+            if style == 'PopupMenu' then
+                local menu = {}
+                menus[#menus + 1] = menu
+                function widget:addOption(text) menu[text] = true end
+            end
+            return widget
+        end
+        VoiceUI.memberMenu('near', 8, { x = 1, y = 1 })
+        VoiceUI.memberMenu('pub:geral', 8, { x = 1, y = 1 })
+        return menus[1], menus[2]
+    end
+    local nearMenu, roomMenu = menuFor(S.F_MODERATOR)
+    assert(nearMenu['Mute for me'] and nearMenu['Report'], 'every player has these')
+    eq(nearMenu['Kick from the room'], nil, 'no moderators of its own in near')
+    eq(nearMenu['Mute for 10 minutes'], nil)
+    assert(roomMenu['Kick from the room'], 'the same flag moderates a public room')
+    nearMenu = menuFor(S.F_STAFF)
+    assert(nearMenu['Kick from the room'] and nearMenu['Mute for 10 minutes'], 'the staff moderates near')
+end)
+
 -- every text and tooltip of a fake widget and of the widgets under it
 local function widgetTexts(roots)
     local out, seen = {}, {}
@@ -2487,9 +3491,10 @@ test('the panel, its menus, the report and the settings in Portuguese: no Englis
     end
     -- party, guild and officers in the token; we are staff (the moderation
     -- entries), Ana has every flag
-    local w = online(nil, { { id = 'p:10:5', k = 'party', l = 'Party' }, { id = 'g:7', k = 'guild' },
+    local w = nearOnline(nil, { { id = 'p:10:5', k = 'party', l = 'Party' }, { id = 'g:7', k = 'guild' },
         { id = 'g:7:o', k = 'officers', l = 'Oficiais' } })
     roster(w, 'p:10:5', { { 7, 0, nil, nil, 16 }, { 8, 0, 4242, 'Ana', 1 + 2 + 4 + 16 + 64 } })
+    nearRoster(w, { { 9, 90, 4243, 'Bia' } }) -- near too, with its level note
     local u = uiWorld({ world = w, talkKey = 'Insert' })
     tr = function(text, ...)
         local t = pt[text] or text
@@ -2542,9 +3547,11 @@ test('the panel, its menus, the report and the settings in Portuguese: no Englis
     eq(headers[1].title.text, 'SUA PARTY')
     eq(headers[1].tip, 'Segure Insert')
     eq(headers[2].title.text, 'SUA GUILD')
-    eq(headers[3].title.text, 'SALAS')
-    -- the rooms unfolded, with a public room, an event and the echo test
-    headers[3].action.onClick()
+    eq(headers[3].title.text, 'PERTO DE VOC\202')
+    eq(headers[4].title.text, 'SALAS')
+    -- the rooms list starts unfolded (players took the folded one for "no
+    -- rooms"), with a public room, an event and the echo test
+    eq(headers[4].action.text, 'Esconder', 'the rooms list starts open')
     w.relay({ t = 'dir', rooms = { { 'pub:geral', 'Geral', 12, 100, 50, 0 }, { 'ev:eventos', 'Eventos', 45, 300, 0, 1 } } })
     runEvents(50)
     local titles = {}
@@ -2990,12 +3997,12 @@ test('the Portuguese texts fit their boxes: the key rows, the onboarding key box
         local tw = textWidth(REGULAR, text)
         assert(tw <= box, string.format('"%s" (%d px) in the %d px key box', text, tw, box))
     end
-    for _, key in ipairs({ 'In the party', 'In the guild', 'In a room / event' }) do
+    for _, key in ipairs({ 'In the party', 'In the guild', 'In a room / event', 'Near you' }) do
         local tw = textWidth(REGULAR, pt[key])
         assert(tw <= labelWidth, string.format('"%s" (%d px) in the %d px label', pt[key], tw, labelWidth))
     end
     -- the check boxes of the keys column (text after the box: text-offset 18)
-    for _, key in ipairs({ 'Join the party room by itself', 'Join the guild room by itself',
+    for _, key in ipairs({ 'Join the party room by itself', 'Join the guild room by itself', 'Join Near you by itself',
         'Show an icon over who is talking', 'Lower the game sounds while someone talks',
         'Push to talk with the game in the background' }) do
         local tw = textWidth(REGULAR, pt[key]) + 18
@@ -3019,6 +4026,13 @@ test('the Portuguese texts fit their boxes: the key rows, the onboarding key box
         local room = 150 - textWidth(BOLD, pt[title]) - hintGap - 4 - button(pt['Leave']) + 2
         local tw = textWidth(REGULAR, 'Insert')
         assert(tw <= room, string.format('%s, Insert (%d px) and %s: %d px of room', pt[title], tw, pt['Leave'], room))
+    end
+    -- "PERTO DE VOCE" (99 px) leaves no room for the key: the hint shows
+    -- nothing there (its tooltip has it), but the title and the wider of its
+    -- buttons ("Entrar") still fit side by side
+    for _, action in ipairs({ 'Join', 'Leave' }) do
+        local tw = textWidth(BOLD, pt['NEAR YOU']) + button(pt[action])
+        assert(tw <= 150, string.format('%s and %s: %d px in 150', pt['NEAR YOU'], pt[action], tw))
     end
 end)
 
@@ -3403,6 +4417,18 @@ test('every widget the Lua reads by id exists in its otui', function()
     for id in read('voice_ui.lua'):gmatch('%f[%w_]h%.([%a_][%w_]*)[:%.]') do
         assert(headerIds[id], 'VoiceSectionHeader has no ' .. id)
     end
+    -- the settings window: the key rows (keyNear too) and the check boxes
+    local settings = read('voicesettings.otui')
+    local settingIds = ids(settings)
+    local src = read('voice_settings.lua')
+    for id in src:gmatch('keys%.([%a_][%w_]*)') do
+        assert(settingIds[id], 'voicesettings.otui has no ' .. id)
+    end
+    for id in src:gmatch("check%('([%w_]+)'") do
+        assert(settingIds[id], 'voicesettings.otui has no check box ' .. id)
+    end
+    assert(src:find("check%('autoNear', 'autoNear'%)") and src:find('keyRow%(keys%.keyNear, 3,'),
+        'the near key row and its check box')
 end)
 
 print(string.format('%d passed, %d failed', passed, failed))

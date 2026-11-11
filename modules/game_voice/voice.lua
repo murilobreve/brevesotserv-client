@@ -17,7 +17,7 @@ local SAVE_DELAY_MS = 1000
 local DUCK_GAIN = 0.7         -- game sounds at 70% while someone talks
 
 KEY_CATEGORY = 'Voz'
-KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento' }
+KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
 local KEY_MUTE, KEY_DEAFEN, KEY_PANEL = 'Silenciar microfone', 'Ensurdecer', 'Abrir/fechar Voz'
 local PRESET_IDS = { normal = 0, eco = 1, high = 2 }
 
@@ -303,9 +303,9 @@ function pressTalk(slot, keyCode)
     end, TX_LIMIT_MS)
 end
 
--- the hold-to-talk button of touch screens: the first room joined
+-- the hold-to-talk button of touch screens: the first room joined (near too)
 function touchSlot()
-    for slot = 0, 2 do
+    for slot = 0, VoiceState.LAST_SLOT do
         if session and session.rooms[slot] then
             return slot
         end
@@ -318,7 +318,7 @@ local function registerKeybinds()
         return
     end
     keybindsOn = true
-    for slot = 0, 2 do
+    for slot = 0, VoiceState.LAST_SLOT do
         local action = KEY_TALK[slot]
         Keybind.new(KEY_CATEGORY, action, '', '')
         Keybind.bind(KEY_CATEGORY, action, {
@@ -339,7 +339,7 @@ local function unregisterKeybinds()
         return
     end
     keybindsOn = false
-    for slot = 0, 2 do
+    for slot = 0, VoiceState.LAST_SLOT do
         Keybind.delete(KEY_CATEGORY, KEY_TALK[slot])
     end
     Keybind.delete(KEY_CATEGORY, KEY_MUTE)
@@ -408,6 +408,51 @@ local function onSessionEvent(what, a, b, c)
     end
 end
 
+-- proximity (the session asks only while it is in the near room) ------------
+
+-- the players this client shows around us (same floor, 7 x 5 tiles), nearest
+-- first; nothing when the local player has no position (dead, not placed)
+local function nearbyPlayers()
+    local player = g_game.getLocalPlayer()
+    local pos = player and player:getPosition()
+    if not pos then
+        return {}
+    end
+    local creatures = g_map.getSpectatorsInRange(pos, false, VoiceState.NEAR_RANGE_X, VoiceState.NEAR_RANGE_Y)
+    return VoiceState.nearList({ id = player:getId(), pos = pos }, creatures)
+end
+
+-- where a near speaker is from us, in tiles; nil when it is not on our floor
+-- or the client lost it: a creature found by id later may be dead with no
+-- position (AGENTS.md, dead creatures in deferred code)
+local function offsetOf(cid)
+    local player = g_game.getLocalPlayer()
+    local me = player and player:getPosition()
+    local creature = me and cid > 0 and g_map.getCreatureById(cid)
+    local pos = creature and not creature:isDead() and creature:getPosition()
+    if not pos or pos.z ~= me.z then
+        return nil
+    end
+    return pos.x - me.x, pos.y - me.y
+end
+
+-- a map call that fails gives nil (the session keeps what it had) and is
+-- logged once; the timers go on
+local function guarded(fn, what)
+    local logged = false
+    return function(...)
+        local ok, a, b = pcall(fn, ...)
+        if ok then
+            return a, b
+        end
+        if not logged then
+            logged = true
+            g_logger.error('game_voice: ' .. what .. ': ' .. tostring(a))
+        end
+        return nil
+    end
+end
+
 local io = {
     now = function() return g_clock.millis() end,
     time = os.time,
@@ -442,6 +487,10 @@ local io = {
         end
     end,
     engine = engineCall,
+    nearby = guarded(nearbyPlayers, 'near'),
+    offset = guarded(offsetOf, 'spatial'),
+    -- an old executable has no setUserSpatial (engine_full checks it once)
+    canSpatial = function() return engine ~= nil and engine.spatial == true end,
 }
 
 -- player actions (panel buttons, keys, menus) ---------------------------------

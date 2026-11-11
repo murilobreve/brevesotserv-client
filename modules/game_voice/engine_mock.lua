@@ -1,9 +1,11 @@
 -- Mock engine: a relay that lives inside the client, for UI work and the
--- tests. It answers the hello with a welcome, a join with a roster of four
--- made-up players, and makes them talk (and now and then come and go) every
--- 1-3 s. EngineMock.reply stands in for canary's opcode 142 answers, so the
--- whole panel can be clicked through on a server without voice. Picked only
--- when the g_settings node 'voice' has mock = true (developers).
+-- tests. It answers the hello with a welcome (with proximity), a join with a
+-- roster of four made-up players, near with three made-up players around
+-- us (creature ids nobody has, so no icon and gain 0), and makes them talk
+-- (and now and then come and go: a visitor in the room, a passer-by near us)
+-- every 1-3 s. EngineMock.reply stands in for canary's opcode 142 answers, so
+-- the whole panel can be clicked through on a server without voice. Picked
+-- only when g_settings has voice-mock = true (developers).
 
 EngineMock = {}
 EngineMock.__index = EngineMock
@@ -15,6 +17,14 @@ local PLAYERS = {
     { sid = 5, guid = 9004, name = 'Dara Voss', flags = 64 }, -- lite
 }
 local VISITOR = { sid = 6, guid = 9005, name = 'Visitante', flags = 0 }
+-- near us: creature ids in the players' range that no real creature has
+local NEAR = {
+    { sid = 11, cid = 0x10FFFF01, guid = 9011, name = 'Eli Brasa', flags = 0 },
+    { sid = 12, cid = 0x10FFFF02, guid = 9012, name = 'Fia', flags = 0 },
+    { sid = 13, cid = 0x10FFFF03, guid = 9013, name = 'Gus Ferro', flags = 1 }, -- self-muted
+}
+local PASSERBY = { sid = 14, cid = 0x10FFFF04, guid = 9014, name = 'Passante', flags = 0 }
+local NEAR_LEVEL = 8
 local SELF_SID = 1
 local MOCK_TOKEN = 'bW9jay12b2ljZQ.bW9jay1zaWduYXR1cmU'
 
@@ -47,8 +57,9 @@ function EngineMock.create(sink, info)
     for i, p in ipairs(PLAYERS) do
         players[i] = { sid = p.sid, guid = p.guid, name = p.name, flags = p.flags }
     end
-    return setmetatable({ name = 'mock', audio = true, sink = sink, info = info or {}, events = {},
-        rooms = {}, talking = {}, visitorIn = false, players = players }, EngineMock)
+    return setmetatable({ name = 'mock', audio = true, spatial = true, sink = sink, info = info or {}, events = {},
+        rooms = {}, talking = {}, visitorIn = false, passerbyIn = false, players = players, nearIds = nil,
+        spatialOf = {} }, EngineMock)
 end
 
 -- a one-shot event that disconnect() cancels
@@ -81,7 +92,7 @@ function EngineMock:connect(url, tok)
         self:later(100, function()
             local now = os.time()
             self:ctl({ t = 'welcome', sid = SELF_SID, now = now, exp = now + 300,
-                lim = { pl = 240, fps = 30, bps = 6000, lastN = 4 } })
+                lim = { pl = 240, fps = 30, bps = 6000, lastN = 4 }, near = { lvl = NEAR_LEVEL } })
         end)
     end)
 end
@@ -90,7 +101,8 @@ function EngineMock:disconnect()
     self:cancelAll()
     -- the talk timer went with the events: the next connect arms a new one
     self.connected, self.talkArmed = false, false
-    self.rooms, self.talking, self.visitorIn = {}, {}, false
+    self.rooms, self.talking, self.visitorIn, self.passerbyIn = {}, {}, false, false
+    self.nearIds, self.spatialOf = nil, {}
 end
 
 -- the relay closing on us, for trying the reconnect screens
@@ -102,26 +114,77 @@ function EngineMock:drop(code)
 end
 
 local function row(p)
-    return { p.sid, 0, p.guid, p.name, p.flags }
+    return { p.sid, p.cid or 0, p.guid, p.name, p.flags }
 end
 
 function EngineMock:roster(id)
     local me = self.info.self or {}
     local u = { { SELF_SID, me.cid or 0, me.guid or 1, me.name or 'Voce', 32 } }
-    for _, p in ipairs(self.players) do
+    local near = id == 'near'
+    for _, p in ipairs(near and NEAR or self.players) do
         u[#u + 1] = row(p)
     end
+    if near and self.passerbyIn then
+        u[#u + 1] = row(PASSERBY)
+    end
     self.rooms[id] = true
-    self:ctl({ t = 'roster', room = id, slot = 0, u = u })
+    self:ctl({ t = 'roster', room = id, slot = near and 3 or 0, u = u })
     self:scheduleTalk()
 end
 
-function EngineMock:anyRoom()
-    return next(self.rooms)
+-- a joined room that is not near (the party's, as a rule)
+function EngineMock:otherRoom()
+    for id in pairs(self.rooms) do
+        if id ~= 'near' then
+            return id
+        end
+    end
+    return nil
+end
+
+-- who may talk now: the room's players and, in near, the players around us
+function EngineMock:talkers()
+    local list = {}
+    if self:otherRoom() then
+        for _, p in ipairs(self.players) do
+            list[#list + 1] = p
+        end
+    end
+    if self.rooms.near then
+        for _, p in ipairs(NEAR) do
+            list[#list + 1] = p
+        end
+        if self.passerbyIn then
+            list[#list + 1] = PASSERBY
+        end
+    end
+    return list
+end
+
+-- the visitor comes into the room or goes; near, the passer-by walks into
+-- sight or out of it (talking or not: the client forgets it either way)
+function EngineMock:comeOrGo()
+    local room = self:otherRoom()
+    if self.rooms.near and (not room or math.random() < 0.5) then
+        self.passerbyIn = not self.passerbyIn
+        if self.passerbyIn then
+            self:ctl({ t = 'in', room = 'near', u = { row(PASSERBY) } })
+        else
+            self.talking[PASSERBY.sid] = nil
+            self:ctl({ t = 'out', room = 'near', sid = PASSERBY.sid })
+        end
+    elseif room then
+        self.visitorIn = not self.visitorIn
+        if self.visitorIn then
+            self:ctl({ t = 'in', room = room, u = { row(VISITOR) } })
+        else
+            self:ctl({ t = 'out', room = room, sid = VISITOR.sid })
+        end
+    end
 end
 
 -- one random edge every 1-3 s while a room is joined: someone starts or stops
--- talking, or the visitor comes in or goes out
+-- talking, or someone comes or goes
 function EngineMock:scheduleTalk()
     if self.talkArmed then
         return
@@ -129,19 +192,14 @@ function EngineMock:scheduleTalk()
     self.talkArmed = true
     self:later(1000 + math.random(0, 2000), function()
         self.talkArmed = false
-        local room = self:anyRoom()
-        if not self.connected or not room then
+        local talkers = self:talkers()
+        if not self.connected or #talkers == 0 then
             return
         end
         if math.random() < 0.1 then
-            self.visitorIn = not self.visitorIn
-            if self.visitorIn then
-                self:ctl({ t = 'in', room = room, u = { row(VISITOR) } })
-            else
-                self:ctl({ t = 'out', room = room, sid = VISITOR.sid })
-            end
+            self:comeOrGo()
         else
-            local p = self.players[math.random(1, #self.players)]
+            local p = talkers[math.random(1, #talkers)]
             local on = not self.talking[p.sid]
             self.talking[p.sid] = on or nil
             self.sink('spk', nil, p.sid, on and 1 or 0)
@@ -161,6 +219,11 @@ function EngineMock:send(msg)
         end)
     elseif t == 'leave' then
         self.rooms[msg.room] = nil
+        if msg.room == 'near' then
+            self.nearIds = nil
+        end
+    elseif t == 'near' then
+        self.nearIds = msg.c -- what we would match against the others' lists
     elseif t == 'dir' then
         self:later(80, function()
             self:ctl({ t = 'dir', rooms = DIR })
@@ -206,6 +269,11 @@ end
 -- the local gate follows the push-to-talk key
 function EngineMock:setTransmit(slot)
     self.sink('talk', nil, slot)
+end
+
+-- no audio to place: the last values are kept (the tests read them)
+function EngineMock:setUserSpatial(sid, gain, pan)
+    self.spatialOf[sid] = { gain = gain, pan = pan }
 end
 
 function EngineMock:terminate()

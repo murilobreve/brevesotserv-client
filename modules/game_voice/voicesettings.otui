@@ -63,7 +63,7 @@ VoiceKeyRow < UIWidget
 
 VoiceSettingsWindow < MythosWindow
   !text: tr('Voice settings')
-  size: 574 420
+  size: 574 466
   @onEscape: modules.game_voice.VoiceSettings.hide()
 
   // audio
@@ -242,6 +242,10 @@ VoiceSettingsWindow < MythosWindow
       id: keyRoom
       anchors.top: prev.bottom
 
+    VoiceKeyRow
+      id: keyNear
+      anchors.top: prev.bottom
+
     VoiceSettingLabel
       id: keyStatus
       anchors.top: prev.bottom
@@ -275,6 +279,11 @@ VoiceSettingsWindow < MythosWindow
       id: autoGuild
       anchors.top: prev.bottom
       !text: tr('Join the guild room by itself')
+
+    VoiceSettingCheck
+      id: autoNear
+      anchors.top: prev.bottom
+      !text: tr('Join Near you by itself')
 
     VoiceSettingCheck
       id: overheadIcon

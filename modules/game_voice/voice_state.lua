@@ -33,8 +33,12 @@ S.ST = {
 }
 local ST = S.ST
 
-S.SLOT_PARTY, S.SLOT_GUILD, S.SLOT_ROOM = 0, 1, 2
-S.SLOT_OF = { party = 0, guild = 1, officers = 1, public = 2, stage = 2, echo = 2 }
+-- four slots, the audio flags' bits 0-1: party, guild or officers, a public
+-- room, event or the echo test, and proximity ("Near you")
+S.SLOT_PARTY, S.SLOT_GUILD, S.SLOT_ROOM, S.SLOT_NEAR = 0, 1, 2, 3
+S.LAST_SLOT = 3
+S.SLOT_OF = { party = 0, guild = 1, officers = 1, public = 2, stage = 2, echo = 2, near = 3 }
+S.NEAR_ROOM = 'near' -- one per relay, like the public rooms
 
 -- member flags (protocol G)
 S.F_SELF_MUTED, S.F_DEAF, S.F_SERVER_MUTED = 1, 2, 4
@@ -74,6 +78,14 @@ S.REPORT_TXT, S.REPORT_WHO = 300, 25
 S.REPORT_WHY = { ofensa = true, assedio = true, spam = true, som_alto = true, outro = true }
 S.REPORT_WAIT_MS = 10000
 S.MOD_OPS = { kick = true, mute = true, unmute = true, speak = true, nospeak = true }
+-- proximity: the players this client shows on screen (same floor, 7 tiles
+-- left and right, 5 up and down), the nearest 40, checked every 500 ms and
+-- sent only when the set changed; the distance and pan of who talks near
+-- us every 200 ms, given to the engine only on a change over 0.02
+S.NEAR_RANGE_X, S.NEAR_RANGE_Y, S.NEAR_MAX = 7, 5, 40
+S.NEAR_GAP_MS = 500
+S.SPATIAL_GAP_MS = 200
+S.SPATIAL_STEP = 0.02
 
 -- helpers --------------------------------------------------------------------
 
@@ -124,6 +136,8 @@ function S.roomKind(id)
     end
     if id == 'echo' then
         return 'echo'
+    elseif id == 'near' then
+        return 'near'
     elseif id:find('^p:%d+:%d+$') then
         return 'party'
     elseif id:find('^g:%d+:o$') then
@@ -234,7 +248,7 @@ end
 S.DEFAULT_PREFS = {
     onboarded = false,
     mode = 'ptt', vadDb = -45, inGain = 100, outVol = 100, preset = 'normal',
-    autoParty = true, autoGuild = false, overheadIcon = true, ducking = false,
+    autoParty = true, autoGuild = false, autoNear = true, overheadIcon = true, ducking = false,
     globalPtt = false, pttMouse = 0, selfMuted = false, deafened = false,
     inDevice = '', outDevice = '', -- '' is the system default
 }
@@ -267,7 +281,7 @@ function S.normalizePrefs(raw)
     raw = type(raw) == 'table' and raw or {}
     local d = S.DEFAULT_PREFS
     local p = {}
-    for _, key in ipairs({ 'onboarded', 'autoParty', 'autoGuild', 'overheadIcon', 'ducking',
+    for _, key in ipairs({ 'onboarded', 'autoParty', 'autoGuild', 'autoNear', 'overheadIcon', 'ducking',
         'globalPtt', 'selfMuted', 'deafened' }) do
         p[key] = toBool(raw[key], d[key])
     end
@@ -452,6 +466,55 @@ function S.buildReport(room, target, why, text)
     return msg
 end
 
+-- proximity ---------------------------------------------------------------------
+
+-- The creature ids of the players this client shows around `me` ({ id, pos },
+-- the local player): the same floor, at most NEAR_RANGE_X tiles left or
+-- right and NEAR_RANGE_Y up or down, never `me`; nearest first (then by id),
+-- at most NEAR_MAX. `creatures` come from the map (getId, getPosition,
+-- isPlayer, isLocalPlayer, isDead): a dead one or one without a position is
+-- skipped (AGENTS.md, dead creatures in deferred code).
+function S.nearList(me, creatures)
+    local found, seen = {}, {}
+    local at = type(me) == 'table' and me.pos
+    if not at or type(creatures) ~= 'table' then
+        return found
+    end
+    for _, c in ipairs(creatures) do
+        if c:isPlayer() and not c:isLocalPlayer() and not c:isDead() then
+            local id, pos = c:getId(), c:getPosition()
+            if pos and pos.z == at.z and isInt(id, 1, 2 ^ 32 - 1) and id ~= me.id and not seen[id] then
+                local dx, dy = pos.x - at.x, pos.y - at.y
+                if math.abs(dx) <= S.NEAR_RANGE_X and math.abs(dy) <= S.NEAR_RANGE_Y then
+                    seen[id] = true
+                    found[#found + 1] = { id = id, d = dx * dx + dy * dy }
+                end
+            end
+        end
+    end
+    table.sort(found, function(a, b)
+        if a.d ~= b.d then
+            return a.d < b.d
+        end
+        return a.id < b.id
+    end)
+    local ids = {}
+    for i = 1, math.min(#found, S.NEAR_MAX) do
+        ids[i] = found[i].id
+    end
+    return ids
+end
+
+-- the gain (1 up to 1.5 tiles away, then 0.11 less a tile, never under 0.2)
+-- and the pan (-0.75 left to 0.75 right, full at 7 tiles) of a speaker
+-- dx, dy tiles from us
+function S.spatial(dx, dy)
+    local d = math.sqrt(dx * dx + dy * dy)
+    local gain = math.max(0.2, math.min(1, 1 - math.max(0, d - 1.5) * 0.11))
+    local pan = math.max(-1, math.min(1, dx / 7)) * 0.75
+    return gain, pan
+end
+
 -- the session -----------------------------------------------------------------
 
 local Session = {}
@@ -459,7 +522,9 @@ Session.__index = Session
 
 -- io: now() ms, time() unix s, random() [0,1), send142(t), connect(url, tok),
 -- disconnect(), sendCtl(t), schedule(name, ms), cancel(name), savePrefs(p),
--- emit(what, ...), engine(method, ...)
+-- emit(what, ...), engine(method, ...); for proximity: nearby() (the ids of
+-- S.nearList), offset(cid) (dx, dy in tiles, or nil when that creature is
+-- not on our floor, gone or dead) and canSpatial() (the engine pans)
 function S.new(io, prefs)
     local self = setmetatable({ io = io, prefs = prefs or S.normalizePrefs(nil) }, Session)
     self.lastHi, self.lastWant, self.lastDir = -1e12, -1e12, -1e12
@@ -468,7 +533,7 @@ function S.new(io, prefs)
     return self
 end
 
-local TIMERS = { 'hi', 'want', 'tokreq', 'tokwait', 'connect', 'retry', 'ctl' }
+local TIMERS = { 'hi', 'want', 'tokreq', 'tokwait', 'connect', 'retry', 'ctl', 'near', 'spatial' }
 
 -- everything that belongs to one login
 function Session:reset()
@@ -477,9 +542,9 @@ function Session:reset()
     self.tok, self.tokRooms, self.tokSig = nil, {}, ''
     self.failures, self.onlineAt, self.reauthUsed, self.retryAt = 0, nil, false, nil
     self.pendingWant, self.reportAt = nil, nil
-    -- what to join again after a reconnect: [slot] = room id (slots 1 and 2)
+    -- what to join again after a reconnect: [slot] = room id (slots 1 to 3)
     self.intents = {}
-    -- party/guild rooms the player left by hand: no auto-join back into them
+    -- party/guild rooms and near the player left by hand: no auto-join back into them
     self.optOut = {}
     self:clearSession()
 end
@@ -491,10 +556,15 @@ function Session:clearSession()
     self.dir = {}
     self.speaking, self.speakingCount = {}, 0
     self.talkSlot = -1
-    self.joining = nil -- the room an auto-join asked for, until its roster
+    self.joining = {} -- [id] = true: rooms an auto-join asked for, until their roster
     self.joins = {} -- times of the joins sent in this relay session (the last minute)
     self.queue, self.bucket, self.bucketAt = {}, S.CTL_BURST, nil
     self.mutedUntil = 0
+    -- proximity: { lvl } from welcome when this relay has it (else nil)
+    self.near = nil
+    self.nearHold = false -- refused or sent out: no auto-join until the next welcome
+    self.nearSig, self.nearSentAt = nil, -1e12 -- the list as last sent, and when
+    self.spatial, self.spatialOn = {}, false -- [sid] = { gain, pan } as given to the engine
 end
 
 -- `force`: tell the UI even if only retryAt changed
@@ -568,8 +638,9 @@ function Session:dropConnection(close)
     if close and (self.state == ST.CONNECTING or self.state == ST.ONLINE) then
         self.io.disconnect()
     end
-    self.io.cancel('connect')
-    self.io.cancel('ctl')
+    for _, name in ipairs({ 'connect', 'ctl', 'near', 'spatial' }) do
+        self.io.cancel(name)
+    end
     local hadRooms = next(self.rooms) ~= nil
     local wasSpeaking = self.speakingCount > 0
     self:clearSession()
@@ -834,6 +905,10 @@ function Session:onTimer(name)
         end
     elseif name == 'ctl' then
         self:drainQueue()
+    elseif name == 'near' then
+        self:nearTick()
+    elseif name == 'spatial' then
+        self:spatialTick()
     end
 end
 
@@ -935,6 +1010,12 @@ function Session:onWelcome(msg)
     self.sid = msg.sid
     self.onlineAt = self.io.now()
     self.retryAt = nil
+    -- this relay has proximity (absent: it has none, and the panel shows nothing of it)
+    if type(msg.near) == 'table' then
+        self.near = { lvl = S.num(msg.near.lvl, 0, 65535, 8) }
+    else
+        self.intents[S.SLOT_NEAR] = nil
+    end
     self:setState(ST.ONLINE)
     -- a token that came while connecting carries newer rights
     self:useTokenForAuth()
@@ -972,29 +1053,34 @@ function Session:sendJoin(id)
     return true
 end
 
--- the party room, and the guild room if the player wants it, unless the
+-- the party room, the guild room if the player wants it, and near (with
+-- autoNear, or joined before a reconnect) when this relay has it, unless the
 -- player left that very room by hand
 function Session:autoJoinTarget(slot)
     if slot == 0 and self.prefs.autoParty and self.tokRooms.party then
         return self.tokRooms.party.id
     elseif slot == 1 and self.prefs.autoGuild and self.tokRooms.guild and not self.intents[1] then
         return self.tokRooms.guild.id
+    elseif slot == S.SLOT_NEAR and self.near and not self.nearHold and (self.prefs.autoNear or self.intents[slot]) then
+        return S.NEAR_ROOM
     end
     return nil
 end
 
+local AUTO_SLOTS = { S.SLOT_PARTY, S.SLOT_GUILD, S.SLOT_NEAR }
+
 function Session:autoJoin()
-    for slot = 0, 1 do
+    for _, slot in ipairs(AUTO_SLOTS) do
         local id = self:autoJoinTarget(slot)
         -- a room already in the slot moves with the rights (the relay's moved)
-        if id and not self.rooms[slot] and self.optOut[slot] ~= id and self.joining ~= id and self:sendJoin(id) then
-            self.joining = id
+        if id and not self.rooms[slot] and self.optOut[slot] ~= id and not self.joining[id] and self:sendJoin(id) then
+            self.joining[id] = true
         end
     end
 end
 
 function Session:roomById(id)
-    for slot = 0, 2 do
+    for slot = 0, S.LAST_SLOT do
         local room = self.rooms[slot]
         if room and room.id == id then
             return room
@@ -1062,9 +1148,7 @@ function CTL.roster(self, msg)
     if not slot or type(msg.u) ~= 'table' then
         return
     end
-    if self.joining == msg.room then
-        self.joining = nil
-    end
+    self.joining[msg.room] = nil
     local room = { id = msg.room, kind = kind, slot = slot, label = self:labelOf(kind, msg.room),
         members = {}, count = 0, over = 0 }
     -- joining a room leaves the other one of the same slot
@@ -1081,12 +1165,18 @@ function CTL.roster(self, msg)
             if not self:memberAnywhere(sid) then
                 self:dropSpeaker(sid)
             end
+            if slot == S.SLOT_NEAR and not room.members[sid] then
+                self.spatial[sid] = nil
+            end
         end
     end
     if slot > 0 and kind ~= 'echo' then
         self.intents[slot] = room.id
     end
     self.io.emit('rooms')
+    if slot == S.SLOT_NEAR then
+        self:nearJoined()
+    end
 end
 
 -- 'in' is a Lua keyword
@@ -1101,11 +1191,18 @@ CTL['in'] = function(self, msg)
             self:addMember(room, m)
             if room.members[m.sid] then
                 self.io.emit('in', room, m)
+                -- already talking in our party: placed at once
+                if room.slot == S.SLOT_NEAR and m.speaking then
+                    self:spatialSoon(m.sid)
+                end
             end
         end
     end
 end
 
+-- in near this comes whenever someone walks out of sight: the member, its
+-- speaking state (unless it is in another of our rooms) and its spatial
+-- values are forgotten
 function CTL.out(self, msg)
     local room = self:roomById(msg.room)
     local m = room and room.members[msg.sid]
@@ -1114,6 +1211,9 @@ function CTL.out(self, msg)
     end
     room.members[msg.sid] = nil
     room.count = room.count - 1
+    if room.slot == S.SLOT_NEAR then
+        self.spatial[msg.sid] = nil
+    end
     self.io.emit('out', room, m)
     if not self:memberAnywhere(msg.sid) then
         self:dropSpeaker(msg.sid)
@@ -1143,6 +1243,11 @@ function CTL.left(self, msg)
     if not room then
         return
     end
+    -- kicked from near, or near switched off: not joined again by itself
+    -- until the next welcome
+    if room.slot == S.SLOT_NEAR then
+        self.nearHold = true
+    end
     self:removeRoom(room)
     self.io.emit('notice', 'left', type(msg.why) == 'string' and msg.why or '', room)
 end
@@ -1151,6 +1256,9 @@ function Session:removeRoom(room)
     self.rooms[room.slot] = nil
     if self.intents[room.slot] == room.id then
         self.intents[room.slot] = nil
+    end
+    if room.slot == S.SLOT_NEAR then
+        self:nearLeft()
     end
     for sid in pairs(room.members) do
         if not self:memberAnywhere(sid) then
@@ -1201,13 +1309,16 @@ end
 function CTL.err(self, msg)
     local code = type(msg.code) == 'string' and msg.code or 'bad_msg'
     if msg.room and (code == 'room_denied' or code == 'room_full' or code == 'kick_block') then
-        for slot = 1, 2 do
+        for slot = 1, S.LAST_SLOT do
             if self.intents[slot] == msg.room and not (self.rooms[slot] and self.rooms[slot].id == msg.room) then
                 self.intents[slot] = nil
             end
         end
-        if self.joining == msg.room then
-            self.joining = nil
+        self.joining[msg.room] = nil
+        -- near refused a join (not a talk spurt under its level, which comes
+        -- while we are in it): no auto-join again until the next welcome
+        if msg.room == S.NEAR_ROOM and not self.rooms[S.SLOT_NEAR] then
+            self.nearHold = true
         end
     end
     self.io.emit('notice', 'err', code, msg.room)
@@ -1216,7 +1327,7 @@ end
 -- speaking edges and the local gate --------------------------------------------
 
 function Session:memberAnywhere(sid)
-    for slot = 0, 2 do
+    for slot = 0, S.LAST_SLOT do
         local room = self.rooms[slot]
         if room and room.members[sid] then
             return room.members[sid]
@@ -1236,7 +1347,7 @@ function Session:onSpeaking(sid, on)
     end
     self.speaking[sid] = on or nil
     self.speakingCount = self.speakingCount + (on and 1 or -1)
-    for slot = 0, 2 do
+    for slot = 0, S.LAST_SLOT do
         local room = self.rooms[slot]
         local m = room and room.members[sid]
         if m then
@@ -1246,6 +1357,10 @@ function Session:onSpeaking(sid, on)
     self.io.emit('speaking', sid, on, member)
     if self.speakingCount == (on and 1 or 0) then
         self.io.emit('speakers', self.speakingCount)
+    end
+    local near = self.rooms[S.SLOT_NEAR]
+    if on and near and near.members[sid] then
+        self:spatialSoon(sid)
     end
 end
 
@@ -1258,6 +1373,120 @@ end
 function Session:onTalk(slot)
     self.talkSlot = tonumber(slot) or -1
     self.io.emit('talk', self.talkSlot)
+end
+
+-- proximity: the near list and the spatial values -------------------------------
+--
+-- Both run only while we are in the near room (scheduleEvent through io,
+-- never per frame) and stop when we leave it, on a drop and at game end
+-- (dropConnection and gameEnd cancel 'near' and 'spatial'). The spatial
+-- tick runs only while someone near us talks.
+
+-- the near roster came (a join, or a join again): the relay knows nothing of
+-- what we see yet, so the list goes now (500 ms after the last one at the
+-- earliest), then every 500 ms when it changed
+function Session:nearJoined()
+    self.nearHold = false
+    self.nearSig = nil
+    self.io.cancel('near')
+    self:nearTick()
+    local room = self.rooms[S.SLOT_NEAR]
+    for sid in pairs(self.speaking) do
+        if room.members[sid] then
+            self:spatialSoon(sid)
+        end
+    end
+end
+
+function Session:nearLeft()
+    self.io.cancel('near')
+    self.io.cancel('spatial')
+    self.spatialOn = false
+    self.nearSig = nil
+    self.spatial = {}
+end
+
+function Session:nearTick()
+    if self.state ~= ST.ONLINE or not self.rooms[S.SLOT_NEAR] then
+        return
+    end
+    local wait = self.nearSentAt + S.NEAR_GAP_MS - self.io.now()
+    -- nil: the map could not be read this time; the last list stands
+    local ids = wait <= 0 and self.io.nearby()
+    if ids then
+        local list, sorted = {}, {}
+        for i = 1, math.min(#ids, S.NEAR_MAX) do
+            list[i], sorted[i] = ids[i], ids[i]
+        end
+        -- the set, not the order: the nearest moving changes nothing
+        table.sort(sorted)
+        local sig = table.concat(sorted, ',')
+        if sig ~= self.nearSig then
+            self.nearSig, self.nearSentAt = sig, self.io.now()
+            self:send({ t = 'near', c = list })
+        end
+    end
+    if wait <= 0 then
+        wait = S.NEAR_GAP_MS
+    end
+    self.io.schedule('near', wait)
+end
+
+function Session:canSpatial()
+    local can = self.io.canSpatial
+    return can == nil or can() == true
+end
+
+-- a near member started talking (or came near while talking): placed at
+-- once, then every 200 ms with the others while anyone near us talks
+function Session:spatialSoon(sid)
+    local room = self.rooms[S.SLOT_NEAR]
+    local m = room and room.members[sid]
+    if self.state ~= ST.ONLINE or not m or sid == self.sid or not self:canSpatial() then
+        return
+    end
+    self:spatialUpdate(sid, m)
+    if not self.spatialOn then
+        self.spatialOn = true
+        self.io.schedule('spatial', S.SPATIAL_GAP_MS)
+    end
+end
+
+function Session:spatialTick()
+    self.spatialOn = false
+    local room = self.rooms[S.SLOT_NEAR]
+    if self.state ~= ST.ONLINE or not room or not self:canSpatial() then
+        return
+    end
+    local any = false
+    for sid in pairs(self.speaking) do
+        local m = room.members[sid]
+        if m and sid ~= self.sid then
+            any = true
+            self:spatialUpdate(sid, m)
+        end
+    end
+    -- nobody near us talks any more: nothing runs until someone does
+    if any then
+        self.spatialOn = true
+        self.io.schedule('spatial', S.SPATIAL_GAP_MS)
+    end
+end
+
+-- the creature not on our floor (gone, dead, another floor): gain 0, the pan
+-- kept; the engine is told only of a change over SPATIAL_STEP
+function Session:spatialUpdate(sid, m)
+    local last = self.spatial[sid]
+    local gain, pan = 0, last and last.pan or 0
+    local dx, dy = self.io.offset(m.cid)
+    if dx and dy then
+        gain, pan = S.spatial(dx, dy)
+    end
+    if last and math.abs(gain - last.gain) <= S.SPATIAL_STEP and math.abs(pan - last.pan) <= S.SPATIAL_STEP then
+        return
+    end
+    self.spatial[sid] = { gain = gain, pan = pan }
+    self.io.engine('setUserSpatial', sid, gain, pan)
 end
 
 -- player actions --------------------------------------------------------------
@@ -1287,7 +1516,7 @@ function Session:leave(id)
         return false
     end
     self:send({ t = 'leave', room = id })
-    if room.slot <= 1 then
+    if room.slot <= 1 or room.slot == S.SLOT_NEAR then
         self.optOut[room.slot] = id
     end
     self:removeRoom(room)
@@ -1320,7 +1549,7 @@ end
 function Session:setUserMuted(member, on)
     S.setUserPref(self.prefs, member.guid, 'm', on, self.io.time())
     self.io.savePrefs(self.prefs)
-    for slot = 0, 2 do
+    for slot = 0, S.LAST_SLOT do
         local room = self.rooms[slot]
         local m = room and room.members[member.sid]
         if m then
@@ -1377,11 +1606,11 @@ end
 -- control messages to the relay, at most CTL_RATE a second ----------------------
 
 -- pending messages that a newer one replaces: one mute per player, one of each
--- switch, one directory request
+-- switch, one directory request, one near list
 local function queueKey(msg)
     if msg.t == 'mute' then
         return 'mute' .. msg.sid
-    elseif msg.t == 'self' or msg.t == 'deaf' or msg.t == 'dir' or msg.t == 'auth' then
+    elseif msg.t == 'self' or msg.t == 'deaf' or msg.t == 'dir' or msg.t == 'auth' or msg.t == 'near' then
         return msg.t
     end
     return nil

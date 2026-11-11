@@ -1,7 +1,9 @@
 # game_voice (Mythos Voz)
 
 Voice chat in the game panel: the party room, the guild and officers rooms,
-public rooms and event stages, Discord-like. Audio goes through the
+public rooms and event stages, Discord-like, and proximity ("Perto de você":
+who is on your screen hears you, quieter with distance and panned left or
+right; see Proximity below). Audio goes through the
 `mythos-voz` relay (Go, `tools/voz` in the server repository); canary only
 grants the rights, over extended opcode 142.
 
@@ -17,11 +19,11 @@ has no `g_voice` until the native engine (phases 6 and 7), so there
 
 | File | What it holds |
 |---|---|
-| `voice_state.lua` | The pure part: state machine, opcode 142 and relay messages, rooms and members, control rate limit, preferences, report builder. No `g_*` call and no widget: it runs in plain LuaJIT. |
+| `voice_state.lua` | The pure part: state machine, opcode 142 and relay messages, rooms and members, control rate limit, preferences, report builder, the near list and the spatial values with their timers. No `g_*` call and no widget: it runs in plain LuaJIT (the map is read through `io.nearby` and `io.offset`, which voice.lua gives). |
 | `engine_full.lua` | Thin wrapper over `g_voice` (only if the binding exists and `isSupported()`). |
 | `engine_lite.lua` | Control messages only, over `HTTP.webSocket`: presence, rooms, moves, moderation. No audio. |
-| `engine_mock.lua` | A relay inside the client (welcome, a roster of 4 made-up players, speaking edges every 1-3 s), plus canary's opcode 142 answers. |
-| `voice.lua` | The glue: opcode 142, engine choice, push-to-talk keys, ducking, game start/end. |
+| `engine_mock.lua` | A relay inside the client (welcome with proximity, a roster of 4 made-up players, near with 3 more and a passer-by who walks in and out, speaking edges every 1-3 s), plus canary's opcode 142 answers. |
+| `voice.lua` | The glue: opcode 142, engine choice, push-to-talk keys, ducking, game start/end, the map reads of proximity. |
 | `voice_ui.lua`, `voice.otui` | The panel, member rows, right-click menus, volume popup, report window, over-head icon. |
 | `voice_settings.lua`, `voicesettings.otui`, `voiceonboard.otui` | Settings window and the one-time onboarding. |
 | `voice_locale.lua` | Portuguese for every English string (Latin-1 as `\ddd` escapes), merged into the `pt` locale on first use, only for keys `pt.lua` lacks. |
@@ -69,14 +71,19 @@ through one sink with the shape of `g_voice.onVoiceEvent(type, s, a, b)`:
 
 Contract for the phase 4/6 `g_voice` binding, used by `engine_full.lua`:
 `connect(url, token, clientTag, build)` sends the hello itself once open;
-`disconnect()`, `sendControl(json)`, `setTransmit(slot|-1)`, `setMode(vad)`,
-`setVadThreshold(db)`, `setPreset(0 normal|1 eco|2 high)`,
+`disconnect()`, `sendControl(json)`, `setTransmit(slot|-1)` (slots 0-3),
+`setMode(vad)`, `setVadThreshold(db)`, `setPreset(0 normal|1 eco|2 high)`,
 `setInputDevice(name)`, `setOutputDevice(name)`, `getInputDevices()` and
 `getOutputDevices()` (arrays of names), `setInputGain(x)`,
 `setOutputVolume(x)`, `setUserVolume(sid, x)`, `setSlotVolume(slot, x)`,
 `setDeafened(b)`, `setSelfMuted(b)`, `setMeter(b)`, `setPttMouse(btn, slot)`
 (browser; btn 3 or 4, slot -1 to turn off), `setGlobalPtt(vk)` (Windows; a
-virtual-key code, 0 to turn off), `startLocalTest(b)`. The wrapper drops a
+virtual-key code, 0 to turn off), `startLocalTest(b)`, and with the slot-3
+engines `setUserSpatial(sid, gain, pan)` (gain 0-1, pan -1 left to 1 right,
+for that speaker's slot-3 frames only). `EngineFull.create` looks that one
+up once with a type test: an older executable has none, `engine.spatial` is
+false and the session never computes a spatial value (the lite engine has
+none either; the mock keeps the values). The wrapper drops a
 `closed`/`error` state that arrives after its own `disconnect()`.
 `applyEnginePrefs()` sends every setting again on each change (each slider
 step), so a setter whose value did not change must do nothing: no microphone
@@ -163,18 +170,24 @@ Where the plan left room, the simplest safe option was taken:
   A token while online is sent as `auth`, then the party (and, with autoGuild,
   the guild) room is joined if the slot is empty; a room already in the slot
   is moved by the relay itself (`moved`).
+- **Slots**: 0 party, 1 guild or officers, 2 a public room, event or the echo
+  test, 3 near (proximity). Every walk over the slots (rooms, members,
+  speaking, mutes, intents, the talk keys, the touch button, the own ring)
+  goes to `VoiceState.LAST_SLOT`.
 - **Rejoin after a reconnect**: the party room comes from the token (autoParty),
   the guild/officers room is joined again only if the token still lists it,
-  and the public room or event of before is joined again (the relay refuses it
-  with `err room_denied` if the rights changed, which clears it).
+  the public room or event of before is joined again (the relay refuses it
+  with `err room_denied` if the rights changed, which clears it), and near
+  with autoNear, or when it was joined by hand before the drop.
 - A party or guild room left by hand is not auto-joined again until its id
-  changes (a new party epoch).
+  changes (a new party epoch); near left by hand, not in this login (a join
+  by hand lifts it).
 - **Control rate limit**: the relay allows 5/s, burst 10; this client sends at
   most 4/s after a burst of 8, through a queue of 256 (one `mute` for each
   muted player of a big guild roster; the relay keeps up to 256). A newer
-  `mute` for the same player, `self`, `deaf`, `dir` or `auth` replaces the
-  pending one. A saved mute or volume is sent once per player and relay
-  session, even when the player is in two of our rooms.
+  `mute` for the same player, `self`, `deaf`, `dir`, `auth` or `near`
+  replaces the pending one. A saved mute or volume is sent once per player
+  and relay session, even when the player is in two of our rooms.
 - **Joins**: at most 10 a minute per relay session, the relay's own limit
   (over it the relay answers `rate` and, after 20 of those, closes 4429). A
   click over the budget does nothing and says "too fast; wait a moment".
@@ -185,16 +198,18 @@ Where the plan left room, the simplest safe option was taken:
   and sent again after each reconnect.
 - **Moderation entries** show when this player's own row in that room has the
   moderator (32) or staff (16) flag; in the party room only the mute entries
-  show unless staff. The relay checks every action again.
+  show unless staff; in near only the staff has them (no party-leader or
+  guild moderation there). The relay checks every action again.
 - **Reports**: `{a='report', c, n, room, why, txt, who}` with `txt` at most 300
   bytes and `who` (the reported player first) at most 25 names, trimmed until
   the JSON fits 2048 bytes. One report at a time (10 s, or until `rep`); a
   `rep` with no report pending is ignored. The text goes as typed (Latin-1),
   like `game_feedback`.
-- **Speaking**: rings in the rows and the over-head icon change only on edges;
-  the over-head icon is attached only to a creature that exists, is not dead
-  and has a position, at most 8 at a time, and is destroyed on the off edge
-  (destroying it detaches it). `speakers` 0 removes every icon but our own.
+- **Speaking**: rings in the rows and the over-head icon (near speakers too)
+  change only on edges; the over-head icon is attached only to a creature
+  that exists, is not dead and has a position, at most 8 at a time, and is
+  destroyed on the off edge (destroying it detaches it). `speakers` 0
+  removes every icon but our own.
   Our own voice coming back from the echo room gets no second icon (the
   local gate's `self` icon is there). Every icon is removed on the off
   edge, when the speaker leaves our rooms, and at game end. The icon is an
@@ -220,13 +235,17 @@ Where the plan left room, the simplest safe option was taken:
   "Desligar/Ligar áudio". Online, the status row and the Voz button say
   "Conectado" (it said "Voz" under the title "Voz").
 - **Settings keys**: label 92 px ("Na sala/evento", as the Hotkeys list's
-  "Falar na sala/evento"), then the key box, 126 px in the client, which
-  shows "Aperte uma tecla..." and keys up to "Ctrl+Shift+PageDown" whole; the
-  box's tooltip has the key whole. The Lua test measures these with the
-  font's glyph widths.
+  "Falar na sala/evento"; "Perto de você" is 82), then the key box, 126 px
+  in the client, which shows "Aperte uma tecla..." and keys up to
+  "Ctrl+Shift+PageDown" whole; the box's tooltip has the key whole. The
+  window is 466 px high for the fourth key row and the autoNear check box
+  ("Entrar sozinho em Perto de você", 193 px after the box's 18). The Lua
+  test measures these with the font's glyph widths.
 - A member row that leaves a room with hidden members gives its place to a
   hidden one in a redraw at most once a second, so a big room's churn does
-  not redraw the panel every frame.
+  not redraw the panel every frame. In near (people walk past all the time)
+  a hidden member takes the free row in place: near's `in` and `out` never
+  redraw the panel.
 - **Where the panel opens** (`VoiceUI.toggle`): where it is if its side panel
   has room for its minimum height; else a side panel with room
   (`findContentPanelAvailable`); else the top of the selected side panel
@@ -234,9 +253,11 @@ Where the plan left room, the simplest safe option was taken:
   appended at the end, it opened under the bottom of the screen). 100 ms
   later, once the layout settled, a panel that does not end inside
   `rootWidget` floats over the top right of the map (and is saved there).
-- **Section headers**: "SUA PARTY", "SUA GUILD", "SALAS", "EVENTOS" (the
-  client says "party" and "guild": the bosses window's "Sua party", pt.lua's
-  "Entrar na party do %s"; a bare "PARTY" read as English). The key hint
+- **Section headers**: "SUA PARTY", "SUA GUILD", "PERTO DE VOCÊ", "SALAS",
+  "EVENTOS" (the client says "party" and "guild": the bosses window's "Sua
+  party", pt.lua's "Entrar na party do %s"; a bare "PARTY" read as English).
+  "PERTO DE VOCÊ" (99 px bold) and "Entrar" (50 px) fill the 150 px header
+  with 1 px to spare, so its key hint shows only in its tooltip. The key hint
   ("Segure Insert") ends where the header's button (Sair, Entrar, Mostrar)
   starts; when it does not fit, only the key shows ("Insert"), and when not
   even the key fits, nothing (a cut "Segure I..." read as a broken label).
@@ -244,11 +265,12 @@ Where the plan left room, the simplest safe option was taken:
 - **Volume popup**: a click on the track or an arrow moves 10% (it moved 1%),
   on the 10% grid for the track; "0%" and "100%" buttons; the thumb still
   drags freely.
-- **Ducking**: game channels go to 70% on the first speaker and back on the
-  last; a volume the player changed meanwhile is kept.
-- **Push-to-talk**: the three talk keys, mute, deafen and the panel toggle are
-  `Keybind` actions of the `Voz` category (no default key; Options > Hotkeys
-  lists them once voice was offered). A key that types in the chat is refused
+- **Ducking**: game channels go to 70% on the first speaker (near ones too)
+  and back on the last; a volume the player changed meanwhile is kept.
+- **Push-to-talk**: the four talk keys ("Falar na party", "Falar na guild",
+  "Falar na sala/evento", "Falar perto"), mute, deafen and the panel toggle
+  are `Keybind` actions of the `Voz` category (no default key; Options >
+  Hotkeys lists them once voice was offered). A key that types in the chat is refused
   while the chat is on, and saved for "chat off" only when the chat is off.
   A key is also refused when anything else would run on it in the chat modes
   it is saved for (`VoiceSettings.keyTaken`): another `Keybind` action, a
@@ -271,7 +293,8 @@ Where the plan left room, the simplest safe option was taken:
   with a notice. Touch screens get a hold-to-talk button.
 - **Preferences** (`g_settings` node `voice`), per installation: `onboarded`,
   `mode`, `vadDb`, `inGain`, `outVol`, `preset`, `autoParty`, `autoGuild`,
-  `overheadIcon`, `ducking`, `globalPtt`, `pttMouse`, `selfMuted`, `deafened`,
+  `autoNear` (default on), `overheadIcon`, `ducking`, `globalPtt`, `pttMouse`,
+  `selfMuted`, `deafened`,
   `inDevice`, `outDevice`, and `users` = `{ g<guid> = { v = 0-200, m = bool, t = unix } }`
   (string keys: OTML loses numeric ones). An entry back at the defaults is
   dropped; at most 500, least recently changed go first. Saved once a second
@@ -291,6 +314,62 @@ Where the plan left room, the simplest safe option was taken:
   report window and the settings drawn in Portuguese for English left over.
 - The rules link in the onboarding points to `https://mythosot.com.br/?subtopic=voz`
   (to be created with the rules text).
+
+## Proximity ("Perto de você", slot 3)
+
+The relay has one `near` room (kind `near`, slot 3) when its config enables
+it; who hears whom is mutual visibility: A and B are near when both are in
+the room and each one's latest list holds the other's creature id. Audio on
+slot 3 goes only to the members near the speaker.
+
+- **Welcome**: `"near":{"lvl":N}` when the relay has it (`session.near =
+  { lvl = N }`, N the level to talk there, read through `VoiceState.num`).
+  Absent, the client shows nothing of it and joins nothing.
+- **Joining**: with `autoNear` (on by default) near is joined after every
+  welcome, like the party room; not when the player left it by hand in this
+  login (`optOut[3]`, lifted by a join by hand), nor after an `err` that
+  refused the join (`room_denied`, `kick_block`) or a `left` (kicked, or
+  switched off on the relay) until the next welcome. A `room_denied` while
+  in near is a talk spurt under the level: the room stays and the player is
+  told "Voz: para falar perto você precisa do nível N.". Lite sessions join
+  too (presence only).
+- **The near list** `{"t":"near","c":[cid,...]}`: while the session is in
+  near, every 500 ms (the session's `near` timer, scheduleEvent), voice.lua
+  asks `g_map.getSpectatorsInRange(pos, false, 7, 5)` around the local
+  player and `VoiceState.nearList` keeps the players on its floor within 7
+  tiles left or right and 5 up or down, alive with a position, never the
+  local player, nearest first, at most 40. It is sent only when the set
+  changed (the sorted ids; the nearest walking changes nothing), at most
+  once per 500 ms, and once right after the near roster arrives (500 ms
+  after the last list at the earliest). A map read that fails keeps the last
+  list (logged once).
+- **Spatial values**: every 200 ms (the `spatial` timer) while someone in
+  near talks, and at once on a near member's speaking edge (or when one
+  already talking in the party comes near), each talking near member but us
+  is looked up by its creature id: missing, dead or on another floor ->
+  gain 0, the pan kept; else `d = sqrt(dx^2 + dy^2)` tiles, gain =
+  `clamp(1 - max(0, d - 1.5) * 0.11, 0.2, 1)`, pan = `clamp(dx / 7, -1, 1) *
+  0.75`. `setUserSpatial` is called only when gain or pan moved by more than
+  0.02 (at most 5 calls a second a speaker). The engine applies it to that
+  speaker's slot-3 frames only: a party member who is also near sounds
+  centred in the party. The timer stops at the first tick with nobody near
+  talking.
+- **Cost**: nothing runs when the session is not in near: both timers start
+  from the near roster, stop when near is left (by hand, `left`), on any
+  drop of the relay session and at game end (`dropConnection`, `gameEnd`),
+  and the spatial one runs only while a near member talks and the engine can
+  pan (`io.canSpatial`). A member who walks out of sight (`out`) is
+  forgotten with its speaking state (unless it is in another of our rooms)
+  and its spatial values; nothing is sent to the engine for it.
+- **Panel**: "PERTO DE VOCÊ" after the guild and before the rooms, with the
+  slot-3 key hint, Entrar/Sair, the members near us from the roster, `in`
+  and `out` (in place, never a redraw) and, while the character's level is
+  under N, the note "Falar perto: nível N+" (read when the panel is drawn).
+  Settings: the "Perto de você" key row and "Entrar sozinho em Perto de
+  você" (autoNear).
+- **Mock**: `voice-mock` shows near with three made-up players (creature ids
+  `0x10FFFF01`..`03`, which no creature has: no icon, gain 0) whose speaking
+  toggles, and a passer-by who walks in and out.
 
 ## Known gaps for later phases
 

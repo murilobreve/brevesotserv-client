@@ -20,7 +20,8 @@ end
 
 -- info: { build = text }
 function EngineLite.create(sink, info)
-    return setmetatable({ name = 'lite', audio = false, sink = sink, build = info.build, gen = 0 }, EngineLite)
+    return setmetatable({ name = 'lite', audio = false, spatial = false, sink = sink, build = info.build, gen = 0 },
+        EngineLite)
 end
 
 -- a later build may put the number in the message; today there is none
