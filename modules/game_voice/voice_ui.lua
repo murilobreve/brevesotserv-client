@@ -475,6 +475,11 @@ end
 -- "Hold F8" next to a section, and the key alone for a narrow header: only
 -- where this client can talk
 local function keyHint(slot)
+    -- the one talk key shows next to the room it talks in now
+    local s = session()
+    if not (s and s.targetSlot and s:targetSlot() == slot) or getPrefs().mode == 'vad' then
+        return '', ''
+    end
     local key = hasAudio() and talkKey(slot) or ''
     if key == '' then
         return '', ''
@@ -665,6 +670,16 @@ local function nearSection(parent, s)
     local player = g_game.getLocalPlayer()
     if hasAudio() and lvl > 0 and not (player and player:getLevel() >= lvl) then
         note(parent, fmt('Talking nearby: level %d+', lvl))
+    end
+    -- the talk key talks here only out of party, guild and rooms (the header
+    -- is too narrow for its hint): say so
+    if room and hasAudio() and s:targetSlot() == S.SLOT_NEAR and getPrefs().mode ~= 'vad' then
+        local key = talkKey(S.SLOT_NEAR)
+        if key ~= '' then
+            note(parent, fmt('Hold %s to talk nearby', key))
+        else
+            note(parent, tr('Pick a talk key in the voice settings'))
+        end
     end
 end
 

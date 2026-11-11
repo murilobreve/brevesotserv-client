@@ -228,23 +228,21 @@ VoiceSettingsWindow < MythosWindow
       id: keysTitle
       anchors.top: parent.top
       anchors.left: parent.left
-      !text: tr('Push-to-talk keys')
+      !text: tr('Push-to-talk key')
 
     VoiceKeyRow
       id: keyParty
       anchors.top: prev.bottom
 
-    VoiceKeyRow
-      id: keyGuild
+    VoiceSettingLabel
+      id: keyNote
       anchors.top: prev.bottom
-
-    VoiceKeyRow
-      id: keyRoom
-      anchors.top: prev.bottom
-
-    VoiceKeyRow
-      id: keyNear
-      anchors.top: prev.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 2
+      text-wrap: true
+      text-auto-resize: true
+      !text: tr('It talks in the party; out of one, in the guild, then the room, then near you.')
 
     VoiceSettingLabel
       id: keyStatus

@@ -17,7 +17,7 @@ VoiceOnboardWindow < MythosWindow
     color: #e6e0f2
     text-wrap: true
     text-auto-resize: true
-    !text: tr('Talk with your party while you play. Hold a key to talk: nobody hears you while it is up.')
+    !text: tr('Talk while you play: the microphone opens by itself when you speak. Not to be heard, mute the microphone or leave the room.')
 
   Label
     id: headset
@@ -62,7 +62,7 @@ VoiceOnboardWindow < MythosWindow
     color: #f3dcae
     text-wrap: true
     text-auto-resize: true
-    !text: tr('Click the box and press the key to hold to talk in the party:')
+    !text: tr('If you would rather hold a key to talk, click the box and press it:')
 
   UIWidget
     id: keyBox

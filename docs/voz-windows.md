@@ -118,16 +118,18 @@ segunda pessoa (ou o client do navegador em `/play`) na mesma party.
    (um fone USB, por exemplo) e confirme que a voz vai para ele enquanto o
    som do jogo continua nas caixas. Tirar o fone USB com a voz ligada não
    pode travar nada: a voz volta no dispositivo padrão.
-3. **Push-to-talk:** segure a tecla de "Falar na party" e fale; a outra
-   pessoa ouve, e o ícone de quem fala acende para os dois. Solte: para na
-   hora.
-4. **Ativação por voz** (configurações da voz): fale sem apertar nada; o
-   microfone abre sozinho e fecha uns 0,3 s depois que você para. Fora de
-   qualquer sala, ela não abre o microfone.
+3. **Ativação por voz** (o padrão): fale sem apertar nada; o microfone abre
+   sozinho e fecha uns 0,3 s depois que você para. A voz vai para um lugar
+   só, nesta ordem: a party; sem party, a guild; depois a sala; e por último
+   "Perto de você". Fora de qualquer sala, o microfone não abre.
+4. **Push-to-talk** (opção nas configurações da voz, "Apertar para falar"):
+   segure a tecla "Falar" (uma só, para todos os lugares, na mesma ordem
+   acima) e fale; a outra pessoa ouve, e o ícone de quem fala acende para
+   os dois. Solte: para na hora.
 5. **Alt+Tab solta o push-to-talk:** segure a tecla, aperte Alt+Tab e veja
    que parou de transmitir.
 6. **Falar com o jogo minimizado** (opção "Falar com o jogo minimizado" nas
-   teclas): com ela ligada, a tecla de "Falar na party" funciona até com o
+   teclas): com ela ligada, a tecla "Falar" funciona até com o
    jogo minimizado ou com outra janela na frente. Funciona com letras,
    números, F1 a F24 e Espaço. Segurar mais de 60 s solta sozinho.
    - Com a janela do jogo na frente vale a tecla normal do jogo (que
@@ -173,18 +175,13 @@ segunda pessoa (ou o client do navegador em `/play`) na mesma party.
     de 100 ms (o Windows pode demorar com fone Bluetooth). Se aparecerem com
     mais de uns 200 ms, mande para mim: nessa hora a voz dos outros pode
     falhar por um instante, e dá para mudar isso.
-15. **Perto de você (voz por proximidade):** com duas pessoas com fone, cada
-    uma com o personagem na tela da outra (a poucos passos, no mesmo andar),
-    as duas entram em "Perto de você" no painel e escolhem uma tecla para
-    "Falar perto" (ela não tem tecla padrão). Fale com essa tecla: a outra
-    pessoa ouve do lado em que o seu personagem está na tela dela (à
-    esquerda, no lado esquerdo do fone) e mais baixo quanto mais longe. Ande
-    de um lado para o outro falando: o som passa de um lado para o outro
-    aos poucos, sem estalo. Ao mesmo tempo, a party e a guild continuam no
-    meio e com o volume de sempre. Fora da tela um do outro (outro andar, ou
-    longe), não se ouvem pela "Perto de você". Com fone, o OpenAL pode ligar
-    o som 3D (HRTF) sozinho: o lado fica mais natural e não some de todo do
-    outro ouvido; nas caixas de som, quem está bem ao lado sai só de uma.
+15. **Perto de você (voz por proximidade):** com duas pessoas sem party e
+    fora das salas, cada uma com o personagem na tela da outra (a poucos
+    passos, no mesmo andar), as duas ficam em "Perto de você" (o painel
+    entra sozinho). Fale: a outra pessoa ouve no volume normal, igual à
+    party (sem efeito de distância nem de lado). Fora da tela um do outro
+    (outro andar, ou longe), não se ouvem. Para não ser ouvido por quem está
+    perto, saia de "Perto de você" ou desligue o microfone.
 
 Se algo falhar, mande: o que fez, o que esperava, e o arquivo de log do
 client (as linhas que começam com `voice:`).

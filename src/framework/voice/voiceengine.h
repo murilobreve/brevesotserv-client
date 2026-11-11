@@ -62,8 +62,8 @@ public:
     // Behaviour the browser engine has and the native one must match:
     // - voice activation listens only while connected, in a room and not
     //   self-muted (in no room nothing is captured or sent, no 'talk'); it
-    //   talks in the first room of slots 0-2 and never in near (slot 3),
-    //   which needs its key;
+    //   talks in the first room joined, slots 0 to 3 (the one talk key's
+    //   place); so does the Windows background key;
     // - frames for a slot with no room are not sent; Opus over the welcome's
     //   lim.pl is not sent (the relay counts it as abuse);
     // - the side mouse button and the push-to-talk key are held apart: letting

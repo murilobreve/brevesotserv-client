@@ -17,7 +17,11 @@ local SAVE_DELAY_MS = 1000
 local DUCK_GAIN = 0.7         -- game sounds at 70% while someone talks
 
 KEY_CATEGORY = 'Voz'
-KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
+-- one talk key (2026-11-11): it talks in one place, the first room joined:
+-- the party, else the guild, else the room or event, else near you
+KEY_TALK = { [0] = 'Falar' }
+-- the per-room keys of before; the party one's key moves to 'Falar'
+local OLD_TALK_KEYS = { 'Falar na party', 'Falar na guild', 'Falar na sala/evento', 'Falar perto' }
 local KEY_MUTE, KEY_DEAFEN, KEY_PANEL = 'Silenciar microfone', 'Ensurdecer', 'Abrir/fechar Voz'
 local PRESET_IDS = { normal = 0, eco = 1, high = 2 }
 
@@ -27,6 +31,7 @@ local timers = {}
 local saveEvent
 local keybindsOn, localeOn = false, false
 local txSlot, txKey, txGuard = -1, nil, nil
+local txFrom = -1 -- the slot of the key held (txSlot differs when it fell back to near)
 local hintAt = {}
 local ducked
 local testing = false
@@ -147,7 +152,8 @@ function applyEnginePrefs()
     engineCall('setInputDevice', prefs.inDevice)
     engineCall('setOutputDevice', prefs.outDevice)
     if g_platform.isBrowser() then
-        engineCall('setPttMouse', prefs.pttMouse, prefs.pttMouse > 0 and 0 or -1)
+        -- the side button talks where the talk key does (the first room joined)
+        engineCall('setPttMouse', prefs.pttMouse, prefs.pttMouse > 0 and mouseSlot() or -1)
     end
     syncGlobalKey()
 end
@@ -260,10 +266,10 @@ local function onAnyKeyUp(widget, keyCode)
 end
 
 function releaseTalk(slot)
-    if txSlot < 0 or (slot and slot ~= txSlot) then
+    if txSlot < 0 or (slot and slot ~= txSlot and slot ~= txFrom) then
         return
     end
-    txSlot, txKey = -1, nil
+    txSlot, txKey, txFrom = -1, nil, -1
     engineCall('setTransmit', -1)
     disconnect(rootWidget, { onKeyUp = onAnyKeyUp })
     removeEvent(txGuard)
@@ -279,7 +285,11 @@ function pressTalk(slot, keyCode)
         hint('lite', tr('Voice: presence mode cannot talk. Update the client or use Chrome, Edge or Firefox.'))
         return
     end
-    if not session.rooms[slot] then
+    -- the one talk key talks in the first room joined (party, guild, room,
+    -- near); `slot` is only the key's own (0), to match its key-up
+    local from = slot or 0
+    slot = session:targetSlot()
+    if slot < 0 then
         hint('room', tr('Voice: join a room first.'))
         return
     end
@@ -291,7 +301,7 @@ function pressTalk(slot, keyCode)
         return
     end
     releaseTalk()
-    txSlot, txKey = slot, keyCode
+    txSlot, txKey, txFrom = slot, keyCode, from
     engineCall('setTransmit', slot)
     if keyCode then
         connect(rootWidget, { onKeyUp = onAnyKeyUp }, true)
@@ -305,12 +315,36 @@ end
 
 -- the hold-to-talk button of touch screens: the first room joined (near too)
 function touchSlot()
-    for slot = 0, VoiceState.LAST_SLOT do
-        if session and session.rooms[slot] then
-            return slot
+    local slot = session and session:targetSlot() or -1
+    return slot >= 0 and slot or 0
+end
+
+-- the slot the browser's side mouse button talks on: the talk key's
+function mouseSlot()
+    return touchSlot()
+end
+
+-- the per-room keys of before 2026-11-11: when 'Falar' has no key yet, it
+-- takes the party key's (the onboarding's), in both chat modes; then the old
+-- actions go. A failure here never stops the keybinds.
+function migrateTalkKey(action)
+    pcall(function()
+        local preset = Keybind.currentPreset
+        local modes = CHAT_MODE and { CHAT_MODE.ON, CHAT_MODE.OFF } or {}
+        for i, old in ipairs(OLD_TALK_KEYS) do
+            Keybind.new(KEY_CATEGORY, old, '', '')
+            if i == 1 then
+                for _, mode in ipairs(modes) do
+                    local mine = Keybind.getKeybindKeys(KEY_CATEGORY, action, mode)
+                    local was = Keybind.getKeybindKeys(KEY_CATEGORY, old, mode)
+                    if (not mine.primary or mine.primary == '') and was.primary and was.primary ~= '' then
+                        Keybind.setPrimaryActionKey(KEY_CATEGORY, action, preset, was.primary, mode)
+                    end
+                end
+            end
+            Keybind.delete(KEY_CATEGORY, old)
         end
-    end
-    return 0
+    end)
 end
 
 local function registerKeybinds()
@@ -318,14 +352,13 @@ local function registerKeybinds()
         return
     end
     keybindsOn = true
-    for slot = 0, VoiceState.LAST_SLOT do
-        local action = KEY_TALK[slot]
-        Keybind.new(KEY_CATEGORY, action, '', '')
-        Keybind.bind(KEY_CATEGORY, action, {
-            { type = KEY_DOWN, callback = function(widget, keyCode) pressTalk(slot, keyCode) end },
-            { type = KEY_UP, callback = function() releaseTalk(slot) end },
-        })
-    end
+    local action = KEY_TALK[0]
+    Keybind.new(KEY_CATEGORY, action, '', '')
+    migrateTalkKey(action)
+    Keybind.bind(KEY_CATEGORY, action, {
+        { type = KEY_DOWN, callback = function(widget, keyCode) pressTalk(0, keyCode) end },
+        { type = KEY_UP, callback = function() releaseTalk(0) end },
+    })
     Keybind.new(KEY_CATEGORY, KEY_MUTE, '', '')
     Keybind.bind(KEY_CATEGORY, KEY_MUTE, { { type = KEY_DOWN, callback = function() toggleSelfMute() end } })
     Keybind.new(KEY_CATEGORY, KEY_DEAFEN, '', '')
@@ -339,9 +372,7 @@ local function unregisterKeybinds()
         return
     end
     keybindsOn = false
-    for slot = 0, VoiceState.LAST_SLOT do
-        Keybind.delete(KEY_CATEGORY, KEY_TALK[slot])
-    end
+    Keybind.delete(KEY_CATEGORY, KEY_TALK[0])
     Keybind.delete(KEY_CATEGORY, KEY_MUTE)
     Keybind.delete(KEY_CATEGORY, KEY_DEAFEN)
     Keybind.delete(KEY_CATEGORY, KEY_PANEL)
@@ -352,7 +383,8 @@ function talkKey(slot)
     if not keybindsOn then
         return ''
     end
-    local keys = Keybind.getKeybindKeys(KEY_CATEGORY, KEY_TALK[slot])
+    -- one key for every room (`slot` kept for the callers)
+    local keys = Keybind.getKeybindKeys(KEY_CATEGORY, KEY_TALK[0])
     return keys and tostring(keys.primary or '') or ''
 end
 
@@ -402,6 +434,13 @@ local function onSessionEvent(what, a, b, c)
         VoiceSettings.onState()
     elseif what == 'speakers' then
         duck(a > 0)
+        VoiceUI.onEvent(what, a, b, c)
+    elseif what == 'rooms' then
+        -- a room joined or left moves where the side button talks (the
+        -- engine ignores a value it already has)
+        if g_platform.isBrowser() and prefs.pttMouse > 0 then
+            engineCall('setPttMouse', prefs.pttMouse, mouseSlot())
+        end
         VoiceUI.onEvent(what, a, b, c)
     else
         VoiceUI.onEvent(what, a, b, c)
@@ -490,7 +529,9 @@ local io = {
     nearby = guarded(nearbyPlayers, 'near'),
     offset = guarded(offsetOf, 'spatial'),
     -- an old executable has no setUserSpatial (engine_full checks it once)
-    canSpatial = function() return engine ~= nil and engine.spatial == true end,
+    -- distance and left/right of near voices: off (2026-11-11, the owner:
+    -- near voices sounded odd); VoiceState.SPATIAL turns it back on
+    canSpatial = function() return VoiceState.SPATIAL == true and engine ~= nil and engine.spatial == true end,
 }
 
 -- player actions (panel buttons, keys, menus) ---------------------------------

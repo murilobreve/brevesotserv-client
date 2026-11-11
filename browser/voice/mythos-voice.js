@@ -1267,10 +1267,10 @@
     return st.tx >= 0 || st.mouseTx || st.test || (st.meter && micQuiet()) || st.probe || vadArmed();
   }
 
-  // voice activation never talks in near (slot 3) by itself: with only near
-  // joined it would send to strangers on screen without a key press
+  // voice activation talks in the first room joined (party, guild, room,
+  // near): a player who does not want to be heard leaves the room
   function hasVadRoom() {
-    return !!(st.rooms[0] || st.rooms[1] || st.rooms[2]);
+    return !!(st.rooms[0] || st.rooms[1] || st.rooms[2] || st.rooms[3]);
   }
 
   // voice activation listens only while it could send: connected, in a
@@ -1457,9 +1457,9 @@
   }
 
   // voice activation talks in the party room, else the first room joined
-  // (guild, public); never near, which needs its key
+  // (guild, public, near): the same place as the one talk key
   function vadSlot() {
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       if (st.rooms[i]) {
         return i;
       }

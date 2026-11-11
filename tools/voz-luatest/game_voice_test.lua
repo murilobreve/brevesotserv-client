@@ -1915,7 +1915,7 @@ test('no string of the module stays in English in Portuguese', function()
     eq(pt['EVENTS'], 'EVENTOS')
     -- the word the client uses for a party: "party" (the bosses window's
     -- "Sua party", game_hunttasks, pt.lua's "Entrar na party do %s")
-    for _, s in ipairs({ 'No party', 'Party room', 'In the party', 'Join the party room by itself' }) do
+    for _, s in ipairs({ 'No party', 'Party room', 'Join the party room by itself' }) do
         assert(pt[s]:find('party'), s .. ': ' .. pt[s])
     end
     -- every unused entry is gone from the voice locale (a renamed key left behind)
@@ -2426,9 +2426,10 @@ test('voice.lua in a stub client: nothing until cfg, nothing left at game end', 
         -- voice offered
         handler(protocol, 142, json.encode(CFG))
         eq(#tracked, 2, 'the panel and its top-menu button')
-        eq(keybinds['Voz_Falar na party'], 'bound')
-        eq(keybinds['Voz_Falar perto'], 'bound', 'the near key (no default key)')
-        eq(KEY_TALK[3], 'Falar perto')
+        eq(keybinds['Voz_Falar'], 'bound', 'one talk key')
+        eq(keybinds['Voz_Falar na party'], nil, 'the per-room keys of before are gone')
+        eq(keybinds['Voz_Falar perto'], nil)
+        eq(KEY_TALK[1], nil, 'KEY_TALK has the one key')
         eq(pt.translation['Turn voice on'], 'Ligar a voz', 'pt.lua text kept')
         eq(pt.translation['Mute microphone'], 'Desligar microfone', 'voice text added')
         runEvents(3000)
@@ -2647,6 +2648,20 @@ test('engine_full over the g_voice binding: every call bound, events end to end'
         eq(last('setTransmit')[2], 0)
         releaseTalk()
         eq(last('setTransmit')[2], -1)
+        -- out of the party, in near: the party key talks to the players near
+        -- us (players pressed it to talk nearby and nobody heard them)
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'left', room = 'p:10:5', why = 'party' }), 0, 0)
+        g_voice.onVoiceEvent('ctl', json.encode({ t = 'roster', room = 'near', slot = 3,
+            u = { { 7, 0, 1, ME, 0 }, { 9, 0, 3, 'Bia', 0 } } }), 0, 0)
+        eq(getSession().rooms[0], nil, 'no party room')
+        pressTalk(0)
+        eq(last('setTransmit')[2], 3, 'the party key with no party talks nearby')
+        releaseTalk(0)
+        eq(last('setTransmit')[2], -1, 'and its key-up ends it')
+        pressTalk(2)
+        eq(last('setTransmit')[2], 3, 'so does the room key with no room')
+        releaseTalk()
+        eq(last('setTransmit')[2], -1)
         -- the mic test on, then the relay restarts: the test ends in the
         -- engine too (the page does not end it on a relay close)
         toggleMicTest()
@@ -2781,6 +2796,20 @@ test('voice.lua on the full engine: near speakers placed from the map, dead or g
             g_voice.onVoiceEvent('spk', '', sid, 1)
         end
     end
+    -- off by default (2026-11-11: near voices sounded odd with distance and
+    -- pan): nothing goes to the engine, near voices play like any other
+    run(true)
+    local none = 0
+    for _, call in ipairs(calls) do
+        if call[1] == 'setUserSpatial' then
+            none = none + 1
+        end
+    end
+    eq(none, 0, 'spatial off: no setUserSpatial')
+    g_game.onGameEnd()
+    terminate()
+    -- turned back on, it still places them
+    VoiceState.SPATIAL = true
     run(true)
     local placed = {}
     for _, call in ipairs(calls) do
@@ -2825,6 +2854,7 @@ test('voice.lua on the full engine: near speakers placed from the map, dead or g
     g_game.onGameEnd()
     terminate()
     eq(#errors, 0, 'errors: ' .. table.concat(errors, ' | '))
+    VoiceState.SPATIAL = false
     g_voice, g_map = nil, nil
 end)
 
@@ -3202,6 +3232,7 @@ end)
 test('the party header hint stops at its button, the key alone when narrow, whole in the tooltip', function()
     local w = online()
     roster(w, 'p:10:5', { { 7 }, { 8 } })
+    w.s.prefs.mode = 'ptt' -- the hint is for push-to-talk (voice activation shows none)
     local u = uiWorld({ world = w, talkKey = 'Insert' })
     VoiceUI.create()
     u.created.window.shown = true
@@ -3324,8 +3355,8 @@ test('the near section: after the guild, its key, join and leave, rows in and ou
     eq(#u.created.window.rooms.kids, 4, 'party, guild, near, rooms')
     eq(h.parent, nearBox(), 'after the guild, before the rooms')
     eq(h.action.text, 'Join', 'joining (autoNear): no roster yet')
-    eq(h.tip, 'Hold F7', 'the key hint of slot 3')
-    eq(lastHeader('PARTY').tip, nil, 'the party has its own key')
+    eq(h.tip, nil, 'no hint while near is not the place the key talks in')
+    eq(lastHeader('PARTY').tip, nil, 'no hint while not joined anywhere')
     assert(hasText(nearBox(), 'Talking nearby: level 8+'), 'the level note (no level known)')
     h.action.onClick()
     eq(w.lastCtl().t, 'join')
@@ -3494,6 +3525,7 @@ test('the panel, its menus, the report and the settings in Portuguese: no Englis
     local w = nearOnline(nil, { { id = 'p:10:5', k = 'party', l = 'Party' }, { id = 'g:7', k = 'guild' },
         { id = 'g:7:o', k = 'officers', l = 'Oficiais' } })
     roster(w, 'p:10:5', { { 7, 0, nil, nil, 16 }, { 8, 0, 4242, 'Ana', 1 + 2 + 4 + 16 + 64 } })
+    w.s.prefs.mode = 'ptt' -- the key hints show for push-to-talk
     nearRoster(w, { { 9, 90, 4243, 'Bia' } }) -- near too, with its level note
     local u = uiWorld({ world = w, talkKey = 'Insert' })
     tr = function(text, ...)
@@ -3997,7 +4029,7 @@ test('the Portuguese texts fit their boxes: the key rows, the onboarding key box
         local tw = textWidth(REGULAR, text)
         assert(tw <= box, string.format('"%s" (%d px) in the %d px key box', text, tw, box))
     end
-    for _, key in ipairs({ 'In the party', 'In the guild', 'In a room / event', 'Near you' }) do
+    for _, key in ipairs({ 'Talk' }) do
         local tw = textWidth(REGULAR, pt[key])
         assert(tw <= labelWidth, string.format('"%s" (%d px) in the %d px label', pt[key], tw, labelWidth))
     end
@@ -4427,8 +4459,30 @@ test('every widget the Lua reads by id exists in its otui', function()
     for id in src:gmatch("check%('([%w_]+)'") do
         assert(settingIds[id], 'voicesettings.otui has no check box ' .. id)
     end
-    assert(src:find("check%('autoNear', 'autoNear'%)") and src:find('keyRow%(keys%.keyNear, 3,'),
-        'the near key row and its check box')
+    assert(src:find("check%('autoNear', 'autoNear'%)") and src:find('keyRow%(keys%.keyParty, 0,'),
+        'the one key row and the near check box')
+    assert(not src:find('keyRow%(keys%.keyNear'), 'no per-room key rows')
+end)
+
+test('one talk key and voice activation by default (2026-11-11)', function()
+    -- voice activation is the default, and a saved push-to-talk of before
+    -- moves to it once; a push-to-talk picked after that stays
+    eq(S.normalizePrefs({}).mode, 'vad', 'new players: voice activation')
+    eq(S.normalizePrefs({ mode = 'ptt' }).mode, 'vad', 'the old default moved once')
+    eq(S.normalizePrefs({ mode = 'ptt', modeV = 1 }).mode, 'ptt', 'a choice made since stays')
+    eq(S.serializePrefs(S.normalizePrefs({})).modeV, 1, 'and is saved as made')
+    -- the key talks in one place: party, else guild, else room, else near
+    local w = nearOnline(nil, { { id = 'p:10:5', k = 'party' }, { id = 'g:7', k = 'guild', l = 'G' } })
+    eq(w.s:targetSlot(), -1, 'in no room')
+    nearRoster(w, { { 8, 80, 1008, 'Ana' } })
+    eq(w.s:targetSlot(), 3, 'near only')
+    w.relay({ t = 'roster', room = 'pub:geral', slot = 2, u = { { 7, 0, 1, 'Me', 0 } } })
+    eq(w.s:targetSlot(), 2, 'a room before near')
+    roster(w, 'g:7', { { 7 }, { 8 } })
+    eq(w.s:targetSlot(), 1, 'the guild before the room')
+    roster(w, 'p:10:5', { { 7 }, { 8 } })
+    eq(w.s:targetSlot(), 0, 'the party first')
+    eq(S.SPATIAL, false, 'no distance or left/right for near voices')
 end)
 
 print(string.format('%d passed, %d failed', passed, failed))

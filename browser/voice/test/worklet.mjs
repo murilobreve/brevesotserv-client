@@ -684,7 +684,7 @@ function captureRig(rate = 48000) {
   v.feed(400, 0.1);
   v.feed(800, 0.001);
   const g = v.frames();
-  check('capture: voice activation frames carry the configured slot (3)', g.length > 0 && g.every((x) => x.slot === 3 && x.vad === 1) && g.filter((x) => x.end).length === 1, `${g.length} frames`);
+  check('capture: voice activation on slot 3 (near the only room)', g.length > 0 && g.every((x) => x.slot === 3 && x.vad === 1) && g.filter((x) => x.end).length === 1, `${g.length} frames`);
 }
 
 console.log(`${passed} passed, ${failed} failed`);

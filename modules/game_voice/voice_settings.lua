@@ -376,9 +376,7 @@ local function keyRow(row, slot, label)
         captureKey(row.value, slot, function(combo, chatKey)
             applyTalkKey(slot, combo, chatKey)
             show()
-            if slot == 0 then
-                applyEnginePrefs() -- the background push-to-talk follows the party key
-            end
+            applyEnginePrefs() -- the background push-to-talk follows the talk key
         end, function(text)
             status:setText(text or '')
             show()
@@ -452,11 +450,9 @@ function VS.show()
         audio[id]:setEnabled(audioOk and (id ~= 'vad' or prefs.mode == 'vad'))
     end
 
-    -- under "Push-to-talk keys": "In the party", "In the guild"...
-    keyRow(keys.keyParty, 0, tr('In the party'))
-    keyRow(keys.keyGuild, 1, tr('In the guild'))
-    keyRow(keys.keyRoom, 2, tr('In a room / event'))
-    keyRow(keys.keyNear, 3, tr('Near you'))
+    -- under "Push-to-talk key": one key; it talks in the party, else the
+    -- guild, else the room or event, else near you
+    keyRow(keys.keyParty, 0, tr('Talk'))
     -- the browser's side buttons reach the page only (phase 4 forwards them)
     local browserFull = browserMouse()
     keys.mouseLabel:setVisible(browserFull)

@@ -769,9 +769,16 @@ namespace
 
         bool connOpen() const { return m_conn && m_conn->open; }
 
-        // voice activation never talks in near (slot 3) by itself: with only
-        // near joined it would send to strangers on screen without a key
-        bool hasVadRoom() const { return !m_rooms[0].empty() || !m_rooms[1].empty() || !m_rooms[2].empty(); }
+        // voice activation talks in the first room joined (party, guild, room,
+        // near): a player who does not want to be heard leaves the room
+        bool hasVadRoom() const
+        {
+            for (const auto& r : m_rooms) {
+                if (!r.empty())
+                    return true;
+            }
+            return false;
+        }
 
         bool canSend() const { return connOpen() && m_sid != 0 && !m_deaf && !m_smute; }
 
@@ -1464,7 +1471,7 @@ namespace
             if (m_keyTx >= 0)
                 return m_keyTx;
             if (m_globalHeld && !m_globalBlocked && connOpen())
-                return 0; // the background key talks as the party key
+                return vadSlot(); // the background key talks where the talk key does
             return -1;
         }
 
@@ -1477,10 +1484,10 @@ namespace
         bool capturing() const { return m_gate || needMic(); }
 
         // voice activation talks in the party room, else the first room
-        // joined (guild, public); never near, which needs its key
+        // joined (guild, public, near): the same place as the one talk key
         int vadSlot() const
         {
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < kSlots; ++i) {
                 if (!m_rooms[i].empty())
                     return i;
             }

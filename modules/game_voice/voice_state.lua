@@ -247,7 +247,9 @@ end
 -- player's character must not join rooms and hear them by itself.
 S.DEFAULT_PREFS = {
     onboarded = false,
-    mode = 'ptt', vadDb = -45, inGain = 100, outVol = 100, preset = 'normal',
+    -- voice activation by default (2026-11-11, the owner: no key to hold);
+    -- modeV 1 moved every saved 'ptt' to it once
+    mode = 'vad', modeV = 1, vadDb = -45, inGain = 100, outVol = 100, preset = 'normal',
     autoParty = true, autoGuild = false, autoNear = true, overheadIcon = true, ducking = false,
     globalPtt = false, pttMouse = 0, selfMuted = false, deafened = false,
     inDevice = '', outDevice = '', -- '' is the system default
@@ -285,7 +287,11 @@ function S.normalizePrefs(raw)
         'globalPtt', 'selfMuted', 'deafened' }) do
         p[key] = toBool(raw[key], d[key])
     end
-    p.mode = (raw.mode == 'vad') and 'vad' or 'ptt'
+    p.mode = (raw.mode == 'ptt') and 'ptt' or 'vad'
+    p.modeV = toInt(raw.modeV, 0, 99, 0)
+    if p.modeV < 1 then
+        p.mode, p.modeV = 'vad', 1 -- push-to-talk was the default before
+    end
     p.vadDb = toInt(raw.vadDb, -60, -20, d.vadDb)
     p.inGain = toInt(raw.inGain, 0, 200, d.inGain)
     p.outVol = toInt(raw.outVol, 0, 200, d.outVol)
@@ -508,6 +514,10 @@ end
 -- the gain (1 up to 1.5 tiles away, then 0.11 less a tile, never under 0.2)
 -- and the pan (-0.75 left to 0.75 right, full at 7 tiles) of a speaker
 -- dx, dy tiles from us
+-- off: near voices play like any other (no distance, no left/right); the
+-- code stays for a later try (voice.lua's canSpatial reads this)
+S.SPATIAL = false
+
 function S.spatial(dx, dy)
     local d = math.sqrt(dx * dx + dy * dy)
     local gain = math.max(0.2, math.min(1, 1 - math.max(0, d - 1.5) * 0.11))
@@ -1077,6 +1087,17 @@ function Session:autoJoin()
             self.joining[id] = true
         end
     end
+end
+
+-- where the one talk key talks: the first room joined, party, guild, room
+-- or event, near you; -1 in none
+function Session:targetSlot()
+    for slot = 0, S.LAST_SLOT do
+        if self.rooms[slot] then
+            return slot
+        end
+    end
+    return -1
 end
 
 function Session:roomById(id)

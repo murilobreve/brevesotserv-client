@@ -267,8 +267,17 @@ Where the plan left room, the simplest safe option was taken:
   drags freely.
 - **Ducking**: game channels go to 70% on the first speaker (near ones too)
   and back on the last; a volume the player changed meanwhile is kept.
-- **Push-to-talk**: the four talk keys ("Falar na party", "Falar na guild",
-  "Falar na sala/evento", "Falar perto"), mute, deafen and the panel toggle
+- **One place to talk (2026-11-11)**: voice activation is the default
+  (`mode` 'vad'; `modeV` 1 moved every saved 'ptt' of before to it once).
+  Voice activation, the one talk key "Falar", the browser's side button and
+  the Windows background key all talk in the same place,
+  `Session:targetSlot()`: the party; else the guild or officers; else the
+  room or event; else near you. A player who does not want to be heard
+  mutes the microphone or leaves the room. "Falar" took the key of the old
+  "Falar na party" (`migrateTalkKey`); the other per-room keys are gone.
+  The panel shows "Segure X" only next to the section the key talks in, and
+  only in push-to-talk.
+- **Push-to-talk**: the talk key "Falar", mute, deafen and the panel toggle
   are `Keybind` actions of the `Voz` category (no default key; Options >
   Hotkeys lists them once voice was offered). A key that types in the chat is refused
   while the chat is on, and saved for "chat off" only when the chat is off.
@@ -343,7 +352,9 @@ slot 3 goes only to the members near the speaker.
   once per 500 ms, and once right after the near roster arrives (500 ms
   after the last list at the earliest). A map read that fails keeps the last
   list (logged once).
-- **Spatial values**: every 200 ms (the `spatial` timer) while someone in
+- **Spatial values** (off since 2026-11-11, `VoiceState.SPATIAL = false`:
+  near voices sounded odd with distance and pan; they now play like any
+  other, and the timer never starts): every 200 ms (the `spatial` timer) while someone in
   near talks, and at once on a near member's speaking edge (or when one
   already talking in the party comes near), each talking near member but us
   is looked up by its creature id: missing, dead or on another floor ->
@@ -361,12 +372,13 @@ slot 3 goes only to the members near the speaker.
   pan (`io.canSpatial`). A member who walks out of sight (`out`) is
   forgotten with its speaking state (unless it is in another of our rooms)
   and its spatial values; nothing is sent to the engine for it.
-- **Panel**: "PERTO DE VOCÊ" after the guild and before the rooms, with the
-  slot-3 key hint, Entrar/Sair, the members near us from the roster, `in`
+- **Panel**: "PERTO DE VOCÊ" after the guild and before the rooms, with
+  Entrar/Sair, "Segure X para falar perto" while near is where the key
+  talks (push-to-talk only), the members near us from the roster, `in`
   and `out` (in place, never a redraw) and, while the character's level is
   under N, the note "Falar perto: nível N+" (read when the panel is drawn).
-  Settings: the "Perto de você" key row and "Entrar sozinho em Perto de
-  você" (autoNear).
+  Settings: one key row ("Falar") with the order it talks in, and "Entrar
+  sozinho em Perto de você" (autoNear).
 - **Mock**: `voice-mock` shows near with three made-up players (creature ids
   `0x10FFFF01`..`03`, which no creature has: no icon, gain 0) whose speaking
   toggles, and a passer-by who walks in and out.

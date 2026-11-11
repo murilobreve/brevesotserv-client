@@ -88,9 +88,8 @@ and `probe {on}` (tests: onset timestamps and output RMS, `rms` left and
 `rmsR` right). Slots are 0 party, 1 guild/officers, 2 public/stage/echo and
 3 near (proximity) everywhere: `tx`, `svol`, `pttMouse`, the rooms tracked
 from `roster`/`moved`/`left`, frames up and down. Voice activation talks in
-the first room joined of 0 to 2 and never in near: with only near joined it
-stays off (it would send to strangers on screen without a key press); near
-needs its push-to-talk key.
+the first room joined, 0 to 3 (party, guild, room, near): the same place as
+the game's one talk key.
 
 `voice.lua` sends every setting again whenever one changes (each slider step,
 each checkbox), so a setting command whose value did not change does nothing:
