@@ -1,7 +1,8 @@
 /*
  * Mythos Voz: the engine of a build without audio. isSupported() is false,
  * so modules/game_voice uses its presence-only (lite) engine; every call is
- * a no-op. The desktop build uses it until the native engine exists.
+ * a no-op. A desktop build with voice on but VOICE_NATIVE off (no libopus)
+ * uses it.
  */
 
 #include "voiceengine.h"

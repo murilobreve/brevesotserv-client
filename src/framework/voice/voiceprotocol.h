@@ -11,8 +11,8 @@
  * bits 4-7 zero.
  *
  * The browser engine does this in mythos-voice.js; this header is for the
- * native engine (a later phase) and its Linux test harness. Standard library
- * only.
+ * native engine (voiceengine_native.cpp) and its Linux test harness
+ * (tools/voz-native-test). Standard library only.
  */
 
 #pragma once

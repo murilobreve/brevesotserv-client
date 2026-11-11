@@ -47,7 +47,15 @@ Reference: `docs/client-assets-auto-install.md`
 
 - It is pasted into index.html inside the emscripten shell (`cmake/VoiceShell.cmake`): never three braces in a row, `</script`, or a line starting with `#` (emscripten preprocesses the shell). `shell.html` shows the crash screen on any uncaught page error: every engine callback goes through `safe()`.
 - The game thread never waits on the page: commands with `MAIN_THREAD_ASYNC_EM_ASM`, events through `otc_voice_event` into a queue drained by `g_voice.poll()`. No new synchronous `MAIN_THREAD_EM_ASM` per frame.
-- Desktop compiles none of it while `TOGGLE_FRAMEWORK_VOICE` is OFF (default outside WASM); keep every voice line in `luafunctions.cpp`/`graphicalapplication.cpp` under `#ifdef FRAMEWORK_VOICE`.
+- `TOGGLE_FRAMEWORK_VOICE` is ON by default in the WASM build (this engine) and on Windows (the native engine below); elsewhere OFF. Keep every voice line in `luafunctions.cpp`/`graphicalapplication.cpp` under `#ifdef FRAMEWORK_VOICE`.
+
+## Native Voice Engine (`src/framework/voice/voiceengine_native.cpp`)
+
+- Desktop engine: libopus, OpenAL Soft capture and playback, ixwebsocket. On by default on Windows (`VOICE_NATIVE`, opus from `vcpkg.json`); on Linux only when libopus is found, else the null engine (presence only).
+- Everything runs on its own voz thread; the game thread only queues commands and drains events in `g_voice.poll()`. Never block the game thread on a device, a socket or a lock held by the voz thread.
+- It opens its own OpenAL device and context through `ALC_EXT_thread_local_context`: never make it the process-wide current context (the game sound owns that).
+- Code that MSVC has not compiled yet is checked with MinGW (`x86_64-w64-mingw32-g++-posix -std=c++20 -fsyntax-only`, with and without `framework/pch.h`). Include every standard header you use directly; MSVC's STL pulls in fewer headers than libstdc++.
+- Validate: `tools/voz-native-test` (ASan and release builds, `run-tests.sh`, own relay on 127.0.0.1:7391), `luajit tools/voz-luatest/game_voice_test.lua`, and the Windows checklist in `docs/voz-windows.md`.
 - Validate: in `browser/voice/test/`, `node lint.mjs --browser`, `node worklet.mjs`, `node bridge.mjs`, `node e2e.mjs` (local relay), and `luajit tools/voz-luatest/game_voice_test.lua`.
 
 ## Narrow Rules (recurring defects)

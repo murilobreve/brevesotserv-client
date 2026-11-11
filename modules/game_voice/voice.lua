@@ -120,9 +120,18 @@ local function onEngineEvent(kind, s, a, b)
     elseif kind == 'mic' and s == 'denied' then
         notify(tr('Voice: the microphone was blocked. You can still listen.'))
     elseif kind == 'mic' and s == 'encoder' then
-        notify(tr('Voice: this browser could not encode your voice. You can still listen.'))
+        notify(tr('Voice: your voice could not be encoded. You can still listen.'))
     elseif kind == 'devices' then
         VoiceSettings.refreshDevices()
+    end
+end
+
+-- the background push-to-talk key (Windows) is the party key: sent again on
+-- each state change and each press too, since a key changed in the options
+-- raises no event (the engine ignores a value it already has)
+local function syncGlobalKey()
+    if not g_platform.isBrowser() then
+        engineCall('setGlobalPtt', prefs.globalPtt and VoiceState.virtualKey(talkKey(0)) or 0)
     end
 end
 
@@ -139,9 +148,8 @@ function applyEnginePrefs()
     engineCall('setOutputDevice', prefs.outDevice)
     if g_platform.isBrowser() then
         engineCall('setPttMouse', prefs.pttMouse, prefs.pttMouse > 0 and 0 or -1)
-    else
-        engineCall('setGlobalPtt', prefs.globalPtt and VoiceState.virtualKey(talkKey(0)) or 0)
     end
+    syncGlobalKey()
 end
 
 local function ensureEngine()
@@ -266,6 +274,7 @@ function pressTalk(slot, keyCode)
     if not session or session.state ~= ST.ONLINE then
         return
     end
+    syncGlobalKey()
     if not hasAudio() then
         hint('lite', tr('Voice: presence mode cannot talk. Update the client or use Chrome, Edge or Firefox.'))
         return
@@ -388,6 +397,7 @@ local function onSessionEvent(what, a, b, c)
             releaseTalk()
             stopTest()
         end
+        syncGlobalKey()
         VoiceUI.onState()
         VoiceSettings.onState()
     elseif what == 'speakers' then

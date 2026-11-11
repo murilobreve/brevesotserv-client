@@ -20,6 +20,10 @@
 class VoiceManager
 {
 public:
+    // also on an exit() that skipped terminate(): the engine's thread is
+    // joined while the event queue below still exists
+    ~VoiceManager() { terminate(); }
+
     void poll();
     void terminate();
 
