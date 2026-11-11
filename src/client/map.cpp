@@ -1279,9 +1279,13 @@ void Map::updateAttachedWidgets(const MapViewPtr& mapView)
             const auto displacementX = g_game.getFeature(Otc::GameNegativeOffset) ? 0 : creature->getDisplacementX();
             const auto displacementY = g_game.getFeature(Otc::GameNegativeOffset) ? 0 : creature->getDisplacementY();
 
-            const auto& jumpOffset = creature->getJumpOffset() * g_drawPool.getScaleFactor();
+            // the map's own scale: this runs from MapView::preLoad, outside any
+            // draw pool, where g_drawPool.getScaleFactor() would read past the
+            // end of the pool array
+            const float scaleFactor = mapView->m_posInfo.scaleFactor;
+            const auto& jumpOffset = creature->getJumpOffset() * scaleFactor;
             const auto& creatureOffset = Point(16 - displacementX, -displacementY - 2) + creature->getDrawOffset();
-            p += creatureOffset * g_drawPool.getScaleFactor() - Point(std::round(jumpOffset.x), std::round(jumpOffset.y));
+            p += creatureOffset * scaleFactor - Point(std::round(jumpOffset.x), std::round(jumpOffset.y));
         }
 
         p.x *= mapView->m_posInfo.horizontalStretchFactor;
