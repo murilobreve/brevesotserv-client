@@ -128,23 +128,19 @@ ssh -i "%CHAVE%" %VPS% "if grep -q ' mythos-amigo-!NOME!$' %AK%; then sed -i '/ 
 goto :fim
 
 rem ---------------------------------------------------------------- checks
-rem a known key type and a base64 key (the letters spelled out: findstr's
-rem ranges also take accented letters)
+rem a known key type and a base64 key. PowerShell reads the value from the
+rem environment (findstr ran out of memory on the long character classes)
 :valida
 set "VALIDO="
 for %%t in (ssh-ed25519 ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521) do if "!TIPO!"=="%%t" set "VALIDO=1"
 if not defined VALIDO exit /b
-> "%TEMP%\mythos-chave.txt" echo(!BLOB!
-findstr /r /x "AAAA[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=]*" "%TEMP%\mythos-chave.txt" >nul
+powershell -NoProfile -Command "if ($env:BLOB -cmatch '^AAAA[A-Za-z0-9+/=]*$') { exit 0 } else { exit 1 }"
 if errorlevel 1 set "VALIDO="
-del "%TEMP%\mythos-chave.txt" >nul 2>&1
 exit /b
 
 :nomeValido
 set "NOMEOK="
-> "%TEMP%\mythos-nome.txt" echo(!NOME!
-findstr /r /x "[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_][ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_]*" "%TEMP%\mythos-nome.txt" >nul && set "NOMEOK=1"
-del "%TEMP%\mythos-nome.txt" >nul 2>&1
+powershell -NoProfile -Command "if ($env:NOME -cmatch '^[A-Za-z0-9_]+$') { exit 0 } else { exit 1 }" && set "NOMEOK=1"
 exit /b
 
 :fim

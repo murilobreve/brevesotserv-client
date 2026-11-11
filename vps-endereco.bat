@@ -24,11 +24,11 @@ echo (o dono do servidor sabe; ele fica guardado em %VPSFILE%).
 set "VPS="
 set /p "VPS=Endereco da VPS: "
 if not defined VPS goto :vazio
-rem only letters, numbers, . - _ and one @: nothing that is cmd syntax
-> "%TEMP%\mythos-vps.txt" echo(%VPS%
-findstr /r /x "[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-][ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-]*@[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.:-][ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.:-]*" "%TEMP%\mythos-vps.txt" >nul
+rem only letters, numbers, . - _ and one @: nothing that is cmd syntax.
+rem PowerShell reads it from the environment (findstr ran out of memory on
+rem the long character classes this check used before)
+powershell -NoProfile -Command "if ($env:VPS -cmatch '^[A-Za-z0-9_.-]+@[A-Za-z0-9.:-]+$') { exit 0 } else { exit 1 }"
 if errorlevel 1 goto :invalido
-del "%TEMP%\mythos-vps.txt" >nul 2>&1
 if not exist "%USERPROFILE%\.ssh" mkdir "%USERPROFILE%\.ssh"
 > "%VPSFILE%" echo %VPS%
 echo Guardado: %VPS%
@@ -36,7 +36,6 @@ if /i "%~1"=="usar" exit /b 0
 goto :fim
 
 :invalido
-del "%TEMP%\mythos-vps.txt" >nul 2>&1
 echo ERRO: use usuario@IP, so letras, numeros, ponto, hifen e um @.
 set "VPS="
 if /i "%~1"=="usar" exit /b 1

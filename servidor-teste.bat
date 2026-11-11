@@ -30,16 +30,13 @@ rem only the characters of a branch name: nothing that is cmd or shell syntax,
 rem and no "-" at the start. Written with delayed expansion and outside a ( )
 rem block, so nothing typed runs before the check (resetar-servidor.bat does
 rem the same). The lines after it may expand the name: it passed.
-setlocal EnableDelayedExpansion
-> "%TEMP%\mythos-branch.txt" echo(!BRANCH!
-endlocal
-findstr /r /x "[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_][ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./-]*" "%TEMP%\mythos-branch.txt" >nul
+rem PowerShell reads it from the environment (findstr ran out of memory on
+rem the long character classes this check used before)
+powershell -NoProfile -Command "if ($env:BRANCH -cmatch '^[A-Za-z0-9_][A-Za-z0-9_./-]*$') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
-    del "%TEMP%\mythos-branch.txt" >nul 2>&1
     echo ERRO: nome de branch invalido.
     goto :fim
 )
-del "%TEMP%\mythos-branch.txt" >nul 2>&1
 echo ATENCAO: todos os jogadores passam a jogar na branch %BRANCH%.
 echo O servidor reinicia com aviso de 5 minutos no jogo.
 set "RESP="
