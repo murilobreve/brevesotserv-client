@@ -19,6 +19,7 @@ for _, key in pairs({ KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta }) do
 end
 
 local window, onboard, onboardEvent
+local ONBOARD_SHORT = 230 -- the onboarding's height without the key rows
 local onboardKey -- the key picked in the onboarding, set when voice is turned on
 local stylesLoaded = false
 
@@ -243,6 +244,17 @@ function VS.showOnboarding()
     loadStyles()
     onboard = g_ui.createWidget('VoiceOnboardWindow', rootWidget)
     onboardKey = nil
+    -- voice activation (the default): no key to pick, a shorter window; the
+    -- key stays in the settings for whoever turns push-to-talk on
+    if getPrefs().mode ~= 'ptt' then
+        for _, id in ipairs({ 'keyLabel', 'keyBox', 'keyHint', 'keyStatus', 'mouseCheck' }) do
+            onboard[id]:setVisible(false)
+        end
+        onboard:setHeight(ONBOARD_SHORT)
+        onboard:raise()
+        onboard:focus()
+        return
+    end
     local box, status, keyHint = onboard.keyBox, onboard.keyStatus, onboard.keyHint
     local current = talkKey(0)
     -- no key yet: a free one is offered (Insert on a new profile), so a new
@@ -282,7 +294,7 @@ function VS.closeOnboarding(turnOn)
     local mouse
     if onboard then
         onboard.keyBox:ungrabKeyboard()
-        if browserMouse() then -- the box shows only there
+        if browserMouse() and onboard.mouseCheck:isVisible() then -- the box shows only there
             mouse = onboard.mouseCheck:isChecked()
         end
         onboard:destroy()
@@ -402,11 +414,40 @@ local function slider(id, labelId, text, key)
     end
 end
 
+-- the key rows (the key, its note, the side button, the background key)
+-- show only in push-to-talk: with voice activation, the default, nothing
+-- in them does anything a player needs to look at
+local function updatePttRows()
+    if not window then
+        return
+    end
+    local keys = window.keys
+    local ptt = getPrefs().mode == 'ptt'
+    local browserFull = browserMouse()
+    for _, id in ipairs({ 'keysTitle', 'keyParty', 'keyNote', 'keyStatus' }) do
+        keys[id]:setVisible(ptt)
+    end
+    keys.mouseLabel:setVisible(ptt and browserFull)
+    keys.mouse:setVisible(ptt and browserFull)
+    keys.globalPtt:setVisible(ptt and getEngineName() == 'full' and not g_platform.isBrowser())
+    if not ptt then
+        keys.autoParty:addAnchor(AnchorTop, 'parent', AnchorTop)
+        keys.autoParty:setMarginTop(0)
+    elseif browserFull then
+        keys.autoParty:addAnchor(AnchorTop, 'mouseLabel', AnchorBottom)
+        keys.autoParty:setMarginTop(10)
+    else
+        keys.autoParty:addAnchor(AnchorTop, 'keyStatus', AnchorBottom) -- no gap where the row was
+        keys.autoParty:setMarginTop(10)
+    end
+end
+
 local function setMode(mode)
     setPref('mode', mode)
     window.audio.modePtt:setChecked(mode == 'ptt')
     window.audio.modeVad:setChecked(mode == 'vad')
     window.audio.vad:setEnabled(mode == 'vad' and hasAudio())
+    updatePttRows()
 end
 
 function VS.show()
@@ -440,13 +481,12 @@ function VS.show()
     slider('vad', 'vadLabel', 'Activation level: %d dB', 'vadDb')
     slider('inGain', 'inGainLabel', 'Microphone volume: %d%%', 'inGain')
     slider('outVol', 'outVolLabel', 'Voice volume: %d%%', 'outVol')
-    local presets = {}
-    for _, p in ipairs(PRESETS) do
-        presets[#presets + 1] = { p[1], tr(p[2]) }
-    end
-    fillCombo(audio.preset, presets, prefs.preset, function(id) setPref('preset', id) end)
+    -- the quality choice is gone from the window (2026-11-12, simpler): the
+    -- saved preset still applies, Normal for everyone new
+    audio.presetLabel:setVisible(false)
+    audio.preset:setVisible(false)
     VS.refreshDevices()
-    for _, id in ipairs({ 'modeVad', 'vad', 'inGain', 'outVol', 'preset' }) do
+    for _, id in ipairs({ 'modeVad', 'vad', 'inGain', 'outVol' }) do
         audio[id]:setEnabled(audioOk and (id ~= 'vad' or prefs.mode == 'vad'))
     end
 
@@ -455,11 +495,7 @@ function VS.show()
     keyRow(keys.keyParty, 0, tr('Talk'))
     -- the browser's side buttons reach the page only (phase 4 forwards them)
     local browserFull = browserMouse()
-    keys.mouseLabel:setVisible(browserFull)
-    keys.mouse:setVisible(browserFull)
-    if not browserFull then
-        keys.autoParty:addAnchor(AnchorTop, 'keyStatus', AnchorBottom) -- no gap where the row was
-    else
+    if browserFull then
         local mouse = {}
         for _, m in ipairs(MOUSE) do
             mouse[#mouse + 1] = { m[1], tr(m[2]) }
@@ -472,8 +508,8 @@ function VS.show()
     check('overheadIcon', 'overheadIcon')
     check('ducking', 'ducking')
     -- polling the key with the game in the background: the Windows engine only
-    keys.globalPtt:setVisible(getEngineName() == 'full' and not g_platform.isBrowser())
     check('globalPtt', 'globalPtt')
+    updatePttRows()
     keys.liteNote:setText(audioOk and '' or
         tr('Audio settings need the new client. In presence mode you see who is in the rooms.'))
     window.testButton:setVisible(audioOk)

@@ -442,6 +442,21 @@ end
 
 -- hint: the whole key hint ("Hold Insert"); short: the key alone, shown when
 -- the whole one does not fit
+-- the section the voice goes to now (voice activation and the talk key both
+-- talk there): its title in green, and a tooltip that says so
+local TARGET_COLOR = '#8fd18f'
+
+local function markTarget(h, slot)
+    local s = session()
+    if s and s.targetSlot and s.state == ST.ONLINE and s:targetSlot() == slot and hasAudio() then
+        h.title:setColor(TARGET_COLOR)
+        if h.fullHint == '' then
+            h:setTooltip(tr('Your voice goes here'))
+        end
+    end
+    return h
+end
+
 local function header(parent, title, hint, short)
     local h = g_ui.createWidget('VoiceSectionHeader', parent)
     h.title:setText(title)
@@ -600,7 +615,7 @@ local function leaveButton(h, room)
 end
 
 local function partySection(parent, s)
-    local h = header(parent, tr('PARTY'), keyHint(0))
+    local h = markTarget(header(parent, tr('PARTY'), keyHint(0)), 0)
     local room = s.rooms[0]
     if room then
         leaveButton(h, room)
@@ -632,7 +647,7 @@ local function guildSection(parent, s)
     if not guild and not officers then
         return
     end
-    local h = header(parent, tr('GUILD'), keyHint(1))
+    local h = markTarget(header(parent, tr('GUILD'), keyHint(1)), 1)
     local room = s.rooms[1]
     if room then
         leaveButton(h, room)
@@ -656,7 +671,7 @@ local function nearSection(parent, s)
     if not s.near then
         return
     end
-    local h = header(parent, tr('NEAR YOU'), keyHint(S.SLOT_NEAR))
+    local h = markTarget(header(parent, tr('NEAR YOU'), keyHint(S.SLOT_NEAR)), S.SLOT_NEAR)
     local room = s.rooms[S.SLOT_NEAR]
     if room then
         leaveButton(h, room)
@@ -685,7 +700,7 @@ end
 
 -- public rooms and events, from the relay's directory (only while unfolded)
 local function roomsSection(parent, s)
-    local h = header(parent, tr('ROOMS'), keyHint(2))
+    local h = markTarget(header(parent, tr('ROOMS'), keyHint(2)), 2)
     headerAction(h, roomsOpen and tr('Hide') or tr('Show'), function()
         roomsOpen = not roomsOpen
         if roomsOpen then
@@ -733,10 +748,8 @@ local function roomsSection(parent, s)
     if #s.dir == 0 then
         note(parent, tr('Loading the rooms...'))
     end
-    -- the relay plays our own voice back after 1.5 s
-    if hasAudio() and not (joined and joined.kind == 'echo') then
-        dirRow(parent, s, 'echo', '# ' .. tr('Echo test'), false)
-    end
+    -- no "Echo test" row any more (2026-11-12, simpler): the panel's Test
+    -- button plays the microphone back
 end
 
 -- asks the relay for the room list now and every 15 s while it shows

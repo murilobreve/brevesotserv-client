@@ -53,6 +53,7 @@ return {
     ["Talking in public rooms: level %d+"] = "Falar nas salas p\250blicas: n\237vel %d+",
     ["Talking nearby: level %d+"] = "Falar perto: n\237vel %d+",
     ["Hold %s to talk nearby"] = "Segure %s para falar perto",
+    ["Your voice goes here"] = "Sua voz vai para c\225",
     ["Pick a talk key in the voice settings"] = "Escolha a tecla de falar nas configura\231\245es da voz",
     ["+%d in the room"] = "+%d na sala",
     ["+%d talking"] = "+%d falando",

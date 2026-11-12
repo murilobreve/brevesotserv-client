@@ -1,7 +1,9 @@
-// Mythos Voz: shown once, the first time the server offers voice. It explains
-// push-to-talk, asks for headphones, links the rules and takes the party key
-// (a free one is offered: Insert on a new profile; in the browser the mouse
-// side button is an option too). The PT-BR texts fit the 348 px of content.
+// Mythos Voz: shown once, the first time the server offers voice. It says the
+// microphone opens by itself, asks for headphones and links the rules. With
+// push-to-talk chosen it also takes the talk key (a free one is offered:
+// Insert on a new profile; in the browser the mouse side button is an option
+// too); with voice activation, the default, those rows hide and the window
+// is shorter. The PT-BR texts fit the 348 px of content.
 
 VoiceOnboardWindow < MythosWindow
   !text: tr('Mythos Voice')

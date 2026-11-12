@@ -1938,7 +1938,7 @@ test('push-to-talk keys taken elsewhere: actions, hotkeys, the hotkeys manager, 
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta, KeyEscape = 22, 24, 21, 23, 25, 1
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
+    KEY_TALK = { [0] = 'Falar' }
     local actions = { ['Ctrl+K'] = true }
     Keybind = {
         currentPreset = 'Druid',
@@ -1978,7 +1978,7 @@ test('push-to-talk keys: the key of an empty action bar button is free; a free k
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta, KeyEscape = 22, 24, 21, 23, 25, 1
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
+    KEY_TALK = { [0] = 'Falar' }
     local actions = {}
     Keybind = { currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
         isKeyComboUsed = function(combo) return actions[combo] == true end }
@@ -2898,6 +2898,7 @@ function Widget:setText(t) self.text = tostring(t) end
 function Widget:getText() return self.text end
 function Widget:getTextSize() return { width = 6 * #self.text, height = 14 } end
 function Widget:setTooltip(t) rawset(self, 'tip', t) end
+function Widget:setColor(c) rawset(self, 'color', c) end
 function Widget:setVisible(v) self.shown = v and true or false end
 function Widget:isVisible() return self.shown and (not self.parent or self.parent:isVisible()) end
 function Widget:getWidth() return self.width end
@@ -3132,7 +3133,7 @@ local function uiWorld(opts)
     KeyShift, KeyControl, KeyCtrlCmd, KeyAltOpt, KeyMeta = 22, 24, 21, 23, 25
     CHAT_MODE = { ON = 1, OFF = 2 }
     KEY_CATEGORY = 'Voz'
-    KEY_TALK = { [0] = 'Falar na party', [1] = 'Falar na guild', [2] = 'Falar na sala/evento', [3] = 'Falar perto' }
+    KEY_TALK = { [0] = 'Falar' }
     local keys, used = {}, opts.usedKeys or {}
     Keybind = { chatMode = CHAT_MODE.OFF, currentPreset = 'Druid', hotkeys = { [1] = {}, [2] = {} },
         isKeyComboUsed = function(combo) return used[combo] == true end,
@@ -3356,7 +3357,9 @@ test('the near section: after the guild, its key, join and leave, rows in and ou
     eq(h.parent, nearBox(), 'after the guild, before the rooms')
     eq(h.action.text, 'Join', 'joining (autoNear): no roster yet')
     eq(h.tip, nil, 'no hint while near is not the place the key talks in')
-    eq(lastHeader('PARTY').tip, nil, 'no hint while not joined anywhere')
+    eq(lastHeader('PARTY').tip, 'Your voice goes here', 'in the party: the voice goes there')
+    eq(lastHeader('PARTY').title.color, '#8fd18f', 'its title in green')
+    eq(rawget(lastHeader('NEAR YOU').title, 'color'), nil, 'near is not where the voice goes')
     assert(hasText(nearBox(), 'Talking nearby: level 8+'), 'the level note (no level known)')
     h.action.onClick()
     eq(w.lastCtl().t, 'join')
@@ -3667,6 +3670,7 @@ end)
 test('onboarding: a free key offered (Insert), the chat hint without F1-F12, Mouse 4 in the browser', function()
     local function onboardWorld(opts)
         local u = uiWorld(opts)
+        getPrefs().mode = opts and opts.mode or 'ptt' -- the key rows are for push-to-talk
         local origCreate = g_ui.createWidget
         g_ui.createWidget = function(style, parent)
             local w = origCreate(style, parent)
@@ -3691,7 +3695,7 @@ test('onboarding: a free key offered (Insert), the chat hint without F1-F12, Mou
     VoiceSettings.closeOnboarding(true)
     eq(#u.keys, 2, 'the party key, chat on and off')
     eq(u.keys[1].combo, 'Insert')
-    eq(u.keys[1].action, 'Falar na party')
+    eq(u.keys[1].action, 'Falar')
     eq(u.wants[1], true)
     -- "Not now": the suggestion is not taken
     u, win = onboardWorld()
@@ -3788,6 +3792,7 @@ test('Escape during a key capture only cancels it: the window stays, the onboard
     KeyEnter = 5
     -- the onboarding: its Escape is "Not now"
     local u = uiWorld()
+    getPrefs().mode = 'ptt' -- the onboarding asks for a key only in push-to-talk
     local createWidget = g_ui.createWidget
     local kb
     g_ui.createWidget = function(style, parent)
@@ -4483,6 +4488,28 @@ test('one talk key and voice activation by default (2026-11-11)', function()
     roster(w, 'p:10:5', { { 7 }, { 8 } })
     eq(w.s:targetSlot(), 0, 'the party first')
     eq(S.SPATIAL, false, 'no distance or left/right for near voices')
+end)
+
+test('voice activation: a short onboarding with no key, the settings without the key rows', function()
+    local u = uiWorld({ talkKey = '' })
+    getPrefs().mode = 'vad'
+    VoiceSettings.showOnboarding()
+    local win = u.created.VoiceOnboardWindow[1]
+    for _, id in ipairs({ 'keyLabel', 'keyBox', 'keyHint', 'keyStatus', 'mouseCheck' }) do
+        eq(win[id].shown, false, id .. ' hidden')
+    end
+    VoiceSettings.closeOnboarding(true)
+    eq(#u.keys, 0, 'no key set by the onboarding')
+    eq(u.wants[1], true, 'voice turned on')
+    VoiceSettings.show()
+    local keys = u.created.VoiceSettingsWindow[1].keys
+    for _, id in ipairs({ 'keysTitle', 'keyParty', 'keyNote', 'keyStatus', 'mouseLabel', 'mouse', 'globalPtt' }) do
+        eq(keys[id].shown, false, id .. ' hidden with voice activation')
+    end
+    eq(u.created.VoiceSettingsWindow[1].audio.preset.shown, false, 'no quality choice')
+    u.created.VoiceSettingsWindow[1].audio.modePtt.onClick()
+    eq(keys.keyParty.shown, true, 'push-to-talk: the key row is back')
+    VoiceSettings.hide()
 end)
 
 print(string.format('%d passed, %d failed', passed, failed))
