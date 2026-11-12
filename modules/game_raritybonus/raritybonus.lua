@@ -304,7 +304,7 @@ local function onOpcode(protocol, opcode, data)
             local result = data.result
             local code = type(result) == 'table' and result.code
             if code == 'bought' or code == 'coins' or code == 'points' or code == 'pack' then
-                shopWindow.status:setText(window.status:getText())
+                shopWindow.status:setText(window.bottomBar.status:getText())
                 shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
             end
         end
@@ -426,7 +426,7 @@ end
 function request()
     local window = Forge.window()
     if window then
-        window.status:setText('')
+        window.bottomBar.status:setText('')
     end
     send({ action = 'open' })
 end
