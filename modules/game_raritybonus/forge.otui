@@ -1,258 +1,60 @@
-// Forja de Raridade: the rarity window. Four pages under tabs: the Arsenal
-// (the items worn and each bonus's roll), the Reforge (reroll), the Ascension
-// (grade upgrade) and Your Bonuses (the totals). Pictures: images/forge,
-// made by tools/custom-assets/gen_forge_art.py, painted with image-color.
+// Forja de Raridade, in the way of Tibia's own forge: a small window with
+// tabs (Roll, Upgrade, My bonuses), the rare items as 32px slots (worn on
+// top, the backpack's below), the item picked on the right. Roll: one line
+// per bonus with a box to keep it, then a wheel that picks each new bonus's
+// type and a needle meter that picks its value. Upgrade: the item and its
+// next grade, the chance and the price; a bar while it forges, then the
+// result. My bonuses: the totals of what is worn, with their limits.
+// Pictures: images/forge (wheel/: one wheel per number of slices).
 
 ForgeTab < UIButton
-  height: 26
+  height: 22
   text-auto-resize: true
   padding: 0 14
   font: verdana-11px-antialised
-  color: #b9b0a3
-  background-color: #00000000
+  color: #9c9c9c
+  background-color: #262626
   border-width: 1
-  border-color: #00000000
+  border-color: #444444
   change-cursor-image: true
   cursor: pointer
 
   $hover !on:
-    color: #ece6dc
-    border-color: #3a3140
+    color: #e0e0e0
 
   $on:
-    color: #f3d38a
-    background-color: #2a2219
-    border-color: #6b5631
+    color: #ffffff
+    background-color: #333333
+    border-color: #5a5a5a
 
-ForgeBox < UIWidget
-  background-color: #141117
+// a sunken box (Tibia's inset panels)
+ForgeInset < UIWidget
+  background-color: #1e1e1e
+  border-width: 1
+  border-color: #121212
 
-ForgeTitle < Label
-  font: verdana-11px-antialised
-  color: #a59d92
-  text-auto-resize: true
-
-ForgeText < Label
-  font: verdana-11px-antialised
-  color: #d6cfc2
+// a raised box
+ForgePanel < UIWidget
+  background-color: #262626
+  border-width: 1
+  border-color: #161616
 
 ForgeDim < Label
   font: verdana-11px-antialised
-  color: #8f877c
+  color: #8c8c8c
+
+ForgeText < Label
+  font: verdana-11px-antialised
+  color: #c8c8c8
 
 ForgeButton < MythosButton
-  height: 30
+  height: 22
 
-ForgeGoldButton < UIButton
-  height: 36
-  font: Verdana Bold-11px
-  color: #f3d38a
-  background-color: #2a2219
-  border-width: 1
-  border-color: #8a6d36
-  change-cursor-image: true
-  cursor: pointer
-
-  $hover !disabled:
-    background-color: #3a2e1f
-    border-color: #b08a42
-    color: #ffe9b5
-
-  $pressed:
-    background-color: #1f1912
-
-  $disabled:
-    color: #7d7466
-    background-color: #1b1816
-    border-color: #3a3330
-    change-cursor-image: false
-
-ForgeVioletButton < ForgeGoldButton
-  color: #ddd0ff
-  background-color: #1d1830
-  border-color: #6f5aa8
-
-  $hover !disabled:
-    background-color: #2a2245
-    border-color: #8b74d0
-    color: #f1ebff
-
-  $pressed:
-    background-color: #161226
-
-  $disabled:
-    color: #77708a
-    background-color: #18161d
-    border-color: #2f2b38
-
-ForgePip < UIWidget
-  size: 10 10
-  image-source: /game_raritybonus/images/forge/pip
-  phantom: true
-
-// one worn item on the Arsenal's paperdoll
+// one rare item as a slot: its grade is the frame's colour
 ForgeSlot < UIButton
-  size: 48 48
-  background-color: #00000000
-  change-cursor-image: true
-  cursor: pointer
-
-  UIItem
-    id: item
-    size: 40 40
-    anchors.centerIn: parent
-    virtual: true
-    phantom: true
-
-  ForgePip
-    id: pip
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    margin-right: 3
-    margin-bottom: 3
-    size: 8 8
-
-ForgeEmptySlot < UIWidget
-  size: 48 48
-  phantom: true
-
-// one bonus of the selected item: name, value, where the roll fell in the
-// item's range, quality
-ForgeBonusRow < UIWidget
-  height: 46
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
-
-  Label
-    id: name
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 10
-    width: 140
-    font: verdana-11px-antialised
-    color: #ece6dc
-    text-wrap: true
-    height: 28
-
-  Label
-    id: value
-    anchors.left: name.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 4
-    width: 58
-    font: Verdana Bold-11px
-    color: #ece6dc
-
-  UIWidget
-    id: track
-    anchors.left: value.right
-    anchors.top: parent.top
-    margin-top: 12
-    size: 120 8
-    background-color: #241f28
-    phantom: true
-
-    UIWidget
-      id: fill
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      phantom: true
-
-    UIWidget
-      id: mark
-      anchors.top: parent.top
-      anchors.left: parent.left
-      margin-top: -3
-      size: 3 14
-      background-color: #ffffff
-      phantom: true
-
-  Label
-    id: low
-    anchors.left: track.left
-    anchors.top: track.bottom
-    margin-top: 4
-    font: verdana-11px-antialised
-    color: #8f877c
-    text-auto-resize: true
-
-  Label
-    id: high
-    anchors.right: track.right
-    anchors.top: track.bottom
-    margin-top: 4
-    font: verdana-11px-antialised
-    color: #8f877c
-    text-auto-resize: true
-
-  Label
-    id: quality
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 8
-    width: 98
-    height: 20
-    text-align: center
-    font: verdana-11px-antialised
-    border-width: 1
-
-// "in your character": this item's share of a total next to the others'
-ForgeShareRow < UIWidget
-  height: 34
-
-  Label
-    id: name
-    anchors.left: parent.left
-    anchors.top: parent.top
-    anchors.right: total.left
-    font: verdana-11px-antialised
-    color: #d6cfc2
-
-  Label
-    id: total
-    anchors.right: parent.right
-    anchors.top: parent.top
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #b9b0a3
-
-  UIWidget
-    id: track
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: name.bottom
-    margin-top: 5
-    height: 6
-    background-color: #241f28
-    phantom: true
-
-    UIWidget
-      id: others
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      background-color: #5a5260
-      phantom: true
-
-    UIWidget
-      id: mine
-      anchors.left: others.right
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      background-color: #e8c77a
-      phantom: true
-
-// a worn item to pick (Reforge's strip, the Ascension's list)
-ForgeItemChip < UIButton
-  size: 44 44
-  background-color: #17131a
+  size: 36 36
+  background-color: #1a1a1a
   border-width: 2
-  border-color: #2a2430
   change-cursor-image: true
   cursor: pointer
 
@@ -263,810 +65,115 @@ ForgeItemChip < UIButton
     virtual: true
     phantom: true
 
-// one bonus the Reforge can give, in the "can roll" grid
-ForgePoolChip < UIWidget
-  size: 24 24
-  background-color: #00000000
+// one bonus of the item: keep box, text, how it changed, range, quality
+ForgeRow < UIWidget
+  height: 22
 
-  UIWidget
-    id: icon
-    size: 18 18
-    anchors.centerIn: parent
-    phantom: true
-
-  // on the item now: a gold line under the icon
-  UIWidget
-    id: mark
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    margin-left: 4
-    margin-right: 4
-    height: 2
-    background-color: #e8c77a
-    phantom: true
-    visible: false
-
-// one bonus of the Reforge, as a card: face up or face down
-ForgeCard < UIButton
-  size: 116 212
-  background-color: #15121899
-  change-cursor-image: true
-  cursor: pointer
-
-  UIWidget
-    id: glow
-    size: 150 150
-    anchors.centerIn: parent
-    image-source: /game_raritybonus/images/forge/glow
-    phantom: true
-    visible: false
-
-  UIWidget
-    id: icon
-    anchors.left: parent.left
-    anchors.top: parent.top
-    margin-left: 6
-    margin-top: 5
-    size: 18 18
-    phantom: true
-
-  Label
-    id: number
-    anchors.left: icon.right
-    anchors.top: parent.top
-    margin-left: 5
-    margin-top: 7
-    font: verdana-11px-antialised
-    color: #8f877c
-    text-auto-resize: true
-
-  Label
-    id: sealed
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-right: 6
-    margin-top: 5
-    height: 16
-    text-auto-resize: true
-    padding: 0 5
-    font: Verdana Bold-10px
-    color: #1a1306
-    background-color: #e8c77a
-    !text: tr('SEALED')
-    visible: false
-
-  // after a reforge: how the bonus changed (+3 green, -2 red, new violet)
-  Label
-    id: delta
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-right: 7
-    margin-top: 7
-    text-auto-resize: true
-    font: Verdana Bold-11px
-    phantom: true
-    visible: false
-
-  UIWidget
-    id: track
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: parent.top
-    margin-top: 26
-    size: 76 76
-    image-source: /game_raritybonus/images/forge/ring
-    image-clip: 1520 0 76 76
-    image-color: #2a2430
-    phantom: true
-
-    UIWidget
-      id: arc
-      anchors.fill: parent
-      image-source: /game_raritybonus/images/forge/ring
-      image-clip: 0 0 76 76
-      phantom: true
-
-    Label
-      id: percent
-      anchors.centerIn: parent
-      text-auto-resize: true
-      font: Verdana Bold-13px
-      color: #ece6dc
-
-  Label
-    id: grade
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: track.bottom
-    margin-top: 2
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #a59d92
-    phantom: true
-
-  Label
-    id: name
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: grade.bottom
-    margin-top: 4
-    margin-left: 6
-    margin-right: 6
-    height: 30
-    text-align: center
-    text-wrap: true
-    font: verdana-11px-antialised
-    color: #ece6dc
-
-  Label
-    id: value
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: name.bottom
-    margin-top: 2
-    height: 18
-    text-align: center
-    font: Verdana Bold-13px
-    color: #ece6dc
-
-  // where the roll fell in its range: the grades as zones (what is still
-  // ahead stays lit in its own colour), a marker, the top in gold
-  UIWidget
-    id: meter
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: value.bottom
-    margin-top: 7
-    size: 98 6
-    phantom: true
-
-    UIWidget
-      id: zone1
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 29
-      background-color: #3a3540
-      phantom: true
-
-    UIWidget
-      id: zone2
-      anchors.left: zone1.right
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      margin-left: 1
-      width: 29
-      background-color: #57524d
-      phantom: true
-
-    UIWidget
-      id: zone3
-      anchors.left: zone2.right
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      margin-left: 1
-      width: 23
-      background-color: #2f5a39
-      phantom: true
-
-    UIWidget
-      id: zone4
-      anchors.left: zone3.right
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      margin-left: 1
-      width: 10
-      background-color: #2f5078
-      phantom: true
-
-    UIWidget
-      id: zone5
-      anchors.left: zone4.right
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      margin-left: 1
-      width: 3
-      background-color: #b8964a
-      phantom: true
-
-    UIWidget
-      id: fill
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      phantom: true
-
-    UIWidget
-      id: mark
-      anchors.left: parent.left
-      anchors.verticalCenter: parent.verticalCenter
-      size: 2 12
-      background-color: #ffffff
-      phantom: true
-
-  Label
-    id: rmin
-    anchors.left: meter.left
-    anchors.top: meter.bottom
-    margin-top: 5
-    height: 14
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #6e665e
-    phantom: true
-
-  Label
-    id: rmax
-    anchors.right: meter.right
-    anchors.top: meter.bottom
-    margin-top: 5
-    height: 14
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #e8c77a
-    phantom: true
-
-  // a line of the roll's colour along the top of the card
-  UIWidget
-    id: accent
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-left: 1
-    margin-right: 1
-    margin-top: 1
-    height: 2
-    phantom: true
-    visible: false
-
-  UIWidget
-    id: back
-    anchors.fill: parent
-    background-color: #18131d
-    phantom: true
-    visible: false
-
-    UIWidget
-      id: rune
-      size: 56 56
-      anchors.horizontalCenter: parent.horizontalCenter
-      anchors.top: parent.top
-      margin-top: 44
-      image-source: /game_raritybonus/images/forge/rune
-      image-color: #8a6dd0
-      phantom: true
-
-    // while the Reforge rolls: a slot-machine column of what the item can
-    // get; the middle row (in the band) is the one that counts
-    UIWidget
-      id: band
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: parent.top
-      margin-top: 78
-      height: 72
-      background-color: #8a6dd022
-      phantom: true
-      visible: false
-
-    Label
-      id: reelPrev
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: parent.top
-      margin-top: 44
-      margin-left: 6
-      margin-right: 6
-      height: 28
-      text-align: center
-      text-wrap: true
-      font: verdana-11px-antialised
-      color: #5d5568
-      phantom: true
-
-    UIWidget
-      id: reelIcon
-      anchors.horizontalCenter: parent.horizontalCenter
-      anchors.top: band.top
-      margin-top: 6
-      size: 18 18
-      phantom: true
-      visible: false
-
-    Label
-      id: reelName
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: reelIcon.bottom
-      margin-top: 2
-      margin-left: 6
-      margin-right: 6
-      height: 28
-      text-align: center
-      text-wrap: true
-      font: verdana-11px-antialised
-      color: #e6dcff
-      phantom: true
-
-    Label
-      id: reelRange
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: reelName.bottom
-      height: 14
-      text-align: center
-      font: verdana-11px-antialised
-      color: #e8c77a
-      phantom: true
-
-    Label
-      id: reelNextRow
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: band.bottom
-      margin-top: 6
-      margin-left: 6
-      margin-right: 6
-      height: 28
-      text-align: center
-      text-wrap: true
-      font: verdana-11px-antialised
-      color: #5d5568
-      phantom: true
-
-  UIWidget
-    id: flash
-    anchors.fill: parent
-    phantom: true
-    visible: false
-
-  UIWidget
-    id: emptyRune
-    size: 56 56
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: parent.top
-    margin-top: 58
-    image-source: /game_raritybonus/images/forge/rune
-    image-color: #2a2430
-    phantom: true
-    visible: false
-
-  Label
-    id: empty
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: emptyRune.bottom
-    margin-top: 10
-    font: verdana-11px-antialised
-    color: #5d5568
-    text-auto-resize: true
-    !text: tr('no bonus')
-    visible: false
-
-// before -> after of one bonus, once the Reforge is done
-ForgeDiffRow < UIWidget
-  height: 26
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
-
-  Label
-    id: name
+  CheckBox
+    id: seal
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
-    width: 150
-    font: verdana-11px-antialised
-    color: #d6cfc2
-
-  Label
-    id: before
-    anchors.left: name.right
-    anchors.verticalCenter: parent.verticalCenter
-    width: 56
-    text-align: right
-    font: verdana-11px-antialised
-    color: #8f877c
-
-  UIWidget
-    id: arrow
-    anchors.left: before.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
+    margin-left: 3
     size: 14 14
-    image-source: /game_raritybonus/images/forge/arrow
-    image-color: #8f877c
-    phantom: true
 
   Label
-    id: after
-    anchors.left: arrow.right
+    id: text
+    anchors.left: seal.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
-    width: 56
-    font: Verdana Bold-11px
-    color: #ece6dc
+    text-auto-resize: true
+    font: verdana-11px-antialised
 
   Label
     id: delta
-    anchors.right: parent.right
+    anchors.left: text.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 8
+    margin-left: 8
     text-auto-resize: true
-    font: Verdana Bold-11px
-
-ForgeOddsRow < UIWidget
-  height: 16
+    font: Verdana Bold-10px
 
   Label
-    id: label
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    width: 64
-    font: verdana-11px-antialised
-    color: #a59d92
-
-  UIWidget
-    id: track
-    anchors.left: label.right
-    anchors.right: pct.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 6
-    height: 8
-    background-color: #241f28
-    phantom: true
-
-    UIWidget
-      id: fill
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      phantom: true
-
-  Label
-    id: pct
+    id: quality
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    width: 40
+    margin-right: 4
+    width: 64
     text-align: right
     font: verdana-11px-antialised
-    color: #ece6dc
 
-// an item that can go up a grade (the Ascension's list)
-ForgeAscendRow < UIButton
-  height: 56
-  background-color: #00000000
-  border-width: 1
-  border-color: #00000000
-  change-cursor-image: true
-  cursor: pointer
-
-  $hover !on:
-    background-color: #1d1922
-
-  $on:
-    background-color: #1e1a24
-    border-color: #5d4d84
-
-  UIWidget
-    id: frame
-    anchors.left: parent.left
+  Label
+    id: range
+    anchors.right: quality.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
-    size: 44 44
-    background-color: #17131a
-    border-width: 2
-    phantom: true
-
-    UIItem
-      id: item
-      size: 32 32
-      anchors.centerIn: parent
-      virtual: true
-      phantom: true
-
-  Label
-    id: name
-    anchors.left: frame.right
-    anchors.right: chance.left
-    anchors.top: frame.top
-    margin-left: 8
-    margin-top: 6
-    font: Verdana Bold-11px
-    color: #ece6dc
-
-  Label
-    id: path
-    anchors.left: name.left
-    anchors.right: chance.left
-    anchors.top: name.bottom
-    margin-top: 4
-    font: verdana-11px-antialised
-    color: #a59d92
-
-  Label
-    id: chance
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 8
-    text-auto-resize: true
-    font: Verdana Bold-11px
-    color: #ddd0ff
-
-// a grade's diamond crest with the item in it
-ForgeCrest < UIWidget
-  size: 120 120
-  phantom: true
-
-  UIWidget
-    id: glow
-    size: 170 170
-    anchors.centerIn: parent
-    image-source: /game_raritybonus/images/forge/glow
-    phantom: true
-    visible: false
-
-  UIWidget
-    id: fill
-    anchors.fill: parent
-    image-source: /game_raritybonus/images/forge/crest_fill
-    image-color: #151118
-    phantom: true
-
-  UIWidget
-    id: frame
-    anchors.fill: parent
-    image-source: /game_raritybonus/images/forge/crest
-    phantom: true
-
-  UIItem
-    id: item
-    size: 48 48
-    anchors.centerIn: parent
-    virtual: true
-    phantom: true
-
-// one total of Your Bonuses: the bar to its limit split by the items that
-// give it, each in its grade's colour
-ForgeTotalRow < UIWidget
-  size: 448 74
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
-
-  Label
-    id: name
-    anchors.left: parent.left
-    anchors.top: parent.top
-    margin-left: 10
-    margin-top: 8
-    text-auto-resize: true
-    font: Verdana Bold-11px
-    color: #ece6dc
-
-  Label
-    id: tag
-    anchors.left: name.right
-    anchors.verticalCenter: name.verticalCenter
-    margin-left: 8
-    height: 15
-    text-auto-resize: true
-    padding: 0 5
-    font: verdana-11px-antialised
-
-  Label
-    id: total
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-right: 10
-    margin-top: 8
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #b9b0a3
-
-  UIWidget
-    id: track
-    anchors.left: parent.left
-    anchors.top: name.bottom
-    margin-left: 10
-    margin-top: 7
-    size: 426 10
-    background-color: #241f28
-    phantom: true
-    layout:
-      type: horizontalBox
-      spacing: 2
-
-  UIWidget
-    id: chips
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: track.bottom
-    margin-left: 10
-    margin-right: 10
-    margin-top: 6
-    height: 20
-    phantom: true
-    layout:
-      type: horizontalBox
-      spacing: 6
-
-ForgeChip < UIWidget
-  height: 20
-  background-color: #1f1a24
-  border-width: 1
-  phantom: true
-
-  UIItem
-    id: item
-    size: 18 18
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 1
-    virtual: true
-    phantom: true
-
-  Label
-    id: value
-    anchors.left: item.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 3
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #d6cfc2
-
-ForgeTile < UIWidget
-  size: 190 58
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
-
-  Label
-    id: label
-    anchors.left: parent.left
-    anchors.top: parent.top
-    margin-left: 12
-    margin-top: 8
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #a59d92
-
-  Label
-    id: value
-    anchors.left: parent.left
-    anchors.top: label.bottom
-    margin-left: 12
-    margin-top: 2
-    text-auto-resize: true
-    ttf-font: cinzel-bold
-    ttf-font-size: 18
-    color: #ece6dc
-
-  Label
-    id: sub
-    anchors.left: value.right
-    anchors.bottom: value.bottom
-    margin-left: 8
-    margin-bottom: 2
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #8f877c
-
-ForgeFilter < UIButton
-  height: 24
-  text-auto-resize: true
-  padding: 0 12
-  font: verdana-11px-antialised
-  color: #b9b0a3
-  border-width: 1
-  border-color: #3a3140
-  change-cursor-image: true
-  cursor: pointer
-
-  $hover !on:
-    color: #ece6dc
-
-  $on:
-    color: #f3d38a
-    background-color: #2a2219
-    border-color: #8a6d36
-
-// one of the character's bonuses in the Arsenal: name, total (and limit),
-// and the items that give it, each with its share
-ForgeMiniTotal < UIWidget
-  height: 46
-  background-color: #00000000
-
-  UIWidget
-    id: icon
-    anchors.left: parent.left
-    anchors.top: parent.top
-    margin-left: 5
-    margin-top: 4
-    size: 18 18
-    phantom: true
-
-  Label
-    id: name
-    anchors.left: icon.right
-    anchors.right: total.left
-    anchors.top: parent.top
-    margin-left: 5
-    margin-top: 5
-    margin-right: 4
-    height: 14
-    font: Verdana Bold-11px
-    color: #ece6dc
-
-  Label
-    id: total
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-right: 7
-    margin-top: 5
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #b9b0a3
-
-  UIWidget
-    id: chips
-    anchors.left: name.left
-    anchors.right: parent.right
-    anchors.top: name.bottom
     margin-right: 6
-    margin-top: 3
-    height: 18
-    layout:
-      type: horizontalBox
-      spacing: 4
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #8c8c8c
 
   UIWidget
-    id: track
+    id: line
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    margin: 0 1 1 1
-    height: 3
-    background-color: #241f28
+    height: 1
+    background-color: #2f2f2f
     phantom: true
 
-    UIWidget
-      id: fill
-      anchors.left: parent.left
-      anchors.top: parent.top
-      anchors.bottom: parent.bottom
-      width: 0
-      phantom: true
+// a bonus's picture on its slice of the wheel
+ForgeWheelIcon < UIWidget
+  size: 20 20
+  phantom: true
 
-// an item in a bonus row: its picture and what it gives
-ForgeMiniChip < UIButton
-  height: 18
-  background-color: #1f1a24
-  change-cursor-image: true
-  cursor: pointer
-
-  UIItem
-    id: item
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 1
-    size: 16 16
-    virtual: true
-    phantom: true
+// one total of My bonuses
+ForgeTotalRow < UIWidget
+  height: 21
 
   Label
-    id: value
-    anchors.left: item.right
+    id: name
+    anchors.left: parent.left
+    anchors.right: total.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 3
-    text-auto-resize: true
+    margin-left: 4
     font: verdana-11px-antialised
-    color: #d6cfc2
+    color: #d0d0d0
+
+  Label
+    id: cap
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+    width: 70
+    text-align: right
+    font: verdana-11px-antialised
+    color: #8c8c8c
+
+  Label
+    id: total
+    anchors.right: cap.left
+    anchors.verticalCenter: parent.verticalCenter
+    width: 80
+    text-align: right
+    font: Verdana Bold-11px
+    color: #e6e6e6
+
+  UIWidget
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 1
+    background-color: #2f2f2f
     phantom: true
+
+// a line of the upgrade's result
+ForgeResultLine < Label
+  height: 15
+  text-auto-resize: true
+  font: verdana-11px-antialised
 
 MythosWindow
   id: forgeWindow
   !text: tr('Rarity Forge')
-  size: 980 650
+  size: 680 600
   @onEscape: modules.game_raritybonus.hide()
 
   UIButton
@@ -1096,489 +203,879 @@ MythosWindow
     id: tabs
     anchors.top: parent.top
     anchors.left: parent.left
-    height: 26
-    width: 520
+    margin-left: 4
+    height: 22
+    width: 400
     layout:
       type: horizontalBox
-      spacing: 4
+      spacing: 2
 
+    ForgeTab
+      id: tabRoll
+      !text: tr('Roll')
+      @onClick: modules.game_raritybonus.forgeTab('roll')
 
-  // the gold in the bank (prices of the seal and the Ascension)
-  BrevesValueBox
-    id: bankBox
-    anchors.verticalCenter: tabs.verticalCenter
+    ForgeTab
+      id: tabUp
+      !text: tr('Upgrade')
+      @onClick: modules.game_raritybonus.forgeTab('up')
+
+    ForgeTab
+      id: tabTotals
+      !text: tr('My bonuses')
+      @onClick: modules.game_raritybonus.forgeTab('totals')
+
+  // Rarity XP, the shop, what the last action did, the gold
+  ForgePanel
+    id: bottomBar
+    anchors.left: parent.left
     anchors.right: parent.right
-    width: 120
+    anchors.bottom: parent.bottom
+    height: 26
 
-  Label
-    id: bankLabel
-    anchors.verticalCenter: tabs.verticalCenter
-    anchors.right: bankBox.left
-    margin-right: 6
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #a59d92
-    !text: tr('Gold')
+    UIWidget
+      id: xpIcon
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-left: 6
+      size: 16 16
+      image-source: /game_raritybonus/images/forge/ui/rarity_xp
 
-  MythosButton
-    id: buyXpButton
-    anchors.verticalCenter: tabs.verticalCenter
-    anchors.right: bankLabel.left
-    margin-right: 16
-    size: 136 22
-    !text: tr('Buy Rarity XP')
-    !tooltip: tr('Buy Rarity XP here, with Mythos Coins or Hunt Points.')
-    @onClick: modules.game_raritybonus.buyRarityXp()
+    ForgeText
+      id: xpLabel
+      anchors.left: xpIcon.right
+      anchors.verticalCenter: parent.verticalCenter
+      margin-left: 5
+      text-auto-resize: true
+      font: Verdana Bold-11px
+      color: #c9a4ff
 
-  Label
-    id: xpLabel
-    anchors.verticalCenter: tabs.verticalCenter
-    anchors.right: buyXpButton.left
-    margin-right: 10
-    text-auto-resize: true
-    font: Verdana Bold-11px
-    color: #c9a4ff
+    ForgeButton
+      id: buyXpButton
+      anchors.left: xpLabel.right
+      anchors.verticalCenter: parent.verticalCenter
+      margin-left: 8
+      size: 70 18
+      !text: tr('Buy')
+      !tooltip: tr('Buy Rarity XP here, with Mythos Coins or Hunt Points.')
+      @onClick: modules.game_raritybonus.buyRarityXp()
 
-  UIWidget
-    id: topRule
+    UIWidget
+      id: goldIcon
+      anchors.right: bankBox.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-right: 5
+      size: 16 16
+      image-source: /images/game/cyclopedia/icons/icon-goldcoin
+
+    ForgeText
+      id: bankBox
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      margin-right: 8
+      text-auto-resize: true
+      font: Verdana Bold-11px
+      color: #e2c46a
+
+    Label
+      id: status
+      anchors.left: buyXpButton.right
+      anchors.right: goldIcon.left
+      anchors.verticalCenter: parent.verticalCenter
+      margin-left: 10
+      margin-right: 10
+      height: 14
+      text-align: center
+      font: verdana-11px-antialised
+      color: #7fd35a
+
+  ForgePanel
+    id: body
     anchors.top: tabs.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 8
-    height: 1
-    background-color: #2a2430
-    phantom: true
+    anchors.bottom: bottomBar.top
+    margin-bottom: 6
+    background-color: #333333
+    border-color: #5a5a5a
+    padding: 6
 
-  // what the last action did, as a status bar along the bottom
-  Label
-    id: status
-    anchors.bottom: parent.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: 16
-    font: verdana-11px-antialised
-    color: #7fd35a
+    // ---------------------------------------------------------- the items
+    ForgePanel
+      id: left
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      width: 172
+      padding: 6
 
-  UIWidget
-    id: footRule
-    anchors.bottom: status.top
-    anchors.left: parent.left
-    anchors.right: parent.right
-    margin-bottom: 5
-    height: 1
-    background-color: #2a2430
-    phantom: true
-
-  UIWidget
-    id: pages
-    anchors.top: topRule.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: footRule.top
-    margin-top: 10
-    margin-bottom: 8
-
-    // ---------------------------------------------------------------- Arsenal
-    // one page: the items worn (left), the item picked with its bonuses as
-    // cards, and below them the two things the Forge does to it, side by side:
-    // Reforge (roll the bonuses again) and Ascension (go up a grade)
-    UIWidget
-      id: arsenal
-      anchors.fill: parent
-
-      ForgeBox
-        id: left
+      ForgeDim
+        id: wornTitle
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        width: 300
-        padding: 12
-
-        ForgeTitle
-          id: wornTitle
-          anchors.top: parent.top
-          anchors.left: parent.left
-          !text: tr('WORN')
-
-        ForgeDim
-          id: wornNote
-          anchors.verticalCenter: wornTitle.verticalCenter
-          anchors.right: parent.right
-          text-auto-resize: true
-
-        UIWidget
-          id: doll
-          anchors.top: wornTitle.bottom
-          anchors.left: parent.left
-          margin-top: 8
-          size: 264 48
-          layout:
-            type: grid
-            cell-size: 48 48
-            cell-spacing: 6
-            num-columns: 5
-
-        ForgeTitle
-          id: bonusesTitle
-          anchors.top: doll.bottom
-          anchors.left: parent.left
-          margin-top: 16
-          !text: tr('YOUR BONUSES')
-
-        ForgeDim
-          id: bonusesNote
-          anchors.verticalCenter: bonusesTitle.verticalCenter
-          anchors.right: parent.right
-          text-auto-resize: true
-
-        ScrollablePanel
-          id: bonusList
-          anchors.top: bonusesTitle.bottom
-          anchors.left: parent.left
-          anchors.right: bonusScroll.left
-          anchors.bottom: parent.bottom
-          margin-top: 6
-          margin-right: 3
-          vertical-scrollbar: bonusScroll
-          layout:
-            type: verticalBox
-            spacing: 3
-
-        VerticalScrollBar
-          id: bonusScroll
-          anchors.top: bonusesTitle.bottom
-          margin-top: 6
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          step: 30
-          pixels-scroll: true
+        text-auto-resize: true
+        color: #a8a8a8
+        !text: tr('Equipped items')
 
       UIWidget
-        id: center
-        anchors.top: parent.top
-        anchors.left: left.right
+        id: wornGrid
+        anchors.top: wornTitle.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 5
+        height: 36
+        layout:
+          type: grid
+          cell-size: 36 36
+          cell-spacing: 4
+          num-columns: 4
+
+      UIWidget
+        id: bagRule
+        anchors.top: wornGrid.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        margin-top: 8
+        height: 1
+        background-color: #3c3c3c
+        phantom: true
+
+      ForgeDim
+        id: bagTitle
+        anchors.top: bagRule.bottom
+        anchors.left: parent.left
+        margin-top: 6
+        text-auto-resize: true
+        color: #a8a8a8
+        !text: tr('In the backpack')
+
+      ForgeDim
+        id: bagNote
+        anchors.verticalCenter: bagTitle.verticalCenter
+        anchors.right: parent.right
+        text-auto-resize: true
+        font: Verdana-10px-antialiased
+
+      ScrollablePanel
+        id: bagGrid
+        anchors.top: bagTitle.bottom
+        anchors.left: parent.left
+        anchors.right: bagScroll.left
+        anchors.bottom: leftHint.top
+        margin-top: 5
+        margin-bottom: 6
+        vertical-scrollbar: bagScroll
+        layout:
+          type: grid
+          cell-size: 36 36
+          cell-spacing: 4
+          num-columns: 4
+
+      VerticalScrollBar
+        id: bagScroll
+        anchors.top: bagTitle.bottom
+        anchors.bottom: leftHint.top
+        margin-top: 5
+        margin-bottom: 6
+        anchors.right: parent.right
+        width: 8
+        step: 40
+        pixels-scroll: true
+
+      ForgeDim
+        id: leftHint
+        anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        margin-left: 12
+        height: 40
+        text-wrap: true
+        font: Verdana-10px-antialiased
+        !text: tr('Hover an item to see its bonuses. Click to pick it.')
 
-        UIWidget
-          id: pedestal
-          anchors.top: parent.top
+    // ------------------------------------------------- the item picked
+    ForgePanel
+      id: right
+      anchors.top: parent.top
+      anchors.left: left.right
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      margin-left: 6
+      padding: 8 10 8 10
+
+      UIWidget
+        id: head
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 40
+
+        ForgeSlot
+          id: itemBox
           anchors.left: parent.left
-          size: 76 76
-
-          UIWidget
-            id: glow
-            size: 130 130
-            anchors.centerIn: parent
-            image-source: /game_raritybonus/images/forge/glow
-            opacity: 0.55
-            phantom: true
-
-          UIItem
-            id: item
-            size: 64 64
-            anchors.centerIn: parent
-            virtual: true
-
-        Label
-          id: badge
-          anchors.top: pedestal.top
-          anchors.left: pedestal.right
-          margin-left: 14
-          margin-top: 4
-          height: 18
-          text-auto-resize: true
-          font: Verdana Bold-11px
-
-        UIWidget
-          id: pips
-          anchors.left: badge.right
-          anchors.verticalCenter: badge.verticalCenter
-          margin-left: 10
-          size: 70 10
-          layout:
-            type: horizontalBox
-            spacing: 4
+          anchors.top: parent.top
+          change-cursor-image: false
 
         Label
           id: name
-          anchors.top: badge.bottom
-          anchors.left: badge.left
+          anchors.left: itemBox.right
+          anchors.top: parent.top
           anchors.right: parent.right
-          margin-top: 4
-          height: 28
-          ttf-font: cinzel-bold
-          ttf-font-size: 20
-          color: #ece6dc
+          margin-left: 8
+          margin-top: 3
+          height: 15
+          font: Verdana Bold-11px
+          color: #e6e6e6
 
         Label
           id: info
+          anchors.left: name.left
           anchors.top: name.bottom
-          anchors.left: badge.left
           anchors.right: parent.right
-          margin-top: 2
-          height: 16
+          margin-top: 3
+          height: 14
           font: verdana-11px-antialised
-          color: #a59d92
 
         UIWidget
-          id: cards
-          anchors.top: pedestal.bottom
           anchors.left: parent.left
           anchors.right: parent.right
-          margin-top: 12
-          height: 212
-          layout:
-            type: horizontalBox
-            spacing: 10
+          anchors.bottom: parent.bottom
+          height: 1
+          background-color: #3c3c3c
+          phantom: true
+
+      ForgeDim
+        id: empty
+        anchors.centerIn: parent
+        width: 440
+        height: 60
+        text-align: center
+        text-auto-resize: false
+        text-wrap: true
+        !text: tr('You have no rarity item, worn or in the backpack.\nRarity items come from Pale, Ashen, Obsidian and Lord of Death monsters.')
+        visible: false
+
+      // ---------------------------------------------------- Roll
+      UIWidget
+        id: rollPage
+        anchors.top: head.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
 
         ForgeDim
-          id: empty
-          anchors.centerIn: parent
-          text-auto-resize: true
-          !text: tr('You wear no rarity item. Rarity items come from Pale, Ashen, Obsidian and Lord of Death monsters.')
-
-        // ------------------------------------------------ Reforge
-        ForgeBox
-          id: reforgeBox
-          anchors.top: cards.bottom
+          id: colKeep
+          anchors.top: parent.top
           anchors.left: parent.left
-          anchors.bottom: parent.bottom
-          margin-top: 12
-          width: 312
-          padding: 12
+          margin-top: 6
+          text-auto-resize: true
+          font: Verdana-10px-antialiased
+          !text: tr('Keep / Bonus')
+
+        ForgeDim
+          id: colRange
+          anchors.top: parent.top
+          anchors.right: parent.right
+          margin-top: 6
+          margin-right: 74
+          text-auto-resize: true
+          font: Verdana-10px-antialiased
+          !text: tr('Range')
+
+        UIWidget
+          id: rows
+          anchors.top: colKeep.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          margin-top: 3
+          height: 110
+          layout:
+            type: verticalBox
+
+        ForgeDim
+          id: emptySlots
+          anchors.top: rows.bottom
+          anchors.left: parent.left
+          margin-left: 24
+          height: 18
+          text-auto-resize: true
+          color: #707070
+
+        ForgeInset
+          id: wheelBox
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: hint.top
+          margin-bottom: 6
+          height: 204
+          padding: 6
 
           UIWidget
-            id: icon
-            anchors.top: parent.top
+            id: wheelHolder
             anchors.left: parent.left
-            size: 14 14
-            image-source: /game_raritybonus/images/reroll
-            image-color: #e8c77a
-            phantom: true
+            anchors.top: parent.top
+            size: 184 192
 
-          ForgeTitle
-            id: title
-            anchors.verticalCenter: icon.verticalCenter
-            anchors.left: icon.right
-            margin-left: 6
-            !text: tr('REFORGE')
+            UIWidget
+              id: wheel
+              anchors.left: parent.left
+              anchors.top: parent.top
+              margin-left: 2
+              margin-top: 10
+              size: 180 180
+              image-source: /game_raritybonus/images/forge/wheel/wheel_10
+
+            UIWidget
+              id: hub
+              anchors.horizontalCenter: wheel.horizontalCenter
+              anchors.verticalCenter: wheel.verticalCenter
+              size: 16 16
+              image-source: /game_raritybonus/images/forge/wheel/hub
+              phantom: true
+
+            UIWidget
+              id: pointer
+              anchors.horizontalCenter: wheel.horizontalCenter
+              anchors.top: parent.top
+              size: 20 18
+              image-source: /game_raritybonus/images/forge/wheel/pointer
+              phantom: true
+
+          Label
+            id: caption
+            anchors.left: wheelHolder.right
+            anchors.right: parent.right
+            anchors.top: parent.top
+            margin-left: 12
+            margin-top: 8
+            height: 32
+            text-wrap: true
+            font: Verdana Bold-11px
+            color: #c8c8c8
 
           ForgeDim
-            id: subtitle
-            anchors.verticalCenter: title.verticalCenter
-            anchors.left: title.right
-            margin-left: 8
-            text-auto-resize: true
-            !text: tr('rolls the bonuses again')
-
-          // the rules, in a tooltip
-          UIWidget
-            id: info
-            anchors.verticalCenter: icon.verticalCenter
+            id: sub
+            anchors.left: caption.left
             anchors.right: parent.right
-            size: 14 14
-            image-source: /game_raritybonus/images/info
-            image-color: #a59d92
+            anchors.top: caption.bottom
+            margin-top: 2
+            height: 42
+            text-wrap: true
+            font: Verdana-10px-antialiased
 
-          // two rows, label and value: what it costs, what is sealed
+          ForgeDim
+            id: meterTitle
+            anchors.left: caption.left
+            anchors.bottom: meter.top
+            margin-bottom: 5
+            text-auto-resize: true
+            font: Verdana-10px-antialiased
+            color: #a8a8a8
+
+          Label
+            id: meterValue
+            anchors.right: parent.right
+            anchors.bottom: meter.top
+            margin-bottom: 3
+            text-auto-resize: true
+            font: Verdana Bold-13px
+
+          // where the value falls: weak, fair, good, excellent, perfect
+          UIWidget
+            id: meter
+            anchors.left: caption.left
+            anchors.right: parent.right
+            anchors.top: sub.bottom
+            margin-top: 24
+            height: 16
+
+            UIWidget
+              id: z1
+              anchors.left: parent.left
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+              background-color: #4a4a4a
+              phantom: true
+
+            UIWidget
+              id: z2
+              anchors.left: z1.right
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+              margin-left: 1
+              background-color: #6c6c6c
+              phantom: true
+
+            UIWidget
+              id: z3
+              anchors.left: z2.right
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+              margin-left: 1
+              background-color: #3d6b38
+              phantom: true
+
+            UIWidget
+              id: z4
+              anchors.left: z3.right
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+              margin-left: 1
+              background-color: #34567e
+              phantom: true
+
+            UIWidget
+              id: z5
+              anchors.left: z4.right
+              anchors.top: parent.top
+              anchors.right: parent.right
+              anchors.bottom: parent.bottom
+              margin-left: 1
+              background-color: #b8964a
+              phantom: true
+
+            UIWidget
+              id: needle
+              anchors.left: parent.left
+              anchors.top: parent.top
+              anchors.bottom: parent.bottom
+              margin-top: -4
+              margin-bottom: -4
+              width: 3
+              background-color: #ffffff
+              phantom: true
+              visible: false
+
+          UIWidget
+            id: legend
+            anchors.left: meter.left
+            anchors.right: meter.right
+            anchors.top: meter.bottom
+            margin-top: 3
+            height: 12
+
+            Label
+              id: l1
+              anchors.left: parent.left
+              anchors.top: parent.top
+              text-align: center
+              font: Verdana-10px-antialiased
+              color: #8c8c8c
+              !text: tr('Weak')
+
+            Label
+              id: l2
+              anchors.left: l1.right
+              anchors.top: parent.top
+              text-align: center
+              font: Verdana-10px-antialiased
+              color: #8c8c8c
+              !text: tr('Fair')
+
+            Label
+              id: l3
+              anchors.left: l2.right
+              anchors.top: parent.top
+              text-align: center
+              font: Verdana-10px-antialiased
+              color: #7fd36a
+              !text: tr('Good')
+
+            Label
+              id: l4
+              anchors.left: l3.right
+              anchors.top: parent.top
+              anchors.right: parent.right
+              text-align: center
+              font: Verdana-10px-antialiased
+              color: #6fb2ff
+              !text: tr('Excel.')
+
+          ForgeDim
+            id: meterMin
+            anchors.left: meter.left
+            anchors.top: legend.bottom
+            margin-top: 2
+            text-auto-resize: true
+            font: Verdana-10px-antialiased
+
+          ForgeDim
+            id: meterMax
+            anchors.right: meter.right
+            anchors.top: legend.bottom
+            margin-top: 2
+            text-auto-resize: true
+            font: Verdana-10px-antialiased
+            color: #e2c46a
+
+        ForgeText
+          id: hint
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: costBar.top
+          margin-bottom: 6
+          height: 28
+          text-wrap: true
+          color: #a8a8a8
+
+        ForgeInset
+          id: costBar
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          height: 32
+
           ForgeDim
             id: costKey
-            anchors.top: icon.bottom
             anchors.left: parent.left
-            margin-top: 14
-            size: 48 14
-            !text: tr('Cost')
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 8
+            text-auto-resize: true
+            !text: tr('Cost:')
+
+          UIWidget
+            id: costXpIcon
+            anchors.left: costKey.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 8
+            size: 14 14
+            image-source: /game_raritybonus/images/forge/ui/rarity_xp
 
           ForgeText
             id: costXp
-            anchors.verticalCenter: costKey.verticalCenter
-            anchors.left: costKey.right
-            anchors.right: parent.right
-            height: 14
-
-          ForgeDim
-            id: sealKey
-            anchors.top: costKey.bottom
-            anchors.left: parent.left
-            margin-top: 7
-            size: 48 14
-            !text: tr('Seal')
-
-          // takes the seal off (only with a bonus sealed)
-          UIButton
-            id: sealClear
-            anchors.verticalCenter: sealKey.verticalCenter
-            anchors.right: parent.right
-            size: 52 18
-            font: verdana-11px-antialised
-            color: #cbbcf0
-            background-color: #2a2430
-            change-cursor-image: true
-            cursor: pointer
-            !text: tr('remove')
-            !tooltip: tr('Take the seal off: the next reforge rolls every bonus.')
-            visible: false
-
-            $hover:
-              color: #ffffff
-              background-color: #3a3140
-
-          ForgeText
-            id: costSeal
-            anchors.verticalCenter: sealKey.verticalCenter
-            anchors.left: sealKey.right
-            anchors.right: sealClear.left
-            margin-right: 6
-            height: 14
-
-          // what a reforge can give: a count, the list in its tooltip
-          UIWidget
-            id: poolGrid
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: rollButton.top
-            margin-bottom: 10
-            height: 51
-
-          ForgeDim
-            id: pool
-            anchors.left: parent.left
-            anchors.bottom: poolGrid.top
-            margin-bottom: 5
-            height: 14
+            anchors.left: costXpIcon.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 4
             text-auto-resize: true
 
-          ForgeGoldButton
+          UIWidget
+            id: costGoldIcon
+            anchors.left: costXp.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 12
+            size: 14 14
+            image-source: /images/game/cyclopedia/icons/icon-goldcoin
+
+          ForgeText
+            id: costGold
+            anchors.left: costGoldIcon.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 4
+            text-auto-resize: true
+            color: #e2c46a
+
+          ForgeButton
             id: rollButton
-            anchors.left: parent.left
             anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: 30
-            @onClick: modules.game_raritybonus.reforgeNow()
+            anchors.verticalCenter: parent.verticalCenter
+            margin-right: 5
+            size: 120 22
+            @onClick: modules.game_raritybonus.forgeRoll()
 
           ForgeButton
             id: skipButton
             anchors.right: parent.right
-            anchors.verticalCenter: rollButton.verticalCenter
-            margin-right: 4
-            size: 70 22
+            anchors.verticalCenter: parent.verticalCenter
+            margin-right: 5
+            size: 80 22
             !text: tr('Skip')
             visible: false
-            @onClick: modules.game_raritybonus.skipReforge()
+            @onClick: modules.game_raritybonus.forgeSkip()
 
-        // ------------------------------------------------ Ascension
-        ForgeBox
-          id: ascendBox
-          anchors.top: cards.bottom
-          anchors.left: reforgeBox.right
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          margin-top: 12
-          margin-left: 12
-          padding: 12
+      // ---------------------------------------------------- Upgrade
+      UIWidget
+        id: upPage
+        anchors.top: head.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        visible: false
+
+        UIWidget
+          id: pair
+          anchors.top: parent.top
+          anchors.horizontalCenter: parent.horizontalCenter
+          margin-top: 18
+          size: 160 52
+
+          ForgeSlot
+            id: fromBox
+            anchors.left: parent.left
+            anchors.top: parent.top
+            size: 52 52
+            change-cursor-image: false
 
           UIWidget
-            id: icon
-            anchors.top: parent.top
-            anchors.left: parent.left
-            size: 14 14
-            image-source: /game_raritybonus/images/improve
-            image-color: #c9a4ff
+            id: arrow
+            anchors.centerIn: parent
+            size: 24 24
+            image-source: /game_raritybonus/images/forge/arrow
+            image-color: #a8a8a8
             phantom: true
 
-          ForgeTitle
-            id: title
-            anchors.verticalCenter: icon.verticalCenter
-            anchors.left: icon.right
-            margin-left: 6
-            !text: tr('ASCENSION')
+          ForgeSlot
+            id: toBox
+            anchors.right: parent.right
+            anchors.top: parent.top
+            size: 52 52
+            change-cursor-image: false
+
+        Label
+          id: path
+          anchors.top: pair.bottom
+          anchors.horizontalCenter: parent.horizontalCenter
+          margin-top: 10
+          text-auto-resize: true
+          font: Verdana Bold-11px
+
+        Label
+          id: chance
+          anchors.top: path.bottom
+          anchors.horizontalCenter: parent.horizontalCenter
+          margin-top: 4
+          text-auto-resize: true
+          font: Verdana Bold-11px
+          color: #e6e6e6
+
+        ForgeInset
+          id: forgeBar
+          anchors.top: chance.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          margin: 16 40 0 40
+          height: 14
+          visible: false
 
           UIWidget
-            id: info
-            anchors.verticalCenter: icon.verticalCenter
-            anchors.right: parent.right
+            id: fill
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            margin: 1
+            width: 0
+            background-color: #c9a24a
+
+        Label
+          id: forgePct
+          anchors.top: forgeBar.bottom
+          anchors.horizontalCenter: parent.horizontalCenter
+          margin-top: 4
+          text-auto-resize: true
+          font: verdana-11px-antialised
+          color: #e2c46a
+          visible: false
+
+        ForgeText
+          id: explain
+          anchors.top: chance.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          margin: 16 10 0 10
+          height: 60
+          text-wrap: true
+          color: #a8a8a8
+
+        ForgeDim
+          id: maxText
+          anchors.centerIn: parent
+          width: 320
+          height: 50
+          text-align: center
+          text-wrap: true
+          visible: false
+
+        ForgeInset
+          id: upCostBar
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          height: 32
+
+          ForgeDim
+            id: upCostKey
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 8
+            text-auto-resize: true
+            !text: tr('Cost:')
+
+          UIWidget
+            id: upGoldIcon
+            anchors.left: upCostKey.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 8
             size: 14 14
-            image-source: /game_raritybonus/images/info
-            image-color: #a59d92
+            image-source: /images/game/cyclopedia/icons/icon-goldcoin
+
+          ForgeText
+            id: upGold
+            anchors.left: upGoldIcon.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 4
+            text-auto-resize: true
+            color: #e2c46a
+
+          UIWidget
+            id: upXpIcon
+            anchors.left: upGold.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 12
+            size: 14 14
+            image-source: /game_raritybonus/images/forge/ui/rarity_xp
+
+          ForgeText
+            id: upXp
+            anchors.left: upXpIcon.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-left: 4
+            text-auto-resize: true
+
+          ForgeButton
+            id: upButton
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            margin-right: 5
+            size: 110 22
+            @onClick: modules.game_raritybonus.forgeUpgrade()
+
+        // the result, over the page, as Tibia's forge shows it
+        ForgePanel
+          id: result
+          anchors.fill: parent
+          visible: false
 
           Label
-            id: path
-            anchors.verticalCenter: title.verticalCenter
-            anchors.left: title.right
-            margin-left: 8
+            id: title
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            margin-top: 16
+            text-auto-resize: true
+            font: Verdana Bold-13px
+
+          UIWidget
+            id: glow
+            anchors.centerIn: box
+            size: 120 120
+            image-source: /game_raritybonus/images/forge/glow
+            opacity: 0.6
+            phantom: true
+
+          ForgeSlot
+            id: box
+            anchors.top: title.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            margin-top: 12
+            size: 52 52
+            change-cursor-image: false
+
+          Label
+            id: grade
+            anchors.top: box.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            margin-top: 8
             text-auto-resize: true
             font: Verdana Bold-11px
 
-          UIWidget
-            id: dial
-            anchors.top: icon.bottom
-            anchors.left: parent.left
-            margin-top: 2
-            size: 116 116
-
-            Label
-              id: chance
-              anchors.centerIn: parent
-              visible: false
-              text-auto-resize: true
-              ttf-font: cinzel-bold
-              ttf-font-size: 20
-
-            UIWidget
-              id: needle
-              anchors.fill: parent
-              image-source: /game_raritybonus/images/forge/needle
-              image-color: #f6efe2
-              phantom: true
-
-          Label
-            id: resultTitle
-            anchors.top: icon.bottom
-            anchors.left: dial.right
-            anchors.right: parent.right
-            margin-top: 10
-            margin-left: 12
-            height: 20
-            ttf-font: cinzel-bold
-            ttf-font-size: 14
-            color: #ece6dc
-
-          ForgeDim
-            id: resultText
-            anchors.top: resultTitle.bottom
-            anchors.left: resultTitle.left
-            anchors.right: parent.right
-            margin-top: 2
-            height: 58
-            text-wrap: true
-
-          UIWidget
-            id: history
-            anchors.top: resultText.bottom
-            anchors.left: resultTitle.left
-            anchors.right: parent.right
-            margin-top: 4
-            height: 12
-            layout:
-              type: horizontalBox
-              spacing: 4
-
-          ForgeVioletButton
-            id: goButton
+          ForgeText
+            id: text
+            anchors.top: grade.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: 30
-            @onClick: modules.game_raritybonus.ascendNow()
-
-          ForgeDim
-            id: none
-            anchors.centerIn: parent
-            margin-top: 8
-            width: 300
-            height: 60
+            margin: 8 20 0 20
+            height: 32
             text-align: center
             text-wrap: true
-            visible: false
+
+          UIWidget
+            id: lines
+            anchors.top: text.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            margin-top: 4
+            width: 320
+            height: 90
+            layout:
+              type: verticalBox
+              align-center: true
+
+          ForgeButton
+            id: okButton
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            margin-bottom: 10
+            size: 80 22
+            text: OK
+            @onClick: modules.game_raritybonus.forgeCloseResult()
+
+      // ---------------------------------------------------- My bonuses
+      UIWidget
+        id: totalsPage
+        anchors.fill: parent
+        visible: false
+
+        ForgeDim
+          id: hName
+          anchors.top: parent.top
+          anchors.left: parent.left
+          margin-left: 4
+          text-auto-resize: true
+          font: Verdana-10px-antialiased
+          !text: tr('Bonus')
+
+        ForgeDim
+          id: hCap
+          anchors.top: parent.top
+          anchors.right: parent.right
+          margin-right: 14
+          width: 70
+          text-align: right
+          font: Verdana-10px-antialiased
+          !text: tr('Limit')
+
+        ForgeDim
+          id: hTotal
+          anchors.top: parent.top
+          anchors.right: hCap.left
+          width: 80
+          text-align: right
+          font: Verdana-10px-antialiased
+          !text: tr('Total')
+
+        UIWidget
+          id: hRule
+          anchors.top: hName.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          margin-top: 4
+          height: 1
+          background-color: #3c3c3c
+          phantom: true
+
+        ScrollablePanel
+          id: list
+          anchors.top: hRule.bottom
+          anchors.left: parent.left
+          anchors.right: listScroll.left
+          anchors.bottom: note.top
+          margin-bottom: 4
+          vertical-scrollbar: listScroll
+          layout:
+            type: verticalBox
+
+        VerticalScrollBar
+          id: listScroll
+          anchors.top: hRule.bottom
+          anchors.bottom: note.top
+          margin-bottom: 4
+          anchors.right: parent.right
+          width: 8
+          step: 21
+          pixels-scroll: true
+
+        ForgeDim
+          id: note
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          height: 28
+          text-wrap: true
+          font: Verdana-10px-antialiased
+          !text: tr('Gold: at the limit (more of it adds nothing). Hover a line to see which items give it. Only worn items count.')
