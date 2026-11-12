@@ -597,7 +597,7 @@ WIKI_PAGES.affixes = {
               { 'Communis', '20' }, { 'Rarus', '50' }, { 'Praeclarus', '125' },
               { 'Legendarius', '300' }, { 'Mythicus', '700' },
           } },
-        { 'p', 'O preço também sobe com o level exigido do item: um item de level 400 custa o dobro, um de level 200 custa 1,5 vez, e um item sem level exigido custa o preço da tabela. Refazer um Mythicus de level 400 custa 1400.' },
+        { 'p', 'O preço depende também do item: quanto melhor ele é no seu slot (armor, ataque ou defesa comparados aos melhores, level exigido e slots de imbuement), mais caro fica refazer, selar um bônus ou ascender. Vai de 0,6x a 5x o preço da tabela: anel ou amuleto sem level 0,6x, plate armor 1,25x, golden armor 2,3x, magic plate armor 2,75x, falcon plate 4,7x, itens soul 5x. Refazer um Mythicus custa 871 numa plate armor e 3500 num soulshell.' },
         { 'p', 'A Store também vende Rarity XP na categoria Rarity: 500 por 250 coins, 1500 por 700 e 5000 por 2200.' },
         { 'h', 'Vender itens raros' },
         { 'p', 'Nenhum NPC compra item raro na janela de troca, nem no vender tudo, então um raro nunca é vendido sem querer. Para vender, fale hi e depois raros (ou rare) ao Gersao, no templo de Ventera.' },
