@@ -9,6 +9,14 @@ locale = {
 
   translation = {
     -- Rarity Forge
+    ["How many bonuses? %d..."] = "Quantos bônus? %d...",
+    ["%d of %d bonuses came out!"] = "Saíram %d de %d bônus!",
+    ["First the roll draws how many bonuses the item gets (1 to %d). Slots left over stay empty."] = "Primeiro sai quantos bônus o item terá (1 a %d). O que sobrar fica vazio.",
+    ["Odds: %s"] = "Chances: %s",
+    ["%d of %d bonuses came out: 1 slot stays empty."] = "Saíram %d de %d bônus: 1 espaço ficou vazio.",
+    ["%d of %d bonuses came out: %d slots stay empty."] = "Saíram %d de %d bônus: %d espaços ficaram vazios.",
+    ["+ 1 empty slot (each roll draws 1 to %d bonuses)"] = "+ 1 espaço vazio (cada roletada sorteia de 1 a %d bônus)",
+    ["+ %d empty slots (each roll draws 1 to %d bonuses)"] = "+ %d espaços vazios (cada roletada sorteia de 1 a %d bônus)",
     ["(in the backpack)"] = "(na mochila)",
     ["1 rare item"] = "1 item raro",
     ["%d rare items"] = "%d itens raros",
