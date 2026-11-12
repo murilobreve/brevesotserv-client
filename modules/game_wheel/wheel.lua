@@ -310,8 +310,11 @@ function toggleTabBarButtons(selectedButtonId)
 end
 
 function onResourceBalance()
-  if not wheelWindow:isVisible() then
-    return true
+  -- no "return true" here: signalcall stops at the first handler that
+  -- returns true, so the Prey, Forge, Cyclopedia and task windows never
+  -- heard about gold or card changes while the wheel was closed
+  if not wheelWindow or not wheelWindow:isVisible() then
+    return
   end
   local player = g_game.getLocalPlayer()
   

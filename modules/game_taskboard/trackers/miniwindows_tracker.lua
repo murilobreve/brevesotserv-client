@@ -163,6 +163,16 @@ function Tracker.Prey.getSmallIconPath(bonusType)
     return path .. "prey_no_bonus"
 end
 
+-- only the "disabled" icon ships with the client today: an icon that is not
+-- there falls back to it (instead of a texture error on every update)
+local extendIconExists = {}
+local function existingExtendIcon(icon)
+    if extendIconExists[icon] == nil then
+        extendIconExists[icon] = g_resources.fileExists(icon .. ".png")
+    end
+    return extendIconExists[icon] and icon or "/images/game/prey/prey-auto-extend-disabled"
+end
+
 function Tracker.Prey.getExtendIcon(lockType)
     local path = "/images/game/prey/"
     local player = g_game.getLocalPlayer()
@@ -171,16 +181,19 @@ function Tracker.Prey.getExtendIcon(lockType)
     end
     local balance = player:getResourceBalance(ResourceTypes.PREY_WILDCARDS)
     if lockType == 1 then
-        return balance < 1 and (path .. "prey-auto-reroll-enabled-failing") or (path .. "prey-auto-reroll-enabled")
+        return existingExtendIcon(balance < 1 and (path .. "prey-auto-reroll-enabled-failing") or
+                                      (path .. "prey-auto-reroll-enabled"))
     elseif lockType == 2 then
-        return balance < 5 and (path .. "prey-lock-prey-enabled-failing") or (path .. "prey-lock-prey-enabled")
+        return existingExtendIcon(balance < 5 and (path .. "prey-lock-prey-enabled-failing") or
+                                      (path .. "prey-lock-prey-enabled"))
     end
     return path .. "prey-auto-extend-disabled"
 end
 
+-- the prey's time left (0: the same text as the prey window)
 function Tracker.Prey.timeleftTranslation(timeleft)
     if timeleft == 0 then
-        return "Free"
+        return tr("infinite bonus")
     end
     local hours = string.format('%02.f', math.floor(timeleft / 3600))
     local mins = string.format('%02.f', math.floor(timeleft / 60 - (hours * 60)))
@@ -197,12 +210,14 @@ function Tracker.Prey.updateWidget(slot, state, currentHolderOutfit, preySlot, s
     end
 
     if state == SLOT_STATE_LOCKED then
+        trackerSlot.preyCreatureName = nil
         trackerSlot:setVisible(false)
         return
     end
 
+    -- a slot that is no longer locked shows its row again
+    trackerSlot:setVisible(true)
     if slot == 2 then
-        trackerSlot:setVisible(true)
         preyTracker:setContentMaximumHeight(195)
     end
 
@@ -219,18 +234,22 @@ function Tracker.Prey.updateWidget(slot, state, currentHolderOutfit, preySlot, s
         trackerSlot.onClick = function()
             showCallback()
         end
+        -- kept for updateTimeLeft, which writes the tooltip again
+        trackerSlot.preyCreatureName = preySlot.title:getText()
         trackerSlot:setTooltip(tr("Creature: %s\nDuration: %s\n\nClick in this window to open the prey dialog.",
-            preySlot.title:getText(), duration))
+            trackerSlot.preyCreatureName, duration))
     else
+        trackerSlot.preyCreatureName = nil
         trackerSlot.creature:hide()
         trackerSlot.noCreature:show()
-        trackerSlot.creatureName:setText("Inactive")
+        trackerSlot.creatureName:setText(tr("Inactive"))
         trackerSlot.time:setPercent(0)
         trackerSlot.preyAutoExtend:setImageSource(Tracker.Prey.getExtendIcon(preySlot.lockType))
         trackerSlot.preyType:setImageSource(Tracker.Prey.getSmallIconPath(preySlot.bonusType))
         trackerSlot.onClick = function()
             showCallback()
         end
+        trackerSlot:setTooltip(tr("Inactive prey.\n\nClick in this window to open the prey dialog."))
     end
 end
 
@@ -242,10 +261,11 @@ function Tracker.Prey.updateTimeLeft(slot, timeLeft)
     if not trackerSlot then
         return
     end
-    local tooltip = trackerSlot:getTooltip() or "Duration: \n"
-    local updated = string.gsub(tooltip, "[^\n]*Duration: [^\n]*\n?",
-        "Duration: " .. Tracker.Prey.timeleftTranslation(timeLeft) .. "\n")
-    trackerSlot:setTooltip(updated)
+    -- the tooltip is written again (a translated one has no "Duration: " to replace)
+    if trackerSlot.preyCreatureName then
+        trackerSlot:setTooltip(tr("Creature: %s\nDuration: %s\n\nClick in this window to open the prey dialog.",
+            trackerSlot.preyCreatureName, Tracker.Prey.timeleftTranslation(timeLeft)))
+    end
     local percent = (timeLeft / (2 * 60 * 60)) * 100
     trackerSlot.time:setPercent(percent)
 end

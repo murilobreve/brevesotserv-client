@@ -20,7 +20,9 @@ LockedPreyPanel < Panel
       id: shopPermButton
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.verticalCenter: parent.verticalCenter
-      image-source: /images/game/prey/prey_perm_test
+      // the old image had "Unlock permanently" drawn into it; the text is a
+      // label now so it can be translated
+      image-source: /images/game/prey/prey_unlock_bg
       size: 195 67
       image-clip: 0 0 204 67
       @onClick: modules.game_mainpanel.toggleStore()
@@ -29,21 +31,42 @@ LockedPreyPanel < Panel
       $pressed:
         image-clip: 0 67 204 67
 
+      Label
+        id: label
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.horizontalCenter: parent.horizontalCenter
+        margin-left: 12
+        font: verdana-11px-rounded
+        color: #c0c0c0
+        text-auto-resize: true
+        phantom: true
+        !text: tr('Unlock in the Store')
+
+      UIWidget
+        id: icon
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: label.left
+        margin-right: 5
+        size: 19 16
+        image-source: /images/game/prey/prey_perm
+        image-clip: 0 0 19 16
+        phantom: true
+
   UIButton
     id: temp
-    anchors.top: prev.bottom
+    anchors.top: noCreature.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     height: 64
     background-color: #1c4161
-    margin-top: 7
+    margin-top: 3
     @onClick: modules.game_mainpanel.toggleStore()
 
     UIWidget
       id: shopTempButton
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.verticalCenter: parent.verticalCenter
-      image-source: /images/game/prey/prey_temp_test
+      image-source: /images/game/prey/prey_unlock_bg
       size: 195 67
       image-clip: 0 0 204 67
       @onClick: modules.game_mainpanel.toggleStore()
@@ -51,6 +74,27 @@ LockedPreyPanel < Panel
 
       $pressed:
         image-clip: 0 67 204 67
+
+      Label
+        id: label
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.horizontalCenter: parent.horizontalCenter
+        margin-left: 11
+        font: verdana-11px-rounded
+        color: #c0c0c0
+        text-auto-resize: true
+        phantom: true
+        !text: tr('Unlock with Premium')
+
+      UIWidget
+        id: icon
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: label.left
+        margin-right: 5
+        size: 17 16
+        image-source: /images/game/prey/prey_temp
+        image-clip: 0 0 17 16
+        phantom: true
 
 Star < UIWidget
   size: 9 10
@@ -206,7 +250,7 @@ ActivePreyPanel < Panel
       anchors.right: parent.right
       size: 155 15
       font: verdana-11px-rounded
-      text: Automatic Bonus Rer...
+      !text: tr('Automatic Bonus Reroll')
       margin-left: 5
       text-offset: 20 1
 
@@ -233,7 +277,7 @@ ActivePreyPanel < Panel
       anchors.right: parent.right
       size: 155 15
       font: verdana-11px-rounded
-      text: Lock Prey
+      !text: tr('Lock Prey')
       margin-left: 5
       text-offset: 20 1
 
@@ -320,6 +364,9 @@ BonusReroll < FlatPanel
 
     $pressed:
       image-clip: 0 52 37 54
+
+    $disabled:
+      opacity: 0.5
 
   CardLabel
     id: price
@@ -424,7 +471,7 @@ InactivePreyPanel < Panel
       height: 20
       padding-left: 4
       padding-right: 18
-      placeholder: Type to search
+      !placeholder: tr('Type to search')
       placeholder-color: #6e706f
       @onTextChange: modules.game_prey.onRaceSearchTextChanged(self)
 
@@ -552,7 +599,7 @@ CardLabel < FlatPanel
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     image-source: /images/game/prey/prey_wildcard
-    tooltip: Prey Wildcards
+    !tooltip: tr('Prey Wildcards')
 
   UIWidget
     id: text
@@ -572,7 +619,7 @@ GoldLabel < FlatPanel
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     image-source: /images/game/prey/prey_gold
-    tooltip: Gold Coins
+    !tooltip: tr('Gold Coins')
 
   UIWidget
     id: text
@@ -713,7 +760,7 @@ MainWindow
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     size: 45 21
-    text: Close
+    !text: tr('Close')
     font: cipsoftFont
     @onClick: modules.game_prey.hide()
 
@@ -736,7 +783,7 @@ MainWindow
     margin-left: 10
     size: 26 20
     anchors.verticalCenter: closeButton.verticalCenter
-    tooltip: Go to the Store to get more Prey Wildcards!
+    !tooltip: tr('Go to the Store to get more Prey Wildcards!')
     image-source: /images/game/prey/prey_smallstore
     image-clip: 0 0 26 20
     background-color: #17354e
@@ -781,7 +828,7 @@ PreyCreature < Panel
     anchors.bottom: prev.bottom
     margin-bottom: 7
     anchors.right: parent.right
-    text: Inactive
+    !text: tr('Inactive')
     font: verdana-11px-rounded
     text-align: left
 

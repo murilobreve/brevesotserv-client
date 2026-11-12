@@ -355,12 +355,23 @@ local function wallInUse()
     return os.time() - lastWallUse <= 5
 end
 
+-- A box text with an entry in the current locale shows translated (the prey's
+-- English boxes, until the server sends them in Portuguese); any other text
+-- shows exactly as it came.
+local function localizeServerText(text)
+    local locales = modules.client_locales
+    local locale = locales and locales.getCurrentLocale and locales.getCurrentLocale()
+    local translated = type(text) == 'string' and locale and locale.translation and locale.translation[text]
+    return type(translated) == 'string' and translated or text
+end
+
 -- Every message box of the server comes this way (0xED): the reward wall's,
 -- and the imbuing shrine's, the forge's, the stash's and the prey's. It is
 -- listened to all game long (it used to be only after the wall was opened,
 -- so those boxes never showed before that); the wall's title, and the way
 -- back to the wall on "ok", only for a box about the wall.
 local function onServerError(code, error)
+    error = localizeServerText(error)
     local fromWall = wallInUse()
     generalBox = destroyWindows(generalBox)
     local cancelCallback = function()
