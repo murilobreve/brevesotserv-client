@@ -4507,8 +4507,11 @@ test('voice activation: a short onboarding with no key, the settings without the
         eq(keys[id].shown, false, id .. ' hidden with voice activation')
     end
     eq(u.created.VoiceSettingsWindow[1].audio.preset.shown, false, 'no quality choice')
+    local full = u.created.VoiceSettingsWindow[1].fullHeight
+    eq(u.created.VoiceSettingsWindow[1].height, 400, 'a shorter window')
     u.created.VoiceSettingsWindow[1].audio.modePtt.onClick()
     eq(keys.keyParty.shown, true, 'push-to-talk: the key row is back')
+    eq(u.created.VoiceSettingsWindow[1].height, full, 'and the window its full height')
     VoiceSettings.hide()
 end)
 

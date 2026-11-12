@@ -719,8 +719,10 @@ local function roomsSection(parent, s)
     if not roomsOpen then
         return
     end
+    -- the level note only for whom it stops (like near's): read when drawn
     local cfg = s.cfg
-    if cfg and cfg.psl > 0 then
+    local player = g_game.getLocalPlayer()
+    if cfg and cfg.psl > 0 and not (player and player:getLevel() >= cfg.psl) then
         note(parent, fmt('Talking in public rooms: level %d+', cfg.psl))
     end
     local events = {}

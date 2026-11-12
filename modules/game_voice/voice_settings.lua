@@ -20,6 +20,7 @@ end
 
 local window, onboard, onboardEvent
 local ONBOARD_SHORT = 230 -- the onboarding's height without the key rows
+local SHORT_HEIGHT = 400 -- the settings window's in voice activation
 local onboardKey -- the key picked in the onboarding, set when voice is turned on
 local stylesLoaded = false
 
@@ -430,6 +431,9 @@ local function updatePttRows()
     keys.mouseLabel:setVisible(ptt and browserFull)
     keys.mouse:setVisible(ptt and browserFull)
     keys.globalPtt:setVisible(ptt and getEngineName() == 'full' and not g_platform.isBrowser())
+    -- shorter without the key rows: the audio column ends at the voice volume
+    window.fullHeight = window.fullHeight or window:getHeight()
+    window:setHeight(ptt and window.fullHeight or SHORT_HEIGHT)
     if not ptt then
         keys.autoParty:addAnchor(AnchorTop, 'parent', AnchorTop)
         keys.autoParty:setMarginTop(0)
