@@ -230,12 +230,53 @@ local function grade(key)
     return GRADES[key] or GRADES.uncommon
 end
 
-local function setItem(widget, entry)
+-- the item as the inventory shows it: its grade's shader and, from the
+-- tooltip the server sends ("#rarity:<grade>" and the element tags), the
+-- rarity frame with its gems. `gradeKey` shows it at another grade (the
+-- Upgrade's next one)
+local function setItem(widget, entry, gradeKey)
     local item = Item.create(entry.itemId or 0, 1)
     if entry.shader and entry.shader ~= '' then
         item:setShader(entry.shader)
     end
+    local tooltip = entry.tooltip
+    if gradeKey then
+        tooltip = '#rarity:' .. gradeKey .. ((tooltip or ''):match('(\n.*)$') or '')
+    end
+    if tooltip and item.setTooltip then
+        item:setTooltip(tooltip)
+    end
     widget:setItem(item)
+    if ItemsDatabase and ItemsDatabase.setItemRarityFrame then
+        ItemsDatabase.setItemRarityFrame(widget, item)
+    end
+end
+
+-- the game's item card (game_itemcard) on hover, as in the inventory
+local function itemCard()
+    local itemcard = modules.game_itemcard
+    return itemcard and itemcard.showFor and itemcard or nil
+end
+
+local function hideCard()
+    local itemcard = itemCard()
+    if itemcard then
+        itemcard.hide()
+    end
+end
+
+local function hoverCard(widget, entry)
+    widget.onHoverChange = function(w, hovered)
+        local itemcard = itemCard()
+        if not itemcard or type(entry.card) ~= 'table' then
+            return
+        end
+        if hovered then
+            itemcard.showFor(entry.card, w)
+        else
+            itemcard.hide()
+        end
+    end
 end
 
 -- the bottom bar has room for about 50 letters: a longer message is cut
@@ -311,11 +352,15 @@ local function fillGrid(grid, list)
     for _, entry in ipairs(list) do
         local w = g_ui.createWidget('ForgeSlot', grid)
         setItem(w.item, entry)
-        w:setBorderColor(grade(entry.rarity).color)
         if entry.slotId == selected then
             w:setBackgroundColor('#4a4a4a')
+            w:setBorderColor('#d8d8d8')
         end
-        w:setTooltip(itemTip(entry))
+        if type(entry.card) == 'table' then
+            hoverCard(w, entry)
+        else
+            w:setTooltip(itemTip(entry))
+        end
         w.onClick = function() pickItem(entry.slotId) end
     end
 end
@@ -328,7 +373,10 @@ local function fillItems()
     end
     fillGrid(left.wornGrid, worn)
     left.wornGrid:setHeight(math.max(1, math.ceil(#worn / 4)) * 40 - 4)
+    hideCard()
     fillGrid(left.bagGrid, bag)
+    -- the scrollbar only when the backpack's items need it
+    left.bagScroll:setVisible(math.ceil(#bag / 4) * 40 - 4 > left.bagGrid:getHeight())
     left.bagNote:setText(#bag == 1 and tr('1 rare item') or tr('%d rare items', #bag))
 end
 
@@ -336,7 +384,7 @@ local function fillHead(entry)
     local head = page().head
     local g = grade(entry.rarity)
     setItem(head.itemBox.item, entry)
-    head.itemBox:setBorderColor(g.color)
+    hoverCard(head.itemBox, entry)
     head.name:setText(titleCase(entry.name))
     local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
     local info = g.label .. DOT .. tr('%d of %d bonuses', #(entry.bonuses or {}), max) .. DOT .. tr(entry.slot or '')
@@ -696,8 +744,8 @@ local function fillUp(entry)
         local g = grade(result.grade)
         res.title:setText(result.win and tr('Success!') or tr('Failed'))
         res.title:setColor(result.win and '#7fd36a' or '#ff7a6a')
-        setItem(res.box.item, { itemId = entry.itemId, shader = result.win and entry.shader or result.shader })
-        res.box:setBorderColor(g.color)
+        setItem(res.box.item, entry, result.grade)
+        hoverCard(res.box, entry)
         res.glow:setVisible(result.win)
         res.glow:setImageColor(g.color)
         res.grade:setText(titleCase(entry.name) .. DOT .. g.label)
@@ -725,9 +773,8 @@ local function fillUp(entry)
     end
     local from, to = grade(entry.rarity), grade(offer.to)
     setItem(up.pair.fromBox.item, entry)
-    up.pair.fromBox:setBorderColor(from.color)
-    setItem(up.pair.toBox.item, entry)
-    up.pair.toBox:setBorderColor(to.color)
+    hoverCard(up.pair.fromBox, entry)
+    setItem(up.pair.toBox.item, entry, offer.to)
     up.path:setText(from.label .. '  >  ' .. to.label)
     up.path:setColor(to.color)
     up.chance:setText(tr('Success chance: %d%%', tonumber(offer.chance) or 0))
@@ -760,6 +807,8 @@ end
 local function fillTotals()
     local tp = page().totalsPage
     tp.list:destroyChildren()
+    -- the scrollbar only when the lines need it
+    tp.listScroll:setVisible(#((data and data.totals) or {}) * 21 > tp.list:getHeight())
     for _, t in ipairs((data and data.totals) or {}) do
         local row = g_ui.createWidget('ForgeTotalRow', tp.list)
         local unit = t.unit or ''
@@ -1126,8 +1175,31 @@ local function messageOf(d)
 end
 
 -- a summary from the server becomes the window's data
+-- the server's UTF-8 to Latin-1, the fonts' charset (as game_itemcard does)
+local function latin1(value)
+    if type(value) == 'string' then
+        return (value:gsub('[\194\195][\128-\191]', function(pair)
+            local a, b = pair:byte(1, 2)
+            return string.char((a - 194) * 64 + b)
+        end))
+    elseif type(value) == 'table' then
+        for k, v in pairs(value) do
+            value[k] = latin1(v)
+        end
+    end
+    return value
+end
+
 function Forge.apply(d)
     data = d
+    if not d.cardsReady then
+        d.cardsReady = true
+        for _, entry in ipairs(d.items or {}) do
+            if type(entry.card) == 'table' then
+                latin1(entry.card)
+            end
+        end
+    end
     rarityXp = tonumber(d.rarityXp) or rarityXp
     gold = tonumber(d.gold) or gold
     items, bySlot, totalsByKey = d.items or {}, {}, {}
@@ -1292,6 +1364,7 @@ function Forge.destroy()
 end
 
 function Forge.closeConfirm()
+    hideCard()
     if confirmBox then
         confirmBox:destroy()
         confirmBox = nil
