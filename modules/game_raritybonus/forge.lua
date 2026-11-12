@@ -56,7 +56,9 @@ for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) 
 end
 
 -- the Roll's pace: the wheel's spin, the needle's swing, the stop between
-local SPIN_MS, SWING_MS, HOLD_MS = 2400, 2000, 450
+-- first how many bonuses come out (COUNT_MS), then for each the wheel
+-- (SPIN_MS) and the needle (SWING_MS)
+local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
 local WHEEL = 180
 -- the icons sit near the rim, upright towards it
 local ICON_RADIUS = 68
@@ -516,9 +518,18 @@ local function fillRows(entry)
     local list = showing and roll.after or (roll and roll.slot == entry.slotId and roll.before) or entry.bonuses or {}
     local lock = seals[entry.slotId]
     local canLock = lockable(entry) and not busy()
+    if showing and roll.stage == 'count' and roll.t < 1 then
+        -- while the count is drawn every slot waits: the lines don't give
+        -- the number away before it shows
+        local padded = {}
+        for i = 1, math.max(#list, tonumber(roll.max) or #list) do
+            padded[i] = list[i] or { pad = true }
+        end
+        list = padded
+    end
     for i, bonus in ipairs(list) do
         local row = g_ui.createWidget('ForgeRow', rp.rows)
-        local isSealed = bonus.key == lock and (not roll or bonus.locked or not showing)
+        local isSealed = lock ~= nil and bonus.key == lock and (not roll or bonus.locked or not showing)
         local pos, done, now, wait = nil, false, false, false
         if roll and roll.slot == entry.slotId then
             if showing then
@@ -536,6 +547,9 @@ local function fillRows(entry)
                 -- the server rolls: every line not kept waits
                 wait = true
             end
+        end
+        if bonus.pad then
+            wait = true
         end
         local q = qualityOf(bonus)
         local look = quality(q, bonus.perfect)
@@ -602,8 +616,20 @@ local function fillRows(entry)
     end
     rp.rows:setHeight(math.max(1, #list) * 22)
     local max = math.max(1, tonumber(entry.maxBonuses) or #list)
-    local empty = showing and 0 or (max - #list)
-    rp.emptySlots:setText(empty <= 0 and '' or empty == 1 and tr('- 1 empty slot -') or tr('- %d empty slots -', empty))
+    -- the slots left empty, and why: each roll draws how many bonuses
+    -- come out first; known once the roll's count is shown
+    local countKnown = not showing or roll.stage ~= 'count' or roll.t >= 1
+    local empty = countKnown and (max - #list) or 0
+    local justRolled = (showing and countKnown) or (not roll and deltaSlot == entry.slotId and next(deltas) ~= nil)
+    if empty <= 0 then
+        rp.emptySlots:setText('')
+    elseif justRolled then
+        rp.emptySlots:setText(empty == 1 and tr('%d of %d bonuses came out: 1 slot stays empty.', #list, max)
+            or tr('%d of %d bonuses came out: %d slots stay empty.', #list, max, empty))
+    else
+        rp.emptySlots:setText(empty == 1 and tr('+ 1 empty slot (each roll draws 1 to %d bonuses)', max)
+            or tr('+ %d empty slots (each roll draws 1 to %d bonuses)', empty, max))
+    end
 end
 
 local function fillWheelBox(entry)
@@ -639,8 +665,28 @@ local function fillWheelBox(entry)
         setNeedle(nil)
         return
     end
-    local cur = roll.after[roll.order[roll.k]]
     local spinning = roll.t < 1
+    if roll.stage == 'count' then
+        local max = math.max(1, tonumber(roll.max) or #roll.after)
+        local shown = spinning and (math.floor((g_clock.millis() - roll.startedAt) / 90) % max + 1) or #roll.after
+        box.caption:setText(spinning and tr('How many bonuses? %d...', shown) or tr('%d of %d bonuses came out!', #roll.after, max))
+        box.caption:setColor(spinning and '#e2c46a' or '#ffd75f')
+        local odds = {}
+        for i, pct in ipairs(roll.counts or {}) do
+            table.insert(odds, i .. ' = ' .. number(pct) .. '%')
+        end
+        local text = tr('First the roll draws how many bonuses the item gets (1 to %d). Slots left over stay empty.', max)
+        if #odds > 0 then
+            text = text .. '\n' .. tr('Odds: %s', table.concat(odds, ', '))
+        end
+        box.sub:setText(text)
+        box.meterTitle:setText(tr('Value: after the wheel'))
+        box.meterValue:setText('')
+        setNeedle(nil)
+        lightSlice(nil)
+        return
+    end
+    local cur = roll.after[roll.order[roll.k]]
     box.sub:setText(tr('bonus %d of %d', roll.k, #roll.order) .. DOT .. (roll.stage == 'type' and tr('the wheel picks the type') or tr('the needle picks the value')))
     if roll.stage == 'type' then
         box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', tr(cur.label or '')))
@@ -940,7 +986,7 @@ local function rollTick()
         tickEvent = scheduleEvent(rollTick, 30)
         return
     end
-    local len = roll.stage == 'type' and SPIN_MS or SWING_MS
+    local len = roll.stage == 'count' and COUNT_MS or roll.stage == 'type' and SPIN_MS or SWING_MS
     local el = now - roll.startedAt
     local t = math.min(1, el / len)
     if roll.stage == 'type' then
@@ -950,7 +996,10 @@ local function rollTick()
     local changed = (t >= 1) ~= (roll.t >= 1)
     roll.t = t
     if el >= len + HOLD_MS then
-        if roll.stage == 'type' then
+        if roll.stage == 'count' then
+            roll.k = 1
+            startStage('type')
+        elseif roll.stage == 'type' then
             startStage('value')
         elseif roll.k < #roll.order then
             roll.k = roll.k + 1
@@ -987,9 +1036,10 @@ local function showRoll(after)
         return
     end
     roll.phase = 'show'
-    roll.k = 1
+    -- first how many bonuses came out; no line is being rolled yet
+    roll.k = 0
     roll.wheelTo = wheelRot
-    startStage('type')
+    startStage('count')
     local entry = bySlot[roll.slot]
     if entry then
         fillRoll(entry)
@@ -1013,7 +1063,8 @@ function forgeRoll()
         end
         selected = slot
         deltas, deltaSlot = {}, nil
-        roll = { phase = 'wait', slot = slot, before = now.bonuses or {}, lock = lock, pool = now.pool or {} }
+        roll = { phase = 'wait', slot = slot, before = now.bonuses or {}, lock = lock, pool = now.pool or {},
+            max = now.maxBonuses, counts = now.counts }
         setStatus(tr('Rolling...'), '#e2c46a')
         Forge.send({ action = 'rerollItem', slot = now.bag and nil or slot, fid = now.fid, lock = lock })
         Forge.expectAnswer()

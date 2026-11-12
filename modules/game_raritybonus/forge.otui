@@ -561,7 +561,7 @@ MythosWindow
             anchors.right: parent.right
             anchors.top: caption.bottom
             margin-top: 2
-            height: 42
+            height: 54
             text-wrap: true
             font: Verdana-10px-antialiased
 
