@@ -20,6 +20,7 @@
 
 #include "jitterbuffer.h"
 #include "voicecodec.h"
+#include "voicedsp.h"
 #include "voiceprotocol.h"
 
 #include <algorithm>
@@ -56,6 +57,7 @@ namespace
     constexpr int kSlots = voiceproto::kSlots; // 0 party, 1 guild, 2 public, 3 near
     constexpr int kNearSlot = 3;
     constexpr int64_t kPlaceRampMs = 50; // a near speaker's new place: there in this long
+    constexpr float kVoiceProbStart = 0.5f; // RNNoise voice probability that may open voice activation
     constexpr int kMaxQueued = 8; // buffers one stream holds in OpenAL (4) or the harness (4)
     constexpr size_t kMaxSpeakers = 8; // decoders and OpenAL streams
     constexpr int kLeadBuffers = 2; // decoded frames queued in OpenAL per speaker
@@ -1555,6 +1557,7 @@ namespace
         {
             const int64_t t0 = nowMs();
             const bool opened = m_in->open(m_inDev, kRate);
+            m_dn.reset(); // a new microphone: the noise filter learns it again
             noteDeviceCall("opening the microphone", nowMs() - t0, m_n.micOpenMaxMs);
             if (opened) {
                 m_mic = MicState::On;
@@ -1653,6 +1656,9 @@ namespace
         void onFrame(const int64_t t)
         {
             const int n = static_cast<int>(m_frame.size());
+            // noise suppression first (what the browser gets from WebRTC):
+            // the level, voice activation and Opus all see the clean frame
+            const float voice = m_dn.process(m_frame.data(), n);
             double sum = 0;
             for (int i = 0; i < n; ++i) {
                 const double x = m_frame[i] / 32768.0;
@@ -1662,7 +1668,9 @@ namespace
             const int hang = (std::max)(1, static_cast<int>(std::lround(300.0 * kRate / n / 1000.0)));
             const bool muted = m_smute || m_deaf;
             if (m_vad && connOpen() && hasVadRoom() && !muted) {
-                if (db >= m_vadDb) {
+                // a spurt starts on speech, not on a noise that got loud:
+                // RNNoise's voice probability has to agree (none: level only)
+                if (db >= m_vadDb && (m_vadOn || voice < 0.0f || voice >= kVoiceProbStart)) {
                     m_vadOn = true;
                     m_hang = hang;
                 } else if (m_vadOn) {
@@ -2025,6 +2033,7 @@ namespace
         int m_hang = 0;
         double m_levelSum = 0;
         int m_levelN = 0;
+        VoiceDenoiser m_dn;
         OpusEnc m_enc;
         int64_t m_encCoolUntil = 0;
         bool m_encFailing = false;

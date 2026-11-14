@@ -62,7 +62,20 @@ set(VOICE_ENGINE_SOURCES
   ${VOICE_DIR}/voicecapture_openal.cpp
   ${VOICE_DIR}/voiceplayback_openal.cpp
   ${VOICE_DIR}/voiceengine_native.cpp
+  ${VOICE_DIR}/voicedsp.cpp
 )
+set(RNNOISE_SOURCES
+  ${VOICE_DIR}/rnnoise/denoise.c
+  ${VOICE_DIR}/rnnoise/rnn.c
+  ${VOICE_DIR}/rnnoise/rnn_data.c
+  ${VOICE_DIR}/rnnoise/pitch.c
+  ${VOICE_DIR}/rnnoise/kiss_fft.c
+  ${VOICE_DIR}/rnnoise/celt_lpc.c
+)
+set_source_files_properties(${RNNOISE_SOURCES} PROPERTIES
+  COMPILE_DEFINITIONS "_USE_MATH_DEFINES;common=mythos_rnnoise_common;compute_rnn=mythos_rnnoise_compute_rnn"
+  COMPILE_OPTIONS "-w")
+list(APPEND VOICE_ENGINE_SOURCES ${RNNOISE_SOURCES})
 
 add_executable(voz-native-test main.cpp ${VOICE_ENGINE_SOURCES})
 target_compile_definitions(voz-native-test PRIVATE VOICE_STANDALONE)

@@ -611,6 +611,19 @@ if (WASM)
   )
 endif()
 
+# RNNoise (vendored, framework/voice/rnnoise): the native engine's noise
+# suppression. Plain C; two generic global names renamed so they cannot clash.
+set(_RNNOISE_SOURCES
+        framework/voice/rnnoise/denoise.c
+        framework/voice/rnnoise/rnn.c
+        framework/voice/rnnoise/rnn_data.c
+        framework/voice/rnnoise/pitch.c
+        framework/voice/rnnoise/kiss_fft.c
+        framework/voice/rnnoise/celt_lpc.c
+)
+set_source_files_properties(${_RNNOISE_SOURCES} PROPERTIES
+        COMPILE_DEFINITIONS "_USE_MATH_DEFINES;common=mythos_rnnoise_common;compute_rnn=mythos_rnnoise_compute_rnn")
+
 if (TOGGLE_FRAMEWORK_VOICE)
   if (WASM)
     set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_web.cpp)
@@ -622,6 +635,8 @@ if (TOGGLE_FRAMEWORK_VOICE)
             framework/voice/jitterbuffer.cpp
             framework/voice/voicecapture_openal.cpp
             framework/voice/voiceplayback_openal.cpp
+            framework/voice/voicedsp.cpp
+            ${_RNNOISE_SOURCES}
     )
   else()
     set(_VOICE_SOURCES framework/voice/voicemanager.cpp framework/voice/voiceengine_null.cpp)
