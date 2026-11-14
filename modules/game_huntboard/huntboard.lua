@@ -248,7 +248,7 @@ local RATE_COLORS = {
     { 3.5, 255, 158, 40 },
     { 5, 255, 52, 52 },
 }
-local RATE_ALERT = 4 -- from here the label also gets a "!"
+local RATE_ALERT = 4 -- from here (the rounded rate) the label also gets a "!"
 
 local function rateColor(rate)
     if rate <= RATE_COLORS[1][1] then
@@ -1021,11 +1021,11 @@ local rateByName = {}
 local STRONG_SHADER = 'Hunt - Strong'
 
 -- What a monster shows of its rates:
---   experience  the number beside the health bar (light grey at 1x, yellow,
---               orange, red at 5x) and, from RATE_ALERT, the strong shader:
---               that rate also makes it tougher
+--   experience  the number beside the health bar, rounded ("3x"; yellow,
+--               orange, red at 5x; nothing at 1x) and, from RATE_ALERT, the
+--               strong shader: that rate also makes it tougher
 --   loot, rare  badges above the name (Creature::setBoostBadges): coins and
---               crystals, from 1.5x
+--               crystals with the rounded rate, from 2x
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return
@@ -1041,14 +1041,17 @@ local function labelCreature(creature)
         return
     end
     local rate = entry.xp / 10
-    creature:setRateText(string.format(rate >= RATE_ALERT and '%.1fx!' or '%.1fx', rate))
+    -- whole numbers; a monster at 1x shows no rate
+    local shown = math.floor(rate + 0.5)
+    local strong = shown >= RATE_ALERT
+    creature:setRateText(shown <= 1 and '' or string.format(strong and '%dx!' or '%dx', shown))
     -- clients from before the colours keep the plain label
     if creature.setRateColor then
         creature:setRateColor(rateColor(rate))
     end
     if creature.setBoostBadges then
         creature:setBoostBadges(entry.loot, entry.rare)
-        creature:setStrongShader(rate >= RATE_ALERT and STRONG_SHADER or '')
+        creature:setStrongShader(strong and STRONG_SHADER or '')
     end
 end
 

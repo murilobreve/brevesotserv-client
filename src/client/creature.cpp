@@ -322,7 +322,7 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         if (nameProgram)
             g_drawPool.resetShaderProgram();
 
-        if (m_boosts && (m_boosts->tier[0] || m_boosts->tier[1]))
+        if (m_boosts && (m_boosts->times[0] || m_boosts->times[1]))
             drawBoostBadges(textRect);
 
         if (m_text) {
@@ -1442,36 +1442,38 @@ namespace
     constexpr int BOOST_GLINT_FRAMES = 5;
     constexpr int BOOST_GLINT_FRAME_MS = 70;
     constexpr int BOOST_GLINT_EVERY_MS = 2600;
-    // loot in the Hunt Board's gold, rare monsters in its cyan; brighter by tier
+    // loot in the Hunt Board's gold, rare monsters in its cyan; brighter by
+    // rate (2x, 3x, 4x)
     constexpr Color BOOST_COLORS[2][3] = {
-        { Color(205, 180, 120), Color(235, 205, 130), Color(255, 228, 150) },
-        { Color(125, 190, 215), Color(120, 220, 255), Color(170, 240, 255) },
+        { Color(225, 196, 126), Color(255, 228, 150), Color(255, 228, 150) },
+        { Color(125, 200, 228), Color(120, 220, 255), Color(170, 240, 255) },
     };
+    // the highest rate of each (loot goes up to 3x, rare monsters up to 4x):
+    // its badge glints
+    constexpr int BOOST_TOP[2] = { 3, 4 };
 
-    uint8_t boostTier(const int tenths, const int second, const int third)
+    // a rate in tenths as the whole number shown; 0 when it rounds to 1x
+    uint8_t boostTimes(const int tenths)
     {
-        if (tenths >= third) return 3;
-        if (tenths >= second) return 2;
-        return tenths >= 15 ? 1 : 0;
+        const int times = (tenths + 5) / 10;
+        return times >= 2 ? static_cast<uint8_t>(std::min<int>(times, 9)) : 0;
     }
 }
 
 void Creature::setBoostBadges(const int lootTenths, const int rareTenths)
 {
-    // loot goes up to 3x, rare monsters up to 4x
-    const uint8_t tiers[2] = { boostTier(lootTenths, 20, 25), boostTier(rareTenths, 20, 30) };
+    const uint8_t times[2] = { boostTimes(lootTenths), boostTimes(rareTenths) };
     if (!m_boosts) {
-        if (!tiers[0] && !tiers[1])
+        if (!times[0] && !times[1])
             return;
         m_boosts = std::make_unique<BoostBadges>();
         const auto& font = g_fonts.getFont("verdana-8px-rounded");
         for (auto& text : m_boosts->text)
             text.setFont(font ? font : g_gameConfig.getStaticTextFont());
     }
-    const int tenths[2] = { lootTenths, rareTenths };
     for (int i = 0; i < 2; ++i) {
-        m_boosts->tier[i] = tiers[i];
-        m_boosts->text[i].setText(tiers[i] ? fmt::format("{}.{}x", tenths[i] / 10, tenths[i] % 10) : std::string());
+        m_boosts->times[i] = times[i];
+        m_boosts->text[i].setText(times[i] ? fmt::format("{}x", times[i]) : std::string());
     }
 }
 
@@ -1484,8 +1486,10 @@ void Creature::setStrongShader(const std::string_view name)
         m_strongShaderId = shader->getId();
 }
 
-// The badges sit on the name, centred: icon and rate of each boost. A third
-// tier badge glints every few seconds, each creature at its own moment.
+// The badges sit on the name, centred: icon and rate of each boost. The icon
+// has as many coins or crystals as the rate (2x two, 3x and up three); the
+// highest rate's badge glints every few seconds, each creature at its own
+// moment.
 void Creature::drawBoostBadges(const Rect& nameRect)
 {
     static const TexturePtr texture = g_textures.getTexture("/images/game/huntboard/boost_badges");
@@ -1494,7 +1498,7 @@ void Creature::drawBoostBadges(const Rect& nameRect)
 
     int width = 0;
     for (int i = 0; i < 2; ++i) {
-        if (m_boosts->tier[i])
+        if (m_boosts->times[i])
             width += (width > 0 ? BOOST_GAP : 0) + BOOST_ICON + 1 + m_boosts->text[i].getTextSize().width();
     }
 
@@ -1504,15 +1508,16 @@ void Creature::drawBoostBadges(const Rect& nameRect)
     int x = nameRect.center().x - width / 2;
     const int y = nameRect.top() - BOOST_ICON + 1;
     for (int i = 0; i < 2; ++i) {
-        const int tier = m_boosts->tier[i];
-        if (!tier)
+        const int times = m_boosts->times[i];
+        if (!times)
             continue;
-        const int frame = tier == 3 ? glint : 0;
+        const int tier = std::min<int>(times, 3); // the sheet's row: 2 or 3 pieces
+        const int frame = times >= BOOST_TOP[i] ? glint : 0;
         g_drawPool.addTexturedRect(Rect(x, y, BOOST_ICON, BOOST_ICON), texture,
                                    Rect(frame * BOOST_ICON, (i * 3 + tier - 1) * BOOST_ICON, BOOST_ICON, BOOST_ICON));
         x += BOOST_ICON + 1;
         const auto size = m_boosts->text[i].getTextSize();
-        m_boosts->text[i].draw(Rect(x, y + (BOOST_ICON - size.height()) / 2 + 1, size), BOOST_COLORS[i][tier - 1]);
+        m_boosts->text[i].draw(Rect(x, y + (BOOST_ICON - size.height()) / 2 + 1, size), BOOST_COLORS[i][std::min<int>(times, 4) - 2]);
         x += size.width() + BOOST_GAP;
     }
 }
