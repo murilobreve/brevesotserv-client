@@ -506,7 +506,7 @@ WIKI_PAGES.pools = {
             { 'Attack Spell Damage', '3% a 15%', '' }, { 'Life Leech', '1% a 6%', '' }, { 'Mana Leech', '1% a 10%', '' },
             { 'Healing Received', '5% a 20%', '' }, { 'Dodge Chance', '1% a 4%', '' },
         }),
-        { 'p', 'Physical Resist vai só até 7% por item: é a resistência mais forte.' },
+        { 'p', 'Physical Resist vai até 14% por item (o total no personagem para em 15%): é a resistência mais forte.' },
         { 'links', { 'quality', 'affixes', 'stacking' } },
     },
 }
