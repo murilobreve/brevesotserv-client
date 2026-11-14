@@ -1481,7 +1481,7 @@ void Creature::setBoostBadges(const int lootTenths, const int rareTenths, const 
         m_boosts->times[i] = times[i];
         // "5x!": the experience of a very strong monster
         const bool alert = i == BOOST_XP && times[i] >= BOOST_TOP[i];
-        m_boosts->text[i].setText(times[i] ? fmt::format(alert ? "{}x!" : "{}x", times[i]) : std::string());
+        m_boosts->text[i].setText(times[i] ? fmt::format("{}x{}", times[i], alert ? "!" : "") : std::string());
     }
 }
 
