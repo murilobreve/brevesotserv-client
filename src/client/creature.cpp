@@ -322,6 +322,9 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         if (nameProgram)
             g_drawPool.resetShaderProgram();
 
+        if (m_boosts && (m_boosts->tier[0] || m_boosts->tier[1]))
+            drawBoostBadges(textRect);
+
         if (m_text) {
             auto extraTextSize = m_text->getTextSize();
             Rect extraTextRect = Rect(p.x - extraTextSize.width() / 2.0, p.y + 15, extraTextSize);
@@ -389,6 +392,11 @@ void Creature::internalDraw(Point dest, const Color& color)
 
     Point originalDest = dest;
 
+    // the creature's own shader (the server's: a rare tier, an outfit), else
+    // the Hunt Board's shader of a very strong monster
+    const uint8_t shaderId = m_shaderId ? m_shaderId : m_strongShaderId;
+    const bool hasShader = shaderId > 0 && g_shaders.getShaderById(shaderId);
+
     if (!m_jumpOffset.isNull()) {
         const auto& jumpOffset = m_jumpOffset * g_drawPool.getScaleFactor();
         dest -= Point(std::round(jumpOffset.x), std::round(jumpOffset.y));
@@ -429,7 +437,7 @@ void Creature::internalDraw(Point dest, const Color& color)
             }
 
             const auto& datType = getThingType();
-            const bool useFramebuffer = !replaceColorShader && hasShader() && g_shaders.getShaderById(m_shaderId)->useFramebuffer();
+            const bool useFramebuffer = !replaceColorShader && hasShader && g_shaders.getShaderById(shaderId)->useFramebuffer();
 
             const auto& drawCreature = [&](const Point& dest) {
                 // yPattern => creature addon
@@ -438,8 +446,8 @@ void Creature::internalDraw(Point dest, const Color& color)
                     if (yPattern > 0 && !(m_outfit.getAddons() & (1 << (yPattern - 1))))
                         continue;
 
-                    if (!replaceColorShader && hasShader() && !useFramebuffer) {
-                        g_drawPool.setShaderProgram(g_shaders.getShaderById(m_shaderId), true/*, shaderAction*/);
+                    if (!replaceColorShader && hasShader && !useFramebuffer) {
+                        g_drawPool.setShaderProgram(g_shaders.getShaderById(shaderId), true/*, shaderAction*/);
                     }
 
                     datType->draw(dest, 0, m_numPatternX, yPattern, m_numPatternZ, animationPhase, color);
@@ -460,7 +468,7 @@ void Creature::internalDraw(Point dest, const Color& color)
                 const auto& p = (Point(size) - Point(datType->getExactHeight())) / 2;
                 const auto& destFB = Rect(dest - p, Size{ size });
 
-                g_drawPool.setShaderProgram(g_shaders.getShaderById(m_shaderId), true/*, shaderAction*/);
+                g_drawPool.setShaderProgram(g_shaders.getShaderById(shaderId), true/*, shaderAction*/);
 
                 g_drawPool.bindFrameBuffer(destFB.size());
                 drawCreature(p);
@@ -498,8 +506,8 @@ void Creature::internalDraw(Point dest, const Color& color)
             if (m_outfit.isEffect())
                 animationPhase = std::min<int>(animationPhase + 1, animationPhases);
 
-            if (!replaceColorShader && hasShader())
-                g_drawPool.setShaderProgram(g_shaders.getShaderById(m_shaderId), true/*, shaderAction*/);
+            if (!replaceColorShader && hasShader)
+                g_drawPool.setShaderProgram(g_shaders.getShaderById(shaderId), true/*, shaderAction*/);
             getThingType()->draw(dest - (getDisplacement() * g_drawPool.getScaleFactor()), 0, 0, 0, 0, animationPhase, color);
         }
     }
@@ -1422,6 +1430,91 @@ void Creature::setRateText(const std::string& text)
         m_rateText.setFont(font ? font : g_gameConfig.getStaticTextFont());
     }
     m_rateText.setText(text);
+}
+
+namespace
+{
+    // data/images/game/huntboard/boost_badges.png: 12x12 cells, a row per
+    // badge (loot 1-3, then rare monsters 1-3), 6 frames each (0 at rest,
+    // 1-5 the glint of the third tier)
+    constexpr int BOOST_ICON = 12;
+    constexpr int BOOST_GAP = 6;
+    constexpr int BOOST_GLINT_FRAMES = 5;
+    constexpr int BOOST_GLINT_FRAME_MS = 70;
+    constexpr int BOOST_GLINT_EVERY_MS = 2600;
+    // loot in the Hunt Board's gold, rare monsters in its cyan; brighter by tier
+    constexpr Color BOOST_COLORS[2][3] = {
+        { Color(205, 180, 120), Color(235, 205, 130), Color(255, 228, 150) },
+        { Color(125, 190, 215), Color(120, 220, 255), Color(170, 240, 255) },
+    };
+
+    uint8_t boostTier(const int tenths, const int second, const int third)
+    {
+        if (tenths >= third) return 3;
+        if (tenths >= second) return 2;
+        return tenths >= 15 ? 1 : 0;
+    }
+}
+
+void Creature::setBoostBadges(const int lootTenths, const int rareTenths)
+{
+    // loot goes up to 3x, rare monsters up to 4x
+    const uint8_t tiers[2] = { boostTier(lootTenths, 20, 25), boostTier(rareTenths, 20, 30) };
+    if (!m_boosts) {
+        if (!tiers[0] && !tiers[1])
+            return;
+        m_boosts = std::make_unique<BoostBadges>();
+        const auto& font = g_fonts.getFont("verdana-8px-rounded");
+        for (auto& text : m_boosts->text)
+            text.setFont(font ? font : g_gameConfig.getStaticTextFont());
+    }
+    const int tenths[2] = { lootTenths, rareTenths };
+    for (int i = 0; i < 2; ++i) {
+        m_boosts->tier[i] = tiers[i];
+        m_boosts->text[i].setText(tiers[i] ? fmt::format("{}.{}x", tenths[i] / 10, tenths[i] % 10) : std::string());
+    }
+}
+
+void Creature::setStrongShader(const std::string_view name)
+{
+    m_strongShaderId = 0;
+    if (name.empty())
+        return;
+    if (const auto& shader = g_shaders.getShader(name))
+        m_strongShaderId = shader->getId();
+}
+
+// The badges sit on the name, centred: icon and rate of each boost. A third
+// tier badge glints every few seconds, each creature at its own moment.
+void Creature::drawBoostBadges(const Rect& nameRect)
+{
+    static const TexturePtr texture = g_textures.getTexture("/images/game/huntboard/boost_badges");
+    if (!texture)
+        return;
+
+    int width = 0;
+    for (int i = 0; i < 2; ++i) {
+        if (m_boosts->tier[i])
+            width += (width > 0 ? BOOST_GAP : 0) + BOOST_ICON + 1 + m_boosts->text[i].getTextSize().width();
+    }
+
+    const auto elapsed = (g_clock.millis() + getId() * 137) % BOOST_GLINT_EVERY_MS;
+    const int glint = elapsed < BOOST_GLINT_FRAMES * BOOST_GLINT_FRAME_MS ? 1 + static_cast<int>(elapsed / BOOST_GLINT_FRAME_MS) : 0;
+
+    int x = nameRect.center().x - width / 2;
+    const int y = nameRect.top() - BOOST_ICON + 1;
+    for (int i = 0; i < 2; ++i) {
+        const int tier = m_boosts->tier[i];
+        if (!tier)
+            continue;
+        const int frame = tier == 3 ? glint : 0;
+        g_drawPool.addTexturedRect(Rect(x, y, BOOST_ICON, BOOST_ICON), texture,
+                                   Rect(frame * BOOST_ICON, (i * 3 + tier - 1) * BOOST_ICON, BOOST_ICON, BOOST_ICON));
+        x += BOOST_ICON + 1;
+        const auto size = m_boosts->text[i].getTextSize();
+        m_boosts->text[i].draw(Rect(x, y + (BOOST_ICON - size.height()) / 2 + 1, size), BOOST_COLORS[i][tier - 1]);
+        x += size.width() + BOOST_GAP;
+    }
 }
 
 void Creature::setText(const std::string& text, const Color& color)

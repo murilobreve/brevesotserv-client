@@ -191,6 +191,12 @@ minHeight,
     void setRateText(const std::string& text);
     std::string getRateText() const { return m_rateText.getText(); }
     void setRateColor(const Color& color) { m_rateColor = color; }
+    // Hunt Board boosts on the monster (modules/game_huntboard): the loot
+    // and rare monsters rates as badges above the name (tenths: 28 = 2.8x; a
+    // rate below 1.5x has no badge), and a shader for a very strong monster
+    // that the creature's own shader (a rare tier's) always comes before
+    void setBoostBadges(int lootTenths, int rareTenths);
+    void setStrongShader(std::string_view name);
     bool canShoot(int distance);
 
     const auto& getIcons() {
@@ -307,6 +313,15 @@ private:
     CachedText m_name;
     CachedText m_rateText;
     Color m_rateColor{ 235, 235, 235, 220 };
+    // loot (0) and rare monsters (1); made the first time a badge is set
+    struct BoostBadges
+    {
+        uint8_t tier[2]{ 0, 0 }; // 0 none, 1-3
+        CachedText text[2];
+    };
+    std::unique_ptr<BoostBadges> m_boosts;
+    uint8_t m_strongShaderId{ 0 };
+    void drawBoostBadges(const Rect& nameRect);
     std::string m_nameShader;
     CachedStep m_stepCache;
 

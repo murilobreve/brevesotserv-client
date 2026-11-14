@@ -1012,24 +1012,43 @@ end
 
 -- ---------------------------------------------------------------- rate next to the monsters
 
--- experience rate (tenths) of each monster, by lower-case name
+-- the rates (tenths) of each monster, by lower-case name: { xp, loot, rare }
 local rateByName = {}
 
--- the label's colour by rate: light grey at 1x, yellow, orange, red at 5x
+-- the shader of a very strong monster (experience rate RATE_ALERT or more):
+-- game_shaders' "Hunt - Strong", a red heartbeat. A rare tier's own shader
+-- comes before it (Creature::setStrongShader).
+local STRONG_SHADER = 'Hunt - Strong'
+
+-- What a monster shows of its rates:
+--   experience  the number beside the health bar (light grey at 1x, yellow,
+--               orange, red at 5x) and, from RATE_ALERT, the strong shader:
+--               that rate also makes it tougher
+--   loot, rare  badges above the name (Creature::setBoostBadges): coins and
+--               crystals, from 1.5x
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return
     end
-    local tenths = rateByName[creature:getName():lower()]
-    if not tenths then
+    local entry = rateByName[creature:getName():lower()]
+    if not entry then
         creature:setRateText('')
+        -- clients from before the badges and the shader have neither
+        if creature.setBoostBadges then
+            creature:setBoostBadges(0, 0)
+            creature:setStrongShader('')
+        end
         return
     end
-    local rate = tenths / 10
+    local rate = entry.xp / 10
     creature:setRateText(string.format(rate >= RATE_ALERT and '%.1fx!' or '%.1fx', rate))
     -- clients from before the colours keep the plain label
     if creature.setRateColor then
         creature:setRateColor(rateColor(rate))
+    end
+    if creature.setBoostBadges then
+        creature:setBoostBadges(entry.loot, entry.rare)
+        creature:setStrongShader(rate >= RATE_ALERT and STRONG_SHADER or '')
     end
 end
 
@@ -1151,7 +1170,7 @@ function handlers.rates(data)
     rates.monsters = monsters
     rateByName = {}
     for _, monster in ipairs(monsters) do
-        rateByName[monster.lname] = monster.xp
+        rateByName[monster.lname] = { xp = monster.xp, loot = monster.loot, rare = monster.rare }
     end
     labelAll()
     if window then

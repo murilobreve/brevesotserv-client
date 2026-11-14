@@ -103,6 +103,11 @@ local OUTFIT_SHADERS = { {
     name = 'Rarity - Lord of Death',
     frag = 'shaders/fragment/rarity_lord_of_death.frag'
 }, {
+    -- Hunt Board: a monster with a very high experience rate (tougher).
+    -- Set by the client (game_huntboard), not by the server.
+    name = 'Hunt - Strong',
+    frag = 'shaders/fragment/hunt_strong.frag'
+}, {
     -- The revive of a Pale / Ashen / Obsidian / Lord of Death monster
     -- (scripts/rarity/revive.lua): the corpse wakes (Revive), then flickers
     -- and the monster stands up made of light (Rise) before taking its tier

@@ -708,6 +708,8 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<Creature>("clearText", &Creature::clearText);
     g_lua.bindClassMemberFunction<Creature>("setRateText", &Creature::setRateText);
     g_lua.bindClassMemberFunction<Creature>("setRateColor", &Creature::setRateColor);
+    g_lua.bindClassMemberFunction<Creature>("setBoostBadges", &Creature::setBoostBadges);
+    g_lua.bindClassMemberFunction<Creature>("setStrongShader", &Creature::setStrongShader);
     g_lua.bindClassMemberFunction<Creature>("getRateText", &Creature::getRateText);
     g_lua.bindClassMemberFunction<Creature>("canShoot", &Creature::canShoot);
 
