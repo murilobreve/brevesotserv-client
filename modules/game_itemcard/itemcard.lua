@@ -285,30 +285,17 @@ end
 local function fillBonuses(widget, rarity)
     addSection(widget, t('Rarity bonuses'))
     for _, bonus in ipairs(rarity.bonuses or {}) do
-        local row = bonusRow(widget, bonus.text or '', bonus.quality ~= nil)
+        -- only the bonus in its colour: no quality bar nor percentage
+        -- (2026-11-14, the owner's call; the colour says how good it is)
+        local row = bonusRow(widget, bonus.text or '', false)
         local color = bonus.color or nil
         row.text:setColor(color or INK)
         row.gem:setImageColor(color or PLAIN_BAR)
-        if bonus.quality then
-            local fill = row.track.fill
-            fill:setBackgroundColor(color or PLAIN_BAR)
-            fill:setWidth(math.max(1, math.floor((row.track:getWidth() - 2) * math.min(1, bonus.quality) + 0.5)))
-            row.percent:setText(percentText(bonus.quality))
-        else
+        if row.track then
             row.track:hide()
         end
-        if bonus.perfect then
+        if row.percent then
             row.percent:hide()
-            local ribbon = g_ui.createWidget('ItemCardPerfect', row)
-            ribbon:setId('perfect')
-            ribbon:setText(t('PERFECT'))
-            -- on the bar's line (the second one of a long row)
-            ribbon:addAnchor(AnchorRight, 'parent', AnchorRight)
-            ribbon:addAnchor(AnchorVerticalCenter, 'percent', AnchorVerticalCenter)
-            row.track:breakAnchors()
-            row.track:addAnchor(AnchorRight, 'perfect', AnchorLeft)
-            row.track:addAnchor(AnchorVerticalCenter, 'percent', AnchorVerticalCenter)
-            row.track:setMarginRight(5)
         end
     end
 end
