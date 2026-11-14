@@ -100,13 +100,34 @@ local function outfitOf(raw)
     }
 end
 
--- "Recompensa: +X de experiência, +Y Hunt Points e +Z charm points."
--- (a server without charm rewards sends no charms)
-local function rewardText(experience, pointsText, charms)
-    if charms and charms > 0 then
-        return tr('Recompensa: +%s de experiência, %s e +%d charm points.', formatNumber(experience), pointsText, charms)
+-- 8000 -> "8k", 21500 -> "21,5k", 1200000 -> "1,2kk"
+local function goldText(value)
+    value = tonumber(value) or 0
+    local function short(v, unit)
+        local text = (math.floor(v * 10 + 0.5) % 10 == 0) and string.format('%d', math.floor(v + 0.5)) or string.format('%.1f', v):gsub('%.', ',')
+        return text .. unit
     end
-    return tr('Recompensa: +%s de experiência e %s.', formatNumber(experience), pointsText)
+    if value >= 1000000 then
+        return short(value / 1000000, 'kk')
+    elseif value >= 1000 then
+        return short(value / 1000, 'k')
+    end
+    return tostring(math.floor(value))
+end
+
+-- "Recompensa: +X de experiência, +Yk de ouro, +Z Hunt Points e +W charm
+-- points." (a server without charm or gold rewards sends none)
+local function rewardText(experience, pointsText, charms, gold)
+    local parts = { tr('+%s de experiência', formatNumber(experience)) }
+    if gold and gold > 0 then
+        parts[#parts + 1] = tr('+%s de ouro', goldText(gold))
+    end
+    parts[#parts + 1] = pointsText
+    if charms and charms > 0 then
+        parts[#parts + 1] = tr('+%d charm points', charms)
+    end
+    local last = table.remove(parts)
+    return tr('Recompensa: ') .. table.concat(parts, ', ') .. tr(' e ') .. last .. '.'
 end
 
 -- a name too long for its label (a task of three monsters, "Many Faces /
@@ -262,7 +283,7 @@ local function renderDaily()
 
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
-    card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms))
+    card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms, daily.gold))
     -- a species task: its name is the species' ("Iks") and these are the
     -- monsters of its hunt that count ("Iks Chuka, Iks Pututu e Iks Aucar")
     if daily.variants and daily.variants ~= '' then
@@ -329,7 +350,7 @@ local function renderTrailCard()
         if step.milestone then
             card.badge:setColor('#ffb020')
         end
-        card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms))
+        card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms, step.gold))
         local following = steps[trail.index + 1]
         local after = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
         if step.variants and step.variants ~= '' then
@@ -403,8 +424,9 @@ local function renderTrailList()
             row.creature:setOutfit(outfitOf(step.outfit))
             fitText(row.name, step.milestone and (step.name .. '  (marco)') or step.name)
             row.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
-            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pontos', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
-                .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or ''))
+            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pts', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
+                .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or '')
+                .. ((step.gold or 0) > 0 and tr(', +%s ouro', goldText(step.gold)) or ''))
         end
         trailBuilt = true
     end
