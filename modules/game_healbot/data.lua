@@ -12,19 +12,22 @@ HealData.FRIEND_ANYONE = '@anyone'
 -- base vocation ids, as the server and SpellInfo use them
 local SORCERER, DRUID, PALADIN, KNIGHT, MONK = 1, 2, 3, 4, 9
 
+-- strongest first within each kind (health, then mana): power is the
+-- average the server gives (potions.lua). The spirit potions heal both: they
+-- sit among the health potions by their health, above an equal plain one
 HealData.potions = {
-    { id = 7876, name = 'Small Health Potion', stat = 'hp' },
-    { id = 266, name = 'Health Potion', stat = 'hp' },
-    { id = 236, name = 'Strong Health Potion', stat = 'hp', level = 50, vocations = { PALADIN, KNIGHT, MONK } },
-    { id = 239, name = 'Great Health Potion', stat = 'hp', level = 80, vocations = { KNIGHT } },
-    { id = 7643, name = 'Ultimate Health Potion', stat = 'hp', level = 130, vocations = { KNIGHT } },
-    { id = 23375, name = 'Supreme Health Potion', stat = 'hp', level = 200, vocations = { KNIGHT } },
-    { id = 268, name = 'Mana Potion', stat = 'mp' },
-    { id = 237, name = 'Strong Mana Potion', stat = 'mp', level = 50 },
-    { id = 238, name = 'Great Mana Potion', stat = 'mp', level = 80, vocations = { SORCERER, DRUID, PALADIN, MONK } },
-    { id = 23373, name = 'Ultimate Mana Potion', stat = 'mp', level = 130, vocations = { SORCERER, DRUID } },
-    { id = 7642, name = 'Great Spirit Potion', stat = 'hp', level = 80, vocations = { PALADIN, MONK } },
-    { id = 23374, name = 'Ultimate Spirit Potion', stat = 'hp', level = 130, vocations = { PALADIN, MONK } },
+    { id = 23375, name = 'Supreme Health Potion', stat = 'hp', power = 1000, level = 200, vocations = { KNIGHT } },
+    { id = 7643, name = 'Ultimate Health Potion', stat = 'hp', power = 750, level = 130, vocations = { KNIGHT } },
+    { id = 23374, name = 'Ultimate Spirit Potion', stat = 'hp', power = 501, level = 130, vocations = { PALADIN, MONK } },
+    { id = 239, name = 'Great Health Potion', stat = 'hp', power = 500, level = 80, vocations = { KNIGHT } },
+    { id = 7642, name = 'Great Spirit Potion', stat = 'hp', power = 301, level = 80, vocations = { PALADIN, MONK } },
+    { id = 236, name = 'Strong Health Potion', stat = 'hp', power = 300, level = 50, vocations = { PALADIN, KNIGHT, MONK } },
+    { id = 266, name = 'Health Potion', stat = 'hp', power = 150 },
+    { id = 7876, name = 'Small Health Potion', stat = 'hp', power = 75 },
+    { id = 23373, name = 'Ultimate Mana Potion', stat = 'mp', power = 500, level = 130, vocations = { SORCERER, DRUID } },
+    { id = 238, name = 'Great Mana Potion', stat = 'mp', power = 200, level = 80, vocations = { SORCERER, DRUID, PALADIN, MONK } },
+    { id = 237, name = 'Strong Mana Potion', stat = 'mp', power = 150, level = 50 },
+    { id = 268, name = 'Mana Potion', stat = 'mp', power = 100 },
 }
 
 -- what the auto food eats: id = { regeneration seconds, name }. It is the
@@ -213,6 +216,24 @@ function HealData.spell(id)
     return spellCache[id] or nil
 end
 
+-- how strong a spell is for the bot, to list the strongest first: about
+-- what one cast heals (the regenerations utura and utura gran below the
+-- instant heals of their level), the friend heals and the hastes by their
+-- strength too. A spell not listed goes by its level
+local POWER = {
+    ['exura max vita'] = 1000, ['exura med ico'] = 950, ['exura gran san'] = 900,
+    ['exura gran ico'] = 850, ['exura vita'] = 800, ['exura gran tio'] = 750,
+    ['exura mas nia'] = 700, ['exura san'] = 600, ['exura gran mas res'] = 550,
+    ['exura ico'] = 400, ['exura gran'] = 380, ['utura gran'] = 300, ['utura'] = 250,
+    ['exura'] = 150, ['exura infir ico'] = 60, ['exura infir'] = 50, ['exura dis'] = 10,
+    ['exura gran sio'] = 1000, ['exura sio'] = 500, ['exura tio sio'] = 450,
+    ['utani tempo hur'] = 300, ['utani gran hur'] = 200, ['utani hur'] = 100,
+}
+
+function HealData.power(spell)
+    return POWER[spell.words] or spell.level or 0
+end
+
 local function vocationSpells(vocation, accept)
     local list = {}
     for _, spell in pairs(SpellInfo.Default) do
@@ -221,8 +242,12 @@ local function vocationSpells(vocation, accept)
         end
     end
     table.sort(list, function(a, b)
+        local pa, pb = HealData.power(a), HealData.power(b)
+        if pa ~= pb then
+            return pa > pb
+        end
         if a.level ~= b.level then
-            return a.level < b.level
+            return a.level > b.level
         end
         return a.words < b.words
     end)
@@ -286,13 +311,24 @@ function HealData.curesFor(vocation)
     return list
 end
 
--- the strongest entry of a list the character can already use
+-- the lists above are strongest first: the first entry the character can
+-- already use
 function HealData.best(list, level, accept)
-    local found
     for _, entry in ipairs(list) do
         if (entry.level or 0) <= level and (not accept or accept(entry)) then
-            found = entry
+            return entry
         end
     end
-    return found
+end
+
+-- what the character can use now, strongest first (what his level does not
+-- reach yet is left out and shows up the moment he gets there)
+function HealData.usable(list, level)
+    local out = {}
+    for _, entry in ipairs(list) do
+        if (entry.level or 0) <= level then
+            out[#out + 1] = entry
+        end
+    end
+    return out
 end
