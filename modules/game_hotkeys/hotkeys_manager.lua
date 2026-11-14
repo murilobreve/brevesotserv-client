@@ -601,6 +601,9 @@ function executeHotkeyItem(action, itemId, subType)
             g_game.useInventoryItem(itemId)
         end
     elseif action == HOTKEY_MANAGER_USEONSELF then
+        if modules.game_healbot and modules.game_healbot.usingMessage then
+            modules.game_healbot.usingMessage(itemId)
+        end
         if g_game.getClientVersion() < 780 or subType then
             local item = g_game.findPlayerItem(itemId, subType or -1)
             if item then

@@ -148,6 +148,9 @@ local function potionReady(player, potion, t)
 end
 
 local function drink(player, potion, t)
+    if modules.game_healbot and modules.game_healbot.usingMessage then
+        modules.game_healbot.usingMessage(potion.id)
+    end
     g_game.useInventoryItemWith(potion.id, player)
     potionUntil = t + POTION_FALLBACK
     if onAction then
