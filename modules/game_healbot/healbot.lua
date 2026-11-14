@@ -123,6 +123,8 @@ local function defaults(player)
         -- eats the food in the backpacks until full (engine.lua)
         food = true,
         antiIdle = false,
+        -- "Using one of 37 great health potions..." when a potion is used
+        usingMsg = true,
         -- `below` is the mana it trains from (the slider is shared)
         train = { on = false, spell = bestTrainSpell(HealData.trainSpells(vocation)), below = 90 },
     }
@@ -273,11 +275,26 @@ local function setSpellIcon(icon, spell)
     end
 end
 
+-- only what the character can use now, strongest first (the lists of
+-- data.lua): a spell or potion his level does not reach yet is not offered
+-- and shows up when he gets there (onLevelChange fills the window again).
+-- A choice saved before (a level lost on death) stays, marked with its level
 local function fillCombo(combo, entries, selected, label, onChange)
+    local player = g_game.getLocalPlayer()
+    local level = player and player:getLevel() or 0
     combo:clearOptions()
     combo:addOption(tr('None'), 0)
-    for _, entry in ipairs(entries) do
+    local listed = false
+    for _, entry in ipairs(HealData.usable(entries, level)) do
         combo:addOption(label(entry), entry.id)
+        listed = listed or entry.id == selected
+    end
+    if selected and selected ~= 0 and not listed then
+        for _, entry in ipairs(entries) do
+            if entry.id == selected then
+                combo:addOption(string.format('%s (lv %d)', label(entry), entry.level or 0), entry.id)
+            end
+        end
     end
     combo:setCurrentOptionByData(selected, true)
     combo.onOptionChange = function(_, _, data)
@@ -531,6 +548,9 @@ local function fill()
     for _, rule in ipairs(cfg.potions) do
         addPotionRule(page, rule, potions)
     end
+    local using = g_ui.createWidget('CureRule', page)
+    bindCheck(using.enabled, cfg.support, 'usingMsg')
+    using.note:setText(tr('Show "Using one of ... potions" when a potion is used (bot, hotkeys and action bar).'))
 
     page = window.content.friendsPage
     clearRules(page)
@@ -554,6 +574,29 @@ local function fill()
     idle.note:setText(tr('Anti idle: turns your character every 5 minutes so the server does not log you out.'))
 
     fillLoot()
+end
+
+-- Tibia's "Using one of 37 great health potions..." / "Using the last ...",
+-- when the bot, a hotkey or the action bar uses a potion (count before the
+-- use, as Tibia shows it), so a hunt does not run out of potions unseen.
+-- Off in the Potions page
+function usingMessage(id)
+    if not cfg or not cfg.support or cfg.support.usingMsg == false then
+        return
+    end
+    local potion = HealData.potion(id)
+    local count = potion and HealEngine.potionCount(id) or 0
+    if count <= 0 or not modules.game_textmessage then
+        return
+    end
+    local name = potion.name:lower()
+    local text
+    if count == 1 then
+        text = string.format('Using the last %s...', name)
+    else
+        text = string.format('Using one of %d %ss...', count, name)
+    end
+    modules.game_textmessage.displayStatusMessage(text)
 end
 
 local function refreshCounts()
@@ -607,10 +650,38 @@ function setRunning(value, keep)
     updateButton()
 end
 
+-- a new level can open a spell or a potion: the lists follow (only when the
+-- set of what he can use changes, so an open list is not closed for nothing)
+local usableKey
+local levelEvent
+local function usableNow()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return ''
+    end
+    local level = player:getLevel()
+    local key = {}
+    for _, list in ipairs({ HealData.potions }) do
+        for _, entry in ipairs(list) do
+            if (entry.level or 0) <= level then
+                key[#key + 1] = entry.id
+            end
+        end
+    end
+    for _, spell in pairs(SpellInfo.Default) do
+        if (spell.level or 0) <= level then
+            key[#key + 1] = spell.id
+        end
+    end
+    table.sort(key)
+    return table.concat(key, ',')
+end
+
 function show()
     if not window or not g_game.isOnline() then
         return
     end
+    usableKey = usableNow()
     fill()
     window:show()
     window:raise()
@@ -675,6 +746,23 @@ local function onVocationChange()
     end
 end
 
+local function onLevelChange()
+    if levelEvent then
+        return
+    end
+    levelEvent = scheduleEvent(function()
+        levelEvent = nil
+        local key = usableNow()
+        if key == usableKey then
+            return
+        end
+        usableKey = key
+        if window and window:isVisible() then
+            fill()
+        end
+    end, 300)
+end
+
 -- someone joins or leaves the party: the target lists follow
 local targetsEvent
 local function onShieldChange(creature)
@@ -711,7 +799,7 @@ function init()
     end, onAction)
     countEvent = cycleEvent(refreshCounts, 1000)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
-    connect(LocalPlayer, { onVocationChange = onVocationChange })
+    connect(LocalPlayer, { onVocationChange = onVocationChange, onLevelChange = onLevelChange })
     connect(Creature, { onShieldChange = onShieldChange })
     if g_game.isOnline() then
         onGameStart()
@@ -720,7 +808,11 @@ end
 
 function terminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
-    disconnect(LocalPlayer, { onVocationChange = onVocationChange })
+    disconnect(LocalPlayer, { onVocationChange = onVocationChange, onLevelChange = onLevelChange })
+    if levelEvent then
+        removeEvent(levelEvent)
+        levelEvent = nil
+    end
     disconnect(Creature, { onShieldChange = onShieldChange })
     save()
     -- the client writes the settings itself as it closes
