@@ -175,7 +175,7 @@ ForgeResultLine < Label
 MythosWindow
   id: forgeWindow
   !text: tr('Rarity Forge')
-  size: 680 600
+  size: 680 656
   @onEscape: modules.game_raritybonus.hide()
 
   UIButton
@@ -308,7 +308,7 @@ MythosWindow
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.bottom: parent.bottom
-      width: 184
+      width: 148
       padding: 6
 
       ForgeDim
@@ -330,7 +330,7 @@ MythosWindow
           type: grid
           cell-size: 36 36
           cell-spacing: 4
-          num-columns: 4
+          num-columns: 3
 
       UIWidget
         id: bagRule
@@ -372,7 +372,7 @@ MythosWindow
           type: grid
           cell-size: 36 36
           cell-spacing: 4
-          num-columns: 4
+          num-columns: 3
 
       VerticalScrollBar
         id: bagScroll
@@ -509,14 +509,14 @@ MythosWindow
           anchors.right: parent.right
           anchors.bottom: hint.top
           margin-bottom: 6
-          height: 204
+          height: 260
           padding: 6
 
           UIWidget
             id: wheelHolder
             anchors.left: parent.left
             anchors.top: parent.top
-            size: 184 192
+            size: 236 248
 
             UIWidget
               id: wheel
@@ -524,7 +524,7 @@ MythosWindow
               anchors.top: parent.top
               margin-left: 2
               margin-top: 10
-              size: 180 180
+              size: 232 232
               image-source: /game_raritybonus/images/forge/wheel/wheel_10
 
             UIWidget
