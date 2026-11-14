@@ -136,25 +136,33 @@ RateRow < BrevesRow
   // a column per number, each one off the row's right edge only (anchors
   // between siblings that wait on each other crash the browser client); the
   // list header's titles sit 4 px further (the list's and the row's padding)
+  // rare monsters: how much more often Pale, Ashen and Obsidian come back
   MultBar
-    id: lootBar
+    id: rareBar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 68
     width: 56
 
   MultBar
-    id: xpBar
+    id: lootBar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 130
+    width: 56
+
+  MultBar
+    id: xpBar
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 192
     width: 56
 
   Label
     id: goldKill
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 192
+    margin-right: 254
     width: 62
     text-align: right
     color: #e2a443
@@ -164,7 +172,7 @@ RateRow < BrevesRow
     id: perKill
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 258
+    margin-right: 320
     width: 62
     text-align: right
     color: #cbc0e0
@@ -174,7 +182,7 @@ RateRow < BrevesRow
     id: health
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 324
+    margin-right: 386
     width: 60
     text-align: right
     color: #cbc0e0
@@ -184,7 +192,7 @@ RateRow < BrevesRow
     id: level
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 388
+    margin-right: 450
     width: 36
     text-align: center
     color: #e6e0f2
@@ -195,7 +203,7 @@ RateRow < BrevesRow
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.right: parent.right
-    margin-right: 430
+    margin-right: 492
 
   Label
     id: name
@@ -352,7 +360,7 @@ BoardColumn < BrevesSection
 MythosWindow
   id: huntBoardWindow
   !text: tr('Hunt Board')
-  size: 900 630
+  size: 962 630
   @onEscape: modules.game_huntboard.hide()
 
   HuntTab
@@ -607,42 +615,49 @@ MythosWindow
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        margin-right: 434
+        margin-right: 496
 
       HuntSortHead
         id: sortLevel
         anchors.right: parent.right
-        margin-right: 392
+        margin-right: 454
         width: 36
         text-align: center
 
       HuntSortHead
         id: sortHp
         anchors.right: parent.right
-        margin-right: 328
+        margin-right: 390
         width: 60
 
       HuntSortHead
         id: sortXpKill
         anchors.right: parent.right
-        margin-right: 262
+        margin-right: 324
         width: 62
 
       HuntSortHead
         id: sortGoldKill
         anchors.right: parent.right
-        margin-right: 196
+        margin-right: 258
         width: 62
 
       HuntSortHead
         id: sortXpRate
+        anchors.right: parent.right
+        margin-right: 196
+        width: 56
+        text-align: center
+
+      HuntSortHead
+        id: sortLootRate
         anchors.right: parent.right
         margin-right: 134
         width: 56
         text-align: center
 
       HuntSortHead
-        id: sortLootRate
+        id: sortRareRate
         anchors.right: parent.right
         margin-right: 72
         width: 56

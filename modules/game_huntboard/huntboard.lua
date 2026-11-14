@@ -66,7 +66,7 @@ local tickEvent
 
 local currentTab = 'rates'
 local currentPeriod = 'hour'
-local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 30, slot = -1 }
+local rates = { monsters = {}, nextAt = 0, interval = 7200, max = 100, lootMax = 30, rareMax = 40, slot = -1 }
 local filtered = {}
 local currentSort = 'combined'
 local sortDesc = true -- the biggest first; a second click on a column title reverses it
@@ -285,6 +285,11 @@ local function lootTone(tenths)
     return ramp(math.max(0, math.min(1, (tenths - 10) / 20)), { 138, 122, 85 }, { 235, 205, 130 })
 end
 
+-- rare monsters go from 1x to 4x: pale grey to the rare monsters' violet
+local function rareTone(tenths)
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 120, 128, 150 }, { 120, 220, 255 })
+end
+
 local function multText(tenths)
     return string.format('x%.1f', tenths / 10)
 end
@@ -463,6 +468,7 @@ local SORT_SPECS = {
     combined = { function(m) return m.xp + m.loot end, true, function(m) return m.perKill end },
     xp = { function(m) return m.xp end, true, function(m) return m.perKill end },
     loot = { function(m) return m.loot end, true, function(m) return m.goldPerKill or 0 end },
+    rare = { function(m) return m.rare end, true, function(m) return m.xp end },
     perKill = { function(m) return m.perKill end, true },
     gold = { function(m) return m.goldPerKill end, true },
     xpPerHp = { function(m) return m.xpPerHp end, true },
@@ -515,6 +521,7 @@ local SORT_HEADS = {
     { 'sortGoldKill', 'gold', 'Gold/kill', 'Gold per kill at this loot rate, at the prices Gersao pays.' },
     { 'sortXpRate', 'xp', 'XP rate', 'The experience rate of this roll.' },
     { 'sortLootRate', 'loot', 'Loot rate', 'The loot rate of this roll.' },
+    { 'sortRareRate', 'rare', 'Rare', 'How much more often this monster comes back Pale, Ashen or Obsidian in this roll.' },
     { 'sortTp', 'tp', 'TP', 'The monsters with a hunt teleport first.' },
 }
 
@@ -681,11 +688,15 @@ local function renderPage()
         row.goldKill:setText(monster.goldPerKill and formatShort(monster.goldPerKill) or '-')
         setBar(row.xpBar, monster.xp)
         setBar(row.lootBar, monster.loot, rates.lootMax, lootTone)
+        setBar(row.rareBar, monster.rare, rates.rareMax, rareTone)
         local tooltip = tr('%s\nExperience: %s x %.1f = %s per kill (before your own bonuses)\nLoot: %.1fx the normal drop chances', monster.name,
             formatNumber(monster.exp), monster.xp / 10, formatNumber(monster.perKill), monster.loot / 10)
         if monster.goldPerKill then
             tooltip = tooltip .. '\n' .. tr('Gold: %s x %.1f = %s per kill (average, at the prices Gersao pays)',
                 formatNumber(monster.gold), monster.loot / 10, formatNumber(monster.goldPerKill))
+        end
+        if monster.rare > 10 then
+            tooltip = tooltip .. '\n' .. tr('Rare monsters: %.1fx more Pale, Ashen and Obsidian', monster.rare / 10)
         end
         if monster.lvl then
             tooltip = tooltip .. '\n' .. tr('Recommended level: %d', monster.lvl)
@@ -1086,6 +1097,7 @@ function handlers.rates(data)
     rates.interval = data.interval or 7200
     rates.max = data.max or 100
     rates.lootMax = data.lootMax or 30
+    rates.rareMax = data.rareMax or 40
     local fields = data.fields or {}
     local index = {}
     for i, name in ipairs(fields) do
@@ -1109,6 +1121,8 @@ function handlers.rates(data)
         end
         monster.xp = tonumber(monster.xp) or 10
         monster.loot = tonumber(monster.loot) or 10
+        -- rare monsters rate (1x-4x); 1x with a server that does not send it
+        monster.rare = tonumber(monster.rare) or 10
         monster.elements, monster.taken = parseElements(monster.elements)
         monster.perKill = math.floor(monster.exp * monster.xp / 10)
         -- the Hunt Tasks' recommended level; nil with a server that does not send it
