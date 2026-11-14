@@ -746,7 +746,7 @@ local function applyFilters()
     local total, counts = #filtered, nil
     if advancedApply then
         filtered, counts = advancedApply(filtered)
-        advancedShowResult(total, counts, #filtered)
+        advancedShowResult(total, counts, #filtered, filtered)
     end
     local button = section.advancedButton
     if button then

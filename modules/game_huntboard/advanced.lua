@@ -558,8 +558,41 @@ local function fillSaved()
     advWindow.savedDelete:setEnabled(#entries > 0)
 end
 
--- the result line: how many are left after the steps, and per step
-function advancedShowResult(total, counts, final)
+local PREVIEW_ROWS = 8
+local BASE_COLUMNS = { level = true, hp = true, perKill = true, gold = true, xp = true, loot = true }
+
+local function thousands(value)
+    local text = tostring(math.floor((tonumber(value) or 0) + 0.5))
+    while true do
+        local replaced, count = text:gsub('^(-?%d+)(%d%d%d)', '%1.%2')
+        text = replaced
+        if count == 0 then
+            return text
+        end
+    end
+end
+
+-- how a field reads in the preview: "x2.5" for rates, "120%" for damage
+-- taken, "0.84" for the per-health ones, thousands for the rest
+local function showValue(key, value)
+    if value == nil then
+        return '-'
+    end
+    if key == 'xp' or key == 'loot' or key == 'combined' or key == 'rare' or key == 'damage' then
+        return string.format('x%.1f', value)
+    elseif key == 'myElement' or key:find('^el:') then
+        return string.format('%d%%', value)
+    elseif key == 'xpPerHp' or key == 'goldPerHp' then
+        return string.format('%.2f', value)
+    elseif key == 'boss' then
+        return value == 1 and tr('yes') or tr('no')
+    end
+    return thousands(value)
+end
+
+-- the result: how many are left after the steps and per step, and the
+-- first monsters of the list with the numbers the steps look at
+function advancedShowResult(total, counts, final, list)
     if not advWindow or not advWindow:isVisible() then
         return
     end
@@ -568,6 +601,48 @@ function advancedShowResult(total, counts, final)
         local count = counts and counts[i]
         row.number:setTooltip(count and tr('%d monsters left after this step', count) or tr('This step does nothing yet'))
         row.number:setColor(count and '#e2a443' or '#75688f')
+    end
+    -- the fields the steps use that the base columns do not show
+    local extra, seen = {}, {}
+    for _, step in ipairs(steps) do
+        for _, key in ipairs({ step.field, step.kind == 'sort' and step.dir2 ~= 'none' and step.field2 or nil }) do
+            if key and FIELD[key] and not BASE_COLUMNS[key] and not seen[key] and #extra < 2 then
+                seen[key] = true
+                extra[#extra + 1] = key
+            end
+        end
+    end
+    local panel = advWindow.preview
+    panel:destroyChildren()
+    list = list or {}
+    if #list == 0 then
+        local row = g_ui.createWidget('AdvPreviewRow', panel)
+        row:setColor('#75688f')
+        row:setText(tr('No monster passes these steps.'))
+        return
+    end
+    for i = 1, math.min(PREVIEW_ROWS, #list) do
+        local m = list[i]
+        local parts = {
+            string.format('#%d  %s', i, m.name),
+            tr('Lvl') .. ' ' .. showValue('level', valueOf('level', m)),
+            tr('HP') .. ' ' .. showValue('hp', valueOf('hp', m)),
+            tr('XP/kill') .. ' ' .. showValue('perKill', valueOf('perKill', m)),
+            tr('Gold/kill') .. ' ' .. showValue('gold', valueOf('gold', m)),
+            tr('XP rate') .. ' ' .. showValue('xp', valueOf('xp', m)),
+            tr('Loot rate') .. ' ' .. showValue('loot', valueOf('loot', m)),
+        }
+        for _, key in ipairs(extra) do
+            parts[#parts + 1] = tr(FIELD[key].label) .. ': ' .. showValue(key, valueOf(key, m))
+        end
+        local row = g_ui.createWidget('AdvPreviewRow', panel)
+        row:setText(table.concat(parts, '   '))
+        row:setColor(i == 1 and '#ffe066' or (i == 2 and '#f0f0f0' or (i == 3 and '#ffc08a' or '#cbc0e0')))
+    end
+    if #list > PREVIEW_ROWS then
+        local row = g_ui.createWidget('AdvPreviewRow', panel)
+        row:setColor('#75688f')
+        row:setText(tr('... and %d more in the list.', #list - PREVIEW_ROWS))
     end
 end
 
