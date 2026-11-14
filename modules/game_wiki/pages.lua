@@ -32,15 +32,15 @@ WIKI_CONVERTED = false
 -- example: a real roll of the server for each grade (scripts/rarity), on a
 -- weapon; the grade's item is that weapon
 WIKI_GRADES = {
-    { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3271, shader = 'Rarity - Uncommon', bonuses = 1, band = '0% a 35%',
+    { key = 'uncommon', name = 'Communis', color = '#63c08a', frame = 1, item = 3271, shader = 'Rarity - Uncommon', bonuses = 1, band = '25% a 50%',
       example = { 'Spike Sword', '+6% Melee Skills' } },
-    { key = 'rare', name = 'Rarus', color = '#4f8fe8', frame = 2, item = 3280, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '10% a 50%',
+    { key = 'rare', name = 'Rarus', color = '#4f8fe8', frame = 2, item = 3280, shader = 'Rarity - Rare', bonuses = 2, minBonuses = 1, band = '30% a 55%',
       example = { 'Fire Sword', '+19% Cleave Damage, +9% Melee Skills' } },
-    { key = 'epic', name = 'Praeclarus', color = '#a679e6', frame = 3, item = 3071, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '15% a 70%',
+    { key = 'epic', name = 'Praeclarus', color = '#a679e6', frame = 3, item = 3071, shader = 'Rarity - Epic', bonuses = 3, minBonuses = 1, band = '35% a 75%',
       example = { 'Wand of Inferno', '+21% Exevo Gran Mas Flam Damage, +6% Critical Hit Chance, +3% Onslaught' } },
-    { key = 'legendary', name = 'Legendarius', color = '#e2a443', frame = 4, item = 3288, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '20% a 85%',
+    { key = 'legendary', name = 'Legendarius', color = '#e2a443', frame = 4, item = 3288, shader = 'Rarity - Legendary', bonuses = 4, minBonuses = 1, band = '35% a 90%',
       example = { 'Magic Sword', '+40% Attack Spell Damage, +14% Melee Skills, +6% Critical Hit Chance, +4% Onslaught' } },
-    { key = 'mythic', name = 'Mythicus', color = '#e8e4ff', frame = 5, item = 3296, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '30% a 100%',
+    { key = 'mythic', name = 'Mythicus', color = '#e8e4ff', frame = 5, item = 3296, shader = 'Rarity - Mythic', bonuses = 5, minBonuses = 1, band = '45% a 100%',
       example = { 'Warlord Sword', '+33% Melee Skills, +26 Attack, +22% Life Leech, +15% Critical Hit Chance, +5% Onslaught' } },
 }
 
