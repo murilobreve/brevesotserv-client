@@ -1,0 +1,310 @@
+// Advanced filter of the Hunts TP list (advanced.lua): steps that run one
+// after the other over what the simple filters let through - keep the
+// monsters that match, sort them (then by a second column), keep only the
+// first N - plus ready-made filters and up to 5 of the player's own.
+
+AdvLabel < Label
+  font: verdana-11px-antialised
+  color: #cbc0e0
+  text-auto-resize: true
+
+AdvEdit < MythosTextEdit
+  size: 64 22
+  placeholder-color: #75688f
+  @onTextChange: modules.game_huntboard.onAdvancedEdited()
+
+// one step: its number, what it does, then the boxes of that kind
+// (advanced.lua shows the ones the kind uses)
+AdvStepRow < Panel
+  height: 30
+  margin-bottom: 2
+  background-color: #1a1326
+  border-width: 1
+  border-color: #33264d
+
+  Label
+    id: number
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 18
+    font: verdana-11px-rounded
+    color: #e2a443
+
+  MythosComboBox
+
+    height: 22
+    id: kind
+    anchors.left: number.right
+    anchors.verticalCenter: parent.verticalCenter
+    width: 112
+
+  MythosComboBox
+
+    height: 22
+    id: field
+    anchors.left: kind.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 160
+
+  MythosComboBox
+
+    height: 22
+    id: op
+    anchors.left: field.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 92
+
+  AdvEdit
+    id: value1
+    anchors.left: op.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+  AdvLabel
+    id: andLabel
+    anchors.left: value1.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  AdvEdit
+    id: value2
+    anchors.left: andLabel.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  AdvLabel
+    id: thenLabel
+    anchors.left: op.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+  MythosComboBox
+
+    height: 22
+    id: field2
+    anchors.left: thenLabel.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    width: 136
+
+  MythosComboBox
+
+    height: 22
+    id: dir2
+    anchors.left: field2.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    width: 84
+
+  AdvLabel
+    id: hint
+    anchors.left: value1.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    color: #9789b3
+
+  MythosButton
+    id: up
+    anchors.right: down.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+    size: 20 20
+    text: ^
+
+  MythosButton
+    id: down
+    anchors.right: remove.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+    size: 20 20
+    text: v
+
+  MythosButton
+    id: remove
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+    size: 20 20
+    text: x
+
+MythosWindow
+  id: huntAdvancedWindow
+  !text: tr('Advanced filter')
+  size: 812 520
+  @onEscape: modules.game_huntboard.closeAdvanced()
+
+  AdvLabel
+    id: intro
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-auto-resize: false
+    text-wrap: true
+    height: 30
+    color: #9789b3
+    !text: tr('The steps run from top to bottom over the monsters the simple filters let through: keep the ones that match, sort them, keep only the first ones... Each step works on what the step above left.')
+
+  AdvLabel
+    id: presetLabel
+    anchors.top: intro.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    !text: tr('Ready-made:')
+
+  MythosComboBox
+
+    height: 22
+    id: presetBox
+    anchors.left: presetLabel.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 6
+    width: 230
+
+  MythosButton
+    id: presetUse
+    anchors.left: presetBox.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 4
+    size: 52 22
+    !text: tr('Use')
+
+  AdvLabel
+    id: savedLabel
+    anchors.left: presetUse.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 18
+    !text: tr('My filters:')
+
+  MythosComboBox
+
+    height: 22
+    id: savedBox
+    anchors.left: savedLabel.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 6
+    width: 170
+
+  MythosButton
+    id: savedUse
+    anchors.left: savedBox.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 4
+    size: 52 22
+    !text: tr('Load')
+
+  MythosButton
+    id: savedDelete
+    anchors.left: savedUse.right
+    anchors.verticalCenter: presetLabel.verticalCenter
+    margin-left: 4
+    size: 60 22
+    !text: tr('Delete')
+
+  MythosSeparator
+    id: sep1
+    anchors.top: presetBox.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  ScrollablePanel
+    id: steps
+    anchors.top: sep1.bottom
+    anchors.left: parent.left
+    anchors.right: stepScroll.left
+    anchors.bottom: addFilter.top
+    margin-top: 8
+    margin-bottom: 8
+    vertical-scrollbar: stepScroll
+    layout:
+      type: verticalBox
+
+  MythosScrollBar
+    id: stepScroll
+    anchors.top: sep1.bottom
+    anchors.bottom: addFilter.top
+    margin-top: 8
+    margin-bottom: 8
+    anchors.right: parent.right
+    step: 32
+    pixel-scroll: true
+
+  AdvLabel
+    id: emptySteps
+    anchors.centerIn: steps
+    color: #75688f
+    !text: tr('No steps yet: add one below, or pick a ready-made filter above.')
+
+  MythosButton
+    id: addFilter
+    anchors.left: parent.left
+    anchors.bottom: sep2.top
+    margin-bottom: 8
+    size: 140 24
+    !text: tr('+ Keep only...')
+
+  MythosButton
+    id: addSort
+    anchors.left: addFilter.right
+    anchors.bottom: sep2.top
+    margin-left: 6
+    margin-bottom: 8
+    size: 120 24
+    !text: tr('+ Sort by...')
+
+  MythosButton
+    id: addTop
+    anchors.left: addSort.right
+    anchors.bottom: sep2.top
+    margin-left: 6
+    margin-bottom: 8
+    size: 190 24
+    !text: tr('+ Keep the first...')
+
+  AdvLabel
+    id: result
+    anchors.right: parent.right
+    anchors.verticalCenter: addFilter.verticalCenter
+    color: #7fd35a
+
+  MythosSeparator
+    id: sep2
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  MythosTextEdit
+    id: saveName
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    size: 170 24
+    placeholder-color: #75688f
+    !placeholder: tr('Name to save...')
+
+  MythosButton
+    id: saveButton
+    anchors.left: saveName.right
+    anchors.bottom: parent.bottom
+    margin-left: 4
+    size: 110 24
+    !text: tr('Save filter')
+
+  MythosButton
+    id: clearButton
+    anchors.left: saveButton.right
+    anchors.bottom: parent.bottom
+    margin-left: 16
+    size: 110 24
+    !text: tr('Clear steps')
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    size: 90 24
+    !text: tr('Close')
+    @onClick: modules.game_huntboard.closeAdvanced()

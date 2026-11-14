@@ -742,9 +742,26 @@ local function applyFilters()
         end
     end
     table.sort(filtered, sorterOf(currentSort, sortDesc))
+    -- the advanced filter's steps (advanced.lua) run over what is left
+    local total, counts = #filtered, nil
+    if advancedApply then
+        filtered, counts = advancedApply(filtered)
+        advancedShowResult(total, counts, #filtered)
+    end
+    local button = section.advancedButton
+    if button then
+        local count = advancedActiveCount and advancedActiveCount() or 0
+        button:setText(count > 0 and tr('Advanced (%d)', count) or tr('Advanced'))
+        button:setColor(count > 0 and '#7fd35a' or '#e6e2ee')
+    end
     page = 1
     updateSortHeads()
     renderPage()
+end
+
+-- a step of the advanced filter changed
+function onAdvancedChanged()
+    applyFilters()
 end
 
 local RANGE_BOXES = { 'xpMin', 'xpMax', 'goldMin', 'goldMax', 'levelMin', 'levelMax' }
@@ -779,7 +796,12 @@ local function setupFilterPanel()
             widget:setTooltip(tr('Monsters for your level: %d to %d.', math.floor(level * MY_LEVEL[1]), math.floor(level * MY_LEVEL[2])))
         end
     end
+    section.advancedButton.onClick = function()
+        openAdvanced()
+    end
+    section.advancedButton:setTooltip(tr('Filters that stack like a spreadsheet: keep only, sort by, keep the first N... over what the filters here let through.'))
     section.clearButton.onClick = function()
+        advancedClear()
         section.searchEdit:setText('')
         for _, id in ipairs(RANGE_BOXES) do
             section[id]:setText('')
@@ -1448,6 +1470,7 @@ function init()
         setSort(key or 'combined', false)
         applyFilters()
     end
+    advancedInit()
     setupFilterPanel()
     updateOnline()
 
@@ -1459,6 +1482,7 @@ function init()
 end
 
 function terminate()
+    advancedTerminate()
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     disconnect(Creature, { onAppear = labelCreature })
     ProtocolGame.unregisterExtendedJSONOpcode(HUNT_OPCODE)

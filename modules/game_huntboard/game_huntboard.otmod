@@ -4,6 +4,6 @@ Module
   author: Mythos
   website: http://25.18.172.192
   sandboxed: true
-  scripts: [ huntboard ]
+  scripts: [ huntboard, advanced ]
   @onLoad: init()
   @onUnload: terminate()
