@@ -241,34 +241,12 @@ local function serverNow()
     return os.time() + timeOffset
 end
 
--- the server's rates go up to 5x (HuntBoard.config.rates.max)
-local RATE_COLORS = {
-    { 1, 235, 235, 235 },
-    { 2, 255, 236, 96 },
-    { 3.5, 255, 158, 40 },
-    { 5, 255, 52, 52 },
-}
-local RATE_ALERT = 4 -- from here (the rounded rate) the label also gets a "!"
-
-local function rateColor(rate)
-    if rate <= RATE_COLORS[1][1] then
-        local c = RATE_COLORS[1]
-        return string.format('#%02x%02x%02x', c[2], c[3], c[4])
-    end
-    for i = 2, #RATE_COLORS do
-        local lo, hi = RATE_COLORS[i - 1], RATE_COLORS[i]
-        if rate <= hi[1] or i == #RATE_COLORS then
-            local t = math.min(1, (rate - lo[1]) / (hi[1] - lo[1]))
-            local function mix(k)
-                return math.floor(lo[k] + (hi[k] - lo[k]) * t + 0.5)
-            end
-            return string.format('#%02x%02x%02x', mix(2), mix(3), mix(4))
-        end
-    end
-end
+-- from this experience rate (rounded) a monster counts as very strong: red
+-- star with a "!", and the strong shader (the server's rates go up to 5x)
+local RATE_ALERT = 4
 
 -- inside this window XP is violet and loot gold, brighter the higher the
--- rate; red stays for real danger (the heat scale above is for the map)
+-- rate; red stays for real danger (the very strong monster on the map)
 local function ramp(t, from, to)
     local function mix(k)
         return math.floor(from[k] + (to[k] - from[k]) * t + 0.5)
