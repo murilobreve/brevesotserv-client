@@ -621,8 +621,12 @@ set(_RNNOISE_SOURCES
         framework/voice/rnnoise/kiss_fft.c
         framework/voice/rnnoise/celt_lpc.c
 )
+# plain C: no C++ precompiled header (MSVC: "STL1003: expected C++ compiler")
+# and no unity batch, as the vendored minizip below
 set_source_files_properties(${_RNNOISE_SOURCES} PROPERTIES
-        COMPILE_DEFINITIONS "_USE_MATH_DEFINES;common=mythos_rnnoise_common;compute_rnn=mythos_rnnoise_compute_rnn")
+        COMPILE_DEFINITIONS "_USE_MATH_DEFINES;common=mythos_rnnoise_common;compute_rnn=mythos_rnnoise_compute_rnn"
+        SKIP_PRECOMPILE_HEADERS ON
+        SKIP_UNITY_BUILD_INCLUSION ON)
 
 if (TOGGLE_FRAMEWORK_VOICE)
   if (WASM)
