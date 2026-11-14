@@ -584,6 +584,14 @@ MythosWindow
         size: 104 22
         !text: tr('Clear filters')
 
+      MythosButton
+        id: advancedButton
+        anchors.top: xpMin.top
+        anchors.right: clearButton.left
+        margin-right: 6
+        size: 104 22
+        !text: tr('Advanced')
+
     Label
       id: countdown
       anchors.top: filterSection.top
