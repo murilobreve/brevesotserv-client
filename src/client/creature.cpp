@@ -322,7 +322,7 @@ void Creature::drawInformation(const MapPosInfo& mapRect, const Point& dest, con
         if (nameProgram)
             g_drawPool.resetShaderProgram();
 
-        if (m_boosts && (m_boosts->times[0] || m_boosts->times[1]))
+        if (m_boosts && (m_boosts->times[0] || m_boosts->times[1] || m_boosts->times[2]))
             drawBoostBadges(textRect);
 
         if (m_text) {
@@ -1435,22 +1435,28 @@ void Creature::setRateText(const std::string& text)
 namespace
 {
     // data/images/game/huntboard/boost_badges.png: 12x12 cells, a row per
-    // badge (loot 1-3, then rare monsters 1-3), 6 frames each (0 at rest,
-    // 1-5 the glint of the third tier)
+    // badge (loot 1-3, rare monsters 1-3, then experience 1-3), 6 frames each
+    // (0 at rest, 1-5 the glint of the third tier)
     constexpr int BOOST_ICON = 12;
     constexpr int BOOST_GAP = 6;
     constexpr int BOOST_GLINT_FRAMES = 5;
     constexpr int BOOST_GLINT_FRAME_MS = 70;
     constexpr int BOOST_GLINT_EVERY_MS = 2600;
-    // loot in the Hunt Board's gold, rare monsters in its cyan; brighter by
-    // rate (2x, 3x, 4x)
-    constexpr Color BOOST_COLORS[2][3] = {
+    // the badges as stored: loot, rare monsters, experience; as drawn, the
+    // experience comes first
+    constexpr int BOOST_LOOT = 0;
+    constexpr int BOOST_XP = 2;
+    constexpr int BOOST_ORDER[3] = { BOOST_XP, BOOST_LOOT, 1 };
+    // loot in the Hunt Board's gold, rare monsters in its cyan, brighter by
+    // rate (2x, 3x, 4x); experience goes pale, orange, red, like its star
+    constexpr Color BOOST_COLORS[3][3] = {
         { Color(255, 208, 84), Color(255, 226, 120), Color(255, 226, 120) },
         { Color(110, 214, 255), Color(140, 228, 255), Color(184, 242, 255) },
+        { Color(255, 244, 190), Color(255, 170, 70), Color(255, 96, 80) },
     };
-    // the highest rate of each (loot goes up to 3x, rare monsters up to 4x):
-    // its badge glints
-    constexpr int BOOST_TOP[2] = { 3, 4 };
+    // the rate from which a badge glints: the highest of loot (3x) and of
+    // rare monsters (4x); for experience, the one of a very strong monster
+    constexpr int BOOST_TOP[3] = { 3, 4, 4 };
 
     // a rate in tenths as the whole number shown; 0 when it rounds to 1x
     uint8_t boostTimes(const int tenths)
@@ -1460,20 +1466,22 @@ namespace
     }
 }
 
-void Creature::setBoostBadges(const int lootTenths, const int rareTenths)
+void Creature::setBoostBadges(const int lootTenths, const int rareTenths, const int xpTenths)
 {
-    const uint8_t times[2] = { boostTimes(lootTenths), boostTimes(rareTenths) };
+    const uint8_t times[3] = { boostTimes(lootTenths), boostTimes(rareTenths), boostTimes(xpTenths) };
     if (!m_boosts) {
-        if (!times[0] && !times[1])
+        if (!times[0] && !times[1] && !times[2])
             return;
         m_boosts = std::make_unique<BoostBadges>();
         // the name's own font: the small one of the rate label read as brown
         for (auto& text : m_boosts->text)
             text.setFont(g_gameConfig.getCreatureNameFont());
     }
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         m_boosts->times[i] = times[i];
-        m_boosts->text[i].setText(times[i] ? fmt::format("{}x", times[i]) : std::string());
+        // "5x!": the experience of a very strong monster
+        const bool alert = i == BOOST_XP && times[i] >= BOOST_TOP[i];
+        m_boosts->text[i].setText(times[i] ? fmt::format(alert ? "{}x!" : "{}x", times[i]) : std::string());
     }
 }
 
@@ -1486,10 +1494,11 @@ void Creature::setStrongShader(const std::string_view name)
         m_strongShaderId = shader->getId();
 }
 
-// The badges sit on the name, centred: icon and rate of each boost. The icon
-// has as many coins or crystals as the rate (2x two, 3x and up three); the
-// highest rate's badge glints every few seconds, each creature at its own
-// moment.
+// The badges sit on the name, centred: icon and rate of each boost,
+// experience first. Experience is a star (pale at 2x, orange at 3x, red from
+// 4x); loot and rare monsters have as many coins or crystals as the rate (2x
+// two, 3x and up three). The top badge of each glints every few seconds, each
+// creature at its own moment.
 void Creature::drawBoostBadges(const Rect& nameRect)
 {
     static const TexturePtr texture = g_textures.getTexture("/images/game/huntboard/boost_badges");
@@ -1497,7 +1506,7 @@ void Creature::drawBoostBadges(const Rect& nameRect)
         return;
 
     int width = 0;
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         if (m_boosts->times[i])
             width += (width > 0 ? BOOST_GAP : 0) + BOOST_ICON + 1 + m_boosts->text[i].getTextSize().width();
     }
@@ -1507,11 +1516,12 @@ void Creature::drawBoostBadges(const Rect& nameRect)
 
     int x = nameRect.center().x - width / 2;
     const int y = nameRect.top() - BOOST_ICON + 1;
-    for (int i = 0; i < 2; ++i) {
+    for (const int i : BOOST_ORDER) {
         const int times = m_boosts->times[i];
         if (!times)
             continue;
-        const int tier = std::min<int>(times, 3); // the sheet's row: 2 or 3 pieces
+        // the sheet's row: 2 or 3 pieces; the star of 2x, 3x or 4x and up
+        const int tier = i == BOOST_XP ? std::min<int>(times, 4) - 1 : std::min<int>(times, 3);
         const int frame = times >= BOOST_TOP[i] ? glint : 0;
         g_drawPool.addTexturedRect(Rect(x, y, BOOST_ICON, BOOST_ICON), texture,
                                    Rect(frame * BOOST_ICON, (i * 3 + tier - 1) * BOOST_ICON, BOOST_ICON, BOOST_ICON));

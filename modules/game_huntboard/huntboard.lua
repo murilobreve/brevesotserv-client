@@ -1042,39 +1042,30 @@ local rateByName = {}
 -- comes before it (Creature::setStrongShader).
 local STRONG_SHADER = 'Hunt - Strong'
 
--- What a monster shows of its rates:
---   experience  the number beside the health bar, rounded ("3x"; yellow,
---               orange, red at 5x; nothing at 1x) and, from RATE_ALERT, the
---               strong shader: that rate also makes it tougher
---   loot, rare  badges above the name (Creature::setBoostBadges): coins and
---               crystals with the rounded rate, from 2x
+-- What a monster shows of its rates: badges above its name
+-- (Creature::setBoostBadges), each an icon and the rounded rate, from 2x:
+--   experience  a star (pale, orange, red with "5x!") and, from RATE_ALERT,
+--               the strong shader: that rate also makes the monster tougher
+--   loot        coins
+--   rare        crystals: the chance of a rare monster
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return
     end
-    local entry = rateByName[creature:getName():lower()]
-    if not entry then
-        creature:setRateText('')
-        -- clients from before the badges and the shader have neither
-        if creature.setBoostBadges then
-            creature:setBoostBadges(0, 0)
-            creature:setStrongShader('')
-        end
+    -- the number beside the health bar gave way to the star above the name
+    creature:setRateText('')
+    -- clients from before the badges and the shader have neither
+    if not creature.setBoostBadges then
         return
     end
-    local rate = entry.xp / 10
-    -- whole numbers; a monster at 1x shows no rate
-    local shown = math.floor(rate + 0.5)
-    local strong = shown >= RATE_ALERT
-    creature:setRateText(shown <= 1 and '' or string.format(strong and '%dx!' or '%dx', shown))
-    -- clients from before the colours keep the plain label
-    if creature.setRateColor then
-        creature:setRateColor(rateColor(rate))
+    local entry = rateByName[creature:getName():lower()]
+    if not entry then
+        creature:setBoostBadges(0, 0, 0)
+        creature:setStrongShader('')
+        return
     end
-    if creature.setBoostBadges then
-        creature:setBoostBadges(entry.loot, entry.rare)
-        creature:setStrongShader(strong and STRONG_SHADER or '')
-    end
+    creature:setBoostBadges(entry.loot, entry.rare, entry.xp)
+    creature:setStrongShader(math.floor(entry.xp / 10 + 0.5) >= RATE_ALERT and STRONG_SHADER or '')
 end
 
 local function labelAll()

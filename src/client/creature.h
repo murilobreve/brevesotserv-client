@@ -196,7 +196,7 @@ minHeight,
     // shown rounded: "3x"; a rate that rounds to 1x has no badge), and a
     // shader for a very strong monster
     // that the creature's own shader (a rare tier's) always comes before
-    void setBoostBadges(int lootTenths, int rareTenths);
+    void setBoostBadges(int lootTenths, int rareTenths, int xpTenths);
     void setStrongShader(std::string_view name);
     bool canShoot(int distance);
 
@@ -314,11 +314,12 @@ private:
     CachedText m_name;
     CachedText m_rateText;
     Color m_rateColor{ 235, 235, 235, 220 };
-    // loot (0) and rare monsters (1); made the first time a badge is set
+    // loot (0), rare monsters (1) and experience (2); made the first time a
+    // badge is set
     struct BoostBadges
     {
-        uint8_t times[2]{ 0, 0 }; // the rounded rate: 0 none, 2-4
-        CachedText text[2];
+        uint8_t times[3]{ 0, 0, 0 }; // the rounded rate: 0 none, 2 and up
+        CachedText text[3];
     };
     std::unique_ptr<BoostBadges> m_boosts;
     uint8_t m_strongShaderId{ 0 };
