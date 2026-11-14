@@ -1445,8 +1445,8 @@ namespace
     // loot in the Hunt Board's gold, rare monsters in its cyan; brighter by
     // rate (2x, 3x, 4x)
     constexpr Color BOOST_COLORS[2][3] = {
-        { Color(225, 196, 126), Color(255, 228, 150), Color(255, 228, 150) },
-        { Color(125, 200, 228), Color(120, 220, 255), Color(170, 240, 255) },
+        { Color(255, 208, 84), Color(255, 226, 120), Color(255, 226, 120) },
+        { Color(110, 214, 255), Color(140, 228, 255), Color(184, 242, 255) },
     };
     // the highest rate of each (loot goes up to 3x, rare monsters up to 4x):
     // its badge glints
@@ -1467,9 +1467,9 @@ void Creature::setBoostBadges(const int lootTenths, const int rareTenths)
         if (!times[0] && !times[1])
             return;
         m_boosts = std::make_unique<BoostBadges>();
-        const auto& font = g_fonts.getFont("verdana-8px-rounded");
+        // the name's own font: the small one of the rate label read as brown
         for (auto& text : m_boosts->text)
-            text.setFont(font ? font : g_gameConfig.getStaticTextFont());
+            text.setFont(g_gameConfig.getCreatureNameFont());
     }
     for (int i = 0; i < 2; ++i) {
         m_boosts->times[i] = times[i];
@@ -1517,7 +1517,7 @@ void Creature::drawBoostBadges(const Rect& nameRect)
                                    Rect(frame * BOOST_ICON, (i * 3 + tier - 1) * BOOST_ICON, BOOST_ICON, BOOST_ICON));
         x += BOOST_ICON + 1;
         const auto size = m_boosts->text[i].getTextSize();
-        m_boosts->text[i].draw(Rect(x, y + (BOOST_ICON - size.height()) / 2 + 1, size), BOOST_COLORS[i][std::min<int>(times, 4) - 2]);
+        m_boosts->text[i].draw(Rect(x, y + (BOOST_ICON - size.height()) / 2, size), BOOST_COLORS[i][std::min<int>(times, 4) - 2]);
         x += size.width() + BOOST_GAP;
     }
 }
