@@ -389,6 +389,9 @@ function onExecuteAction(button, isPress)
     end
 
     if action == UseTypes["UseOnYourself"] and button.item then
+        if modules.game_healbot and modules.game_healbot.usingMessage then
+            modules.game_healbot.usingMessage(button.item:getItemId())
+        end
         g_game.useInventoryItemWith(button.item:getItemId(), player, button.item:getItemSubType() or -1)
         if not g_game.getFeature(GameEnterGameShowAppearance) then -- temp old protocol
             updateInventoryItems()
