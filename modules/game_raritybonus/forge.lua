@@ -56,10 +56,12 @@ for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) 
 end
 
 -- the Roll's pace: the wheel's spin, the needle's swing, the stop between
-local SPIN_MS, SWING_MS, HOLD_MS = 2400, 2000, 450
-local WHEEL = 180
+-- first how many bonuses come out (COUNT_MS), then for each the wheel
+-- (SPIN_MS) and the needle (SWING_MS)
+local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
+local WHEEL = 232
 -- the icons sit near the rim, upright towards it
-local ICON_RADIUS = 68
+local ICON_RADIUS = 90
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
 local METER_ZONES = { 0.30, 0.30, 0.25, 0.13, 0.02 }
@@ -230,12 +232,53 @@ local function grade(key)
     return GRADES[key] or GRADES.uncommon
 end
 
-local function setItem(widget, entry)
+-- the item as the inventory shows it: its grade's shader and, from the
+-- tooltip the server sends ("#rarity:<grade>" and the element tags), the
+-- rarity frame with its gems. `gradeKey` shows it at another grade (the
+-- Upgrade's next one)
+local function setItem(widget, entry, gradeKey)
     local item = Item.create(entry.itemId or 0, 1)
     if entry.shader and entry.shader ~= '' then
         item:setShader(entry.shader)
     end
+    local tooltip = entry.tooltip
+    if gradeKey then
+        tooltip = '#rarity:' .. gradeKey .. ((tooltip or ''):match('(\n.*)$') or '')
+    end
+    if tooltip and item.setTooltip then
+        item:setTooltip(tooltip)
+    end
     widget:setItem(item)
+    if ItemsDatabase and ItemsDatabase.setItemRarityFrame then
+        ItemsDatabase.setItemRarityFrame(widget, item)
+    end
+end
+
+-- the game's item card (game_itemcard) on hover, as in the inventory
+local function itemCard()
+    local itemcard = modules.game_itemcard
+    return itemcard and itemcard.showFor and itemcard or nil
+end
+
+local function hideCard()
+    local itemcard = itemCard()
+    if itemcard then
+        itemcard.hide()
+    end
+end
+
+local function hoverCard(widget, entry)
+    widget.onHoverChange = function(w, hovered)
+        local itemcard = itemCard()
+        if not itemcard or type(entry.card) ~= 'table' then
+            return
+        end
+        if hovered then
+            itemcard.showFor(entry.card, w)
+        else
+            itemcard.hide()
+        end
+    end
 end
 
 -- the bottom bar has room for about 50 letters: a longer message is cut
@@ -311,11 +354,15 @@ local function fillGrid(grid, list)
     for _, entry in ipairs(list) do
         local w = g_ui.createWidget('ForgeSlot', grid)
         setItem(w.item, entry)
-        w:setBorderColor(grade(entry.rarity).color)
         if entry.slotId == selected then
             w:setBackgroundColor('#4a4a4a')
+            w:setBorderColor('#d8d8d8')
         end
-        w:setTooltip(itemTip(entry))
+        if type(entry.card) == 'table' then
+            hoverCard(w, entry)
+        else
+            w:setTooltip(itemTip(entry))
+        end
         w.onClick = function() pickItem(entry.slotId) end
     end
 end
@@ -327,16 +374,20 @@ local function fillItems()
         table.insert(entry.bag and bag or worn, entry)
     end
     fillGrid(left.wornGrid, worn)
-    left.wornGrid:setHeight(math.max(1, math.ceil(#worn / 4)) * 40 - 4)
+    left.wornGrid:setHeight(math.max(1, math.ceil(#worn / 3)) * 40 - 4)
+    hideCard()
     fillGrid(left.bagGrid, bag)
-    left.bagNote:setText(#bag == 1 and tr('1 rare item') or tr('%d rare items', #bag))
+    -- the scrollbar only when the backpack's items need it
+    left.bagScroll:setVisible(math.ceil(#bag / 3) * 40 - 4 > left.bagGrid:getHeight())
+    -- the count beside the title: the narrow column has no room for words
+    left.bagNote:setText('(' .. #bag .. ')')
 end
 
 local function fillHead(entry)
     local head = page().head
     local g = grade(entry.rarity)
     setItem(head.itemBox.item, entry)
-    head.itemBox:setBorderColor(g.color)
+    hoverCard(head.itemBox, entry)
     head.name:setText(titleCase(entry.name))
     local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
     local info = g.label .. DOT .. tr('%d of %d bonuses', #(entry.bonuses or {}), max) .. DOT .. tr(entry.slot or '')
@@ -374,14 +425,13 @@ local function setWheel(rot)
         local size = icon:getWidth()
         icon:setMarginLeft(math.floor(WHEEL_X + WHEEL / 2 + ICON_RADIUS * math.sin(rad) - size / 2 + 0.5))
         icon:setMarginTop(math.floor(WHEEL_Y + WHEEL / 2 - ICON_RADIUS * math.cos(rad) - size / 2 + 0.5))
-        icon:setRotation(a % 360)
     end
 end
 
 -- the wheel's picture and one icon per slice, for this pool
 local function buildWheel(pool)
     local holder = page().rollPage.wheelBox.wheelHolder
-    local n = math.max(2, math.min(24, #pool))
+    local n = math.max(2, math.min(40, #pool))
     for _, icon in ipairs(wheelIcons) do
         icon:destroy()
     end
@@ -389,12 +439,15 @@ local function buildWheel(pool)
     holder.wheel:setImageSource('/game_raritybonus/images/forge/wheel/wheel_' .. n)
     wheelSlices = #pool
     local seg = 360 / math.max(1, #pool)
-    -- as big as the slice allows at that radius
-    local size = math.max(14, math.min(24, math.floor(ICON_RADIUS * math.rad(seg) * 0.8)))
+    -- as big as the slice allows at that radius, from the icons scaled
+    -- ahead with a smooth filter (images/forge/bonus/s16, s20, s24): scaled
+    -- or turned here they came out pixelated, so they stay upright
+    local room = ICON_RADIUS * math.rad(seg) * 0.85
+    local size = room >= 24 and 24 or room >= 20 and 20 or 16
     for i, entry in ipairs(pool) do
         -- a bonus with no picture of its own (a vocation's spell) takes the wand
         local icon = g_ui.createWidget('ForgeWheelIcon', holder)
-        icon:setImageSource('/game_raritybonus/images/forge/bonus/' .. (BONUS_ICONS[entry.key or ''] or 'wand'))
+        icon:setImageSource('/game_raritybonus/images/forge/bonus/s' .. size .. '/' .. (BONUS_ICONS[entry.key or ''] or 'wand'))
         icon:setSize({ width = size, height = size })
         icon:addAnchor(AnchorLeft, 'parent', AnchorLeft)
         icon:addAnchor(AnchorTop, 'parent', AnchorTop)
@@ -468,9 +521,18 @@ local function fillRows(entry)
     local list = showing and roll.after or (roll and roll.slot == entry.slotId and roll.before) or entry.bonuses or {}
     local lock = seals[entry.slotId]
     local canLock = lockable(entry) and not busy()
+    if showing and roll.stage == 'count' and roll.t < 1 then
+        -- while the count is drawn every slot waits: the lines don't give
+        -- the number away before it shows
+        local padded = {}
+        for i = 1, math.max(#list, tonumber(roll.max) or #list) do
+            padded[i] = list[i] or { pad = true }
+        end
+        list = padded
+    end
     for i, bonus in ipairs(list) do
         local row = g_ui.createWidget('ForgeRow', rp.rows)
-        local isSealed = bonus.key == lock and (not roll or bonus.locked or not showing)
+        local isSealed = lock ~= nil and bonus.key == lock and (not roll or bonus.locked or not showing)
         local pos, done, now, wait = nil, false, false, false
         if roll and roll.slot == entry.slotId then
             if showing then
@@ -488,6 +550,9 @@ local function fillRows(entry)
                 -- the server rolls: every line not kept waits
                 wait = true
             end
+        end
+        if bonus.pad then
+            wait = true
         end
         local q = qualityOf(bonus)
         local look = quality(q, bonus.perfect)
@@ -554,8 +619,20 @@ local function fillRows(entry)
     end
     rp.rows:setHeight(math.max(1, #list) * 22)
     local max = math.max(1, tonumber(entry.maxBonuses) or #list)
-    local empty = showing and 0 or (max - #list)
-    rp.emptySlots:setText(empty <= 0 and '' or empty == 1 and tr('- 1 empty slot -') or tr('- %d empty slots -', empty))
+    -- the slots left empty, and why: each roll draws how many bonuses
+    -- come out first; known once the roll's count is shown
+    local countKnown = not showing or roll.stage ~= 'count' or roll.t >= 1
+    local empty = countKnown and (max - #list) or 0
+    local justRolled = (showing and countKnown) or (not roll and deltaSlot == entry.slotId and next(deltas) ~= nil)
+    if empty <= 0 then
+        rp.emptySlots:setText('')
+    elseif justRolled then
+        rp.emptySlots:setText(empty == 1 and tr('%d of %d bonuses came out: 1 slot stays empty.', #list, max)
+            or tr('%d of %d bonuses came out: %d slots stay empty.', #list, max, empty))
+    else
+        rp.emptySlots:setText(empty == 1 and tr('+ 1 empty slot (each roll draws 1 to %d bonuses)', max)
+            or tr('+ %d empty slots (each roll draws 1 to %d bonuses)', empty, max))
+    end
 end
 
 local function fillWheelBox(entry)
@@ -591,8 +668,28 @@ local function fillWheelBox(entry)
         setNeedle(nil)
         return
     end
-    local cur = roll.after[roll.order[roll.k]]
     local spinning = roll.t < 1
+    if roll.stage == 'count' then
+        local max = math.max(1, tonumber(roll.max) or #roll.after)
+        local shown = spinning and (math.floor((g_clock.millis() - roll.startedAt) / 90) % max + 1) or #roll.after
+        box.caption:setText(spinning and tr('How many bonuses? %d...', shown) or tr('%d of %d bonuses came out!', #roll.after, max))
+        box.caption:setColor(spinning and '#e2c46a' or '#ffd75f')
+        local odds = {}
+        for i, pct in ipairs(roll.counts or {}) do
+            table.insert(odds, i .. ' = ' .. number(pct) .. '%')
+        end
+        local text = tr('First the roll draws how many bonuses the item gets (1 to %d). Slots left over stay empty.', max)
+        if #odds > 0 then
+            text = text .. '\n' .. tr('Odds: %s', table.concat(odds, ', '))
+        end
+        box.sub:setText(text)
+        box.meterTitle:setText(tr('Value: after the wheel'))
+        box.meterValue:setText('')
+        setNeedle(nil)
+        lightSlice(nil)
+        return
+    end
+    local cur = roll.after[roll.order[roll.k]]
     box.sub:setText(tr('bonus %d of %d', roll.k, #roll.order) .. DOT .. (roll.stage == 'type' and tr('the wheel picks the type') or tr('the needle picks the value')))
     if roll.stage == 'type' then
         box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', tr(cur.label or '')))
@@ -696,8 +793,8 @@ local function fillUp(entry)
         local g = grade(result.grade)
         res.title:setText(result.win and tr('Success!') or tr('Failed'))
         res.title:setColor(result.win and '#7fd36a' or '#ff7a6a')
-        setItem(res.box.item, { itemId = entry.itemId, shader = result.win and entry.shader or result.shader })
-        res.box:setBorderColor(g.color)
+        setItem(res.box.item, entry, result.grade)
+        hoverCard(res.box, entry)
         res.glow:setVisible(result.win)
         res.glow:setImageColor(g.color)
         res.grade:setText(titleCase(entry.name) .. DOT .. g.label)
@@ -725,9 +822,8 @@ local function fillUp(entry)
     end
     local from, to = grade(entry.rarity), grade(offer.to)
     setItem(up.pair.fromBox.item, entry)
-    up.pair.fromBox:setBorderColor(from.color)
-    setItem(up.pair.toBox.item, entry)
-    up.pair.toBox:setBorderColor(to.color)
+    hoverCard(up.pair.fromBox, entry)
+    setItem(up.pair.toBox.item, entry, offer.to)
     up.path:setText(from.label .. '  >  ' .. to.label)
     up.path:setColor(to.color)
     up.chance:setText(tr('Success chance: %d%%', tonumber(offer.chance) or 0))
@@ -760,6 +856,8 @@ end
 local function fillTotals()
     local tp = page().totalsPage
     tp.list:destroyChildren()
+    -- the scrollbar only when the lines need it
+    tp.listScroll:setVisible(#((data and data.totals) or {}) * 21 > tp.list:getHeight())
     for _, t in ipairs((data and data.totals) or {}) do
         local row = g_ui.createWidget('ForgeTotalRow', tp.list)
         local unit = t.unit or ''
@@ -891,7 +989,7 @@ local function rollTick()
         tickEvent = scheduleEvent(rollTick, 30)
         return
     end
-    local len = roll.stage == 'type' and SPIN_MS or SWING_MS
+    local len = roll.stage == 'count' and COUNT_MS or roll.stage == 'type' and SPIN_MS or SWING_MS
     local el = now - roll.startedAt
     local t = math.min(1, el / len)
     if roll.stage == 'type' then
@@ -901,7 +999,10 @@ local function rollTick()
     local changed = (t >= 1) ~= (roll.t >= 1)
     roll.t = t
     if el >= len + HOLD_MS then
-        if roll.stage == 'type' then
+        if roll.stage == 'count' then
+            roll.k = 1
+            startStage('type')
+        elseif roll.stage == 'type' then
             startStage('value')
         elseif roll.k < #roll.order then
             roll.k = roll.k + 1
@@ -938,9 +1039,10 @@ local function showRoll(after)
         return
     end
     roll.phase = 'show'
-    roll.k = 1
+    -- first how many bonuses came out; no line is being rolled yet
+    roll.k = 0
     roll.wheelTo = wheelRot
-    startStage('type')
+    startStage('count')
     local entry = bySlot[roll.slot]
     if entry then
         fillRoll(entry)
@@ -964,7 +1066,8 @@ function forgeRoll()
         end
         selected = slot
         deltas, deltaSlot = {}, nil
-        roll = { phase = 'wait', slot = slot, before = now.bonuses or {}, lock = lock, pool = now.pool or {} }
+        roll = { phase = 'wait', slot = slot, before = now.bonuses or {}, lock = lock, pool = now.pool or {},
+            max = now.maxBonuses, counts = now.counts }
         setStatus(tr('Rolling...'), '#e2c46a')
         Forge.send({ action = 'rerollItem', slot = now.bag and nil or slot, fid = now.fid, lock = lock })
         Forge.expectAnswer()
@@ -1126,8 +1229,31 @@ local function messageOf(d)
 end
 
 -- a summary from the server becomes the window's data
+-- the server's UTF-8 to Latin-1, the fonts' charset (as game_itemcard does)
+local function latin1(value)
+    if type(value) == 'string' then
+        return (value:gsub('[\194\195][\128-\191]', function(pair)
+            local a, b = pair:byte(1, 2)
+            return string.char((a - 194) * 64 + b)
+        end))
+    elseif type(value) == 'table' then
+        for k, v in pairs(value) do
+            value[k] = latin1(v)
+        end
+    end
+    return value
+end
+
 function Forge.apply(d)
     data = d
+    if not d.cardsReady then
+        d.cardsReady = true
+        for _, entry in ipairs(d.items or {}) do
+            if type(entry.card) == 'table' then
+                latin1(entry.card)
+            end
+        end
+    end
     rarityXp = tonumber(d.rarityXp) or rarityXp
     gold = tonumber(d.gold) or gold
     items, bySlot, totalsByKey = d.items or {}, {}, {}
@@ -1292,6 +1418,7 @@ function Forge.destroy()
 end
 
 function Forge.closeConfirm()
+    hideCard()
     if confirmBox then
         confirmBox:destroy()
         confirmBox = nil
