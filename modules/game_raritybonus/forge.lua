@@ -59,9 +59,9 @@ end
 -- first how many bonuses come out (COUNT_MS), then for each the wheel
 -- (SPIN_MS) and the needle (SWING_MS)
 local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
-local WHEEL = 180
+local WHEEL = 232
 -- the icons sit near the rim, upright towards it
-local ICON_RADIUS = 68
+local ICON_RADIUS = 90
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
 local METER_ZONES = { 0.30, 0.30, 0.25, 0.13, 0.02 }
@@ -374,12 +374,13 @@ local function fillItems()
         table.insert(entry.bag and bag or worn, entry)
     end
     fillGrid(left.wornGrid, worn)
-    left.wornGrid:setHeight(math.max(1, math.ceil(#worn / 4)) * 40 - 4)
+    left.wornGrid:setHeight(math.max(1, math.ceil(#worn / 3)) * 40 - 4)
     hideCard()
     fillGrid(left.bagGrid, bag)
     -- the scrollbar only when the backpack's items need it
-    left.bagScroll:setVisible(math.ceil(#bag / 4) * 40 - 4 > left.bagGrid:getHeight())
-    left.bagNote:setText(#bag == 1 and tr('1 rare item') or tr('%d rare items', #bag))
+    left.bagScroll:setVisible(math.ceil(#bag / 3) * 40 - 4 > left.bagGrid:getHeight())
+    -- the count beside the title: the narrow column has no room for words
+    left.bagNote:setText('(' .. #bag .. ')')
 end
 
 local function fillHead(entry)
@@ -424,14 +425,13 @@ local function setWheel(rot)
         local size = icon:getWidth()
         icon:setMarginLeft(math.floor(WHEEL_X + WHEEL / 2 + ICON_RADIUS * math.sin(rad) - size / 2 + 0.5))
         icon:setMarginTop(math.floor(WHEEL_Y + WHEEL / 2 - ICON_RADIUS * math.cos(rad) - size / 2 + 0.5))
-        icon:setRotation(a % 360)
     end
 end
 
 -- the wheel's picture and one icon per slice, for this pool
 local function buildWheel(pool)
     local holder = page().rollPage.wheelBox.wheelHolder
-    local n = math.max(2, math.min(24, #pool))
+    local n = math.max(2, math.min(40, #pool))
     for _, icon in ipairs(wheelIcons) do
         icon:destroy()
     end
@@ -439,12 +439,15 @@ local function buildWheel(pool)
     holder.wheel:setImageSource('/game_raritybonus/images/forge/wheel/wheel_' .. n)
     wheelSlices = #pool
     local seg = 360 / math.max(1, #pool)
-    -- as big as the slice allows at that radius
-    local size = math.max(14, math.min(24, math.floor(ICON_RADIUS * math.rad(seg) * 0.8)))
+    -- as big as the slice allows at that radius, from the icons scaled
+    -- ahead with a smooth filter (images/forge/bonus/s16, s20, s24): scaled
+    -- or turned here they came out pixelated, so they stay upright
+    local room = ICON_RADIUS * math.rad(seg) * 0.85
+    local size = room >= 24 and 24 or room >= 20 and 20 or 16
     for i, entry in ipairs(pool) do
         -- a bonus with no picture of its own (a vocation's spell) takes the wand
         local icon = g_ui.createWidget('ForgeWheelIcon', holder)
-        icon:setImageSource('/game_raritybonus/images/forge/bonus/' .. (BONUS_ICONS[entry.key or ''] or 'wand'))
+        icon:setImageSource('/game_raritybonus/images/forge/bonus/s' .. size .. '/' .. (BONUS_ICONS[entry.key or ''] or 'wand'))
         icon:setSize({ width = size, height = size })
         icon:addAnchor(AnchorLeft, 'parent', AnchorLeft)
         icon:addAnchor(AnchorTop, 'parent', AnchorTop)
