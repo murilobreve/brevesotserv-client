@@ -17,7 +17,7 @@ local panelButton
 local toolbarButton
 local state -- last "state" from the server
 local selectedKey
-local filter = 'all'
+local filter = 'open' -- the window opens on what there is to do
 local rows = {} -- quest key -> row of the list
 local messageEvent
 
@@ -97,14 +97,34 @@ local function isOpen(quest)
     return canGo(quest) and not quest.done
 end
 
+-- The same colours in every Mythos window for "can I do this?": green at or
+-- above the recommended level, orange between the entry level and it, red
+-- below the entry level.
+local READY, RISKY, LOCKED = '#7fd35a', '#e2a443', '#ff7a6b'
+
+local function recommended(quest)
+    return math.max(tonumber(quest.suggested) or 0, quest.level or 0)
+end
+
+local function readiness(quest)
+    local level = state and state.level or 0
+    if level < (quest.level or 0) then
+        return LOCKED
+    end
+    return level >= recommended(quest) and READY or RISKY
+end
+
+-- only what is not the normal case: a quest already done, or one the
+-- player's level does not open yet
 local function statusOf(quest)
     if quest.done then
         return tr('Done'), '#7fd35a'
     end
     if not canGo(quest) then
-        return tr('Level %d', quest.level), '#ff7a6b'
+        return tr('Opens at level %d', quest.level), LOCKED
     end
-    return tr('To do'), '#e0c060'
+    -- a challenge quest says so here, where "to do" used to be
+    return quest.prize and tr('Challenge') or '', '#b296f5'
 end
 
 -- the monsters of a quest, the strongest first
@@ -246,11 +266,10 @@ local function renderCard()
     end
     card:setText(tr('Quest'))
     card.name:setText(nameOf(quest))
-    -- the server's recommended level (the entry level stays the gate)
-    local suggested = tonumber(quest.suggested) or 0
-    local levelText = quest.prize and tr('Level %d challenge', quest.level) or tr('Level %d quest', quest.level)
-    if suggested > (quest.level or 0) then
-        levelText = levelText .. '  -  ' .. tr('recommended: level %d', suggested)
+    -- the level the cave really asks for; the entry level only when lower
+    local levelText = tr('Recommended level: %d', recommended(quest))
+    if recommended(quest) > (quest.level or 0) then
+        levelText = levelText .. '  -  ' .. tr('opens at %d', quest.level)
     end
     card.level:setText(levelText)
 
@@ -330,8 +349,7 @@ local function renderCard()
     else
         card.note:setText('')
     end
-    -- below the recommended level: the level line says it in orange
-    card.level:setColor((canGo(quest) and suggested > (state and state.level or 0)) and '#e2a443' or '#b296f5')
+    card.level:setColor(readiness(quest))
     card.go:setEnabled(canGo(quest))
     card.go:setTooltip(tr('From a protection zone or out of combat. The Voltar portals in the cave take you back to the temple.'))
 end
@@ -388,16 +406,9 @@ function refreshList()
             for _, monster in ipairs(quest.monsters or {}) do
                 total = total + (monster.count or 0)
             end
-            local info
-            if (tonumber(quest.suggested) or 0) > (quest.level or 0) then
-                -- short, so the recommended level fits in the row
-                info = quest.prize and tr('Challenge %d (rec. %d) - %d monsters', quest.level, quest.suggested, total)
-                    or tr('Level %d (rec. %d) - %d monsters', quest.level, quest.suggested, total)
-            else
-                info = quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
-                    or tr('Level %d - %d monsters', quest.level, total)
-            end
-            row.info:setText(info)
+            -- the level the cave really asks for, in the readiness colour
+            row.info:setText(tr('Level %d - %d monsters', recommended(quest), total))
+            row.info:setColor(readiness(quest))
             row.onFocusChange = function(widget, focused)
                 if focused then
                     selectQuest(quest.key)
@@ -759,7 +770,7 @@ function init()
     window = g_ui.displayUI('quests')
     window:hide()
     window:setText(tr('Quests'))
-    window.allTab:setChecked(true)
+    window.openTab:setChecked(true)
     window.card:setVisible(false)
 
     ProtocolGame.registerExtendedJSONOpcode(QUEST_OPCODE, onQuestOpcode)

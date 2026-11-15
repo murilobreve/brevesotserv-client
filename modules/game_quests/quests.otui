@@ -17,7 +17,7 @@ QuestRow < BrevesRow
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 8
-    width: 68
+    width: 112
     text-align: right
     font: verdana-11px-antialised
     phantom: true

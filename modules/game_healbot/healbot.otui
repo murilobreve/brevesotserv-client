@@ -16,6 +16,11 @@ HealBotCategory < BrevesTab
 HealBotHint < BrevesNote
   margin-bottom: 4
 
+// opens the next empty rule of a page (healbot.lua: addRules)
+HealBotAdd < MythosButton
+  height: 22
+  font: verdana-11px-antialised
+
 HealBotPage < UIWidget
   anchors.fill: parent
   layout:

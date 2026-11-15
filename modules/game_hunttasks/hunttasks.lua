@@ -20,6 +20,20 @@ local messageEvent
 -- "Sim" can never reroll (and charge) the next character
 local rerollBox
 
+-- The same colours in every Mythos window for "can I hunt this?": green at
+-- or above the recommended level, orange not far below it, red well below.
+local READY, RISKY, LOCKED = '#7fd35a', '#e2a443', '#ff7a6b'
+
+local function readiness(level)
+    local player = g_game.getLocalPlayer()
+    local mine = player and player:getLevel() or 0
+    level = tonumber(level) or 0
+    if mine >= level then
+        return READY
+    end
+    return mine >= level * 0.75 and RISKY or LOCKED
+end
+
 local function closeRerollBox()
     if rerollBox then
         rerollBox:destroy()
@@ -247,17 +261,21 @@ local function renderDaily()
     card.action2:setVisible(false)
     card.action:setEnabled(true)
     showSpecies(card, daily and not daily.done and daily.counted)
+    -- no task yet: the card is one big button, and what it pays
+    card.portrait:setVisible(daily ~= nil)
+    card.action:setVisible(daily ~= nil)
+    card.take:setVisible(daily == nil)
 
     if not daily then
         card.creature:setVisible(false)
-        fitText(card.name, tr('Nenhuma task hoje ainda'))
+        card.name:setText('')
         card.info:setText('')
         card.badge:setText('')
         card.bar:setVisible(false)
         card.reward:setText(rewardText(state.dailyExp, string.format('%d+ Hunt Points', state.dailyBase or 20), state.dailyCharms))
-        card.extra:setText(tr('A primeira troca do dia é grátis.'))
-        card.action:setText(tr('Pegar task de hoje'))
-        card.action.onClick = function()
+        card.extra:setText('')
+        card.take:setText(tr('Pegar task de hoje'))
+        card.take.onClick = function()
             send({ action = 'take' })
         end
         return
@@ -267,6 +285,7 @@ local function renderDaily()
     card.creature:setOutfit(outfitOf(daily.outfit))
     fitText(card.name, daily.monster)
     card.info:setText(levelAndRooms(daily.level, daily.rooms))
+    card.info:setColor(readiness(daily.level))
     card.badge:setText(daily.hot and tr('Em alta no Hunt Board: pontos dobrados!') or '')
     card.bar:setVisible(true)
 
@@ -335,6 +354,7 @@ local function renderTrailCard()
         fitText(card.name, step.name or '?')
         card.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
         card.info:setText(levelAndRooms(step.level, step.rooms))
+        card.info:setColor(readiness(step.level))
         card.bar:setVisible(true)
         setBar(card.bar, trail.kills, step.need, '#9b7bff')
         local points = step.points or 0
@@ -374,6 +394,8 @@ local function renderStreak()
     panel.streakTitle:setText(tr('Sequência diária: %d dia%s', streak, streak == 1 and '' or 's'))
     panel.streakTitle:setTooltip(tr('Cada dia seguido dá +%d pontos na task diária (até +%d).', bonus, bonus * max))
     panel.streakDots:destroyChildren()
+    local doneToday = state.daily and state.daily.done
+    local today = math.min(max + 1, doneToday and math.max(1, streak) or streak + 1)
     for day = 1, max + 1 do
         local dot = g_ui.createWidget('StreakDot', panel.streakDots)
         dot:setText(string.format('+%d', (day - 1) * bonus))
@@ -382,6 +404,12 @@ local function renderStreak()
             dot:setBackgroundColor('#e2a44390')
             dot:setBorderColor('#ffe066')
             dot:setColor('#ffffff')
+        end
+        -- today's box: the one a task done today lights, or just lit
+        if day == today then
+            dot:setBorderColor('#ffffff')
+            dot:setColor('#ffffff')
+            dot:setTooltip(tr('Hoje: +%d pontos', (day - 1) * bonus))
         end
     end
     -- no explanation under the cards: each one says what it is
@@ -425,6 +453,7 @@ local function renderTrailList()
             row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pts', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
                 .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or '')
                 .. ((step.gold or 0) > 0 and tr(', +%s ouro', goldText(step.gold)) or ''))
+            row.info:setColor(readiness(step.level))
         end
         trailBuilt = true
     end
@@ -951,6 +980,8 @@ function selectTab(tab)
     window.trailTab:setChecked(tab == 'trail')
     window.shopTab:setChecked(tab == 'shop')
     window.tasksPanel:setVisible(tab == 'tasks')
+    -- the two cards need less room than the lists of the other tabs
+    window:setHeight(tab == 'tasks' and 470 or 560)
     window.trailPanel:setVisible(tab == 'trail')
     window.shopPanel:setVisible(tab == 'shop')
     -- opened from one of the three panel rows: no tabs, the row says where

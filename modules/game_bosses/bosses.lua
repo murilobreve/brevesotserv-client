@@ -46,7 +46,7 @@ local CATS = {
 }
 local SORTS = {
     { 'xp', 'Experiência' }, { 'hp', 'Vida' }, { 'ready', 'Libera primeiro' },
-    { 'level', 'Nível mínimo' }, { 'name', 'Nome' }, { 'fav', 'Favoritos primeiro' },
+    { 'level', 'Level' }, { 'name', 'Nome' }, { 'fav', 'Favoritos primeiro' },
 }
 
 -- ---------------------------------------------------------------- helpers
@@ -192,10 +192,27 @@ local function busyLeft(boss)
     return math.max(0, boss.busyLeft - (os.time() - receivedAt))
 end
 
+-- The same colours in every Mythos window for "can I do this?": green at or
+-- above the recommended level, orange between the lever's level and it, red
+-- below the lever's level.
+local READY, RISKY, LOCKED = '#7fd35a', '#e2a443', '#ff7a6b'
+
+local function recommended(boss)
+    return math.max(tonumber(boss.suggested) or 0, boss.level or 0)
+end
+
+local function readiness(boss)
+    local level = state and state.level or 0
+    if level < (boss.level or 0) then
+        return LOCKED
+    end
+    return level >= recommended(boss) and READY or RISKY
+end
+
 -- the boss's state for the player: key, text, colour, background, border
 local function statusOf(boss)
     if not canFight(boss) then
-        return 'level', tr('Nível %d', boss.level), '#ff9c8a', '#2a1515', '#5a2a2a'
+        return 'level', tr('Level %d', boss.level), '#ff9c8a', '#2a1515', '#5a2a2a'
     end
     local left = waitLeft(boss)
     if left > 0 then
@@ -219,13 +236,14 @@ local function paintPill(pill, boss)
     pill:setBorderColor(border)
 end
 
--- the list's state mark: a coloured dot, its text in the tooltip
+-- the list's state, in words and in its colour: Pronto, the wait left, Em
+-- luta, or the level the lever asks
 local function paintDot(dot, boss)
     local key, text, color = statusOf(boss)
     if dot.stateKey ~= key or dot.stateText ~= text then
         dot.stateKey, dot.stateText = key, text
-        dot:setImageColor(color)
-        dot:setTooltip(text)
+        dot:setText(text)
+        dot:setColor(color)
     end
 end
 
@@ -242,7 +260,7 @@ local function warningsOf(boss)
         lines[#lines + 1] = tr('Você já fez esse boss: a alavanca libera para você em %s.', formatWait(wait))
     end
     if not canFight(boss) then
-        lines[#lines + 1] = tr('A alavanca pede nível %d de todo o time.', boss.level)
+        lines[#lines + 1] = tr('A alavanca pede level %d de todo o time.', boss.level)
     end
     return lines
 end
@@ -255,7 +273,7 @@ local function teamOf(boss)
         if memberWait > 0 then
             list[#list + 1] = { member[1], tr('espera %s', formatWait(memberWait)), '#e8c77a' }
         elseif member[3] == 1 then
-            list[#list + 1] = { member[1], tr('não tem o nível %d', boss.level), '#ff9c8a' }
+            list[#list + 1] = { member[1], tr('não tem o level %d', boss.level), '#ff9c8a' }
         end
     end
     return list
@@ -547,6 +565,8 @@ local function buildChips()
     end
 end
 
+local baseWidth = 980 -- the window with the filters open (init reads it)
+
 local function fillFilters()
     local f = window.pages.hall.filters
     if not chipSets then
@@ -564,6 +584,29 @@ local function fillFilters()
         active = active + 1
     end
     f.clear:setText(tr('Limpar (%d)', active))
+    -- the button that opens the filters says how many are on
+    local toggle = window.pages.hall.middle.filtersToggle
+    toggle:setText(active > 0 and tr('Filtros (%d)', active) or tr('Filtros'))
+    toggle:setColor(active > 0 and '#e8c77a' or '#b9b0a3')
+end
+
+-- The filters are a column of their own, closed until the player wants
+-- them: the window is as wide as the list and the boss, and grows for them.
+local FILTERS_WIDTH, HALL_GAP = 214, 10
+local filtersOpen = false
+
+local function layoutFilters()
+    local hall = window.pages.hall
+    hall.filters:setVisible(filtersOpen)
+    hall.filters:setWidth(filtersOpen and FILTERS_WIDTH or 0)
+    hall.middle:setMarginLeft(filtersOpen and HALL_GAP or 0)
+    window:setWidth(baseWidth - (filtersOpen and 0 or (FILTERS_WIDTH + HALL_GAP)))
+end
+
+function toggleFilters()
+    filtersOpen = not filtersOpen
+    g_settings.set('bossFiltersOpen', filtersOpen)
+    layoutFilters()
 end
 
 local function fillQuests()
@@ -599,12 +642,8 @@ local function fillRow(row, boss)
         row.filled = true
         row.frame.creature:setOutfit(outfitOf(boss.outfit))
         row.name:setText(boss.name)
-        -- the level the lever asks, then the numbers; the quest is in the detail
-        local level = (boss.level or 0) > 0 and tr('Nv %d', boss.level) or tr('Nv livre')
-        -- the server's recommended level (the lever's level stays the gate)
-        if (tonumber(boss.suggested) or 0) > (boss.level or 0) then
-            level = tr('Nv %d (rec. %d)', boss.level, boss.suggested)
-        end
+        -- the level the boss really asks for, then the numbers
+        local level = recommended(boss) > 0 and tr('Level %d', recommended(boss)) or tr('Level livre')
         row.info:setText(tr('%s · %s XP · %s vida', level, shortNumber(boss.experience), shortNumber(boss.health)))
         row.star.onClick = function()
             favorites[boss.name] = not favorites[boss.name] or nil
@@ -621,6 +660,7 @@ local function fillRow(row, boss)
         end
     end
     paintDot(row.status, boss)
+    row.info:setColor(recommended(boss) > 0 and readiness(boss) or '#a59d92')
     local fav = favorites[boss.name] and true or false
     if row.fav ~= fav then
         row.fav = fav
@@ -751,11 +791,10 @@ renderDetail = function()
     d.pedestal.creature:setOutfit(outfitOf(boss.outfit))
     paintPill(d.status, boss)
     d.name:setText(boss.name)
-    local levelText = boss.level > 0 and tostring(boss.level) or tr('livre')
-    if (tonumber(boss.suggested) or 0) > (boss.level or 0) then
-        levelText = tr('%s (recomendado %d)', levelText, boss.suggested)
-    end
-    d.quest:setText(tr('%s · nível %s · espera %s', boss.quest or '', levelText, formatWait(boss.wait or 0)))
+    local levelText = recommended(boss) > 0 and tr('level %d', recommended(boss)) or tr('level livre')
+    d.quest:setText(tr('%s · %s · espera %s', boss.quest or '', levelText, formatWait(boss.wait or 0)))
+    d.quest:setTooltip((boss.level or 0) > 0 and tr('Level recomendado: %d. A alavanca abre no level %d.', recommended(boss), boss.level) or '')
+    d.quest:setColor(recommended(boss) > 0 and readiness(boss) or '#a59d92')
     d.stats:destroyChildren()
     for _, stat in ipairs({ { 'EXPERIÊNCIA', shortNumber(boss.experience) }, { 'VIDA', shortNumber(boss.health) },
         { 'JOGADORES', boss.players > 1 and tr('%d ou mais', boss.players) or tr('1 a 5') } }) do
@@ -1170,7 +1209,10 @@ function init()
     f.questLabel:setText(tr('Quest'))
     f.quest:addOption(tr('Todas as quests'), '')
     local m = window.pages.hall.middle
-    m.sortLabel:setText(tr('Ordenar'))
+    baseWidth = window:getWidth()
+    filtersOpen = g_settings.getBoolean('bossFiltersOpen', false)
+    layoutFilters()
+    m.sortLabel:setText('')
     for _, entry in ipairs(SORTS) do
         m.sort:addOption(tr(entry[2]), entry[1])
     end

@@ -528,7 +528,34 @@ local function clearRules(page)
     end
 end
 
-local function fill()
+-- rules the player opened with "Add rule" this session, by page and slot
+-- (an empty rule in use is not hidden again under his hands)
+local opened = { spells = {}, potions = {}, friends = {} }
+
+local fill
+
+-- Only the rules in use show; the empty slots come one at a time with the
+-- "Add rule" button, where there used to be a column of "None" rows.
+local function addRules(page, kind, rules, field, add)
+    local nextEmpty
+    for index, rule in ipairs(rules) do
+        if (tonumber(rule[field]) or 0) ~= 0 or opened[kind][index] then
+            add(rule)
+        elseif not nextEmpty then
+            nextEmpty = index
+        end
+    end
+    if nextEmpty then
+        local button = g_ui.createWidget('HealBotAdd', page)
+        button:setText(tr('+ Add rule'))
+        button.onClick = function()
+            opened[kind][nextEmpty] = true
+            fill()
+        end
+    end
+end
+
+fill = function()
     local player = g_game.getLocalPlayer()
     if not player or not cfg then
         return
@@ -538,16 +565,16 @@ local function fill()
     local page = window.content.healingPage
     clearRules(page)
     local healSpells = HealData.healSpells(vocation)
-    for _, rule in ipairs(cfg.spells) do
+    addRules(page, 'spells', cfg.spells, 'spell', function(rule)
         addSpellRule(page, rule, healSpells)
-    end
+    end)
 
     page = window.content.potionsPage
     clearRules(page)
     local potions = HealData.potionsFor(vocation)
-    for _, rule in ipairs(cfg.potions) do
+    addRules(page, 'potions', cfg.potions, 'item', function(rule)
         addPotionRule(page, rule, potions)
-    end
+    end)
     local using = g_ui.createWidget('CureRule', page)
     bindCheck(using.enabled, cfg.support, 'usingMsg')
     using.note:setText(tr('Show the "Using one of ... potions" message'))
@@ -555,9 +582,9 @@ local function fill()
     page = window.content.friendsPage
     clearRules(page)
     local friendSpells = HealData.friendSpells(vocation)
-    for _, rule in ipairs(cfg.friends) do
+    addRules(page, 'friends', cfg.friends, 'spell', function(rule)
         addFriendRule(page, rule, friendSpells)
-    end
+    end)
 
     page = window.content.supportPage
     clearRules(page)

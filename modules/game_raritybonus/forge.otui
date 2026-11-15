@@ -93,12 +93,32 @@ ForgeRow < UIWidget
     text-auto-resize: true
     font: Verdana Bold-10px
 
-  Label
-    id: quality
+  // where the roll fell inside its range (forge.lua: fillRows)
+  UIWidget
+    id: bar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 4
-    width: 64
+    margin-right: 6
+    size: 110 8
+    background-color: #1c1c1c
+    border-width: 1
+    border-color: #444444
+
+    UIWidget
+      id: fill
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      margin: 1
+      width: 3
+      phantom: true
+
+  Label
+    id: quality
+    anchors.right: bar.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    width: 50
     text-align: right
     font: verdana-11px-antialised
 
@@ -123,7 +143,6 @@ ForgeRow < UIWidget
 // a bonus's picture on its slice of the wheel
 ForgeWheelIcon < UIWidget
   size: 20 20
-  phantom: true
 
 // one total of My bonuses
 ForgeTotalRow < UIWidget

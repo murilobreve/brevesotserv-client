@@ -146,6 +146,16 @@ TaskCard < BrevesSection
     anchors.left: parent.left
     size: 150 24
 
+  // no task today yet: the card is this button (hunttasks.lua: renderDaily)
+  MythosPrimaryButton
+    id: take
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-top: 34
+    size: 250 46
+    font: Verdana Bold-11px
+    visible: false
+
   MythosButton
     id: action2
     anchors.bottom: parent.bottom

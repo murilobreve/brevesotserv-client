@@ -453,6 +453,9 @@ local function buildWheel(pool)
         icon:addAnchor(AnchorTop, 'parent', AnchorTop)
         icon.angle = (i - 0.5) * seg
         icon.key = entry.key
+        -- the slice says what it is, and its range, under the mouse
+        local span = entry.min and (number(entry.min) .. (entry.unit or '') .. ' - ' .. number(entry.max) .. (entry.unit or '')) or ''
+        icon:setTooltip(tr(entry.label or '') .. (span ~= '' and ('\n' .. span) or ''))
         table.insert(wheelIcons, icon)
     end
     -- the pointer over the icons
@@ -590,30 +593,27 @@ local function fillRows(entry)
             Forge.refresh()
         end
         local hidden = now or wait
-        -- a bonus with a jackpot (the server's RarityConfig.jackpot): a rare
-        -- roll goes above the range, up to bonus.jackpot
+        -- where the roll fell inside its range: a bar, empty at the lowest
+        -- roll and full at the top, in the quality's colour. The numbers
+        -- (and the jackpot, RarityConfig.jackpot) are in its tooltip.
         local jackpot = tonumber(bonus.jackpot)
         local odds = tonumber(entry.jackpotOdds) or 0
-        if hidden or not bonus.min then
-            row.range:setText('')
-            row.range:setTooltip('')
-        else
-            local span = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '')
+        row.range:setText('')
+        local showBar = not hidden and bonus.min ~= nil and q ~= nil
+        row.bar:setVisible(showBar)
+        if showBar then
+            local width = row.bar:getWidth() - 2
+            row.bar.fill:setWidth(math.max(3, math.floor(width * q + 0.5)))
+            row.bar.fill:setBackgroundColor(look[3])
+            local tip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
             if jackpot and odds > 0 then
-                row.range:setText('(' .. span .. ', ' .. tr('jackpot %s', number(jackpot) .. (bonus.unit or '')) .. ')')
-                row.range:setTooltip(Forge.wrapTip(tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))))
-            else
-                row.range:setText('(' .. span .. ')')
-                row.range:setTooltip('')
+                tip = tip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
             end
+            row.bar:setTooltip(Forge.wrapTip(tip))
         end
-        if isSealed and roll then
-            row.quality:setText(tr('kept'))
-            row.quality:setColor('#c9a24a')
-        else
-            row.quality:setText(hidden and '' or (q and tr(look[2]) or ''))
-            row.quality:setColor(look[3])
-        end
+        -- only a bonus kept through a roll says so in words
+        row.quality:setText((isSealed and roll) and tr('kept') or '')
+        row.quality:setColor('#c9a24a')
         local d = (not roll and deltaSlot == entry.slotId) and deltas[i] or nil
         if d == 'new' then
             row.delta:setText(tr('new'))
@@ -663,9 +663,11 @@ local function fillWheelBox(entry)
     end
     local showing = roll and roll.phase == 'show' and roll.slot == entry.slotId
     if not roll then
-        box.caption:setText(tr('Can roll on this item (%d bonuses):', #pool))
+        -- the wheel shows them: each slice has its name under the mouse
+        box.caption:setText(tr('%d bonuses can come out', #pool))
         box.caption:setColor('#c8c8c8')
-        box.sub:setText(table.concat(names, ', '))
+        box.caption:setTooltip(Forge.wrapTip(table.concat(names, ', ')))
+        box.sub:setText('')
         box.meterTitle:setText('')
         box.meterValue:setText('')
         box.meterMin:setText(tr('min.'))
@@ -918,6 +920,14 @@ function Forge.refresh()
     fillItems()
     local right = page()
     local entry = bySlot[selected]
+    -- no Upgrade tab for an item at the highest grade
+    local canUpgrade = entry == nil or entry.upgrade ~= nil or (asc ~= nil and asc.slot == entry.slotId)
+    window.tabs.tabUp:setVisible(canUpgrade)
+    if not canUpgrade and tab == 'up' then
+        tab = 'roll'
+        window.tabs.tabRoll:setOn(true)
+        window.tabs.tabUp:setOn(false)
+    end
     right.empty:setVisible(entry == nil and tab ~= 'totals')
     right.head:setVisible(entry ~= nil and tab ~= 'totals')
     right.rollPage:setVisible(entry ~= nil and tab == 'roll')

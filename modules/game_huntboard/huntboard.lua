@@ -659,6 +659,11 @@ local function renderPage()
         -- a column each: level, health (while this rate lasts), XP and gold
         -- per kill, the XP and loot rates
         row.level:setText(monster.lvl and tostring(monster.lvl) or '-')
+        -- the same colours as the Quests and Bosses windows: green at or
+        -- above the recommended level, orange not far below it, red below
+        local mine = g_game.getLocalPlayer() and g_game.getLocalPlayer():getLevel() or 0
+        local lvl = tonumber(monster.lvl) or 0
+        row.level:setColor(lvl == 0 and '#cbc0e0' or mine >= lvl and '#7fd35a' or mine >= lvl * 0.75 and '#e2a443' or '#ff7a6b')
         row.health:setText(formatShort(monster.hpNow))
         row.health:setColor(monster.hpMult > 1 and '#ef9a62' or '#cbc0e0')
         row.perKill:setText(formatShort(monster.perKill))
