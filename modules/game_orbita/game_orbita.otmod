@@ -1,0 +1,9 @@
+Module
+  name: game_orbita
+  description: Orbita - runes of the rare items a player wears, circling the character (prototype)
+  author: Mythos
+  website: https://mythosot.com.br
+  sandboxed: true
+  scripts: [ orbita ]
+  @onLoad: init()
+  @onUnload: terminate()
