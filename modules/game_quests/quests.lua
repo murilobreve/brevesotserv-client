@@ -254,7 +254,7 @@ local function renderCard()
     local suggested = tonumber(quest.suggested) or 0
     local levelText = quest.prize and tr('Level %d challenge', quest.level) or tr('Level %d quest', quest.level)
     if suggested > (quest.level or 0) then
-        levelText = levelText .. '  ·  ' .. tr('recommended: level %d', suggested)
+        levelText = levelText .. '  -  ' .. tr('recommended: level %d', suggested)
     end
     card.level:setText(levelText)
     card.text:setText(textOf(quest))
@@ -400,10 +400,14 @@ function refreshList()
             for _, monster in ipairs(quest.monsters or {}) do
                 total = total + (monster.count or 0)
             end
-            local info = quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
-                or tr('Level %d - %d monsters', quest.level, total)
+            local info
             if (tonumber(quest.suggested) or 0) > (quest.level or 0) then
-                info = info .. ' - ' .. tr('rec. %d', quest.suggested)
+                -- short, so the recommended level fits in the row
+                info = quest.prize and tr('Challenge %d (rec. %d) - %d monsters', quest.level, quest.suggested, total)
+                    or tr('Level %d (rec. %d) - %d monsters', quest.level, quest.suggested, total)
+            else
+                info = quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
+                    or tr('Level %d - %d monsters', quest.level, total)
             end
             row.info:setText(info)
             row.onFocusChange = function(widget, focused)
