@@ -62,8 +62,13 @@ end
 -- wheel's centre (SWING_MS); HOLD_MS is the stop between them
 local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
 local WHEEL = 292 -- the wheel's pictures (tools/gerar-roleta-forja.py)
--- the icons sit near the rim, upright towards it
-local ICON_RADIUS = 113
+-- the icons sit near the rim, upright: the sizes they come in (images/forge/
+-- bonus/s16 to s40) and, for a size, how far from the centre they sit
+local ICON_SIZES = { 40, 36, 32, 28, 24, 20, 16 }
+local function iconRadiusFor(size)
+    return math.min(116, 136 - size / 2)
+end
+local iconRadius = 116
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
 
@@ -424,8 +429,8 @@ local function setWheel(rot)
         local a = icon.angle + rot
         local rad = math.rad(a)
         local size = icon:getWidth()
-        icon:setMarginLeft(math.floor(WHEEL_X + WHEEL / 2 + ICON_RADIUS * math.sin(rad) - size / 2 + 0.5))
-        icon:setMarginTop(math.floor(WHEEL_Y + WHEEL / 2 - ICON_RADIUS * math.cos(rad) - size / 2 + 0.5))
+        icon:setMarginLeft(math.floor(WHEEL_X + WHEEL / 2 + iconRadius * math.sin(rad) - size / 2 + 0.5))
+        icon:setMarginTop(math.floor(WHEEL_Y + WHEEL / 2 - iconRadius * math.cos(rad) - size / 2 + 0.5))
     end
 end
 
@@ -440,11 +445,18 @@ local function buildWheel(pool)
     holder.wheel:setImageSource('/game_raritybonus/images/forge/wheel/wheel_' .. n)
     wheelSlices = #pool
     local seg = 360 / math.max(1, #pool)
-    -- as big as the slice allows at that radius, from the icons scaled
-    -- ahead with a smooth filter (images/forge/bonus/s16 to s28): scaled
-    -- or turned here they came out pixelated, so they stay upright
-    local room = ICON_RADIUS * math.rad(seg) * 0.85
-    local size = room >= 28 and 28 or room >= 24 and 24 or room >= 20 and 20 or 16
+    -- the biggest size whose icon fits between the slice's two lines where
+    -- its inner edge sits; the icons come scaled ahead with a smooth filter
+    -- (scaled or turned here they came out pixelated), so they stay upright
+    local size = ICON_SIZES[#ICON_SIZES]
+    local half = math.tan(math.rad(seg / 2))
+    for _, candidate in ipairs(ICON_SIZES) do
+        if seg >= 180 or candidate <= 2 * (iconRadiusFor(candidate) - candidate / 2) * half * 1.05 then
+            size = candidate
+            break
+        end
+    end
+    iconRadius = iconRadiusFor(size)
     for i, entry in ipairs(pool) do
         -- a bonus with no picture of its own (a vocation's spell) takes the wand
         local icon = g_ui.createWidget('ForgeWheelIcon', holder)
