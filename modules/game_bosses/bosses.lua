@@ -531,6 +531,10 @@ local function buildChips()
         chip:setText(tr(text))
         if not autoSize then
             chip:setTextAutoResize(false)
+        else
+            -- the three states in one line of the column's 194 px
+            chip:setPaddingLeft(6)
+            chip:setPaddingRight(6)
         end
         chip.activeFn = isOn
         chip.onClick = function()
@@ -565,7 +569,7 @@ local function buildChips()
     end
 end
 
-local baseWidth = 980 -- the window with the filters open (init reads it)
+local baseWidth = 1002 -- the window with the filters open (init reads it)
 
 local function fillFilters()
     local f = window.pages.hall.filters
