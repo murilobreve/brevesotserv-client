@@ -57,6 +57,32 @@ for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) 
     BONUS_ICONS[element .. '_spell_damage'] = 'flame_' .. element
 end
 
+-- the slices' colours, by what the bonus is (its icon): attack and weapon
+-- skills, magic, plain defence, life, mana, speed and gains, and each
+-- element in its own colour. A slice at an even place takes a darker shade,
+-- so two neighbours of one colour still read as two slices
+local SLICE_COLORS = {
+    attack = '#8f3524', magic = '#5a45a0', defense = '#3f5a78', life = '#8c2f58', mana = '#2a4f9a', utility = '#8a6a26',
+    fire = '#a8451c', earth = '#2f7038', energy = '#7a2f96', ice = '#1f7a94', holy = '#978628', death = '#3d3a47',
+    phys = '#5b6470',
+}
+local ICON_FAMILY = {
+    crit = 'attack', sword = 'attack', axe = 'attack', club = 'attack', fist = 'attack', bow = 'attack',
+    wand = 'magic', shield = 'defense', life = 'life', mana = 'mana',
+    wings = 'utility', boots = 'utility', backpack = 'utility',
+}
+local function sliceColor(iconName, index)
+    -- shield_fire, flame_ice...: the element after the underscore
+    local family = ICON_FAMILY[iconName] or iconName:match('_(%a+)$')
+    local color = SLICE_COLORS[family] or SLICE_COLORS.magic
+    if index % 2 == 1 then
+        return color
+    end
+    local r, g, b = color:match('#(%x%x)(%x%x)(%x%x)')
+    return string.format('#%02x%02x%02x', math.floor(tonumber(r, 16) * 0.74), math.floor(tonumber(g, 16) * 0.74),
+        math.floor(tonumber(b, 16) * 0.74))
+end
+
 -- the Roll's pace: first how many bonuses come out (COUNT_MS), then for
 -- each the wheel's spin (SPIN_MS) and its value's swing on the disc at the
 -- wheel's centre (SWING_MS); HOLD_MS is the stop between them
@@ -421,10 +447,14 @@ end
 -- turned widget inside a turned parent, so each frame puts them back on
 -- their slice, at the wheel's angle
 local wheelIcons = {}
+local wheelWedges = {}
 local WHEEL_X, WHEEL_Y = 2, 10 -- the wheel's place inside wheelHolder
 
 local function setWheel(rot)
     page().rollPage.wheelBox.wheelHolder.wheel:setRotation(rot % 360)
+    for _, wedge in ipairs(wheelWedges) do
+        wedge:setRotation((wedge.angle + rot) % 360)
+    end
     for _, icon in ipairs(wheelIcons) do
         local a = icon.angle + rot
         local rad = math.rad(a)
@@ -441,10 +471,31 @@ local function buildWheel(pool)
     for _, icon in ipairs(wheelIcons) do
         icon:destroy()
     end
-    wheelIcons = {}
-    holder.wheel:setImageSource('/game_raritybonus/images/forge/wheel/wheel_' .. n)
+    for _, wedge in ipairs(wheelWedges) do
+        wedge:destroy()
+    end
+    wheelIcons, wheelWedges = {}, {}
+    holder.wheel:setImageSource('/game_raritybonus/images/forge/wheel/lines_' .. n)
     wheelSlices = #pool
     local seg = 360 / math.max(1, #pool)
+    -- the slices under the trim: one wedge per bonus, in its family's colour
+    -- (the wheel has pictures for 2 to 40 slices)
+    if #pool == n then
+        for i, entry in ipairs(pool) do
+            local wedge = g_ui.createWidget('ForgeWedge', holder)
+            wedge:setImageSource('/game_raritybonus/images/forge/wheel/wedge_' .. n)
+            wedge:setImageColor(sliceColor(BONUS_ICONS[entry.key or ''] or 'wand', i))
+            wedge:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+            wedge:addAnchor(AnchorTop, 'parent', AnchorTop)
+            wedge:setMarginLeft(WHEEL_X)
+            wedge:setMarginTop(WHEEL_Y)
+            wedge.angle = (i - 1) * seg
+            wedge.key = entry.key
+            table.insert(wheelWedges, wedge)
+        end
+    end
+    holder.wheel:raise()
+    holder.hub:raise()
     -- the biggest size whose icon fits between the slice's two lines where
     -- its inner edge sits; the icons come scaled ahead with a smooth filter
     -- (scaled or turned here they came out pixelated), so they stay upright
@@ -481,6 +532,9 @@ end
 local function lightSlice(key)
     for _, icon in ipairs(wheelIcons) do
         icon:setOpacity((key == nil or icon.key == key) and 1 or 0.3)
+    end
+    for _, wedge in ipairs(wheelWedges) do
+        wedge:setOpacity((key == nil or wedge.key == key) and 1 or 0.35)
     end
 end
 
@@ -1451,7 +1505,7 @@ end
 
 function Forge.destroy()
     Forge.reset()
-    wheelIcons, wheelSlices = {}, 0
+    wheelIcons, wheelWedges, wheelSlices = {}, {}, 0
     if window then
         window:destroy()
         window = nil

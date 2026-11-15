@@ -127,6 +127,13 @@ ForgeRow < UIWidget
 ForgeWheelIcon < UIWidget
   size: 20 20
 
+// one slice of the wheel: a white wedge in the colour of its bonus's family
+// (forge.lua turns each to its place)
+ForgeWedge < UIWidget
+  size: 292 292
+  image-smooth: true
+  phantom: true
+
 // a stage of the roll under the wheel: lit while it runs
 ForgeStep < UIWidget
   height: 18
@@ -612,10 +619,12 @@ MythosWindow
               margin-left: 2
               margin-top: 10
               size: 292 292
-              // the wheel is drawn turned: without the smooth filter its
-              // lines and rim come out jagged at any angle but upright
+              // the wheel's trim (rim, dividers, pegs) over the slices. It is
+              // drawn turned: without the smooth filter its lines come out
+              // jagged at any angle but upright
               image-smooth: true
-              image-source: /game_raritybonus/images/forge/wheel/wheel_10
+              image-source: /game_raritybonus/images/forge/wheel/lines_10
+              phantom: true
 
             UIWidget
               id: hub

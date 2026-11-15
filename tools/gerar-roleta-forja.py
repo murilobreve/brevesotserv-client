@@ -1,8 +1,8 @@
-"""Wheel pictures for the Roleta de Raridade (wheel_2.png .. wheel_40.png), the
-disc at its centre (wheel/center.png), the keep lock (ui/lock.png: open, open
+"""Wheel pictures for the Roleta de Raridade (for 2 to 40 slices: lines_n.png,
+the trim, and wedge_n.png, one white slice the client tints), the disc at its
+centre (wheel/center.png), the keep lock (ui/lock.png: open, open
 under the mouse, closed) and the bonus icons pre-scaled with a smooth filter
-(bonus/s16 .. s40). Colours of the Mythos kit: obsidian and violet
-slices, gold trim.
+(bonus/s16 .. s40). Gold trim, as the Mythos kit's.
 
 usage: gen_wheel.py <images/forge dir>
 """
@@ -12,14 +12,14 @@ from PIL import Image, ImageDraw
 out = sys.argv[1]
 SIZE = 292
 SS = 4  # supersampling
-A = (0x3b, 0x30, 0x5c, 255)
-B = (0x1f, 0x1a, 0x2e, 255)
-ODD = (0x4c, 0x2f, 0x55, 255)
 GOLD = (0xc9, 0xa2, 0x4a, 255)
 PEG = (0xf0, 0xd9, 0x8c, 255)
 DARK = (0x0f, 0x0a, 0x19, 255)
 
-def wheel(n):
+# the wheel's trim for n slices: rim, dividers and pegs over clear slices.
+# The slices themselves are one white wedge (wedge_n.png) the client tints,
+# one per bonus, in the colour of the bonus's family.
+def lines(n):
     s = SIZE * SS
     img = Image.new('RGBA', (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -27,12 +27,6 @@ def wheel(n):
     r = c - 2 * SS
     box = [c - r, c - r, c + r, c + r]
     seg = 360 / n
-    for i in range(n):
-        color = A if i % 2 == 0 else B
-        if n % 2 == 1 and i == n - 1:
-            color = ODD
-        # PIL angles start at 3 o'clock and go clockwise; slice 0 starts at 12
-        d.pieslice(box, -90 + i * seg, -90 + (i + 1) * seg, fill=color)
     for i in range(n):
         a = math.radians(-90 + i * seg)
         d.line([c, c, c + r * math.cos(a), c + r * math.sin(a)], fill=GOLD, width=int(1.5 * SS))
@@ -45,6 +39,18 @@ def wheel(n):
         a = math.radians(-90 + i * seg)
         x, y = c + rr * math.cos(a), c + rr * math.sin(a)
         d.ellipse([x - pr, y - pr, x + pr, y + pr], fill=PEG, outline=DARK, width=max(1, SS // 2))
+    return img.resize((SIZE, SIZE), Image.LANCZOS)
+
+# the first slice (from 12 o'clock, clockwise), white, a hair wider than
+# the slice so two neighbours meet under the divider
+def wedge(n):
+    s = SIZE * SS
+    img = Image.new('RGBA', (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    c = s / 2
+    r = c - 4 * SS
+    seg = 360 / n
+    d.pieslice([c - r, c - r, c + r, c + r], -90 - 0.4, -90 + seg + 0.4, fill=(255, 255, 255, 255))
     return img.resize((SIZE, SIZE), Image.LANCZOS)
 
 # the disc over the wheel's centre: the roll's number shows on it
@@ -77,7 +83,8 @@ def lock(color, closed):
 
 wdir = os.path.join(out, 'wheel')
 for n in range(2, 41):
-    wheel(n).save(os.path.join(wdir, 'wheel_%d.png' % n))
+    lines(n).save(os.path.join(wdir, 'lines_%d.png' % n))
+    wedge(n).save(os.path.join(wdir, 'wedge_%d.png' % n))
 
 center().save(os.path.join(wdir, 'center.png'))
 
