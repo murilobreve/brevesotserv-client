@@ -590,7 +590,23 @@ local function fillRows(entry)
             Forge.refresh()
         end
         local hidden = now or wait
-        row.range:setText((hidden or not bonus.min) and '' or '(' .. number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. ')')
+        -- a bonus with a jackpot (the server's RarityConfig.jackpot): a rare
+        -- roll goes above the range, up to bonus.jackpot
+        local jackpot = tonumber(bonus.jackpot)
+        local odds = tonumber(entry.jackpotOdds) or 0
+        if hidden or not bonus.min then
+            row.range:setText('')
+            row.range:setTooltip('')
+        else
+            local span = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '')
+            if jackpot and odds > 0 then
+                row.range:setText('(' .. span .. ', ' .. tr('jackpot %s', number(jackpot) .. (bonus.unit or '')) .. ')')
+                row.range:setTooltip(Forge.wrapTip(tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))))
+            else
+                row.range:setText('(' .. span .. ')')
+                row.range:setTooltip('')
+            end
+        end
         if isSealed and roll then
             row.quality:setText(tr('kept'))
             row.quality:setColor('#c9a24a')
