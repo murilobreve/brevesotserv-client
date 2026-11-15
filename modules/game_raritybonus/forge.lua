@@ -1355,10 +1355,18 @@ function Forge.onBonuses(d)
 end
 
 -- the Rarity XP balance changed (a kill, the Store)
+-- Rarity XP comes once per kill: an area spell brings many in one frame, so
+-- the open window is redone once, on the next frame
+local xpRefresh
 function Forge.onXp(xp)
     rarityXp = tonumber(xp) or rarityXp
-    if window and window:isVisible() and not busy() then
-        Forge.refresh()
+    if window and window:isVisible() and not xpRefresh then
+        xpRefresh = scheduleEvent(function()
+            xpRefresh = nil
+            if window and window:isVisible() and not busy() then
+                Forge.refresh()
+            end
+        end, 1)
     end
 end
 
@@ -1411,6 +1419,10 @@ end
 
 function Forge.reset()
     stopTick()
+    if xpRefresh then
+        removeEvent(xpRefresh)
+        xpRefresh = nil
+    end
     if answerEvent then
         removeEvent(answerEvent)
         answerEvent = nil
