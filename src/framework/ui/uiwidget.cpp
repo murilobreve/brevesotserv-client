@@ -89,7 +89,11 @@ void UIWidget::draw(const Rect& visibleRect, const DrawPoolType drawPane)
 
     if (m_rotation != 0.0f) {
         g_drawPool.pushTransformMatrix();
-        g_drawPool.rotate(m_rect.center(), m_rotation * (Fw::pi / 180.0));
+        // around the rect's true centre: center() is in whole pixels, a pixel
+        // up and left of it for an even size, and a widget turned around that
+        // point wobbles as it spins (a wheel off its hub, ticks off their ring)
+        g_drawPool.rotate(m_rect.x() + m_rect.width() / 2.f, m_rect.y() + m_rect.height() / 2.f,
+                          m_rotation * (Fw::pi / 180.0));
     }
 
     drawSelf(drawPane);

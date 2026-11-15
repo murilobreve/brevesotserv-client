@@ -538,7 +538,8 @@ BossRoulette < UIWidget
 
 MythosWindow
   id: bossesWindow
-  size: 980 640
+  // the detail column's grids (3 stats, 2 loot cells) are 330 px wide
+  size: 1002 640
   @onEscape: modules.game_bosses.hide()
 
   UIButton
@@ -767,10 +768,9 @@ MythosWindow
 
         Label
           id: count
-          anchors.top: parent.top
+          anchors.verticalCenter: filtersToggle.verticalCenter
           anchors.left: filtersToggle.right
           margin-left: 8
-          margin-top: 6
           text-auto-resize: true
           font: verdana-11px-antialised
           color: #b9b0a3
@@ -789,9 +789,10 @@ MythosWindow
           cursor: pointer
           @onClick: modules.game_bosses.flipSort()
 
+        // 20 px beside the 24 px buttons: on their middle line
         MythosComboBox
           id: sort
-          anchors.top: parent.top
+          anchors.verticalCenter: dir.verticalCenter
           anchors.right: dir.left
           margin-right: 4
           width: 150
@@ -806,11 +807,11 @@ MythosWindow
 
         ScrollablePanel
           id: list
-          anchors.top: sort.bottom
+          anchors.top: dir.bottom
           anchors.left: parent.left
           anchors.right: listScroll.left
           anchors.bottom: parent.bottom
-          margin-top: 6
+          margin-top: 4
           margin-right: 3
           vertical-scrollbar: listScroll
           layout:
@@ -819,10 +820,10 @@ MythosWindow
 
         VerticalScrollBar
           id: listScroll
-          anchors.top: sort.bottom
+          anchors.top: dir.bottom
           anchors.right: parent.right
           anchors.bottom: parent.bottom
-          margin-top: 6
+          margin-top: 4
           step: 66
           pixels-scroll: true
 

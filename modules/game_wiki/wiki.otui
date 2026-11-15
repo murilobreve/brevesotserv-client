@@ -743,7 +743,8 @@ WikiCreatureRowEven < WikiCreatureRow
 WikiCards < UIWidget
   layout:
     type: grid
-    cell-size: 268 58
+    // two cards fill the page's 563 px
+    cell-size: 278 58
     cell-spacing: 6
     flow: true
     fit-children: true
