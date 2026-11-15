@@ -81,6 +81,7 @@ locale = {
     ["Bonus"] = "Bônus",
     ["Limit"] = "Limite",
     ["Total"] = "Total",
+    ["Hover a line to see which items give it. Only worn items count."] = "Passe o mouse numa linha para ver quais itens dão. Só itens equipados contam.",
     ["Gold: at the limit (more of it adds nothing). Hover a line to see which items give it. Only worn items count."] = "Dourado: no limite (mais não soma nada). Passe o mouse numa linha para ver quais itens dão. Só itens equipados contam.",
     ["on the item"] = "no item",
     ["Reforge  -  %d Rarity XP"] = "Reforjar  -  %d Rarity XP",

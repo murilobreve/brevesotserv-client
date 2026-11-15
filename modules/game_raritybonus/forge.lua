@@ -858,6 +858,21 @@ local function fillTotals()
     tp.list:destroyChildren()
     -- the scrollbar only when the lines need it
     tp.listScroll:setVisible(#((data and data.totals) or {}) * 21 > tp.list:getHeight())
+    -- the server can have the total caps off (RarityConfig.capTotals): then
+    -- no bonus brings a cap, and the column and the gold legend go away
+    local anyCap = false
+    for _, t in ipairs((data and data.totals) or {}) do
+        anyCap = anyCap or (not t.perItem and (tonumber(t.cap) or 0) > 0)
+    end
+    local capHeader = tp:recursiveGetChildById('hCap')
+    if capHeader then
+        capHeader:setVisible(anyCap)
+    end
+    local legend = tp:recursiveGetChildById('note')
+    if legend then
+        legend:setText(anyCap and tr('Gold: at the limit (more of it adds nothing). Hover a line to see which items give it. Only worn items count.')
+            or tr('Hover a line to see which items give it. Only worn items count.'))
+    end
     for _, t in ipairs((data and data.totals) or {}) do
         local row = g_ui.createWidget('ForgeTotalRow', tp.list)
         local unit = t.unit or ''
@@ -871,7 +886,7 @@ local function fillTotals()
         row.name:setColor(full and '#e2c46a' or '#d0d0d0')
         row.total:setText(plus(sum, unit))
         row.total:setColor(full and '#e2c46a' or '#e6e6e6')
-        row.cap:setText(cap and (number(cap) .. unit) or '-')
+        row.cap:setText(cap and (number(cap) .. unit) or (anyCap and '-' or ''))
         local lines = { tr(t.label or '') }
         for _, src in ipairs(t.sources or {}) do
             local it = items[tonumber(src.item) or 0]
