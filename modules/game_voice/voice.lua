@@ -209,6 +209,10 @@ end
 local function savePrefsNow()
     saveEvent = nil
     g_settings.setNode(PREFS_NODE, VoiceState.serializePrefs(prefs))
+    -- to disk now: the browser client never closes the way the desktop one
+    -- does (the tab just goes), so a choice kept only in memory was lost and
+    -- voice came back on at the next login
+    g_settings.save()
 end
 
 -- a slider sends many changes: saved once they stop
