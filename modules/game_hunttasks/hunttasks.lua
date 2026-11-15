@@ -981,7 +981,7 @@ function selectTab(tab)
     window.shopTab:setChecked(tab == 'shop')
     window.tasksPanel:setVisible(tab == 'tasks')
     -- the two cards need less room than the lists of the other tabs
-    window:setHeight(tab == 'tasks' and 470 or 560)
+    window:setHeight(tab == 'tasks' and 502 or 560)
     window.trailPanel:setVisible(tab == 'trail')
     window.shopPanel:setVisible(tab == 'shop')
     -- opened from one of the three panel rows: no tabs, the row says where

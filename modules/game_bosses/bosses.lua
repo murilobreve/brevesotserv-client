@@ -558,7 +558,7 @@ local function buildChips()
         end)
     end
     f.toggles:destroyChildren()
-    for _, entry in ipairs({ { 'mine', 'Só o que meu nível alcança' }, { 'party', 'Minha party toda pode entrar' }, { 'fav', 'Só favoritos' } }) do
+    for _, entry in ipairs({ { 'mine', 'Só o que meu level alcança' }, { 'party', 'Minha party toda pode entrar' }, { 'fav', 'Só favoritos' } }) do
         add(f.toggles, entry[2], true, function() return filters[entry[1]] end, function()
             filters[entry[1]] = not filters[entry[1]]
         end)
