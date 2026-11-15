@@ -1,13 +1,15 @@
--- Forja de Raridade (forge.otui), the way Tibia's own forge is laid out: a
--- small window with three tabs and the rare items on the left (worn on top,
--- the backpack's below; a hover lists an item's bonuses, a click picks it).
---   Roll: one line per bonus of the item, with a box to keep it (the seal),
---     then for every bonus rolled again a wheel that spins for its type (one
---     slice per bonus the item can get) and a needle that swings over a
---     meter, from the bonus's lowest to its highest roll, for its value.
+-- Roleta de Raridade (forge.otui): three tabs, the rare items on the left
+-- (worn on top, the backpack's below; a hover shows an item's card, a click
+-- picks it).
+--   Roll: one line per bonus slot of the item's grade (a lock keeps one
+--     bonus, an empty slot shows as empty), the price against what the
+--     player has and the Roll button. The roll plays in three stages, named
+--     under the wheel: how many bonuses come out, then for each the wheel
+--     spins for its type (one slice per bonus the item can get) and the
+--     disc at the wheel's centre swings to its value.
 --   Upgrade: the item, its next grade, the chance and the price; a bar fills
 --     while it forges, then the result (success or failure) with an OK.
---   My bonuses: the totals of what is worn, with their limits.
+--   My bonuses: the totals of what is worn.
 -- The server (scripts/rarity/bonus_window.lua, extended opcode 123) rolls;
 -- the window only shows. raritybonus.lua routes the opcode here.
 
@@ -55,16 +57,15 @@ for _, element in ipairs({ 'fire', 'ice', 'energy', 'earth', 'holy', 'death' }) 
     BONUS_ICONS[element .. '_spell_damage'] = 'flame_' .. element
 end
 
--- the Roll's pace: the wheel's spin, the needle's swing, the stop between
--- first how many bonuses come out (COUNT_MS), then for each the wheel
--- (SPIN_MS) and the needle (SWING_MS)
+-- the Roll's pace: first how many bonuses come out (COUNT_MS), then for
+-- each the wheel's spin (SPIN_MS) and its value's swing on the disc at the
+-- wheel's centre (SWING_MS); HOLD_MS is the stop between them
 local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
 local WHEEL = 292 -- the wheel's pictures (tools/gerar-roleta-forja.py)
 -- the icons sit near the rim, upright towards it
 local ICON_RADIUS = 113
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
-local METER_ZONES = { 0.30, 0.30, 0.25, 0.13, 0.02 }
 
 local window
 local data -- the last summary from the server
@@ -355,8 +356,8 @@ local function fillGrid(grid, list)
         local w = g_ui.createWidget('ForgeSlot', grid)
         setItem(w.item, entry)
         if entry.slotId == selected then
-            w:setBackgroundColor('#4a4a4a')
-            w:setBorderColor('#d8d8d8')
+            w:setBackgroundColor('#b296f530')
+            w:setBorderColor('#b296f5')
         end
         if type(entry.card) == 'table' then
             hoverCard(w, entry)
@@ -389,8 +390,8 @@ local function fillHead(entry)
     setItem(head.itemBox.item, entry)
     hoverCard(head.itemBox, entry)
     head.name:setText(titleCase(entry.name))
-    local max = math.max(1, tonumber(entry.maxBonuses) or #(entry.bonuses or {}))
-    local info = g.label .. DOT .. tr('%d of %d bonuses', #(entry.bonuses or {}), max) .. DOT .. tr(entry.slot or '')
+    -- how many bonuses it has shows as its slots, under the head
+    local info = g.label .. DOT .. tr(entry.slot or '')
     if entry.bag then
         info = info .. DOT .. tr('in the backpack')
     end
@@ -407,7 +408,7 @@ local function fillHead(entry)
 end
 
 -- ---------------------------------------------------------------------------
--- Roll: the wheel and the meter
+-- Roll: the wheel, its disc and the stages
 -- ---------------------------------------------------------------------------
 
 -- the wheel's picture and one name per slice, for this pool
@@ -458,7 +459,8 @@ local function buildWheel(pool)
         icon:setTooltip(tr(entry.label or '') .. (span ~= '' and ('\n' .. span) or ''))
         table.insert(wheelIcons, icon)
     end
-    -- the pointer over the icons
+    -- the disc and the pointer over the icons
+    holder.disc:raise()
     holder.pointer:raise()
     setWheel(wheelRot)
 end
@@ -485,27 +487,37 @@ local function wheelTarget(from, pool, key)
     return base + 360 * 5 + (360 - center) + (math.random() - 0.5) * seg * 0.6
 end
 
-local function layoutMeter()
-    local meter = page().rollPage.wheelBox.meter
-    local width = meter:getWidth()
-    if width < 40 then
-        width = 200
+-- the roll's stages under the wheel: the one running is lit
+local STEPS = { count = 1, type = 2, value = 3 }
+local function setSteps(box, stage, entry)
+    local at = STEPS[stage] or 0
+    local steps = box.steps
+    steps.s1:setText('1  ' .. tr('How many'))
+    steps.s2:setText('2  ' .. tr('Which bonus'))
+    steps.s3:setText('3  ' .. tr('Value'))
+    steps.a1:setText('>')
+    steps.a2:setText('>')
+    for i = 1, 3 do
+        steps['s' .. i]:setColor(i == at and '#eee6d4' or '#6f6880')
     end
-    local legend = page().rollPage.wheelBox.legend
-    for i = 1, 4 do
-        local w = math.floor(width * METER_ZONES[i] + 0.5) - 1
-        meter['z' .. i]:setWidth(w)
-        legend['l' .. i]:setWidth(i < 4 and w + 1 or w)
+    local odds = {}
+    for i, pct in ipairs((entry and entry.counts) or {}) do
+        table.insert(odds, tr('%d: %s%%', i, number(pct)))
     end
-    return width
+    steps.s1:setTooltip(tr('How many bonuses the item gets') .. (#odds > 0 and ('\n' .. table.concat(odds, '\n')) or ''))
+    steps.s2:setTooltip(tr('The wheel picks each bonus'))
+    steps.s3:setTooltip(tr('Each value falls between the minimum and the maximum of its bonus'))
 end
 
-local function setNeedle(frac)
-    local meter = page().rollPage.wheelBox.meter
-    local width = layoutMeter()
-    meter.needle:setVisible(frac ~= nil)
-    if frac then
-        meter.needle:setMarginLeft(math.floor(math.max(0, math.min(1, frac)) * (width - 3) + 0.5))
+-- the disc at the wheel's centre: the number being drawn (nil hides it)
+local function setDisc(box, big, small, color)
+    local holder = box.wheelHolder
+    holder.disc:setVisible(big ~= nil)
+    holder.hub:setVisible(big == nil)
+    if big then
+        holder.disc.big:setText(big)
+        holder.disc.big:setColor(color or '#eee6d4')
+        holder.disc.small:setText(small or '')
     end
 end
 
@@ -518,133 +530,143 @@ local function lockable(entry)
 end
 
 local function fillRows(entry)
-    local rp = page().rollPage
-    rp.rows:destroyChildren()
+    local col = page().rollPage.bonusCol
+    col.rows:destroyChildren()
     local showing = roll and roll.phase == 'show' and roll.slot == entry.slotId
     local list = showing and roll.after or (roll and roll.slot == entry.slotId and roll.before) or entry.bonuses or {}
     local lock = seals[entry.slotId]
     local canLock = lockable(entry) and not busy()
-    if showing and roll.stage == 'count' and roll.t < 1 then
-        -- while the count is drawn every slot waits: the lines don't give
-        -- the number away before it shows
-        local padded = {}
-        for i = 1, math.max(#list, tonumber(roll.max) or #list) do
-            padded[i] = list[i] or { pad = true }
-        end
-        list = padded
-    end
-    for i, bonus in ipairs(list) do
-        local row = g_ui.createWidget('ForgeRow', rp.rows)
-        local isSealed = lock ~= nil and bonus.key == lock and (not roll or bonus.locked or not showing)
-        local pos, done, now, wait = nil, false, false, false
-        if roll and roll.slot == entry.slotId then
-            if showing then
-                for p, idx in ipairs(roll.order) do
-                    if idx == i then
-                        pos = p
+    -- one line per slot of the item's grade; while the count is drawn
+    -- every slot waits, so the lines don't give the number away
+    local max = math.max(1, #list, tonumber(entry.maxBonuses) or 0)
+    local counting = showing and roll.stage == 'count' and roll.t < 1
+    local lockTip = lockable(entry) and tr('Keep this bonus on the next roll: %s gold', formatGold(entry.lockCost))
+        or tr('Keeping a bonus needs an item with 2 or more bonuses')
+    for i = 1, max do
+        local bonus = list[i]
+        local row = g_ui.createWidget('ForgeRow', col.rows)
+        if not bonus and not counting then
+            -- an empty slot: a roll may fill it
+            row.seal:setVisible(false)
+            row.text:setText(tr('Empty'))
+            row.text:setColor('#5f5870')
+            row:setBackgroundColor('#00000000')
+            row.delta:setText('')
+            row.quality:setText('')
+        else
+            bonus = bonus or { pad = true }
+            -- the bonus kept: the one ticked, or through a roll the one
+            -- that roll was sent with
+            local kept = lock
+            if roll and roll.slot == entry.slotId then
+                kept = roll.lock
+            end
+            local isSealed = kept ~= nil and bonus.key == kept
+            local pos, done, now, wait = nil, false, false, bonus.pad == true or counting
+            if roll and roll.slot == entry.slotId and not wait then
+                if showing then
+                    for p, idx in ipairs(roll.order) do
+                        if idx == i then
+                            pos = p
+                        end
+                    end
+                    if pos then
+                        done = pos < roll.k or (pos == roll.k and roll.stage == 'value' and roll.t >= 1)
+                        now = pos == roll.k and not done
+                        wait = pos > roll.k
+                    end
+                elseif not isSealed then
+                    -- the server rolls: every line not kept waits
+                    wait = true
+                end
+            end
+            local q = qualityOf(bonus)
+            local look = quality(q, bonus.perfect)
+            if now then
+                local typeKnown = roll.stage == 'value' or roll.t >= 1
+                row.text:setText(typeKnown and tr('%s: drawing the value...', tr(bonus.label or '')) or tr('Bonus %d: spinning the wheel...', i))
+                row.text:setColor('#e2c46a')
+                row:setBackgroundColor('#c9a24a26')
+                row:setBorderColor('#8a6f33')
+            elseif wait then
+                row.text:setText(tr('Bonus %d: waiting', i))
+                row.text:setColor('#6f6880')
+            else
+                row.text:setText(bonusText(bonus))
+                row.text:setColor(look[3])
+                if isSealed then
+                    row:setBackgroundColor('#c9a24a26')
+                    row:setBorderColor('#8a6f33')
+                elseif roll and pos == roll.k and done then
+                    row:setBackgroundColor('#ffffff18')
+                end
+            end
+            local hidden = now or wait
+            row.seal:setVisible(not hidden or isSealed)
+            row.seal:setChecked(isSealed)
+            row.seal:setEnabled(canLock)
+            row.seal:setTooltip(lockTip)
+            row.seal.onCheckChange = function(widget, checked)
+                if busy() then
+                    return
+                end
+                if checked then
+                    seals[entry.slotId] = bonus.key
+                elseif seals[entry.slotId] == bonus.key then
+                    seals[entry.slotId] = nil
+                end
+                deltas, deltaSlot = {}, nil
+                Forge.refresh()
+            end
+            -- where the value fell in its range, in a word; a bonus kept
+            -- through a roll says so instead
+            if isSealed and roll then
+                row.quality:setText(tr('kept'))
+                row.quality:setColor('#e2c46a')
+            elseif hidden or q == nil then
+                row.quality:setText('')
+            else
+                row.quality:setText(tr(look[2]))
+                row.quality:setColor(look[3])
+            end
+            local d = (not roll and deltaSlot == entry.slotId) and deltas[i] or nil
+            if d == 'new' then
+                row.delta:setText(tr('new'))
+                row.delta:setColor('#c9a4ff')
+            elseif d then
+                row.delta:setText(math.abs(d) < 0.05 and '=' or ((d > 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10))))
+                row.delta:setColor(d > 0.05 and '#7fd36a' or d < -0.05 and '#ff7a6a' or '#898293')
+            else
+                row.delta:setText('')
+            end
+            if not hidden then
+                -- what the bonus does, its range and the jackpot
+                -- (RarityConfig.jackpot), under the mouse
+                local jackpot = tonumber(bonus.jackpot)
+                local odds = tonumber(entry.jackpotOdds) or 0
+                local rangeTip = ''
+                if bonus.min ~= nil and q ~= nil then
+                    rangeTip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
+                    if jackpot and odds > 0 then
+                        rangeTip = rangeTip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
                     end
                 end
-                if pos then
-                    done = pos < roll.k or (pos == roll.k and roll.stage == 'value' and roll.t >= 1)
-                    now = pos == roll.k and not done
-                    wait = pos > roll.k
+                local tip = describe(bonus.key)
+                if rangeTip ~= '' then
+                    tip = (tip and tip ~= '') and (tip .. '\n\n' .. Forge.wrapTip(rangeTip)) or Forge.wrapTip(rangeTip)
                 end
-            elseif not isSealed then
-                -- the server rolls: every line not kept waits
-                wait = true
-            end
-        end
-        if bonus.pad then
-            wait = true
-        end
-        local q = qualityOf(bonus)
-        local look = quality(q, bonus.perfect)
-        local text, color
-        if now then
-            local typeKnown = roll.stage == 'value' or roll.t >= 1
-            text = typeKnown and tr('%s: drawing the value...', tr(bonus.label or '')) or tr('Bonus %d: spinning the wheel...', i)
-            color = '#e2c46a'
-            row:setBackgroundColor('#3a3326')
-        elseif wait then
-            text = tr('Bonus %d: waiting', i)
-            color = '#707070'
-        else
-            text = bonusText(bonus)
-            color = look[3]
-            if roll and pos == roll.k and done then
-                row:setBackgroundColor('#ffffff18')
-            end
-        end
-        row.text:setText(text)
-        row.text:setColor(color)
-        row.seal:setChecked(isSealed)
-        row.seal:setEnabled(canLock)
-        row.seal:setTooltip(lockable(entry) and tr('Keep this bonus on the next roll') or tr('Keeping a bonus needs an item with 2 or more bonuses'))
-        row.seal.onCheckChange = function(widget, checked)
-            if busy() then
-                return
-            end
-            if checked then
-                seals[entry.slotId] = bonus.key
-            elseif seals[entry.slotId] == bonus.key then
-                seals[entry.slotId] = nil
-            end
-            deltas, deltaSlot = {}, nil
-            Forge.refresh()
-        end
-        local hidden = now or wait
-        -- the line shows the bonus alone, in its quality's colour; its
-        -- range (and the jackpot, RarityConfig.jackpot) are in the tooltip
-        local jackpot = tonumber(bonus.jackpot)
-        local odds = tonumber(entry.jackpotOdds) or 0
-        local rangeTip = ''
-        if bonus.min ~= nil and q ~= nil then
-            rangeTip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
-            if jackpot and odds > 0 then
-                rangeTip = rangeTip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
-            end
-        end
-        row.range:setText('')
-        -- only a bonus kept through a roll says so in words
-        row.quality:setText((isSealed and roll) and tr('kept') or '')
-        row.quality:setColor('#c9a24a')
-        local d = (not roll and deltaSlot == entry.slotId) and deltas[i] or nil
-        if d == 'new' then
-            row.delta:setText(tr('new'))
-            row.delta:setColor('#c9a4ff')
-        elseif d then
-            row.delta:setText(math.abs(d) < 0.05 and '=' or ((d > 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10))))
-            row.delta:setColor(d > 0.05 and '#7fd36a' or d < -0.05 and '#ff7a6a' or '#8c8c8c')
-        else
-            row.delta:setText('')
-        end
-        local tip = describe(bonus.key)
-        if rangeTip ~= '' then
-            tip = (tip and tip ~= '') and (tip .. '\n\n' .. Forge.wrapTip(rangeTip)) or Forge.wrapTip(rangeTip)
-        end
-        row.text:setTooltip(tip)
-        row:setTooltip(tip)
-        row.text.onClick = function()
-            if row.seal:isEnabled() then
-                row.seal:setChecked(not row.seal:isChecked())
+                row:setTooltip(tip)
+                -- a click anywhere on the line keeps or frees the bonus
+                row.onClick = function()
+                    if row.seal:isEnabled() then
+                        row.seal:setChecked(not row.seal:isChecked())
+                    end
+                end
             end
         end
     end
-    rp.rows:setHeight(math.max(1, #list) * 22)
-    local max = math.max(1, tonumber(entry.maxBonuses) or #list)
-    -- the slots left empty, and why: each roll draws how many bonuses
-    -- come out first; known once the roll's count is shown
-    local countKnown = not showing or roll.stage ~= 'count' or roll.t >= 1
-    local empty = countKnown and (max - #list) or 0
-    local justRolled = (showing and countKnown) or (not roll and deltaSlot == entry.slotId and next(deltas) ~= nil)
-    if empty <= 0 then
-        rp.emptySlots:setText('')
-    elseif justRolled then
-        rp.emptySlots:setText(empty == 1 and tr('%d of %d bonuses came out: 1 slot stays empty.', #list, max)
-            or tr('%d of %d bonuses came out: %d slots stay empty.', #list, max, empty))
-    else
-        rp.emptySlots:setText(empty == 1 and tr('+ 1 empty slot') or tr('+ %d empty slots', empty))
-    end
+    col.rows:setHeight(max * 30 - 2)
+    col.slotsCount:setText((counting and '?' or #list) .. ' / ' .. max)
 end
 
 local function fillWheelBox(entry)
@@ -654,61 +676,46 @@ local function fillWheelBox(entry)
         buildWheel(pool)
         box.poolSlot, box.poolSize = entry.slotId, #pool
     end
-    local names = {}
-    for _, p in ipairs(pool) do
-        table.insert(names, tr(p.label or ''))
-    end
     local showing = roll and roll.phase == 'show' and roll.slot == entry.slotId
     if not roll then
         -- the wheel shows them: each slice has its name under the mouse
+        local names = {}
+        for _, p in ipairs(pool) do
+            table.insert(names, tr(p.label or ''))
+        end
         box.caption:setText(tr('%d bonuses can come out', #pool))
-        box.caption:setColor('#c8c8c8')
+        box.caption:setColor('#d1ccd9')
         box.caption:setTooltip(Forge.wrapTip(table.concat(names, ', ')))
-        box.sub:setText('')
-        box.meterTitle:setText('')
-        box.meterValue:setText('')
-        box.meterMin:setText(tr('min.'))
-        box.meterMax:setText(tr('max.'))
-        setNeedle(nil)
+        setDisc(box, nil)
+        setSteps(box, nil, entry)
         lightSlice(nil)
         return
     end
+    box.caption:setTooltip(nil)
     if not showing then
         box.caption:setText(tr('Rolling...'))
         box.caption:setColor('#e2c46a')
-        box.sub:setText('')
-        box.meterTitle:setText('')
-        box.meterValue:setText('')
-        setNeedle(nil)
+        setDisc(box, nil)
+        setSteps(box, nil, entry)
         return
     end
+    setSteps(box, roll.stage, entry)
     local spinning = roll.t < 1
     if roll.stage == 'count' then
         local max = math.max(1, tonumber(roll.max) or #roll.after)
         local shown = spinning and (math.floor((g_clock.millis() - roll.startedAt) / 90) % max + 1) or #roll.after
-        box.caption:setText(spinning and tr('How many bonuses? %d...', shown) or tr('%d of %d bonuses came out!', #roll.after, max))
+        box.caption:setText(spinning and tr('How many bonuses?') or tr('%d of %d bonuses came out!', #roll.after, max))
         box.caption:setColor(spinning and '#e2c46a' or '#ffd75f')
-        local odds = {}
-        for i, pct in ipairs(roll.counts or {}) do
-            table.insert(odds, i .. ' = ' .. number(pct) .. '%')
-        end
-        box.sub:setText(#odds > 0 and tr('Odds: %s', table.concat(odds, ', ')) or '')
-        box.meterTitle:setText('')
-        box.meterValue:setText('')
-        setNeedle(nil)
+        setDisc(box, tostring(shown), tr('of %d bonuses', max), spinning and '#eee6d4' or '#ffd75f')
         lightSlice(nil)
         return
     end
     local cur = roll.after[roll.order[roll.k]]
-    box.sub:setText(tr('bonus %d of %d', roll.k, #roll.order) .. DOT .. (roll.stage == 'type' and tr('the wheel picks the type') or tr('the needle picks the value')))
+    local which = tr('bonus %d of %d', roll.k, #roll.order)
     if roll.stage == 'type' then
         box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', tr(cur.label or '')))
         box.caption:setColor('#e2c46a')
-        box.meterTitle:setText(tr('Value: after the wheel'))
-        box.meterValue:setText('')
-        box.meterMin:setText(tr('min.'))
-        box.meterMax:setText(tr('max.'))
-        setNeedle(nil)
+        setDisc(box, '?', which)
         lightSlice(not spinning and cur.key or nil)
         return
     end
@@ -725,12 +732,7 @@ local function fillWheelBox(entry)
         shown = math.floor((min + frac * (max - min)) * 10 + 0.5) / 10
     end
     local look = spinning and quality(frac) or quality(q, cur.perfect)
-    box.meterTitle:setText(tr(cur.label or ''))
-    box.meterValue:setText(plus(shown, cur.unit))
-    box.meterValue:setColor(look[3])
-    box.meterMin:setText(min and plus(min, cur.unit) or '')
-    box.meterMax:setText(max and tr('%s = Perfect', plus(max, cur.unit)) or '')
-    setNeedle(frac)
+    setDisc(box, plus(shown, cur.unit), tr(look[2]), look[3])
     if spinning then
         box.caption:setText(tr('%s: how much?', tr(cur.label or '')))
         box.caption:setColor('#e2c46a')
@@ -741,46 +743,42 @@ local function fillWheelBox(entry)
 end
 
 local function fillRoll(entry)
-    local rp = page().rollPage
+    local col = page().rollPage.bonusCol
     fillRows(entry)
     fillWheelBox(entry)
-    local lock = seals[entry.slotId]
-    local sealed = sameKey(entry.bonuses, lock)
-    local max = math.max(1, tonumber(entry.maxBonuses) or 1)
-    -- only what the player chose shows here: the kept bonus. How the roll
-    -- goes is in the tick box's tooltip and in the confirmation
-    if not roll and sealed and not (deltaSlot == entry.slotId and next(deltas)) then
-        rp.hint:setText(tr('Kept: %s', bonusText(sealed)))
-        rp.hint:setColor('#c9a24a')
-    else
-        rp.hint:setText('')
-    end
-    local bar = rp.costBar
+    local sealed = sameKey(entry.bonuses, seals[entry.slotId])
+    local bar = col.costBar
     local cost = tonumber(entry.rerollCost) or 0
     local lockGold = sealed and (tonumber(entry.lockCost) or 0) or 0
+    local short = rarityXp < cost
+    -- the wallet follows the roll's price as soon as it is paid
+    window.bottomBar.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
     bar.costXp:setText(tr('%d Rarity XP', cost))
-    bar.costXp:setColor(rarityXp >= cost and '#c9a4ff' or '#ff7a6a')
+    bar.costXp:setColor(short and '#ff7a6a' or '#c9a4ff')
+    bar.haveXp:setText(tr('you have %d', rarityXp))
+    bar.haveXp:setColor(short and '#ff7a6a' or '#898293')
+    local width = bar.xpBar:getWidth()
+    bar.xpBar.fill:setWidth(math.floor((width > 0 and width or 300) * math.min(1, cost > 0 and rarityXp / cost or 1)))
+    -- the gold only when a bonus is kept
     bar.costGoldIcon:setVisible(lockGold > 0)
     bar.costGold:setVisible(lockGold > 0)
-    bar.costGold:setText(tr('%s (seal)', formatGold(lockGold)))
+    bar.costGold:setText(tr('%s gold (keep)', formatGold(lockGold)))
     bar.costGold:setColor(gold >= lockGold and '#e2c46a' or '#ff7a6a')
-    bar.skipButton:setVisible(roll ~= nil and roll.phase == 'show')
-    bar.rollButton:setVisible(not (roll and roll.phase == 'show'))
+    col.skipButton:setVisible(roll ~= nil and roll.phase == 'show')
+    col.rollButton:setVisible(not (roll and roll.phase == 'show'))
     if roll then
-        bar.rollButton:setText(tr('Rolling...'))
-        bar.rollButton:setEnabled(false)
-    elseif rarityXp < cost then
-        bar.rollButton:setText(tr('Missing %d XP', cost - rarityXp))
-        bar.rollButton:setEnabled(false)
+        col.rollButton:setText(tr('Rolling...'))
+        col.rollButton:setEnabled(false)
+    elseif short then
+        col.rollButton:setText(tr('Missing %d XP', cost - rarityXp))
+        col.rollButton:setEnabled(false)
+    elseif gold < lockGold then
+        col.rollButton:setText(tr('Not enough gold to keep'))
+        col.rollButton:setEnabled(false)
     else
-        bar.rollButton:setText((deltaSlot == entry.slotId and next(deltas)) and tr('Roll again') or tr('Roll'))
-        bar.rollButton:setEnabled(cost > 0 and gold >= lockGold)
+        col.rollButton:setText((deltaSlot == entry.slotId and next(deltas)) and tr('Roll again') or tr('Roll'))
+        col.rollButton:setEnabled(cost > 0)
     end
-    local names = {}
-    for _, p in ipairs(entry.pool or {}) do
-        table.insert(names, tr(p.label or ''))
-    end
-    bar.rollButton:setTooltip(Forge.wrapTip(tr('Can roll on this item: %s', table.concat(names, ', '))))
 end
 
 -- ---------------------------------------------------------------------------
@@ -856,48 +854,44 @@ end
 local function fillTotals()
     local tp = page().totalsPage
     tp.list:destroyChildren()
-    -- the scrollbar only when the lines need it
-    tp.listScroll:setVisible(#((data and data.totals) or {}) * 21 > tp.list:getHeight())
-    -- the server can have the total caps off (RarityConfig.capTotals): then
-    -- no bonus brings a cap, and the column and the gold legend go away
-    local anyCap = false
-    for _, t in ipairs((data and data.totals) or {}) do
-        anyCap = anyCap or (not t.perItem and (tonumber(t.cap) or 0) > 0)
-    end
-    local capHeader = tp:recursiveGetChildById('hCap')
-    if capHeader then
-        capHeader:setVisible(anyCap)
-    end
-    -- no legend: a line's tooltip lists the items that give it
-    local legend = tp:recursiveGetChildById('note')
-    if legend then
-        legend:setText('')
-    end
-    for _, t in ipairs((data and data.totals) or {}) do
-        local row = g_ui.createWidget('ForgeTotalRow', tp.list)
-        local unit = t.unit or ''
-        local cap = not t.perItem and tonumber(t.cap) or nil
-        if cap and cap <= 0 then
-            cap = nil
+    local totals = (data and data.totals) or {}
+    -- two columns, read down each: the grid fills across, so the second
+    -- half of the list goes on the right
+    local rows = math.ceil(#totals / 2)
+    tp.listScroll:setVisible(rows * 22 > tp.list:getHeight())
+    tp.none:setVisible(#totals == 0)
+    for cell = 0, rows * 2 - 1 do
+        local t = totals[(cell % 2) * rows + math.floor(cell / 2) + 1]
+        if not t then
+            g_ui.createWidget('UIWidget', tp.list)
+        else
+            local row = g_ui.createWidget('ForgeTotalRow', tp.list)
+            local unit = t.unit or ''
+            -- the server can have the total caps off (RarityConfig.capTotals):
+            -- then no bonus brings one
+            local cap = not t.perItem and tonumber(t.cap) or nil
+            if cap and cap <= 0 then
+                cap = nil
+            end
+            local sum = tonumber(t.total) or 0
+            local full = cap and (t.capped or sum >= cap)
+            row.name:setText(tr(t.label or ''))
+            row.name:setColor(full and '#e2c46a' or '#d1ccd9')
+            row.total:setText(plus(sum, unit) .. (cap and (' / ' .. number(cap) .. unit) or ''))
+            row.total:setColor(full and '#e2c46a' or '#eee6d4')
+            -- the items that give it, under the mouse
+            local lines = { tr(t.label or '') }
+            for _, src in ipairs(t.sources or {}) do
+                local it = items[tonumber(src.item) or 0]
+                table.insert(lines, titleCase(src.name or (it and it.name) or '') .. '  ' .. plus(src.value, unit))
+            end
+            local desc = describe(t.key)
+            if desc then
+                table.insert(lines, '')
+                table.insert(lines, desc)
+            end
+            row:setTooltip(table.concat(lines, '\n'))
         end
-        local sum = tonumber(t.total) or 0
-        local full = cap and (t.capped or sum >= cap)
-        row.name:setText(tr(t.label or ''))
-        row.name:setColor(full and '#e2c46a' or '#d0d0d0')
-        row.total:setText(plus(sum, unit))
-        row.total:setColor(full and '#e2c46a' or '#e6e6e6')
-        row.cap:setText(cap and (number(cap) .. unit) or (anyCap and '-' or ''))
-        local lines = { tr(t.label or '') }
-        for _, src in ipairs(t.sources or {}) do
-            local it = items[tonumber(src.item) or 0]
-            table.insert(lines, titleCase(src.name or (it and it.name) or '') .. '  ' .. plus(src.value, unit))
-        end
-        local desc = describe(t.key)
-        if desc then
-            table.insert(lines, '')
-            table.insert(lines, desc)
-        end
-        row:setTooltip(table.concat(lines, '\n'))
     end
 end
 
