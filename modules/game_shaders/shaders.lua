@@ -238,9 +238,10 @@ local function registerRarityItemShaders()
     end
 end
 
--- Contorno: the outline of a player wearing Mythicus items, one source and a
--- variant per grade and colour. The server names them (scripts/rarity/
--- outline.lua): "Contorno - 1 - <Element>", "Contorno - 2 - <Element>" and
+-- Contorno: a player wearing Mythicus items, the drawing of their element
+-- on the outfit and a line of light round it. One source and a variant per
+-- grade and colour. The server names them (scripts/rarity/outline.lua):
+-- "Contorno - 1 - <Element>", "Contorno - 2 - <Element>" and
 -- "Contorno - 3 - <Element> - <Second element>" (the same element twice:
 -- the second colour is white).
 local CONTORNO_SOURCE = 'shaders/fragment/contorno.frag'
@@ -257,17 +258,18 @@ local function registerContornoShaders()
         return
     end
     local source = g_resources.readFileContents(path)
-    local function register(name, grade, color, second)
-        local code = '#define GRADE ' .. grade .. '\n#define COLOR ' .. color .. '\n#define COLOR2 ' .. second .. '\n' .. source
-        g_shaders.createFragmentShaderFromCode(name, code, false)
+    local function register(name, grade, element, second)
+        local code = '#define GRADE ' .. grade .. '\n#define ELEMENT ' .. (element - 1) .. '\n#define COLOR2 ' .. second .. '\n' .. source
+        -- on the framebuffer: the shader sees the outfit with its colours
+        g_shaders.createFragmentShaderFromCode(name, code, true)
         g_shaders.setupOutfitShader(name)
     end
-    for _, element in ipairs(RARITY_ELEMENTS) do
-        local color = CONTORNO_COLORS[element]
-        register('Contorno - 1 - ' .. element, 1, color, color)
-        register('Contorno - 2 - ' .. element, 2, color, color)
+    for element, elementName in ipairs(RARITY_ELEMENTS) do
+        local color = CONTORNO_COLORS[elementName]
+        register('Contorno - 1 - ' .. elementName, 1, element, color)
+        register('Contorno - 2 - ' .. elementName, 2, element, color)
         for _, other in ipairs(RARITY_ELEMENTS) do
-            register('Contorno - 3 - ' .. element .. ' - ' .. other, 3, color, other == element and 'vec3(1.0)' or CONTORNO_COLORS[other])
+            register('Contorno - 3 - ' .. elementName .. ' - ' .. other, 3, element, other == elementName and 'vec3(1.0)' or CONTORNO_COLORS[other])
         end
     end
 end
