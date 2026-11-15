@@ -92,9 +92,9 @@ local WHEEL = 292 -- the wheel's pictures (tools/gerar-roleta-forja.py)
 -- bonus/s16 to s40) and, for a size, how far from the centre they sit
 local ICON_SIZES = { 40, 36, 32, 28, 24, 20, 16 }
 local function iconRadiusFor(size)
-    return math.min(115, 135 - size / 2)
+    return math.min(116, 136 - size / 2)
 end
-local iconRadius = 115
+local iconRadius = 116
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
 
@@ -449,10 +449,6 @@ end
 local wheelIcons = {}
 local wheelWedges = {}
 local WHEEL_X, WHEEL_Y = 2, 10 -- the wheel's place inside wheelHolder
--- the point the wheel turns around, from its left and top: the client turns
--- a widget around its rect's centre in whole pixels (145 for 292 px, not
--- 146); the pictures are drawn around it (tools/gerar-roleta-forja.py)
-local WHEEL_C = 145
 
 local function setWheel(rot)
     page().rollPage.wheelBox.wheelHolder.wheel:setRotation(rot % 360)
@@ -463,8 +459,8 @@ local function setWheel(rot)
         local a = icon.angle + rot
         local rad = math.rad(a)
         local size = icon:getWidth()
-        icon:setMarginLeft(math.floor(WHEEL_X + WHEEL_C + iconRadius * math.sin(rad) - size / 2 + 0.5))
-        icon:setMarginTop(math.floor(WHEEL_Y + WHEEL_C - iconRadius * math.cos(rad) - size / 2 + 0.5))
+        icon:setMarginLeft(math.floor(WHEEL_X + WHEEL / 2 + iconRadius * math.sin(rad) - size / 2 + 0.5))
+        icon:setMarginTop(math.floor(WHEEL_Y + WHEEL / 2 - iconRadius * math.cos(rad) - size / 2 + 0.5))
     end
 end
 

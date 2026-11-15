@@ -626,15 +626,10 @@ MythosWindow
               image-source: /game_raritybonus/images/forge/wheel/lines_10
               phantom: true
 
-            // the client turns the wheel around a point 145 px from its left
-            // and top (its rect's centre in whole pixels): the hub, the disc
-            // and the pointer sit on that point, not on the widget's middle
             UIWidget
               id: hub
-              anchors.left: wheel.left
-              anchors.top: wheel.top
-              margin-left: 137
-              margin-top: 137
+              anchors.horizontalCenter: wheel.horizontalCenter
+              anchors.verticalCenter: wheel.verticalCenter
               size: 16 16
               image-source: /game_raritybonus/images/forge/wheel/hub
               phantom: true
@@ -642,10 +637,8 @@ MythosWindow
             // during a roll: the number being drawn
             UIWidget
               id: disc
-              anchors.left: wheel.left
-              anchors.top: wheel.top
-              margin-left: 93
-              margin-top: 93
+              anchors.horizontalCenter: wheel.horizontalCenter
+              anchors.verticalCenter: wheel.verticalCenter
               size: 104 104
               image-source: /game_raritybonus/images/forge/wheel/center
               phantom: true
@@ -678,9 +671,8 @@ MythosWindow
 
             UIWidget
               id: pointer
-              anchors.left: wheel.left
+              anchors.horizontalCenter: wheel.horizontalCenter
               anchors.top: parent.top
-              margin-left: 135
               size: 20 18
               image-source: /game_raritybonus/images/forge/wheel/pointer
               phantom: true
