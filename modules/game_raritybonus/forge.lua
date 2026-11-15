@@ -798,7 +798,9 @@ local function fillWheelBox(entry)
         shown = math.floor((min + frac * (max - min)) * 10 + 0.5) / 10
     end
     local look = spinning and quality(frac) or quality(q, cur.perfect)
-    setDisc(box, plus(shown, cur.unit), tr(look[2]), look[3])
+    -- the number alone: the title font's "+" is so thin that the digits
+    -- looked pushed to the right of the disc's centre
+    setDisc(box, number(shown) .. (cur.unit or ''), tr(look[2]), look[3])
     if spinning then
         box.caption:setText(tr('%s: how much?', tr(cur.label or '')))
         box.caption:setColor('#e2c46a')
