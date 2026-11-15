@@ -839,7 +839,7 @@ MythosWindow
     anchors.verticalCenter: closeButton.verticalCenter
     font: verdana-11px-antialised
     color: #9789b3
-    !text: tr('Rates re-roll every 2 hours for every monster. Leaderboard winners are paid in Mythos Coins when the period ends.')
+    text:
 
   MythosButton
     id: closeButton

@@ -1294,14 +1294,9 @@ function updateFooter()
     if not window then
         return
     end
-    local hours = math.floor(rates.interval / 3600)
-    if not next(sectionButtons) then
-        window.footer:setText(tr('Rates re-roll every %d hours for every monster. Leaderboard winners are paid in Mythos Coins when the period ends.', hours))
-    elseif currentTab == 'rates' then
-        window.footer:setText(tr('Rates re-roll every %d hours for every monster.', hours))
-    else
-        window.footer:setText(tr('Leaderboard winners are paid in Mythos Coins when the period ends.'))
-    end
+    -- no explanation at the foot of the window: the countdown and the
+    -- columns' tooltips say it
+    window.footer:setText('')
 end
 
 local function updateSectionButtons()

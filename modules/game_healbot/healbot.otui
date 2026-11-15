@@ -245,28 +245,18 @@ MythosWindow
 
     HealBotPage
       id: healingPage
-      HealBotHint
-        !text: tr('Rules higher on the list go first. A spell is only cast when you have the level and the mana for it.')
 
     HealBotPage
       id: potionsPage
-      HealBotHint
-        !text: tr('Potions and spells have separate exhausts, so the bot can drink and cast in the same second.')
 
     HealBotPage
       id: friendsPage
-      HealBotHint
-        !text: tr('Heals the player on screen with the lowest health. Your own healing always comes first.')
 
     HealBotPage
       id: supportPage
-      HealBotHint
-        !text: tr('Magic shield and haste are not cast in protection zones.')
 
     HealBotPage
       id: lootPage
-      HealBotHint
-        !text: tr('The server loots for you: you do not need to open the corpses. Choose here what it takes.')
       BrevesNote
         id: state
         color: #cbc0e0

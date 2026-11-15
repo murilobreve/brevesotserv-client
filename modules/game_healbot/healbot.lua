@@ -29,9 +29,9 @@ local function fillLoot()
     if not loot or not loot.priceRule then
         text = tr('The auto loot is not available on this client.')
     elseif loot.priceRule().enabled then
-        text = tr('Auto loot is on: on every kill it takes the coins and every item Gersao buys for %d gold or more, plus the items you ticked.', loot.priceRule().min)
+        text = tr('Auto loot on: coins, items worth %d gold or more, and your list', loot.priceRule().min)
     else
-        text = tr('Auto loot is on: on every kill it takes the items on your list.')
+        text = tr('Auto loot on: the items on your list')
     end
     page.state:setText(text)
     page.open.onClick = function()
@@ -523,7 +523,7 @@ local function addCureRule(panel, vocation)
 end
 
 local function clearRules(page)
-    for i = page:getChildCount(), 2, -1 do
+    for i = page:getChildCount(), 1, -1 do
         page:getChildByIndex(i):destroy()
     end
 end
@@ -550,7 +550,7 @@ local function fill()
     end
     local using = g_ui.createWidget('CureRule', page)
     bindCheck(using.enabled, cfg.support, 'usingMsg')
-    using.note:setText(tr('Show "Using one of ... potions" when a potion is used (bot, hotkeys and action bar).'))
+    using.note:setText(tr('Show the "Using one of ... potions" message'))
 
     page = window.content.friendsPage
     clearRules(page)
@@ -561,17 +561,17 @@ local function fill()
 
     page = window.content.supportPage
     clearRules(page)
-    addSupportRule(page, cfg.support.shield, HealData.shieldSpells(vocation), tr('Magic shield: cast again when it runs out.'))
-    addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation),
-        tr('Haste: cast again when it runs out or when you get paralyzed.'))
+    addSupportRule(page, cfg.support.shield, HealData.shieldSpells(vocation), tr('Magic shield'))
+    addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation), tr('Haste (also when paralyzed)'))
     addCureRule(page, vocation)
     local food = g_ui.createWidget('CureRule', page)
     bindCheck(food.enabled, cfg.support, 'food')
-    food.note:setText(tr('Auto food: eats the food in your backpacks until you are full.'))
+    food.note:setText(tr('Auto food'))
     addTrainRule(page, cfg.support.train, HealData.trainSpells(vocation))
     local idle = g_ui.createWidget('CureRule', page)
     bindCheck(idle.enabled, cfg.support, 'antiIdle')
-    idle.note:setText(tr('Anti idle: turns your character every 5 minutes so the server does not log you out.'))
+    idle.note:setText(tr('Anti idle'))
+    idle.note:setTooltip(tr('Turns your character every 5 minutes so the server does not log you out.'))
 
     fillLoot()
 end

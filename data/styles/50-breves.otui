@@ -354,6 +354,22 @@ MythosHSlider < UIScrollBar
 
   MythosHSliderThumb
 
+// A small (i): what would be a paragraph of explanation on a window goes in
+// its tooltip (!tooltip: tr('...'), or setTooltip from Lua).
+MythosInfo < UIWidget
+  size: 14 14
+  text: i
+  text-align: center
+  font: Verdana Bold-11px
+  color: #b4afc3
+  background-color: #2a2438
+  border-width: 1
+  border-color: #5a4f7a
+
+  $hover:
+    color: #ffffff
+    border-color: #b296f5
+
 MythosSeparator < UIWidget
   height: 1
   background-color: #514553

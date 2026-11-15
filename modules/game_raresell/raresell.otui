@@ -80,7 +80,8 @@ MythosWindow
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
-    !text: tr('Gersao pays the common price plus 300 gold, times the grade (Communis x1 up to Mythicus x5). Tick the ones to sell; the gold goes to your bank. Equipped items are not listed.')
+    !text: tr('Common price + 300 gold, times the grade')
+    !tooltip: tr('Communis x1 up to Mythicus x5. The gold goes to your bank. Equipped items are not listed.')
 
   Label
     id: selectLabel
@@ -135,7 +136,7 @@ MythosWindow
       anchors.right: itemsList.right
       margin: 10
       text-align: center
-      !text: tr('No rarity item in your bags that Gersao buys. Equipped items are not listed: put them in your backpack first.')
+      !text: tr('No rarity item in your bags to sell')
       visible: false
 
   Label

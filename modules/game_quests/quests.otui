@@ -242,18 +242,9 @@ MythosWindow
       font: verdana-11px-antialised
       color: #b296f5
 
-    BrevesNote
-      id: text
-      anchors.top: level.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      margin-top: 8
-      text-auto-resize: false
-      height: 44
-
     MythosSeparator
       id: cardSep
-      anchors.top: text.bottom
+      anchors.top: level.bottom
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 6
@@ -341,21 +332,16 @@ MythosWindow
       font: verdana-11px-antialised
       color: #b4afc3
 
-    QuestStat
-      id: steps
-      anchors.top: rarityText.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      margin-top: 2
-
     // more of the strongest monster around the chest (challenge quests)
     QuestStat
       id: guards
-      anchors.top: steps.bottom
+      anchors.top: rarityText.bottom
+      margin-top: 2
       anchors.left: parent.left
       anchors.right: parent.right
 
-    // how it goes, or why the player cannot go yet (quests.lua: renderCard)
+    // why the player cannot go yet, or that the reward is taken (quests.lua:
+    // renderCard); how the button works is in its tooltip
     BrevesNote
       id: note
       anchors.top: guards.bottom

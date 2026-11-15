@@ -646,8 +646,7 @@ local function fillRows(entry)
         rp.emptySlots:setText(empty == 1 and tr('%d of %d bonuses came out: 1 slot stays empty.', #list, max)
             or tr('%d of %d bonuses came out: %d slots stay empty.', #list, max, empty))
     else
-        rp.emptySlots:setText(empty == 1 and tr('+ 1 empty slot (each roll draws 1 to %d bonuses)', max)
-            or tr('+ %d empty slots (each roll draws 1 to %d bonuses)', empty, max))
+        rp.emptySlots:setText(empty == 1 and tr('+ 1 empty slot') or tr('+ %d empty slots', empty))
     end
 end
 
@@ -667,7 +666,7 @@ local function fillWheelBox(entry)
         box.caption:setText(tr('Can roll on this item (%d bonuses):', #pool))
         box.caption:setColor('#c8c8c8')
         box.sub:setText(table.concat(names, ', '))
-        box.meterTitle:setText(tr('The value lands on this bar: further right, better'))
+        box.meterTitle:setText('')
         box.meterValue:setText('')
         box.meterMin:setText(tr('min.'))
         box.meterMax:setText(tr('max.'))
@@ -678,8 +677,8 @@ local function fillWheelBox(entry)
     if not showing then
         box.caption:setText(tr('Rolling...'))
         box.caption:setColor('#e2c46a')
-        box.sub:setText(tr('For each bonus: the wheel spins for the type, then the needle for the value.'))
-        box.meterTitle:setText(tr('Value: after the wheel'))
+        box.sub:setText('')
+        box.meterTitle:setText('')
         box.meterValue:setText('')
         setNeedle(nil)
         return
@@ -694,12 +693,8 @@ local function fillWheelBox(entry)
         for i, pct in ipairs(roll.counts or {}) do
             table.insert(odds, i .. ' = ' .. number(pct) .. '%')
         end
-        local text = tr('First the roll draws how many bonuses the item gets (1 to %d). Slots left over stay empty.', max)
-        if #odds > 0 then
-            text = text .. '\n' .. tr('Odds: %s', table.concat(odds, ', '))
-        end
-        box.sub:setText(text)
-        box.meterTitle:setText(tr('Value: after the wheel'))
+        box.sub:setText(#odds > 0 and tr('Odds: %s', table.concat(odds, ', ')) or '')
+        box.meterTitle:setText('')
         box.meterValue:setText('')
         setNeedle(nil)
         lightSlice(nil)
@@ -753,21 +748,13 @@ local function fillRoll(entry)
     local lock = seals[entry.slotId]
     local sealed = sameKey(entry.bonuses, lock)
     local max = math.max(1, tonumber(entry.maxBonuses) or 1)
-    if roll then
-        rp.hint:setText(tr('For each bonus: the wheel spins for the type, then the needle for the value. A kept bonus stays.'))
-        rp.hint:setColor('#e2c46a')
-    elseif deltaSlot == entry.slotId and next(deltas) then
-        rp.hint:setText(tr('Done: green went up, red went down, new = a different bonus.'))
-        rp.hint:setColor('#a8a8a8')
-    elseif sealed then
-        rp.hint:setText(tr('%s stays at %s. The other bonuses are rolled again.', tr(sealed.label or ''), plus(sealed.value, sealed.unit)))
-        rp.hint:setColor('#a8a8a8')
-    elseif lockable(entry) then
-        rp.hint:setText(tr('Tick a bonus to keep it. Everything else is rolled again (1 to %d bonuses).', max))
-        rp.hint:setColor('#a8a8a8')
+    -- only what the player chose shows here: the kept bonus. How the roll
+    -- goes is in the tick box's tooltip and in the confirmation
+    if not roll and sealed and not (deltaSlot == entry.slotId and next(deltas)) then
+        rp.hint:setText(tr('Kept: %s', bonusText(sealed)))
+        rp.hint:setColor('#c9a24a')
     else
-        rp.hint:setText(tr('The bonuses are rolled again (1 to %d bonuses).', max))
-        rp.hint:setColor('#a8a8a8')
+        rp.hint:setText('')
     end
     local bar = rp.costBar
     local cost = tonumber(entry.rerollCost) or 0
@@ -831,7 +818,7 @@ local function fillUp(entry)
     end
     up.maxText:setVisible(not has)
     if not has then
-        up.maxText:setText(tr('This item is already at the highest grade (%s). Use the Roll tab to roll its bonuses again.', grade(entry.rarity).label))
+        up.maxText:setText(tr('Highest grade: %s', grade(entry.rarity).label))
         up.forgeBar:setVisible(false)
         up.forgePct:setVisible(false)
         return
@@ -846,14 +833,12 @@ local function fillUp(entry)
     local forging = asc ~= nil and asc.phase == 'forging' and asc.slot == entry.slotId
     up.forgeBar:setVisible(forging)
     up.forgePct:setVisible(forging)
-    up.explain:setVisible(not forging)
+    -- what success and failure do is in the confirmation of the upgrade
+    up.explain:setVisible(false)
     if forging then
         local width = up.forgeBar:getWidth() - 2
         up.forgeBar.fill:setWidth(math.max(0, math.floor(width * asc.pct / 100)))
         up.forgePct:setText(tr('Forging... %d%%', asc.pct))
-    else
-        up.explain:setText(tr('If it works: the item goes up a grade and its bonuses are rolled again at the new grade.') .. '\n' ..
-            tr('If it fails: the item stays as it is. The cost is spent anyway.'))
     end
     local bar = up.upCostBar
     local needGold, needXp = tonumber(offer.gold) or 0, tonumber(offer.xp) or 0
@@ -884,10 +869,10 @@ local function fillTotals()
     if capHeader then
         capHeader:setVisible(anyCap)
     end
+    -- no legend: a line's tooltip lists the items that give it
     local legend = tp:recursiveGetChildById('note')
     if legend then
-        legend:setText(anyCap and tr('Gold: at the limit (more of it adds nothing). Hover a line to see which items give it. Only worn items count.')
-            or tr('Hover a line to see which items give it. Only worn items count.'))
+        legend:setText('')
     end
     for _, t in ipairs((data and data.totals) or {}) do
         local row = g_ui.createWidget('ForgeTotalRow', tp.list)

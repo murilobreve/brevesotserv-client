@@ -251,7 +251,7 @@ local function renderDaily()
     if not daily then
         card.creature:setVisible(false)
         fitText(card.name, tr('Nenhuma task hoje ainda'))
-        card.info:setText(tr('Um monstro do seu level com hunt na sala de teleporte de uma cidade.'))
+        card.info:setText('')
         card.badge:setText('')
         card.bar:setVisible(false)
         card.reward:setText(rewardText(state.dailyExp, string.format('%d+ Hunt Points', state.dailyBase or 20), state.dailyCharms))
@@ -290,8 +290,8 @@ local function renderDaily()
         card.extra:setText(tr('Mate %d %s. Valem: %s.', daily.need, daily.monster, daily.variants))
         card.name:setTooltip(tr('Valem: %s.', daily.variants))
     else
-        card.extra:setText(tr('Mate %d %s. Conta para todos que ajudarem na kill e para a party.', daily.need, daily.monster))
-        card.name:setTooltip('')
+        card.extra:setText(tr('Mate %d %s', daily.need, daily.monster))
+        card.name:setTooltip(tr('Conta para todos que ajudarem na kill e para a party.'))
     end
     local cost = state.rerollCost or 0
     card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar (grátis)'))
@@ -371,8 +371,8 @@ local function renderStreak()
     local streak = state.streak or 0
     local max = state.streakMax or 6
     local bonus = state.streakBonus or 5
-    panel.streakTitle:setText(tr('Sequência diária: %d dia%s. Cada dia seguido dá +%d pontos na task diária (até +%d)', streak, streak == 1 and '' or 's',
-        bonus, bonus * max))
+    panel.streakTitle:setText(tr('Sequência diária: %d dia%s', streak, streak == 1 and '' or 's'))
+    panel.streakTitle:setTooltip(tr('Cada dia seguido dá +%d pontos na task diária (até +%d).', bonus, bonus * max))
     panel.streakDots:destroyChildren()
     for day = 1, max + 1 do
         local dot = g_ui.createWidget('StreakDot', panel.streakDots)
@@ -411,7 +411,8 @@ local function renderTrailList()
     local trail = state.trail
     local steps = trail.steps or {}
     local done = trail.finished and #steps or trail.index - 1
-    panel.summary:setText(tr('%d de %d etapas completas. Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.', done, #steps,
+    panel.summary:setText(tr('%d de %d etapas completas', done, #steps))
+    panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.',
         formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0))
         .. ((trail.totalCharms or 0) > 0 and tr(' E %s charm points.', formatNumber(trail.totalCharms)) or ''))
 
@@ -1071,7 +1072,7 @@ function init()
     window = g_ui.displayUI('hunttasks')
     window:hide()
     window:setText(tr('Tasks do Caçador'))
-    window.footer:setText(tr('Mate os monstros das tasks e ganhe experiência e Hunt Points. Também dá para falar com o Szuszkin.'))
+    window.footer:setText('')
 
     ProtocolGame.registerExtendedJSONOpcode(TASK_OPCODE, onTaskOpcode)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })

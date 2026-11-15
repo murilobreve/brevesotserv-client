@@ -240,9 +240,8 @@ VoiceSettingsWindow < MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 2
-      text-wrap: true
-      text-auto-resize: true
-      !text: tr('It talks in the party; out of one, in the guild, then the room, then near you.')
+      height: 0
+      text:
 
     VoiceSettingLabel
       id: keyStatus

@@ -53,10 +53,6 @@ local function nameOf(quest)
     return isPortuguese() and quest.name or quest.nameEn
 end
 
-local function textOf(quest)
-    return isPortuguese() and quest.text or quest.textEn
-end
-
 local function formatNumber(value)
     local text = tostring(math.floor(tonumber(value) or 0))
     while true do
@@ -257,7 +253,6 @@ local function renderCard()
         levelText = levelText .. '  -  ' .. tr('recommended: level %d', suggested)
     end
     card.level:setText(levelText)
-    card.text:setText(textOf(quest))
 
     card.monsters:destroyChildren()
     local count = 0
@@ -315,13 +310,6 @@ local function renderCard()
 
     renderRarity(card, quest)
 
-    if quest.steps and quest.steps > 0 then
-        setStat(card.steps, tr('Way to the chest'), tr('about %d steps', quest.steps))
-        card.steps:setVisible(true)
-    else
-        card.steps:setVisible(false)
-    end
-    -- the guards of a challenge's chest
     if quest.guards and (quest.guards.count or 0) > 0 then
         setStat(card.guards, tr('Guarding the chest'), string.format('%d x %s', quest.guards.count, quest.guards.name), '#ffb36b')
         card.guards:setVisible(true)
@@ -331,21 +319,21 @@ local function renderCard()
         card.guards:setHeight(0)
     end
 
+    -- the card says only what changes for the player; how the button works
+    -- is in its tooltip
     if quest.done then
-        card.note:setText(tr('You took the reward of this quest. The cave stays open for hunting.'))
+        card.note:setText(tr('Reward taken'))
         card.note:setColor('#7fd35a')
     elseif not canGo(quest) then
         card.note:setText(tr('This quest asks for level %d.', quest.level))
         card.note:setColor('#ff7a6b')
-    elseif suggested > (state and state.level or 0) then
-        -- allowed in, but below the level the cave really asks for
-        card.note:setText(tr('You can enter, but the cave is made for level %d: below it, go with a team.', suggested))
-        card.note:setColor('#e2a443')
     else
-        card.note:setText(tr('From a protection zone, or out of combat, the button takes you to the entrance of the cave. The chest is at its far end; the Voltar portals take you back to the temple.'))
-        card.note:setColor('#b4afc3')
+        card.note:setText('')
     end
+    -- below the recommended level: the level line says it in orange
+    card.level:setColor((canGo(quest) and suggested > (state and state.level or 0)) and '#e2a443' or '#b296f5')
     card.go:setEnabled(canGo(quest))
+    card.go:setTooltip(tr('From a protection zone or out of combat. The Voltar portals in the cave take you back to the temple.'))
 end
 
 local function selectQuest(key)
@@ -370,7 +358,7 @@ local function updateStatuses()
         end
     end
     if window then
-        window.summary:setText(tr('%d quests, %d for you to do. Each one is a cave of the official map with a chest at its far end.', #state.quests, open))
+        window.summary:setText(tr('%d quests, %d for you to do', #state.quests, open))
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
@@ -567,7 +555,7 @@ local function showChest(data)
     chestWindow = g_ui.displayUI('chest')
     chestWindow:setText(nameOf(data))
     chestWindow.subtitle:setText(tr('Pick your reward: one per character.'))
-    chestWindow.hint:setText(tr('Rest the mouse on an item to see all of it. A double click takes it.'))
+    chestWindow.hint:setText('')
     local rewards = data.rewards or {}
     local perRow = math.max(1, math.min(#rewards, CARDS_PER_ROW))
     local rowsOf = math.max(1, math.ceil(#rewards / perRow))

@@ -845,7 +845,7 @@ renderDetail = function()
         p.note:setText(table.concat(warnings, '\n'))
         p.note:setColor('#ffb36b')
     else
-        p.note:setText(tr('Ninguém da sua party está impedido. De uma área protegida, ou fora de combate, você vai à sala da alavanca; puxem juntos nos pisos marcados.'))
+        p.note:setText(tr('Ninguém da sua party está impedido.'))
         p.note:setColor('#9fd99a')
     end
 

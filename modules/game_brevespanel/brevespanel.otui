@@ -341,7 +341,7 @@ BrevesNewsWindow < MythosWindow
     text-auto-resize: true
     font: verdana-11px-monochrome
     color: #e6e0f2
-    !text: tr('The server has new systems. They are all in the Mythos bar, under the game screen and above your spells.')
+    !text: tr('Everything is in the Mythos bar, under the game screen.')
 
   MythosSeparator
     id: topSep

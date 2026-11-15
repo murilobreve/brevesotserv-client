@@ -273,7 +273,8 @@ MythosWindow
     text-align: left
     text-offset: 2 2
     text-align: topLeft
-    !text: tr('Pick the bag for each kind of loot.\n\nOn the right, tick Take on what the auto loot should pick up.')
+    text:
+    visible: false
     anchors.top: filters.bottom
     anchors.bottom: list.bottom
     anchors.left: filters.left

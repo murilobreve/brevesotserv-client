@@ -149,9 +149,9 @@ MythosWindow
     anchors.right: parent.right
     text-auto-resize: false
     text-wrap: true
-    height: 30
+    height: 0
     color: #9789b3
-    !text: tr('The steps run from top to bottom over the monsters the simple filters let through: keep the ones that match, sort them, keep only the first ones... Each step works on what the step above left.')
+    text:
 
   AdvLabel
     id: presetLabel
@@ -242,7 +242,7 @@ MythosWindow
     id: emptySteps
     anchors.centerIn: steps
     color: #75688f
-    !text: tr('No steps yet: add one below, or pick a ready-made filter above.')
+    !text: tr('No steps yet')
 
   MythosButton
     id: addFilter

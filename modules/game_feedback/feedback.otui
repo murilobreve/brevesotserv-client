@@ -47,7 +47,7 @@ FeedbackWindow < MythosWindow
 
   Label
     id: help
-    !text: tr('Found a bug or have an idea for the server? Tell the staff here. Your character and where you are go with it.')
+    !text: tr('Bug or idea? Tell the staff.')
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right

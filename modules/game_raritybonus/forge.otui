@@ -393,7 +393,7 @@ MythosWindow
         height: 40
         text-wrap: true
         font: Verdana-10px-antialiased
-        !text: tr('Hover an item to see its bonuses. Click to pick it.')
+        text:
 
     // ------------------------------------------------- the item picked
     ForgePanel
@@ -454,7 +454,7 @@ MythosWindow
         text-align: center
         text-auto-resize: false
         text-wrap: true
-        !text: tr('You have no rarity item, worn or in the backpack.\nRarity items come from Pale, Ashen, Obsidian and Lord of Death monsters.')
+        !text: tr('No rarity item, worn or in the backpack')
         visible: false
 
       // ---------------------------------------------------- Roll
@@ -1082,4 +1082,4 @@ MythosWindow
           height: 28
           text-wrap: true
           font: Verdana-10px-antialiased
-          !text: tr('Gold: at the limit (more of it adds nothing). Hover a line to see which items give it. Only worn items count.')
+          text:
