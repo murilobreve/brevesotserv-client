@@ -12,6 +12,11 @@ from PIL import Image, ImageDraw
 out = sys.argv[1]
 SIZE = 292
 SS = 4  # supersampling
+# The client turns a widget around its rect's centre in whole pixels: for a
+# 292 px widget that is 145 px from its left and top, not 146. Everything
+# that turns (trim, slices) is drawn around that point, or the wheel would
+# wobble off its hub as it spins.
+CENTER = 145
 GOLD = (0xc9, 0xa2, 0x4a, 255)
 PEG = (0xf0, 0xd9, 0x8c, 255)
 DARK = (0x0f, 0x0a, 0x19, 255)
@@ -23,7 +28,7 @@ def lines(n):
     s = SIZE * SS
     img = Image.new('RGBA', (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    c = s / 2
+    c = CENTER * SS
     r = c - 2 * SS
     box = [c - r, c - r, c + r, c + r]
     seg = 360 / n
@@ -47,7 +52,7 @@ def wedge(n):
     s = SIZE * SS
     img = Image.new('RGBA', (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    c = s / 2
+    c = CENTER * SS
     r = c - 4 * SS
     seg = 360 / n
     d.pieslice([c - r, c - r, c + r, c + r], -90 - 0.4, -90 + seg + 0.4, fill=(255, 255, 255, 255))
