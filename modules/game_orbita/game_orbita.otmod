@@ -1,9 +1,0 @@
-Module
-  name: game_orbita
-  description: Orbita - the rare items a player wears, as cut gems circling the character
-  author: Mythos
-  website: https://mythosot.com.br
-  sandboxed: true
-  scripts: [ orbita ]
-  @onLoad: init()
-  @onUnload: terminate()

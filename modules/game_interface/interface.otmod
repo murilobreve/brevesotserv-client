@@ -59,7 +59,6 @@ Module
     - game_feedback
     - game_partyminimap
     - game_voice
-    - game_orbita
     - game_skillshot
     - game_wiki
     - game_huntboard

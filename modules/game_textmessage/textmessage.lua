@@ -336,35 +336,6 @@ function togglePositionWindow()
     else
         cards:setEnabled(false)
     end
-    -- the gems of the rare items (game_orbita): whose are drawn, which grades,
-    -- and whether the others see mine (that one is the server's)
-    local orbita = modules.game_orbita
-    local show, grades, mine = positionWindow:getChildById('orbitaShow'), positionWindow:getChildById('orbitaGrades'), positionWindow:getChildById('orbitaMine')
-    if orbita and orbita.isSupported and orbita.isSupported() then
-        show:addOption(tr('Show on every player'), 'all')
-        show:addOption(tr('Show only on my character'), 'mine')
-        show:addOption(tr('Orbit off'), 'off')
-        show:setCurrentOptionByData(orbita.getMode(), true)
-        show.onOptionChange = function(widget, text, data)
-            orbita.setMode(data)
-        end
-        grades:addOption(tr('Mythicus and Legendarius'), 'all')
-        grades:addOption(tr('Mythicus only'), 'mythic')
-        grades:setCurrentOptionByData(orbita.getMythicOnly() and 'mythic' or 'all', true)
-        grades.onOptionChange = function(widget, text, data)
-            orbita.setMythicOnly(data == 'mythic')
-        end
-        mine:addOption(tr('Other players see my orbit'), 'shown')
-        mine:addOption(tr('Hide my orbit from other players'), 'hidden')
-        mine:setCurrentOptionByData(orbita.getHideMine() and 'hidden' or 'shown', true)
-        mine.onOptionChange = function(widget, text, data)
-            orbita.setHideMine(data == 'hidden')
-        end
-    else
-        show:setEnabled(false)
-        grades:setEnabled(false)
-        mine:setEnabled(false)
-    end
     positionWindow:getChildById('closeButton').onClick = hidePositionWindow
     positionWindow.onEscape = hidePositionWindow
     positionWindow:raise()
