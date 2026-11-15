@@ -250,7 +250,13 @@ local function renderCard()
     end
     card:setText(tr('Quest'))
     card.name:setText(nameOf(quest))
-    card.level:setText(quest.prize and tr('Level %d challenge', quest.level) or tr('Level %d quest', quest.level))
+    -- the server's recommended level (the entry level stays the gate)
+    local suggested = tonumber(quest.suggested) or 0
+    local levelText = quest.prize and tr('Level %d challenge', quest.level) or tr('Level %d quest', quest.level)
+    if suggested > (quest.level or 0) then
+        levelText = levelText .. '  ·  ' .. tr('recommended: level %d', suggested)
+    end
+    card.level:setText(levelText)
     card.text:setText(textOf(quest))
 
     card.monsters:destroyChildren()
@@ -331,6 +337,10 @@ local function renderCard()
     elseif not canGo(quest) then
         card.note:setText(tr('This quest asks for level %d.', quest.level))
         card.note:setColor('#ff7a6b')
+    elseif suggested > (state and state.level or 0) then
+        -- allowed in, but below the level the cave really asks for
+        card.note:setText(tr('You can enter, but the cave is made for level %d: below it, go with a team.', suggested))
+        card.note:setColor('#e2a443')
     else
         card.note:setText(tr('From a protection zone, or out of combat, the button takes you to the entrance of the cave. The chest is at its far end; the Voltar portals take you back to the temple.'))
         card.note:setColor('#b4afc3')
@@ -390,8 +400,12 @@ function refreshList()
             for _, monster in ipairs(quest.monsters or {}) do
                 total = total + (monster.count or 0)
             end
-            row.info:setText(quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
-                or tr('Level %d - %d monsters', quest.level, total))
+            local info = quest.prize and tr('Level %d - %d monsters - challenge', quest.level, total)
+                or tr('Level %d - %d monsters', quest.level, total)
+            if (tonumber(quest.suggested) or 0) > (quest.level or 0) then
+                info = info .. ' - ' .. tr('rec. %d', quest.suggested)
+            end
+            row.info:setText(info)
             row.onFocusChange = function(widget, focused)
                 if focused then
                     selectQuest(quest.key)

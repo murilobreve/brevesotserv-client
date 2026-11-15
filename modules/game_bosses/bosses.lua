@@ -601,6 +601,10 @@ local function fillRow(row, boss)
         row.name:setText(boss.name)
         -- the level the lever asks, then the numbers; the quest is in the detail
         local level = (boss.level or 0) > 0 and tr('Nv %d', boss.level) or tr('Nv livre')
+        -- the server's recommended level (the lever's level stays the gate)
+        if (tonumber(boss.suggested) or 0) > (boss.level or 0) then
+            level = tr('Nv %d (rec. %d)', boss.level, boss.suggested)
+        end
         row.info:setText(tr('%s · %s XP · %s vida', level, shortNumber(boss.experience), shortNumber(boss.health)))
         row.star.onClick = function()
             favorites[boss.name] = not favorites[boss.name] or nil
@@ -747,7 +751,11 @@ renderDetail = function()
     d.pedestal.creature:setOutfit(outfitOf(boss.outfit))
     paintPill(d.status, boss)
     d.name:setText(boss.name)
-    d.quest:setText(tr('%s · nível %s · espera %s', boss.quest or '', boss.level > 0 and tostring(boss.level) or tr('livre'), formatWait(boss.wait or 0)))
+    local levelText = boss.level > 0 and tostring(boss.level) or tr('livre')
+    if (tonumber(boss.suggested) or 0) > (boss.level or 0) then
+        levelText = tr('%s (recomendado %d)', levelText, boss.suggested)
+    end
+    d.quest:setText(tr('%s · nível %s · espera %s', boss.quest or '', levelText, formatWait(boss.wait or 0)))
     d.stats:destroyChildren()
     for _, stat in ipairs({ { 'EXPERIÊNCIA', shortNumber(boss.experience) }, { 'VIDA', shortNumber(boss.health) },
         { 'JOGADORES', boss.players > 1 and tr('%d ou mais', boss.players) or tr('1 a 5') } }) do

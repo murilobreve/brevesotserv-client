@@ -803,7 +803,7 @@ WIKI_PAGES.hunts = {
     menu = 'Hunts por nível',
     title = 'Hunts por nível',
     blocks = {
-        { 'lead', 'Todas as hunts que o Hunts TP do Hunt Board alcança, do nível mais baixo ao mais alto. O nível é o recomendado pelas Hunt Tasks para o monstro; "Perto de" é a cidade mais perto da hunt.' },
+        { 'lead', 'Todas as hunts que o Hunts TP do Hunt Board alcança, do nível mais baixo ao mais alto. O nível é o recomendado pelas Hunt Tasks para o monstro, já contando o ritmo do servidor: aqui o XP sobe bem mais rápido que skill e magic level, então um monstro pede mais nível do que no Tibia normal (um Dragon pede 165, um Demon 440); "Perto de" é a cidade mais perto da hunt.' },
         { 'p', '"Perto do meu level" mostra só as hunts de 55% a 110% do seu level, a mesma faixa que a tarefa diária usa. Clique num monstro para ver a página dele.' },
         { 'huntlist' },
         { 'links', { 'travel', 'huntboard' } },
