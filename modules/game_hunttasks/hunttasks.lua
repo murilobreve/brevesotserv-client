@@ -384,11 +384,8 @@ local function renderStreak()
             dot:setColor('#ffffff')
         end
     end
-    panel.help:setText(tr(
-        'Task diária: um monstro do seu level por dia. Se ele estiver com XP x2.0 ou mais no Hunt Board, os pontos dobram.\n' ..
-        'Trilha do Caçador: %d monstros em ordem, do mais fraco ao mais forte. A cada %d etapas tem um bônus.\n' ..
-        'Os Hunt Points compram poção de XP, exercise weapon, pergaminhos de raridade e ascensão, Bag of Mythical, Bag You Desire, Rarity XP, Mythos Coins, Loot Pouch e montarias na aba Loja.',
-        #(state.trail.steps or {}), state.trail.milestoneEvery or 5))
+    -- no explanation under the cards: each one says what it is
+    panel.help:setText('')
 end
 
 -- ---------------------------------------------------------------- trail tab
