@@ -186,9 +186,11 @@ local function attachShaders()
     local map = modules.game_interface.getMapPanel()
     map:setShader('Default')
 
+    -- the player's own shader is the server's (it comes with the creature,
+    -- before this runs: the Contorno of a player who logs in wearing Mythicus
+    -- items): only the mount's is reset here
     local player = g_game.getLocalPlayer()
     if player then
-        player:setShader('Default')
         player:setMountShader('Default')
     end
 end
@@ -236,6 +238,40 @@ local function registerRarityItemShaders()
     end
 end
 
+-- Contorno: the outline of a player wearing Mythicus items, one source and a
+-- variant per grade and colour. The server names them (scripts/rarity/
+-- outline.lua): "Contorno - 1 - <Element>", "Contorno - 2 - <Element>" and
+-- "Contorno - 3 - <Element> - <Second element>" (the same element twice:
+-- the second colour is white).
+local CONTORNO_SOURCE = 'shaders/fragment/contorno.frag'
+local CONTORNO_COLORS = {
+    None = 'vec3(0.910, 0.894, 1.0)', Igneus = 'vec3(1.0, 0.416, 0.165)', Terrenus = 'vec3(0.424, 0.820, 0.227)',
+    Fulmineus = 'vec3(0.710, 0.420, 1.0)', Glacialis = 'vec3(0.322, 0.863, 1.0)', Sacer = 'vec3(1.0, 0.847, 0.290)',
+    Mortifer = 'vec3(0.541, 0.239, 0.749)', Corporalis = 'vec3(0.722, 0.745, 0.776)',
+}
+
+local function registerContornoShaders()
+    local path = resolvepath(CONTORNO_SOURCE)
+    if not path or not g_resources.fileExists(path) then
+        g_logger.error('Contorno shaders: ' .. tostring(path) .. ' not found')
+        return
+    end
+    local source = g_resources.readFileContents(path)
+    local function register(name, grade, color, second)
+        local code = '#define GRADE ' .. grade .. '\n#define COLOR ' .. color .. '\n#define COLOR2 ' .. second .. '\n' .. source
+        g_shaders.createFragmentShaderFromCode(name, code, false)
+        g_shaders.setupOutfitShader(name)
+    end
+    for _, element in ipairs(RARITY_ELEMENTS) do
+        local color = CONTORNO_COLORS[element]
+        register('Contorno - 1 - ' .. element, 1, color, color)
+        register('Contorno - 2 - ' .. element, 2, color, color)
+        for _, other in ipairs(RARITY_ELEMENTS) do
+            register('Contorno - 3 - ' .. element .. ' - ' .. other, 3, color, other == element and 'vec3(1.0)' or CONTORNO_COLORS[other])
+        end
+    end
+end
+
 ShaderController = Controller:new()
 
 function ShaderController:onInit()
@@ -247,6 +283,7 @@ function ShaderController:onInit()
         registerShader(opts, 'setupOutfitShader')
     end
     registerRarityItemShaders()
+    registerContornoShaders()
 
     for _, opts in pairs(MOUNT_SHADERS) do
         registerShader(opts, 'setupMountShader')
