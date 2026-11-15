@@ -513,7 +513,7 @@ WIKI_PAGES.quality = {
           } },
         { 'p', 'A descrição do item mostra a qualidade dele, por exemplo Base quality 95% (bonuses up to x2.91).' },
         { 'h', 'Limite de um item' },
-        { 'p', 'Um item com todos os bônus do grau não passa de 2/3 do teto de um bônus: Healing Received para em 66%, uma resistência em 33%. Menos bônus continuam deixando os outros mais fortes: o limite sobe junto, e um Mythicus de um bônus só chega ao teto inteiro. Armor, Defense e Attack não passam do valor do próprio item, ou 1,5 vez com menos bônus.' },
+        { 'p', 'O total não tem mais teto, mas um item sozinho continua limitado como antes: com todos os bônus do grau ele não passa de 2/3 do teto que o bônus tinha (Healing Received para em 66%, uma resistência em 33%). Menos bônus continuam deixando os outros mais fortes: o limite sobe junto, e um Mythicus de um bônus só chega a esse valor inteiro. Armor, Defense e Attack não passam do valor do próprio item, ou 1,5 vez com menos bônus.' },
         { 'h', 'Itens que você já tinha' },
         { 'p', 'Os raros que já existiam ganharam o multiplicador do item uma vez, no mesmo lugar da faixa, e nenhum bônus diminuiu. Um Armor, Defense ou Attack antigo maior que a nova faixa continua como estava.' },
         { 'p', 'O Finisher saiu: um item que tinha ganhou outro bônus do seu tipo no lugar, no mesmo lugar da faixa.' },
@@ -599,20 +599,26 @@ WIKI_PAGES.pools = {
             { 'Attack Spell Damage', '3% a 15%', '' }, { 'Life Leech', '1% a 6%', '' }, { 'Mana Leech', '1% a 10%', '' },
             { 'Healing Received', '5% a 20%', '' }, { 'Dodge Chance', '1% a 4%', '' },
         }),
-        { 'p', 'Physical Resist vai até 14% por item (o total no personagem para em 15%): é a resistência mais forte.' },
+        { 'p', 'Physical Resist vai até 14% por item: é a resistência mais forte.' },
         { 'links', { 'quality', 'affixes', 'stacking' } },
     },
 }
 
+-- the rows still carry the cap each bonus had (third value); the total
+-- caps are off on the server (RarityConfig.capTotals), so it is not shown
 local function affixTable(rows)
-    return { 'table', widths = { 120, 330, 60 }, head = { 'Bônus', 'O que faz', 'Teto' }, rows = rows }
+    local shown = {}
+    for i, row in ipairs(rows) do
+        shown[i] = { row[1], row[2] }
+    end
+    return { 'table', widths = { 120, 390 }, head = { 'Bônus', 'O que faz' }, rows = shown }
 end
 
 WIKI_PAGES.affixes = {
     menu = 'Lista de bônus',
     title = 'Lista de bônus',
     blocks = {
-        { 'lead', 'Todos os bônus que um item raro pode ter. O teto é o máximo que todos os seus itens juntos podem dar, já contando o bônus de quem achou. Na janela Rarity Bonuses e na roleta, o (i) ao lado de um bônus explica o que ele faz.' },
+        { 'lead', 'Todos os bônus que um item raro pode ter. O total de um bônus não tem teto: o que todos os seus itens juntos dão não é cortado. Bônus em porcentagem de vários itens se combinam com retorno decrescente (veja Como os bônus somam), então chegam perto de 100% sem passar; o servidor só para Attack Speed, Dodge e Cleave Damage em 100% e Cooldown Reduction em 50%. Na janela Rarity Bonuses e na roleta, o (i) ao lado de um bônus explica o que ele faz.' },
         { 'h', 'Ataque' },
         affixTable({
             { 'Attack', 'Ataque a mais na arma. Nas armas corpo a corpo é uma parte do ataque da própria arma.', '' },
@@ -639,7 +645,7 @@ WIKI_PAGES.affixes = {
             { 'Cooldown Reduction', 'Cooldowns das magias mais curtos, e a espera entre duas magias de ataque ou de cura encurta metade disso (20% deixa os 2 s em 1,8 s). Vem de wands, rods, spellbooks, capacetes, armaduras e calças.', '20%' },
             { 'Ally Healing', 'Cura a mais em outro jogador (exura sio, mass healing). Não vale em você.', '40%' },
             { 'Attack Spell Damage', 'Dano a mais em todas as magias de ataque (as faladas, não runas). Vem das armas e dos spellbooks.', '60%' },
-            { 'Bônus de magia', 'Dano a mais em uma magia ou runa, ou cura a mais se for magia de cura (teto 100%). Soma com Attack Spell Damage.', '150%' },
+            { 'Bônus de magia', 'Dano a mais em uma magia ou runa, ou cura a mais se for magia de cura. Soma com Attack Spell Damage.', '150%' },
         }),
         { 'h', 'Bônus de magia por vocação' },
         { 'p', 'Cada arma só rola magias da vocação que usa ela. No item aparece com as palavras da magia, por exemplo +18% Exori Gran Damage ou +20% Exura Vita Healing. Espadas, machados e clavas rolam magias de knight, armas de punho de monk, arcos e bestas de paladin, wands de sorcerer, rods de druid, e spellbooks da vocação do livro.' },
@@ -713,14 +719,14 @@ WIKI_PAGES.stacking = {
               { 'Dodge 4% + 4% + 4%', '12%', '11,5%' },
               { 'Fire Resist 10% + 10%', '20%', '19%' },
               { 'Critical Hit Chance 10% + 10%', '20%', '19%' },
-              { 'Onslaught 5% + 5%', '10%', '9% (teto)' },
+              { 'Onslaught 5% + 5%', '10%', '9,75%' },
           } },
-        { 'p', 'Bônus fixos, como Attack, Armor e Speed, somam direto. Depois de combinar, o total para no teto do bônus.' },
+        { 'p', 'Bônus fixos, como Attack, Armor e Speed, somam direto. O total não tem teto: em porcentagem, cada item a mais rende um pouco menos que o anterior, e o total chega perto de 100% sem passar.' },
         { 'h', 'Com imbuements e a forja' },
         { 'p', 'Os bônus de raridade somam com os imbuements, e com a Exaltation Forge. Crit e leech da raridade se juntam aos do Strike e do Vampirism/Void.' },
-        { 'note', 'A chance de crítico total pode chegar a 60%: os 10% do Strike mais até 50% da raridade.' },
+        { 'note', 'A chance de crítico da raridade se junta aos 10% do Strike.' },
         { 'h', 'Bônus de quem achou' },
-        { 'p', 'Os 20% a mais do item que você mesmo achou entram antes do teto. Um item seu não passa do teto por causa disso.' },
+        { 'p', 'Os 20% a mais do item que você mesmo achou entram no valor do item, antes de combinar com os outros.' },
         { 'links', { 'affixes', 'experience' } },
     },
 }
