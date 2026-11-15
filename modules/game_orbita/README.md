@@ -1,64 +1,70 @@
-# game_orbita (Órbita, prototype)
+# game_orbita (Órbita)
 
 Every Mythicus or Legendarius item a player wears is a small cut gem circling
-the character. Not loaded by the client: it is not in
-`modules/game_interface/interface.otmod`. It ran on a local Linux build of this
-client (2026-11-15) driven by a text file, with no server part.
+the character. Loaded with `game_interface` (after `game_voice`).
 
 ## What it shows
 
 - **Cut**: the gem's outline recalls the piece: helmet, amulet, armor, shield,
-  weapon, ring, legs, boots (`images/core_<slot>_<element>.png`).
+  weapon, ring, legs, boots (`images/core_<slot>_<element>.png`). A spellbook
+  is a shield.
 - **Height**: three turns (`BANDS` in `orbita.lua`). Helmet and amulet circle
   the head (smaller, faster); armor, weapon, shield and ring the chest; legs
-  and boots the feet.
-- **Colour**: the item's element, the colours of
-  `game_shaders/shaders/fragment/rarity_item.frag`.
+  and boots the feet. A mounted character's orbit is lifted with the rider.
+- **Colour**: the item's first element, the colours of
+  `game_shaders/shaders/fragment/rarity_item.frag`; white for an item with
+  no element.
 - **Grade**: a Mythicus is the large gem with a two-ghost trail; a Legendarius
   the small one without. Lower grades show nothing.
 - **Depth**: on the far half of the turn the layers are drawn under the
-  character (`setOnTop(false)`), on the near half over it.
-- **State**: `heat` blends between rest (9 s a turn, faint) and combat (3.4 s,
-  bright) over about half a second.
-- **Proc**: a gem flashes for 520 ms (core grows, halo widens, a star).
+  character, on the near half over it.
+- **State**: rest (9 s a turn, faint) and combat (3.4 s, bright) blend over
+  about half a second. My own character is in combat by the in-fight state;
+  another player while their health moved in the last 4 s.
+- **Proc**: on my own character, a gem flashes for 520 ms when a bonus of its
+  item fires (Vital Barrier, Reflect, Splinter, Cleave, Momentum).
 - **Set marks**, by the number of Mythicus: 3 a dashed seal on the floor, 5 a
   glow in the dominant element, 8 the chest turn drawn as a ring.
 
-## How it is drawn
+## Where the sets come from
 
-Image attached effects (`g_attachedEffects.registerByImage`), one clone per
-layer per gem, attached to the creature; a 30 ms `cycleEvent` moves each with
-`setSize`, `setOffset`, `setOpacity` and `setOnTop`. A full set is about 34
-layers on one creature.
+The server (`data-otservbr-global/scripts/rarity/orbit.lua` in the server
+repository), extended opcode 143, JSON. The client says `hi` at game start
+and asks for the players that come into view; the server sends a player's
+set when it changes (within the rarity bonus tick, 2 s) to the players who
+see them. A server without the script never answers and nothing is drawn.
 
-## What is prototype only
+## Options
 
-- Who wears what comes from `/orbita_cmd.txt` in the client's work dir, polled
-  every 100 ms (`set`, `state`, `proc`, `clear`; see the top of `orbita.lua`).
-  The server sends nothing.
-- `state` and `proc` were fired by the recording script, not by combat or by a
-  bonus.
-- Ids 9400 to 9990 of `g_attachedEffects` are taken without checking the other
-  modules.
-- `images/core_<element>.png` (a plain diamond, the first cut) is registered
-  but no longer drawn.
+In the Interface window (`game_textmessage`), under "Rare items in orbit":
 
-## Left to decide or do
+| Option | Setting | Whose |
+|---|---|---|
+| Show on every player / only on my character / off | `orbita_mode` | client |
+| Mythicus and Legendarius / Mythicus only | `orbita_mythic_only` | client |
+| Other players see my orbit / hide it from them | player kv `orbita/hide` | server |
 
-- The server tells each client the rare items of the players on screen (slot,
-  grade, element), on equip, on login and when a player comes into view.
-- Combat state and procs from the real events.
-- Options: hide my own orbit (PvP shows a player's gear to enemies), show only
-  mine (a war with 30 players), Mythicus only.
-- With 8 pieces the glow adds up: it was toned down for more than 5 gems
-  (`n > 5` in `update`), and could go further in combat.
-- Helmet and amulet read small on the head turn; legs and boots read well.
-- Mounted characters, outfits of other sizes and the four directions were not
-  looked at: `CENTER` and `BANDS` assume a standing character facing south.
+A hidden set is never sent to anyone but its owner.
+
+## Cost
+
+A gem is 3 to 5 image layers (`g_attachedEffects.registerByImage`, one clone
+per layer) moved every 33 ms. With 6 or more orbits on screen the other
+players' gems lose trail and glow layers, with 14 or more the halo too, and
+the others move every second tick. An engine without image layers (an old
+executable) leaves the module off.
+
+## Checked on a local server (2026-11-15)
+
+Three characters with real rarity items: sets on login, on coming into view
+and on equipping or removing an item; the three options, hiding seen from
+another client; the flash; walking in the four directions; a mount; the
+light drawing modes (thresholds forced down). Not checked: many players at
+once, and outfits much larger or smaller than a human.
 
 ## Textures
 
-`python3 tools/orbita/make_textures.py modules/game_orbita/images [sheet.png]`
+`python3 tools/orbita/make_textures.py modules/game_orbita/images`
 (halos, aura, ring, seal, spark) and
 `python3 tools/orbita/make_slots.py modules/game_orbita/images [sheet.png]`
 (the eight cuts in the eight colours). Python 3 with Pillow and NumPy.

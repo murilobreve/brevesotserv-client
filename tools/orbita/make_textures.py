@@ -1,4 +1,5 @@
-# Órbita: textures of the runes that circle a player wearing rare items.
+# Órbita: the glow, ring, seal and flash of the gems that circle a player
+# wearing rare items (the gems themselves: make_slots.py).
 # One set per element (the colours of shaders/fragment/rarity_item.frag).
 import math, sys
 from PIL import Image, ImageDraw, ImageFilter
@@ -9,21 +10,6 @@ ELEMENTS = {
 }
 N = 64
 def mix(a, b, t): return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
-
-def core(col):
-    """a cut gem seen from the front: dark rim, coloured facets, a white heart"""
-    S = 8; im = Image.new('RGBA', (N * S, N * S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    c = N * S / 2
-    def diamond(rx, ry, fill):
-        d.polygon([(c, c - ry), (c + rx, c), (c, c + ry), (c - rx, c)], fill=fill)
-    diamond(21 * S, 29 * S, (18, 10, 30, 235))               # rim
-    diamond(17.5 * S, 25 * S, mix(col, (0, 0, 0), 0.25) + (255,))
-    # facets: lit upper left, shaded lower right
-    d.polygon([(c, c - 25 * S), (c - 17.5 * S, c), (c, c)], fill=mix(col, (255, 255, 255), 0.35) + (255,))
-    d.polygon([(c, c + 25 * S), (c + 17.5 * S, c), (c, c)], fill=mix(col, (0, 0, 0), 0.45) + (255,))
-    diamond(8 * S, 12 * S, mix(col, (255, 255, 255), 0.82) + (255,))
-    diamond(3.5 * S, 5.5 * S, (255, 255, 255, 255))
-    return im.resize((N, N), Image.LANCZOS)
 
 def halo(col, power=2.0, peak=1.0):
     im = Image.new('RGBA', (N, N)); px = im.load()
@@ -62,7 +48,6 @@ def spark():
     return im
 
 for name, col in ELEMENTS.items():
-    core(col).save(f'{OUT}/core_{name}.png')
     halo(col).save(f'{OUT}/halo_{name}.png')
     halo(col, power=1.4, peak=0.5).save(f'{OUT}/aura_{name}.png')
     ring(col, True).save(f'{OUT}/orbit_front_{name}.png')
@@ -70,11 +55,3 @@ for name, col in ELEMENTS.items():
     ring(col, True, W=128, H=56, width=1.8, alpha=0.95, dashed=True).save(f'{OUT}/seal_front_{name}.png')
     ring(col, False, W=128, H=56, width=1.8, alpha=0.95, dashed=True).save(f'{OUT}/seal_back_{name}.png')
 spark().save(f'{OUT}/spark.png')
-# a sheet to look at
-sheet = Image.new('RGBA', (N * 8 * 3, N * 3 * 2), (40, 34, 60, 255))
-for i, name in enumerate(ELEMENTS):
-    for j, kind in enumerate(('core', 'halo')):
-        t = Image.open(f'{OUT}/{kind}_{name}.png').resize((N * 3, N * 3), Image.NEAREST if kind == 'core' else Image.BILINEAR)
-        sheet.alpha_composite(t, (i * N * 3, j * N * 3))
-if len(sys.argv) > 2:  # a sheet to look at, outside the module
-    sheet.save(sys.argv[2])
