@@ -1,5 +1,5 @@
 """Wheel pictures for the Forja de Raridade roulette (wheel_2.png .. wheel_40.png)
-and the bonus icons pre-scaled with a smooth filter (bonus/s16, s20, s24).
+and the bonus icons pre-scaled with a smooth filter (bonus/s16, s20, s24, s28).
 
 usage: gen_wheel.py <images/forge dir>
 """
@@ -7,7 +7,7 @@ import math, os, sys
 from PIL import Image, ImageDraw
 
 out = sys.argv[1]
-SIZE = 232
+SIZE = 292
 SS = 4  # supersampling
 A = (0x4a, 0x3d, 0x22, 255)
 B = (0x2e, 0x34, 0x46, 255)
@@ -41,7 +41,7 @@ for n in range(2, 41):
     wheel(n).save(os.path.join(wdir, 'wheel_%d.png' % n))
 
 bdir = os.path.join(out, 'bonus')
-for size in (16, 20, 24):
+for size in (16, 20, 24, 28):
     sdir = os.path.join(bdir, 's%d' % size)
     os.makedirs(sdir, exist_ok=True)
     for name in sorted(os.listdir(bdir)):

@@ -59,9 +59,9 @@ end
 -- first how many bonuses come out (COUNT_MS), then for each the wheel
 -- (SPIN_MS) and the needle (SWING_MS)
 local COUNT_MS, SPIN_MS, SWING_MS, HOLD_MS = 1600, 2400, 2000, 450
-local WHEEL = 232
+local WHEEL = 292 -- the wheel's pictures (tools/gerar-roleta-forja.py)
 -- the icons sit near the rim, upright towards it
-local ICON_RADIUS = 90
+local ICON_RADIUS = 113
 -- '  ·  ' in Latin-1, the fonts' charset
 local DOT = '  \183  '
 local METER_ZONES = { 0.30, 0.30, 0.25, 0.13, 0.02 }
@@ -440,10 +440,10 @@ local function buildWheel(pool)
     wheelSlices = #pool
     local seg = 360 / math.max(1, #pool)
     -- as big as the slice allows at that radius, from the icons scaled
-    -- ahead with a smooth filter (images/forge/bonus/s16, s20, s24): scaled
+    -- ahead with a smooth filter (images/forge/bonus/s16 to s28): scaled
     -- or turned here they came out pixelated, so they stay upright
     local room = ICON_RADIUS * math.rad(seg) * 0.85
-    local size = room >= 24 and 24 or room >= 20 and 20 or 16
+    local size = room >= 28 and 28 or room >= 24 and 24 or room >= 20 and 20 or 16
     for i, entry in ipairs(pool) do
         -- a bonus with no picture of its own (a vocation's spell) takes the wand
         local icon = g_ui.createWidget('ForgeWheelIcon', holder)
@@ -593,24 +593,18 @@ local function fillRows(entry)
             Forge.refresh()
         end
         local hidden = now or wait
-        -- where the roll fell inside its range: a bar, empty at the lowest
-        -- roll and full at the top, in the quality's colour. The numbers
-        -- (and the jackpot, RarityConfig.jackpot) are in its tooltip.
+        -- the line shows the bonus alone, in its quality's colour; its
+        -- range (and the jackpot, RarityConfig.jackpot) are in the tooltip
         local jackpot = tonumber(bonus.jackpot)
         local odds = tonumber(entry.jackpotOdds) or 0
-        row.range:setText('')
-        local showBar = not hidden and bonus.min ~= nil and q ~= nil
-        row.bar:setVisible(showBar)
-        if showBar then
-            local width = row.bar:getWidth() - 2
-            row.bar.fill:setWidth(math.max(3, math.floor(width * q + 0.5)))
-            row.bar.fill:setBackgroundColor(look[3])
-            local tip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
+        local rangeTip = ''
+        if bonus.min ~= nil and q ~= nil then
+            rangeTip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
             if jackpot and odds > 0 then
-                tip = tip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
+                rangeTip = rangeTip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
             end
-            row.bar:setTooltip(Forge.wrapTip(tip))
         end
+        row.range:setText('')
         -- only a bonus kept through a roll says so in words
         row.quality:setText((isSealed and roll) and tr('kept') or '')
         row.quality:setColor('#c9a24a')
@@ -625,6 +619,9 @@ local function fillRows(entry)
             row.delta:setText('')
         end
         local tip = describe(bonus.key)
+        if rangeTip ~= '' then
+            tip = (tip and tip ~= '') and (tip .. '\n\n' .. Forge.wrapTip(rangeTip)) or Forge.wrapTip(rangeTip)
+        end
         row.text:setTooltip(tip)
         row:setTooltip(tip)
         row.text.onClick = function()
