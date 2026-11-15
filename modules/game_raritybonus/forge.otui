@@ -612,6 +612,9 @@ MythosWindow
               margin-left: 2
               margin-top: 10
               size: 292 292
+              // the wheel is drawn turned: without the smooth filter its
+              // lines and rim come out jagged at any angle but upright
+              image-smooth: true
               image-source: /game_raritybonus/images/forge/wheel/wheel_10
 
             UIWidget
