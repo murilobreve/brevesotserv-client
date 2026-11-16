@@ -272,9 +272,11 @@ function EnterGame.init()
             local password = enterGame:getChildById('accountPasswordTextEdit'):getText()
 
             if checked and #account > 0 then
+                -- in the browser: the e-mail only, as on login (EnterGame.doLogin)
+                local browser = g_platform.isBrowser and g_platform.isBrowser()
                 ServerList.setServerAccount(host, account)
-                ServerList.setServerPassword(host, password)
-                ServerList.setServerAutologin(host, enterGame:getChildById('autoLoginBox'):isChecked() or false)
+                ServerList.setServerPassword(host, browser and '' or password)
+                ServerList.setServerAutologin(host, not browser and (enterGame:getChildById('autoLoginBox'):isChecked() or false))
                 g_settings.set('host', host)
             else
                 ServerList.setServerAccount(host, '')
