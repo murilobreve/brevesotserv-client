@@ -39,6 +39,48 @@ CREATURES = [
 ]
 
 
+# Their corpses, also with the 7.4 sprites (items of the 7.40 Tibia.dat, the
+# three looks a corpse goes through; (id, pattern) for an item with patterns,
+# such as a splash in one fluid colour). Each monster gets four items from its
+# `first` id: A the fresh corpse (10 s, the corpse flag: the loot is the
+# killer's), B the same body to loot (10 min), C and D rotting away (10 min
+# each, then gone). The server's items.xml has them (name, container size,
+# decay) - `python3 build_creatures74.py itemsxml` prints the entries.
+CORPSES = [
+    {'first': 60030, 'name': 'dead rotworm', 'old': (2824, 2825, 2964), 'size': 10, 'fluid': 'blood', 'weight': 8500},
+    {'first': 60034, 'name': 'dead troll', 'old': (2806, 2810, 2811), 'size': 10, 'fluid': 'blood', 'weight': 60000},
+    # a slime left a pool of slime: the splash in its slime colour (pattern 4)
+    {'first': 60038, 'name': 'remains of a slime', 'old': ((2016, 4), (2017, 4), (2018, 4)), 'size': 10, 'fluid': 'slime', 'weight': 3000},
+    {'first': 60042, 'name': 'dead bug', 'old': (2902, 2903, 2904), 'size': 6, 'fluid': 'slime', 'weight': 2000},
+    {'first': 60046, 'name': 'slain demon skeleton', 'old': (2809, 2922, 2923), 'size': 10, 'fluid': None, 'weight': 40000},
+    {'first': 60050, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
+]
+# stage: (look 0-2, seconds, container, corpse flag)
+STAGES = [(0, 10, True, True), (0, 600, True, False), (1, 600, False, False), (2, 600, False, False)]
+
+
+def corpse_png(old, pattern):
+    return f'{old}_{pattern}.png' if pattern else f'{old}.png'
+
+
+def items_xml():
+    out = []
+    for c in CORPSES:
+        for k, (_look, seconds, container, _corpse) in enumerate(STAGES):
+            attrs = []
+            if c['fluid'] and k < 2:
+                attrs.append(('fluidsource', c['fluid']))
+            attrs.append(('duration', seconds))
+            attrs.append(('decayTo', c['first'] + k + 1 if k + 1 < len(STAGES) else 0))
+            if container:
+                attrs.append(('containersize', c['size']))
+                attrs.append(('weight', c['weight']))
+            out.append('\t<item id="%d" article="a" name="%s">' % (c['first'] + k, c['name']))
+            out += ['\t\t<attribute key="%s" value="%s"/>' % kv for kv in attrs]
+            out.append('\t</item>')
+    return '\n'.join(out)
+
+
 # ---------------------------------------------------------------- extract
 PARAM_740 = {0: 2, 7: 2, 8: 2, 16: 4, 19: 2, 21: 4, 22: 2}  # flag -> bytes of its value
 
@@ -161,6 +203,15 @@ def extract(dat, spr_path):
             for d in range(4):
                 frame(t, spr, d, phase, c.get('colors')).save(os.path.join(folder, f'{DIRS[d]}_{phase}.png'))
         print(c['folder'], t['ph'], 'phases')
+    folder = os.path.join(ART, 'corpses')
+    os.makedirs(folder, exist_ok=True)
+    for c in CORPSES:
+        for old in c['old']:
+            old, pattern = old if isinstance(old, tuple) else (old, 0)
+            t = things[old]
+            px, py = pattern % t['px'], pattern // t['px']
+            tile = spr.get(t['spr'][(py * t['px'] + px) * t['layers'] * t['w'] * t['h']])
+            Image.fromarray(tile).save(os.path.join(folder, corpse_png(old, pattern)))
 
 
 # ---------------------------------------------------------------- build
@@ -256,7 +307,42 @@ def build(client_dir, server_dat):
         o.flags.SetInParent()
         outfits.append(o)
 
+    # the corpses: 32x32 sprites after the creatures'
+    small = []
+    objects = []
+    first_small = first + len(frames)
+    for c in CORPSES:
+        looks = [first_small + len(small) + i for i in range(3)]
+        small += [Image.open(os.path.join(ART, 'corpses', corpse_png(*(old if isinstance(old, tuple) else (old, 0))))).convert('RGBA') for old in c['old']]
+        for k, (look, _seconds, container, corpse) in enumerate(STAGES):
+            o = A.Appearance()
+            o.id = c['first'] + k
+            o.name = c['name']
+            si = o.frame_group.add().sprite_info
+            si.pattern_width = si.pattern_height = si.pattern_depth = si.layers = 1
+            si.sprite_id.append(looks[look])
+            si.is_opaque = False
+            x, y, w, h = bbox(small[looks[look] - first_small])
+            bb = si.bounding_box_per_direction.add()
+            bb.x, bb.y, bb.width, bb.height = x, y, w, h
+            o.flags.SetInParent()
+            if container:
+                o.flags.container = True
+                o.flags.usable = True
+            if corpse:
+                o.flags.forceuse = True
+                o.flags.unmove = True
+                o.flags.corpse = True
+            objects.append(o)
+
     entries = []
+    for i in range(0, len(small), 144):
+        cip = sheet_bytes(small[i:i + 144], 32)
+        name = 'sprites-creatures-corpses-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma'
+        with open(os.path.join(client_dir, name), 'wb') as f:
+            f.write(cip)
+        entries.append({'type': 'sprite', 'file': name, 'spritetype': 0, 'firstspriteid': first_small + i,
+                        'lastspriteid': first_small + min(i + 144, len(small)) - 1, 'area': 32})
     for i in range(0, len(frames), 36):
         cip = sheet_bytes(frames[i:i + 36])
         name = 'sprites-creatures-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma'
@@ -268,6 +354,7 @@ def build(client_dir, server_dat):
         json.dump(catalog + entries, f, indent=2)
 
     ids = {c['id'] for c in CREATURES}
+    object_ids = {o.id for o in objects}
     for path in [os.path.join(client_dir, 'appearances-custom.dat'), server_dat]:
         a = A.Appearances()
         a.ParseFromString(open(path, 'rb').read())
@@ -275,13 +362,19 @@ def build(client_dir, server_dat):
         del a.outfit[:]
         a.outfit.extend(keep)
         a.outfit.extend(outfits)
+        keep = [x for x in a.object if x.id not in object_ids]
+        del a.object[:]
+        a.object.extend(keep)
+        a.object.extend(objects)
         with open(path, 'wb') as f:
             f.write(a.SerializeToString())
-    print('ok', len(outfits), 'outfits,', len(frames), 'sprites from', first, ',', ', '.join(e['file'] for e in entries))
+    print('ok', len(outfits), 'outfits,', len(objects), 'corpse items,', len(frames) + len(small), 'sprites from', first, ',', ', '.join(e['file'] for e in entries))
 
 
 if __name__ == '__main__':
     if sys.argv[1] == 'extract':
         extract(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == 'itemsxml':
+        print(items_xml())
     else:
         build(sys.argv[2], sys.argv[3])

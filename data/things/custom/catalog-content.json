@@ -109,6 +109,14 @@
   },
   {
     "type": "sprite",
+    "file": "sprites-creatures-corpses-a72bfb417d76f68e.bmp.lzma",
+    "spritetype": 0,
+    "firstspriteid": 1000528,
+    "lastspriteid": 1000545,
+    "area": 32
+  },
+  {
+    "type": "sprite",
     "file": "sprites-creatures-27668c8cb9cc9e3e.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1000432,
