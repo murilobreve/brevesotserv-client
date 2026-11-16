@@ -139,6 +139,9 @@ function UIMessageBox:addButton(text, callback)
     button:setWidth(math.max(48, 10 + (string.len(text) * 8)))
     button:setHeight(20)
     button:setText(text)
+    -- as bright as the message: the button's own grey read as a disabled
+    -- button on the confirmations (Roleta, market, logout)
+    button:setColor('#f2f2f2')
     connect(button, {
         onClick = callback
     })

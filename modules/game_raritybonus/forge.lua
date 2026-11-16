@@ -228,8 +228,16 @@ local function plus(value, unit)
     return '+' .. number(value) .. (unit or '')
 end
 
+-- A bonus goes by the name the item and the Wiki give it. The client's
+-- dictionary has some of those words with another meaning ("Attack" is the
+-- menu's "Atacar", "Armor" the market's "Armaduras"), so they are not
+-- translated.
+local function bonusName(bonus)
+    return bonus.label or ''
+end
+
 local function bonusText(bonus)
-    return plus(bonus.value, bonus.unit) .. ' ' .. tr(bonus.label or '')
+    return plus(bonus.value, bonus.unit) .. ' ' .. bonusName(bonus)
 end
 
 -- 0 (lowest roll) to 1 (top) for a bonus, or nil when the server sent none
@@ -525,7 +533,7 @@ local function buildWheel(pool, jackpotOdds)
         if span ~= '' and jackpot and jackpotOdds > 0 then
             span = span .. '\n' .. tr('Jackpot (1 in %d): up to %s', jackpotOdds, number(jackpot) .. (entry.unit or ''))
         end
-        icon:setTooltip(tr(entry.label or '') .. (span ~= '' and ('\n' .. span) or ''))
+        icon:setTooltip(bonusName(entry) .. (span ~= '' and ('\n' .. span) or ''))
         table.insert(wheelIcons, icon)
     end
     -- the disc and the pointer over the icons
@@ -656,7 +664,7 @@ local function fillRows(entry)
             local look = quality(q, bonus.perfect)
             if now then
                 local typeKnown = roll.stage == 'value' or roll.t >= 1
-                row.text:setText(typeKnown and tr('%s: drawing the value...', tr(bonus.label or '')) or tr('Bonus %d: spinning the wheel...', i))
+                row.text:setText(typeKnown and tr('%s: drawing the value...', bonusName(bonus)) or tr('Bonus %d: spinning the wheel...', i))
                 row.text:setColor('#e2c46a')
                 row:setBackgroundColor('#c9a24a26')
                 row:setBorderColor('#8a6f33')
@@ -753,7 +761,7 @@ local function fillWheelBox(entry)
         -- the wheel shows them: each slice has its name under the mouse
         local names = {}
         for _, p in ipairs(pool) do
-            table.insert(names, tr(p.label or ''))
+            table.insert(names, bonusName(p))
         end
         box.caption:setText(tr('%d bonuses can come out', #pool))
         box.caption:setColor('#d1ccd9')
@@ -785,7 +793,7 @@ local function fillWheelBox(entry)
     local cur = roll.after[roll.order[roll.k]]
     local which = tr('bonus %d of %d', roll.k, #roll.order)
     if roll.stage == 'type' then
-        box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', tr(cur.label or '')))
+        box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', bonusName(cur)))
         box.caption:setColor('#e2c46a')
         setDisc(box, '?', which)
         lightSlice(not spinning and cur.key or nil)
@@ -808,7 +816,7 @@ local function fillWheelBox(entry)
     -- looked pushed to the right of the disc's centre
     setDisc(box, number(shown) .. (cur.unit or ''), tr(look[2]), look[3])
     if spinning then
-        box.caption:setText(tr('%s: how much?', tr(cur.label or '')))
+        box.caption:setText(tr('%s: how much?', bonusName(cur)))
         box.caption:setColor('#e2c46a')
     else
         box.caption:setText(tr('Rolled: %s (%s)!', bonusText(cur), tr(look[2])))
@@ -949,12 +957,12 @@ local function fillTotals()
             end
             local sum = tonumber(t.total) or 0
             local full = cap and (t.capped or sum >= cap)
-            row.name:setText(tr(t.label or ''))
+            row.name:setText(bonusName(t))
             row.name:setColor(full and '#e2c46a' or '#d1ccd9')
             row.total:setText(plus(sum, unit) .. (cap and (' / ' .. number(cap) .. unit) or ''))
             row.total:setColor(full and '#e2c46a' or '#eee6d4')
             -- the items that give it, under the mouse
-            local lines = { tr(t.label or '') }
+            local lines = { bonusName(t) }
             for _, src in ipairs(t.sources or {}) do
                 local it = items[tonumber(src.item) or 0]
                 table.insert(lines, titleCase(src.name or (it and it.name) or '') .. '  ' .. plus(src.value, unit))
@@ -1288,14 +1296,15 @@ local function messageOf(d)
     end
     local code = res.code
     if code == 'rerolled' and res.upgrade then
-        return tr('Upgrade! %s: %s. (-%s gold, -%d Rarity XP)', titleCase(res.name), table.concat(res.bonuses or {}, ', '), formatGold(res.gold), tonumber(res.cost) or 0)
+        return tr('Upgrade! -%s gold, -%d Rarity XP', formatGold(res.gold), tonumber(res.cost) or 0)
     elseif code == 'rerolled' then
-        local text = tr('%s rolled: %s. (-%d Rarity XP)', titleCase(res.name), table.concat(res.bonuses or {}, ', '), tonumber(res.cost) or 0)
-        if res.perfect then
-            text = text .. ' ' .. tr('Perfect roll!')
-        end
+        -- the rows show what came out: the line only says what it cost
+        local text = tr('Rolled: -%d Rarity XP', tonumber(res.cost) or 0)
         if (tonumber(res.gold) or 0) > 0 then
-            text = text .. ' ' .. tr('(-%s gold for the seal)', formatGold(res.gold))
+            text = text .. tr(', -%s gold', formatGold(res.gold))
+        end
+        if res.perfect then
+            text = text .. '. ' .. tr('Perfect roll!')
         end
         return text
     elseif code == 'upgradeFailed' then
