@@ -183,7 +183,41 @@ local function loadServerListModule()
 end
 
 -- public functions
+-- the browser keeps no password (the settings live in the site's storage):
+-- one an older build saved there is wiped at start, with its auto login
+local function forgetBrowserPasswords()
+    if not (g_platform.isBrowser and g_platform.isBrowser()) then
+        return
+    end
+    local saved = g_settings.getNode('ServerList')
+    local changed = false
+    if type(saved) == 'table' then
+        for host, data in pairs(saved) do
+            if type(data) == 'table' and ((data.password and data.password ~= '') or data.autologin) then
+                if ServerList and ServerList.setServerPassword then
+                    ServerList.setServerPassword(host, '')
+                    ServerList.setServerAutologin(host, false)
+                end
+                data.password = ''
+                data.autologin = false
+                changed = true
+            end
+        end
+        if changed then
+            g_settings.setNode('ServerList', saved)
+        end
+    end
+    if g_settings.get('password') ~= '' then
+        g_settings.remove('password')
+        changed = true
+    end
+    if changed then
+        g_configs.saveSettings()
+    end
+end
+
 function EnterGame.init()
+    forgetBrowserPasswords()
     enterGame = g_ui.displayUI('entergame')
     Keybind.new("Misc.", "Change Character", "Ctrl+G", "")
     Keybind.bind("Misc.", "Change Character", {
