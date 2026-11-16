@@ -637,8 +637,8 @@ WIKI_PAGES.affixes = {
             { 'Wand/Rod Damage', 'Dano a mais no ataque de wand e rod. No máximo quadruplica o dano.', '300%' },
             { 'Dano de magia do elemento', 'Mais dano das magias e runas de um elemento (Fire, Earth, Energy, Ice, Holy ou Death Spell Damage). Vem de wands, rods e spellbooks.', '75%' },
         }),
-        { 'p', 'Jackpot: quando Attack Speed ou Cleave Damage sai numa arma, há uma chance pequena de o bônus vir acima de tudo o que a arma poderia rolar, até 100% de Attack Speed e 75% de Cleave Damage. O limite é o mesmo em todo lugar; a chance não: 1 em 100 numa arma que cai (loot, baú de quest ou prêmio de Hunt Task) e 1 em 300 numa roletada. A maioria fica logo acima do normal, e só uns 2% dos jackpots chegam ao valor máximo. Um bônus de jackpot que você mantém ao roletar guarda o valor.' },
-        { 'p', 'Item que cai tem mais sorte: ele sorteia a força duas vezes e fica com a melhor, enquanto a Roleta sorteia uma vez só. Na média os bônus de um item que caiu vêm uns 10% mais fortes, com o mesmo máximo.' },
+        { 'p', 'Jackpot: quando Attack Speed ou Cleave Damage sai numa arma, há uma chance pequena de o bônus vir acima de tudo o que a arma poderia rolar, até 100% de Attack Speed e 75% de Cleave Damage. O limite e a chance são os mesmos numa arma que cai e numa roletada: 1 em 100. A maioria fica logo acima do normal, e só uns 2% dos jackpots chegam ao valor máximo. Um bônus de jackpot que você mantém ao roletar guarda o valor.' },
+        { 'p', 'Item que cai e item roletado sorteiam do mesmo jeito: as mesmas faixas e a mesma chance de jackpot. A única diferença é o item que você mesmo achou: enquanto você usa, todos os bônus dele ficam 20% mais fortes.' },
         { 'h', 'Magia' },
         affixTable({
             { 'Magic Level', 'Porcentagem do seu ML base. ML 100 com +5% vira 105.', '75%' },

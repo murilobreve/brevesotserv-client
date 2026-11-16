@@ -465,7 +465,8 @@ local function setWheel(rot)
 end
 
 -- the wheel's picture and one icon per slice, for this pool
-local function buildWheel(pool)
+local function buildWheel(pool, jackpotOdds)
+    jackpotOdds = tonumber(jackpotOdds) or 0
     local holder = page().rollPage.wheelBox.wheelHolder
     local n = math.max(2, math.min(40, #pool))
     for _, icon in ipairs(wheelIcons) do
@@ -517,8 +518,13 @@ local function buildWheel(pool)
         icon:addAnchor(AnchorTop, 'parent', AnchorTop)
         icon.angle = (i - 0.5) * seg
         icon.key = entry.key
-        -- the slice says what it is, and its range, under the mouse
+        -- the slice says what it is, its range and how far a jackpot roll
+        -- takes it (RarityConfig.jackpot), under the mouse
         local span = entry.min and (number(entry.min) .. (entry.unit or '') .. ' - ' .. number(entry.max) .. (entry.unit or '')) or ''
+        local jackpot = tonumber(entry.jackpot)
+        if span ~= '' and jackpot and jackpotOdds > 0 then
+            span = span .. '\n' .. tr('Jackpot (1 in %d): up to %s', jackpotOdds, number(jackpot) .. (entry.unit or ''))
+        end
         icon:setTooltip(tr(entry.label or '') .. (span ~= '' and ('\n' .. span) or ''))
         table.insert(wheelIcons, icon)
     end
@@ -714,7 +720,7 @@ local function fillRows(entry)
                 if bonus.min ~= nil and q ~= nil then
                     rangeTip = number(bonus.min) .. (bonus.unit or '') .. ' - ' .. number(bonus.max) .. (bonus.unit or '') .. '  (' .. tr(look[2]) .. ')'
                     if jackpot and odds > 0 then
-                        rangeTip = rangeTip .. '\n' .. tr('Jackpot: about 1 roll in %d that lands this bonus puts it above the range, up to %s. Items that drop have a better chance.', odds, number(jackpot) .. (bonus.unit or ''))
+                        rangeTip = rangeTip .. '\n' .. tr('Jackpot (1 in %d): up to %s', odds, number(jackpot) .. (bonus.unit or ''))
                     end
                 end
                 local tip = describe(bonus.key)
@@ -739,7 +745,7 @@ local function fillWheelBox(entry)
     local box = page().rollPage.wheelBox
     local pool = (roll and roll.slot == entry.slotId and roll.pool) or entry.pool or {}
     if wheelSlices ~= #pool or box.poolSlot ~= entry.slotId or box.poolSize ~= #pool then
-        buildWheel(pool)
+        buildWheel(pool, entry.jackpotOdds)
         box.poolSlot, box.poolSize = entry.slotId, #pool
     end
     local showing = roll and roll.phase == 'show' and roll.slot == entry.slotId
