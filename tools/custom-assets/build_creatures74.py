@@ -55,6 +55,45 @@ CORPSES = [
     {'first': 60046, 'name': 'slain demon skeleton', 'old': (2809, 2922, 2923), 'size': 10, 'fluid': None, 'weight': 40000},
     {'first': 60050, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
 ]
+# Old equipment: the 7.4 look of an item the Ancient monsters drop, with its
+# own attributes. Each copies the flags of today's item (`ref`: slot, weapon
+# type...) with the old sprite; the attributes are its items.xml entry here
+# (`python3 build_creatures74.py itemsxml`).
+OLD_ITEMS = [
+    # Ancient Rotworm
+    {'id': 60060, 'old': 2483, 'ref': 3377, 'name': 'old scale armor', 'slot': 'armor',
+     'attrs': [('primarytype', 'armors'), ('armor', 11), ('absorbpercentphysical', 3), ('weight', 10500)]},
+    {'id': 60061, 'old': 2428, 'ref': 3316, 'name': 'old orcish axe', 'weapon': 'axe',
+     'attrs': [('primarytype', 'axe weapons'), ('weaponType', 'axe'), ('attack', 30), ('defense', 14), ('skillaxe', 1), ('weight', 4500)]},
+    # Ancient Troll
+    {'id': 60062, 'old': 2473, 'ref': 3367, 'name': 'old viking helmet', 'slot': 'head',
+     'attrs': [('primarytype', 'helmets'), ('armor', 7), ('skillaxe', 1), ('skillclub', 1), ('weight', 3900)]},
+    {'id': 60063, 'old': 2415, 'ref': 3303, 'name': 'old great axe', 'weapon': 'axe', 'level': 50,
+     'attrs': [('primarytype', 'axe weapons'), ('weaponType', 'axe'), ('slotType', 'two-handed'), ('attack', 46), ('defense', 18), ('skillaxe', 2), ('weight', 9000)]},
+    # Ancient Slime
+    {'id': 60064, 'old': 2648, 'ref': 3558, 'name': 'old chain legs', 'slot': 'legs',
+     'attrs': [('primarytype', 'legs'), ('armor', 8), ('absorbpercentearth', 5), ('weight', 3500)]},
+    {'id': 60065, 'old': 2419, 'ref': 3307, 'name': 'old scimitar', 'weapon': 'sword', 'level': 40,
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 28), ('elementearth', 8), ('defense', 20), ('extradef', 1), ('weight', 2900)]},
+    # Ancient Bug
+    {'id': 60066, 'old': 2515, 'ref': 3415, 'name': 'old guardian shield', 'slot': 'shield',
+     'attrs': [('primarytype', 'shields'), ('weaponType', 'shield'), ('defense', 32), ('absorbpercentearth', 4), ('weight', 5500)]},
+    {'id': 60067, 'old': 2412, 'ref': 3300, 'name': 'old katana', 'weapon': 'sword', 'level': 50,
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 36), ('defense', 20), ('extradef', 2), ('skillsword', 1), ('weight', 3100)]},
+    # Ancient Demon Skeleton
+    {'id': 60068, 'old': 2490, 'ref': 3384, 'name': 'old dark helmet', 'slot': 'head',
+     'attrs': [('primarytype', 'helmets'), ('armor', 9), ('absorbpercentdeath', 6), ('weight', 4600)]},
+    {'id': 60069, 'old': 2521, 'ref': 3421, 'name': 'old dark shield', 'slot': 'shield',
+     'attrs': [('primarytype', 'shields'), ('weaponType', 'shield'), ('defense', 34), ('absorbpercentdeath', 5), ('weight', 5200)]},
+    # Ancient Wild Warrior
+    {'id': 60070, 'old': 2393, 'ref': 3281, 'name': 'old giant sword', 'weapon': 'sword', 'level': 60,
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('slotType', 'two-handed'), ('attack', 52), ('defense', 24), ('skillsword', 3), ('weight', 18000)]},
+    {'id': 60071, 'old': 2486, 'ref': 3380, 'name': 'old noble armor', 'slot': 'armor', 'level': 50,
+     'attrs': [('primarytype', 'armors'), ('armor', 13), ('skillsword', 1), ('skillaxe', 1), ('skillclub', 1), ('absorbpercentphysical', 3), ('weight', 12000)]},
+    {'id': 60072, 'old': 2645, 'ref': 3554, 'name': 'old steel boots', 'slot': 'feet', 'level': 60,
+     'attrs': [('primarytype', 'boots'), ('showAttributes', 1), ('armor', 4), ('speed', 10), ('absorbpercentphysical', 2), ('weight', 2900)]},
+]
+
 # stage: (look 0-2, seconds, container, corpse flag)
 STAGES = [(0, 10, True, True), (0, 600, True, False), (1, 600, False, False), (2, 600, False, False)]
 
@@ -78,6 +117,18 @@ def items_xml():
             out.append('\t<item id="%d" article="a" name="%s">' % (c['first'] + k, c['name']))
             out += ['\t\t<attribute key="%s" value="%s"/>' % kv for kv in attrs]
             out.append('\t</item>')
+    for item in OLD_ITEMS:
+        out.append('\t<item id="%d" article="an" name="%s">' % (item['id'], item['name']))
+        out.append('\t\t<attribute key="description" value="A relic of the old days."/>')
+        out += ['\t\t<attribute key="%s" value="%s"/>' % kv for kv in item['attrs']]
+        # how it is worn: the equip event (and the weapon) with its slot and level
+        inner = [('weaponType', item['weapon']), ('slot', 'hand')] if 'weapon' in item else [('slot', item['slot'])]
+        if 'level' in item:
+            inner.append(('level', item['level']))
+        out.append('\t\t<attribute key="script" value="%s">' % ('moveevent;weapon' if 'weapon' in item else 'moveevent'))
+        out += ['\t\t\t<attribute key="%s" value="%s"/>' % kv for kv in inner]
+        out.append('\t\t</attribute>')
+        out.append('\t</item>')
     return '\n'.join(out)
 
 
@@ -212,6 +263,11 @@ def extract(dat, spr_path):
             px, py = pattern % t['px'], pattern // t['px']
             tile = spr.get(t['spr'][(py * t['px'] + px) * t['layers'] * t['w'] * t['h']])
             Image.fromarray(tile).save(os.path.join(folder, corpse_png(old, pattern)))
+    folder = os.path.join(ART, 'items')
+    os.makedirs(folder, exist_ok=True)
+    for item in OLD_ITEMS:
+        t = things[item['old']]
+        Image.fromarray(spr.get(t['spr'][0])).save(os.path.join(folder, f"{item['old']}.png"))
 
 
 # ---------------------------------------------------------------- build
@@ -335,6 +391,32 @@ def build(client_dir, server_dat):
                 o.flags.corpse = True
             objects.append(o)
 
+    # the old equipment: today's item with the old look (no market entry: it
+    # is not that item)
+    refs = A.Appearances()
+    refs.ParseFromString(open(server_dat, 'rb').read())
+    refs = {o.id: o for o in refs.object}
+    for item in OLD_ITEMS:
+        sprite = first_small + len(small)
+        img = Image.open(os.path.join(ART, 'items', f"{item['old']}.png")).convert('RGBA')
+        small.append(img)
+        o = A.Appearance()
+        o.CopyFrom(refs[item['ref']])
+        o.id = item['id']
+        o.name = item['name']
+        o.description = ''
+        for field in ('market', 'npcsaledata', 'cyclopediaitem', 'minimum_level', 'restrict_to_vocation'):
+            o.flags.ClearField(field)
+        del o.frame_group[:]
+        si = o.frame_group.add().sprite_info
+        si.pattern_width = si.pattern_height = si.pattern_depth = si.layers = 1
+        si.sprite_id.append(sprite)
+        si.is_opaque = False
+        x, y, w, h = bbox(img)
+        bb = si.bounding_box_per_direction.add()
+        bb.x, bb.y, bb.width, bb.height = x, y, w, h
+        objects.append(o)
+
     entries = []
     for i in range(0, len(small), 144):
         cip = sheet_bytes(small[i:i + 144], 32)
@@ -368,7 +450,7 @@ def build(client_dir, server_dat):
         a.object.extend(objects)
         with open(path, 'wb') as f:
             f.write(a.SerializeToString())
-    print('ok', len(outfits), 'outfits,', len(objects), 'corpse items,', len(frames) + len(small), 'sprites from', first, ',', ', '.join(e['file'] for e in entries))
+    print('ok', len(outfits), 'outfits,', len(objects), 'items (corpses and old equipment),', len(frames) + len(small), 'sprites from', first, ',', ', '.join(e['file'] for e in entries))
 
 
 if __name__ == '__main__':
