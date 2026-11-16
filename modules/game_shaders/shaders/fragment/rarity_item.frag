@@ -113,15 +113,18 @@ void main() {
     float lit = (light + accent) * glow + flash + aura * (0.30 + 0.90 * hl + 0.40 * l);
     c += (1.0 - c) * shine * (1.0 - exp(-lit)) * ink;
     c = clamp(mix(vec3(lum(c)), c, 1.0 + 0.12 * gr), 0.0, 1.0);
-    // RIM: the outline of the item lights up, the first pixel strongly and
-    // the second less. Four reads one texel away and four two away.
+    // RIM: the outline of the item lights up. Its contour pixel takes the
+    // jewel's colour and keeps part of its dark, so the item still stands
+    // out on a light floor (sand); the pixel behind it takes the light.
+    // Four reads one texel away and four two away.
     vec2 px = abs(vec2(u_TextureMatrix[0][0], u_TextureMatrix[1][1]));
     float edge1 = min(min(texture2D(u_Tex0, v_TexCoord + vec2(px.x, 0.0)).a, texture2D(u_Tex0, v_TexCoord - vec2(px.x, 0.0)).a),
                       min(texture2D(u_Tex0, v_TexCoord + vec2(0.0, px.y)).a, texture2D(u_Tex0, v_TexCoord - vec2(0.0, px.y)).a));
     float edge2 = min(min(texture2D(u_Tex0, v_TexCoord + vec2(2.0 * px.x, 0.0)).a, texture2D(u_Tex0, v_TexCoord - vec2(2.0 * px.x, 0.0)).a),
                       min(texture2D(u_Tex0, v_TexCoord + vec2(0.0, 2.0 * px.y)).a, texture2D(u_Tex0, v_TexCoord - vec2(0.0, 2.0 * px.y)).a));
-    float rim = max(1.0 - edge1, 0.45 * (1.0 - edge2)) * (0.16 + 0.15 * gr) * (0.45 + 0.55 * breath);
-    c = mix(c, shine, clamp(rim, 0.0, 0.92));
+    float rim = (0.16 + 0.15 * gr) * (0.45 + 0.55 * breath);   // 0.14 .. 0.91
+    c = mix(c, jewel, (1.0 - edge1) * min(rim * 0.62, 0.58));
+    c = mix(c, shine, (1.0 - edge2) * edge1 * min(rim * 0.80, 0.75));
     // engraved: deep jewel grooves on bright metal, glowing seams on dark parts
     vec3 etchColor = mix(mix(jewel, vec3(1.0), 0.45), jewel * 0.38, smoothstep(0.45, 0.75, l));
     c = mix(c, etchColor, clamp(etch, 0.0, 1.0) * ink);
