@@ -36,6 +36,19 @@ CREATURES = [
     {'id': 2913, 'old': 37, 'folder': 'demon_skeleton', 'name': 'Ancient Demon Skeleton'},
     {'id': 2914, 'old': 45, 'folder': 'bug', 'name': 'Ancient Bug'},
     {'id': 2915, 'old': 131, 'folder': 'wild_warrior', 'name': 'Ancient Wild Warrior', 'colors': (57, 57, 57, 57)},
+    # the second batch (the humans in the colours of today's monster)
+    {'id': 2916, 'old': 27, 'folder': 'wolf', 'name': 'Ancient Wolf'},
+    {'id': 2917, 'old': 44, 'folder': 'wasp', 'name': 'Ancient Wasp'},
+    {'id': 2918, 'old': 76, 'folder': 'swamp_troll', 'name': 'Ancient Swamp Troll'},
+    {'id': 2919, 'old': 16, 'folder': 'bear', 'name': 'Ancient Bear'},
+    {'id': 2920, 'old': 33, 'folder': 'skeleton', 'name': 'Ancient Skeleton'},
+    {'id': 2921, 'old': 134, 'folder': 'smuggler', 'name': 'Ancient Smuggler', 'colors': (95, 0, 113, 115)},
+    {'id': 2922, 'old': 52, 'folder': 'winter_wolf', 'name': 'Ancient Winter Wolf'},
+    {'id': 2923, 'old': 53, 'folder': 'frost_troll', 'name': 'Ancient Frost Troll'},
+    {'id': 2924, 'old': 129, 'folder': 'hunter', 'name': 'Ancient Hunter', 'colors': (95, 116, 121, 115)},
+    {'id': 2925, 'old': 137, 'folder': 'amazon', 'name': 'Ancient Amazon', 'colors': (113, 120, 95, 115)},
+    {'id': 2926, 'old': 42, 'folder': 'polar_bear', 'name': 'Ancient Polar Bear'},
+    {'id': 2927, 'old': 139, 'folder': 'valkyrie', 'name': 'Ancient Valkyrie', 'colors': (113, 38, 95, 96)},
 ]
 
 
@@ -54,6 +67,19 @@ CORPSES = [
     {'first': 60042, 'name': 'dead bug', 'old': (2902, 2903, 2904), 'size': 6, 'fluid': 'slime', 'weight': 2000},
     {'first': 60046, 'name': 'slain demon skeleton', 'old': (2809, 2922, 2923), 'size': 10, 'fluid': None, 'weight': 40000},
     {'first': 60050, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
+    # the second batch
+    {'first': 60080, 'name': 'dead wolf', 'old': (2826, 2827, 2828), 'size': 8, 'fluid': 'blood', 'weight': 15000},
+    {'first': 60084, 'name': 'dead wasp', 'old': (2899, 2900, 2901), 'size': 6, 'fluid': 'slime', 'weight': 1500},
+    {'first': 60088, 'name': 'dead swamp troll', 'old': (2995, 2996, 2997), 'size': 10, 'fluid': 'blood', 'weight': 55000},
+    {'first': 60092, 'name': 'dead bear', 'old': (2849, 2850, 2851), 'size': 10, 'fluid': 'blood', 'weight': 90000},
+    {'first': 60096, 'name': 'slain skeleton', 'old': (2843, 2975, 2976), 'size': 10, 'fluid': None, 'weight': 20000},
+    {'first': 60100, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
+    {'first': 60104, 'name': 'dead winter wolf', 'old': (2924, 2925, 2926), 'size': 8, 'fluid': 'blood', 'weight': 18000},
+    {'first': 60108, 'name': 'dead frost troll', 'old': (2928, 2929, 2930), 'size': 10, 'fluid': 'blood', 'weight': 55000},
+    {'first': 60112, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
+    {'first': 60116, 'name': 'dead amazon', 'old': (3065, 3066, 3064), 'size': 10, 'fluid': 'blood', 'weight': 70000},
+    {'first': 60120, 'name': 'dead polar bear', 'old': (2893, 2894, 2895), 'size': 10, 'fluid': 'blood', 'weight': 100000},
+    {'first': 60124, 'name': 'dead valkyrie', 'old': (3128, 3129, 3130), 'size': 10, 'fluid': 'blood', 'weight': 75000},
 ]
 # Old equipment: the 7.4 look of an item the Ancient monsters drop, with its
 # own attributes. Each copies the flags of today's item (`ref`: slot, weapon
@@ -92,6 +118,33 @@ OLD_ITEMS = [
      'attrs': [('primarytype', 'armors'), ('armor', 12), ('skillsword', 1), ('skillaxe', 1), ('skillclub', 1), ('absorbpercentphysical', 2), ('weight', 12000)]},
     {'id': 60072, 'old': 2645, 'ref': 3554, 'name': 'old steel boots', 'slot': 'feet', 'level': 60,
      'attrs': [('primarytype', 'boots'), ('showAttributes', 1), ('armor', 3), ('speed', 6), ('absorbpercentphysical', 1), ('weight', 2900)]},
+    # the second batch, one each (two for the Valkyrie)
+    {'id': 60130, 'old': 2420, 'ref': 3308, 'name': 'old machete', 'weapon': 'sword', 'level': 20,  # Ancient Wolf
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 24), ('defense', 14), ('skillsword', 1), ('weight', 1650)]},
+    {'id': 60131, 'old': 2388, 'ref': 3276, 'name': 'old hatchet', 'weapon': 'axe', 'level': 20,  # Ancient Wasp
+     'attrs': [('primarytype', 'axe weapons'), ('weaponType', 'axe'), ('attack', 22), ('elementearth', 4), ('defense', 12), ('skillaxe', 1), ('weight', 3500)]},
+    {'id': 60132, 'old': 2651, 'ref': 3562, 'name': 'old coat', 'slot': 'armor',  # Ancient Swamp Troll
+     'attrs': [('primarytype', 'armors'), ('armor', 7), ('absorbpercentearth', 5), ('weight', 2700)]},
+    {'id': 60133, 'old': 2459, 'ref': 3353, 'name': 'old iron helmet', 'slot': 'head',  # Ancient Bear
+     'attrs': [('primarytype', 'helmets'), ('armor', 7), ('absorbpercentphysical', 2), ('weight', 3000)]},
+    {'id': 60134, 'old': 2436, 'ref': 3324, 'name': 'old skull staff', 'weapon': 'club', 'level': 40,  # Ancient Skeleton
+     'attrs': [('primarytype', 'club weapons'), ('weaponType', 'club'), ('attack', 30), ('elementdeath', 8), ('defense', 12), ('skillclub', 1), ('weight', 1700)]},
+    {'id': 60135, 'old': 2385, 'ref': 3273, 'name': 'old sabre', 'weapon': 'sword', 'level': 30,  # Ancient Smuggler
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 30), ('defense', 18), ('extradef', 2), ('skillsword', 1), ('weight', 2500)]},
+    {'id': 60136, 'old': 2527, 'ref': 3427, 'name': 'old rose shield', 'slot': 'shield',  # Ancient Winter Wolf
+     'attrs': [('primarytype', 'shields'), ('weaponType', 'shield'), ('defense', 31), ('absorbpercentice', 4), ('weight', 5200)]},
+    {'id': 60137, 'old': 2425, 'ref': 3313, 'name': 'old obsidian lance', 'weapon': 'axe', 'level': 50,  # Ancient Frost Troll
+     'attrs': [('primarytype', 'axe weapons'), ('weaponType', 'axe'), ('slotType', 'two-handed'), ('attack', 44), ('defense', 20), ('skillaxe', 2), ('weight', 8000)]},
+    {'id': 60138, 'old': 2407, 'ref': 3295, 'name': 'old bright sword', 'weapon': 'sword', 'level': 60,  # Ancient Hunter
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 38), ('defense', 22), ('extradef', 1), ('skillsword', 1), ('weight', 2900)]},
+    {'id': 60139, 'old': 2392, 'ref': 3280, 'name': 'old fire sword', 'weapon': 'sword', 'level': 50,  # Ancient Amazon
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('attack', 30), ('elementfire', 12), ('defense', 20), ('extradef', 1), ('skillsword', 1), ('weight', 2300)]},
+    {'id': 60140, 'old': 2377, 'ref': 3265, 'name': 'old two handed sword', 'weapon': 'sword', 'level': 50,  # Ancient Polar Bear
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('slotType', 'two-handed'), ('attack', 46), ('defense', 20), ('skillsword', 2), ('weight', 7000)]},
+    {'id': 60141, 'old': 2408, 'ref': 3296, 'name': 'old warlord sword', 'weapon': 'sword', 'level': 80,  # Ancient Valkyrie
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('slotType', 'two-handed'), ('attack', 50), ('defense', 24), ('skillsword', 3), ('absorbpercentphysical', 2), ('weight', 6400)]},
+    {'id': 60142, 'old': 2655, 'ref': 3566, 'name': 'old red robe', 'slot': 'armor', 'level': 50,  # Ancient Valkyrie
+     'attrs': [('primarytype', 'armors'), ('armor', 8), ('magiclevelpoints', 2), ('absorbpercentfire', 4), ('weight', 2600)]},
 ]
 
 # stage: (look 0-2, seconds, container, corpse flag)
