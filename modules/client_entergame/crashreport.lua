@@ -27,11 +27,22 @@ local function readFile(path)
     return nil
 end
 
+-- the player's name on the computer is in every path of the log
+-- (C:\Users\<name>\AppData\...): it stays on the computer
+local function withoutUserNames(text)
+    text = text:gsub('([A-Za-z]:[\\/][Uu][Ss][Ee][Rr][Ss][\\/])[^\\/\r\n]+', '%1~')
+    text = text:gsub('([A-Za-z]:[\\/]Documents and Settings[\\/])[^\\/\r\n]+', '%1~')
+    text = text:gsub('(/home/)[^/\r\n]+', '%1~')
+    text = text:gsub('(/Users/)[^/\r\n]+', '%1~')
+    return text
+end
+
 local function post(kind, text, onSent)
     local url = endpoint()
     if not url or not g_http or not g_http.post then
         return
     end
+    text = withoutUserNames(text)
     if #text > MAX_SEND then
         -- from the start of a line: a cut in the middle of a character is not
         -- valid UTF-8
