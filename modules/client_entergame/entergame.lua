@@ -81,17 +81,24 @@ local function onCharacterList(protocol, characters, account, otui)
     g_settings.set('httpLogin', httpLogin)
 
     if enterGame:getChildById('rememberEmailBox'):isChecked() then
+        -- in the browser the settings live in the site's storage (same origin
+        -- as the website) and g_crypt there is only an obfuscation: any script
+        -- on the site could read them back, so the browser keeps the e-mail
+        -- only, never the password (and so no auto login)
+        local browser = g_platform.isBrowser and g_platform.isBrowser()
+        local savedPassword = browser and '' or G.password
+        local autologin = not browser and enterGame:getChildById('autoLoginBox'):isChecked()
         local account = g_crypt.encrypt(G.account)
-        local password = g_crypt.encrypt(G.password)
+        local password = g_crypt.encrypt(savedPassword)
 
         g_settings.set('account', account)
         g_settings.set('password', password)
 
         ServerList.setServerAccount(G.host, G.account)
-        ServerList.setServerPassword(G.host, G.password)
-        ServerList.setServerAutologin(G.host, enterGame:getChildById('autoLoginBox'):isChecked())
+        ServerList.setServerPassword(G.host, savedPassword)
+        ServerList.setServerAutologin(G.host, autologin)
 
-        g_settings.set('autologin', enterGame:getChildById('autoLoginBox'):isChecked())
+        g_settings.set('autologin', autologin)
         ServerList.save()
     else
         -- reset server list account/password
