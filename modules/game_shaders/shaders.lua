@@ -135,27 +135,6 @@ local OUTFIT_SHADERS = { {
 }, {
     name = 'Rarity - Rise Lord of Death',
     frag = 'shaders/fragment/rarity_rise_lord_of_death.frag'
-}, {
-    -- Baiak Rarity System: item-rarity tints, one per grade. Assigned
-    -- server-side (item:setShader(...) in scripts/rarity/loot.lua), not
-    -- selectable from this module's own UI, same reasoning as the three
-    -- monster-tier shaders above. These color the ITEM by its own rarity
-    -- grade (uncommon/rare/epic/legendary/mythic) rather than by which
-    -- monster tier it happened to drop from.
-    name = 'Rarity - Uncommon',
-    frag = 'shaders/fragment/rarity_uncommon.frag'
-}, {
-    name = 'Rarity - Rare',
-    frag = 'shaders/fragment/rarity_rare.frag'
-}, {
-    name = 'Rarity - Epic',
-    frag = 'shaders/fragment/rarity_epic.frag'
-}, {
-    name = 'Rarity - Legendary',
-    frag = 'shaders/fragment/rarity_legendary.frag'
-}, {
-    name = 'Rarity - Mythic',
-    frag = 'shaders/fragment/rarity_mythic.frag'
 }, }
 
 local MOUNT_SHADERS = { {
@@ -214,7 +193,8 @@ end
 
 -- Rarity items: one source, a variant per grade and element, named
 -- "Rarity - <Grade> - <Element>" (the server's Rarity.itemShaderName). The
--- five "Rarity - <Grade>" shaders above stay for items not yet renamed.
+-- plain "Rarity - <Grade>" (the Wiki, the loot notice, items not yet
+-- renamed) is the same drawing without an element.
 local RARITY_ITEM_SOURCE = 'shaders/fragment/rarity_item.frag'
 local RARITY_GRADES = { 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic' }
 local RARITY_ELEMENTS = { 'None', 'Igneus', 'Terrenus', 'Fulmineus', 'Glacialis', 'Sacer', 'Mortifer', 'Corporalis' }
@@ -227,6 +207,9 @@ local function registerRarityItemShaders()
     end
     local source = g_resources.readFileContents(path)
     for grade, gradeName in ipairs(RARITY_GRADES) do
+        local plain = 'Rarity - ' .. gradeName
+        g_shaders.createFragmentShaderFromCode(plain, '#define GRADE ' .. grade .. '\n#define ELEMENT 0\n' .. source, false)
+        g_shaders.setupOutfitShader(plain)
         for element, elementName in ipairs(RARITY_ELEMENTS) do
             local name = 'Rarity - ' .. gradeName .. ' - ' .. elementName
             local code = '#define GRADE ' .. grade .. '\n#define ELEMENT ' .. (element - 1) .. '\n' .. source

@@ -6,10 +6,14 @@
 // MYTHOS / RELIQUIAS VIVAS — candidate v1, grade layer strengthened so the
 // tier reads at a glance (tint, highlights, a reflection every 4 s, gold
 // sparks on Legendarius, a stronger opal on Mythicus)
-// One texture read; atlas-safe; alpha and dark ink preserved.
+// Alpha and dark ink preserved. Nine texture reads: the pixel and eight
+// around it for the lit outline (RIM). At the border of the sprite's rect a
+// neighbour can be another sprite of the atlas: a few outline pixels then
+// stay unlit, nothing else.
 // GRADE 1..5; ELEMENT 0 none, 1 fire, 2 earth, 3 energy,
 // 4 ice, 5 holy, 6 death, 7 physical. Patterns use screen pixels.
-// The client supplies precision headers. No new uniforms required.
+// The client supplies precision headers. No new uniforms required
+// (u_TextureMatrix is the vertex shader's, declared here to read its scale).
 #ifndef GRADE
 #define GRADE 5
 #endif
@@ -19,6 +23,8 @@
 uniform sampler2D u_Tex0;
 uniform float u_Time;
 uniform vec2 u_Resolution;
+// the size of one texel is its scale; same declaration as the vertex shader
+uniform highp mat3 u_TextureMatrix;
 varying vec2 v_TexCoord;
 const float TAU = 6.28318530718;
 float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
@@ -91,8 +97,34 @@ void main() {
     etch = 0.66 * line(p.x * 0.49 + sin(p.y * 0.37) * 0.9, 0.30)
          + 0.80 * line(p.x * 0.81, 0.16) * line(p.y * 0.73, 0.16) * (0.5 + 0.5 * wave(t * TAU / 5.0 + phase));
 #endif
+    // The grade's glow (owner, 2026-11-16: "2 ou 3x mais brilhoso", more at
+    // every grade). GLOW multiplies the lights above; AURA is a light the
+    // whole item breathes every 3 s, FLASH a wide reflection that crosses
+    // it. 1 - exp(-x) keeps the drawing under any strength, and the colour
+    // is pushed back afterwards: light alone washes the jewel out.
+    float gr = float(GRADE);
+    float glow = 1.5 + 0.30 * gr;                       // lights x1.8 .. x3.0
+    float breath = pow(wave(t * TAU / 3.0 + phase * 0.25), 2.0);
+    float aura = (0.10 + 0.08 * gr) * (0.30 + 0.70 * breath);
+    float flash = pow(wave((p.x + p.y * 0.65) * 0.085 - t * TAU / 4.0), 10.0 - gr)
+                * (0.10 + 0.16 * gr);                    // wider and stronger by grade
+    vec3 shine = mix(jewel, vec3(1.0), 0.20 + 0.04 * gr);
     vec3 c = pigment(col.rgb, jewel, tint * ink * protect);
-    c += (1.0 - c) * jewel * (light + accent) * ink;
+    float lit = (light + accent) * glow + flash + aura * (0.30 + 0.90 * hl + 0.40 * l);
+    c += (1.0 - c) * shine * (1.0 - exp(-lit)) * ink;
+    c = clamp(mix(vec3(lum(c)), c, 1.0 + 0.12 * gr), 0.0, 1.0);
+    // RIM: the outline of the item lights up. Its contour pixel takes the
+    // jewel's colour and keeps part of its dark, so the item still stands
+    // out on a light floor (sand); the pixel behind it takes the light.
+    // Four reads one texel away and four two away.
+    vec2 px = abs(vec2(u_TextureMatrix[0][0], u_TextureMatrix[1][1]));
+    float edge1 = min(min(texture2D(u_Tex0, v_TexCoord + vec2(px.x, 0.0)).a, texture2D(u_Tex0, v_TexCoord - vec2(px.x, 0.0)).a),
+                      min(texture2D(u_Tex0, v_TexCoord + vec2(0.0, px.y)).a, texture2D(u_Tex0, v_TexCoord - vec2(0.0, px.y)).a));
+    float edge2 = min(min(texture2D(u_Tex0, v_TexCoord + vec2(2.0 * px.x, 0.0)).a, texture2D(u_Tex0, v_TexCoord - vec2(2.0 * px.x, 0.0)).a),
+                      min(texture2D(u_Tex0, v_TexCoord + vec2(0.0, 2.0 * px.y)).a, texture2D(u_Tex0, v_TexCoord - vec2(0.0, 2.0 * px.y)).a));
+    float rim = (0.16 + 0.15 * gr) * (0.45 + 0.55 * breath);   // 0.14 .. 0.91
+    c = mix(c, jewel, (1.0 - edge1) * min(rim * 0.62, 0.58));
+    c = mix(c, shine, (1.0 - edge2) * edge1 * min(rim * 0.80, 0.75));
     // engraved: deep jewel grooves on bright metal, glowing seams on dark parts
     vec3 etchColor = mix(mix(jewel, vec3(1.0), 0.45), jewel * 0.38, smoothstep(0.45, 0.75, l));
     c = mix(c, etchColor, clamp(etch, 0.0, 1.0) * ink);

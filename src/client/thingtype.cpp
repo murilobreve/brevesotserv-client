@@ -1054,13 +1054,19 @@ int ThingType::getExactSize(const int layer, const int xPattern, const int yPatt
     if (m_null)
         return 0;
 
+    // a phase the thing does not have, or a texture still loading on
+    // another thread (no frames yet): no size for now
+    if (animationPhase < 0 || animationPhase >= static_cast<int>(m_textureData.size()))
+        return 0;
+
     if (!getTexture(animationPhase)) // we must calculate it anyway.
         return 0;
 
-    const int frameIndex = getTextureIndex(layer, xPattern, yPattern, zPattern);
     const auto& pos = m_textureData[animationPhase].pos;
+    if (pos.empty())
+        return 0;
 
-    const auto& textureDataPos = pos[std::min<int>(frameIndex, pos.size() - 1)];
+    const auto& textureDataPos = pos[std::min<size_t>(getTextureIndex(layer, xPattern, yPattern, zPattern), pos.size() - 1)];
     const auto& size = textureDataPos.originRects.size() - textureDataPos.offsets.toSize();
     return std::max<int>(size.width(), size.height());
 }
@@ -1081,10 +1087,19 @@ int ThingType::getExactHeight()
     if (m_exactHeight != 0)
         return m_exactHeight;
 
-    getTexture(0);
-    const int frameIndex = getTextureIndex(0, 0, 0, 0);
+    // With async texture loading the texture is built on another thread:
+    // until it is there its frames are not either, and reading them closed
+    // the client (a creature drawn through a framebuffer shader, as the
+    // outline, on the first frame of an outfit not loaded yet: the avatar of
+    // Transcendence). 0 for now, not kept: asked again on the next frame.
+    if (m_animationPhases == 0 || m_textureData.empty() || !getTexture(0))
+        return 0;
 
-    const auto& textureDataPos = m_textureData[0].pos[frameIndex];
+    const auto& pos = m_textureData[0].pos;
+    if (pos.empty())
+        return 0;
+
+    const auto& textureDataPos = pos[std::min<size_t>(getTextureIndex(0, 0, 0, 0), pos.size() - 1)];
     const Size& size = textureDataPos.originRects.size() - textureDataPos.offsets.toSize();
     return m_exactHeight = size.height();
 }

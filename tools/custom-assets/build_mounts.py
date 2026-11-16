@@ -276,12 +276,13 @@ for first in range(0, len(small), 144):
     cip = sheet_bytes(small[first:first + 144], 32)
     small_sheets.append(('sprites-items-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, first_small + first, first_small + min(first + 144, len(small)) - 1))
 
-# effects added to the pack by hand (the Last Stand text) are kept as they
-# are: their appearances, sheet files and sprite ids
+# effects added to the pack by hand (the Last Stand text) and the 7.4
+# creatures (build_creatures74.py: run it again after this) keep their sheet
+# files and sprite ids
 old_catalog = []
 if os.path.exists(os.path.join(CLIENT_DIR, 'catalog-content.json')):
     old_catalog = json.load(open(os.path.join(CLIENT_DIR, 'catalog-content.json')))
-kept_sheets = [e for e in old_catalog if e.get('type') == 'sprite' and e['file'].startswith('sprites-effects-')]
+kept_sheets = [e for e in old_catalog if e.get('type') == 'sprite' and e['file'].startswith(('sprites-effects-', 'sprites-creatures-'))]
 old_custom = A.Appearances()
 if os.path.exists(os.path.join(CLIENT_DIR, 'appearances-custom.dat')):
     old_custom.ParseFromString(open(os.path.join(CLIENT_DIR, 'appearances-custom.dat'), 'rb').read())
@@ -337,7 +338,7 @@ dat_name = 'appearances-custom.dat'
 
 os.makedirs(CLIENT_DIR, exist_ok=True)
 for f in os.listdir(CLIENT_DIR):
-    if f.startswith('sprites-') and not f.startswith('sprites-effects-'):
+    if f.startswith('sprites-') and not f.startswith(('sprites-effects-', 'sprites-creatures-')):
         os.remove(os.path.join(CLIENT_DIR, f))
 for name, cip, _first, _last, _t in sized_sheets:
     with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
