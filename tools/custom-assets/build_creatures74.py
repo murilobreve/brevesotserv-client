@@ -87,11 +87,11 @@ OLD_ITEMS = [
      'attrs': [('primarytype', 'shields'), ('weaponType', 'shield'), ('defense', 34), ('absorbpercentdeath', 5), ('weight', 5200)]},
     # Ancient Wild Warrior
     {'id': 60070, 'old': 2393, 'ref': 3281, 'name': 'old giant sword', 'weapon': 'sword', 'level': 60,
-     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('slotType', 'two-handed'), ('attack', 52), ('defense', 24), ('skillsword', 3), ('weight', 18000)]},
+     'attrs': [('primarytype', 'sword weapons'), ('weaponType', 'sword'), ('slotType', 'two-handed'), ('attack', 48), ('defense', 22), ('skillsword', 2), ('weight', 18000)]},
     {'id': 60071, 'old': 2486, 'ref': 3380, 'name': 'old noble armor', 'slot': 'armor', 'level': 50,
-     'attrs': [('primarytype', 'armors'), ('armor', 13), ('skillsword', 1), ('skillaxe', 1), ('skillclub', 1), ('absorbpercentphysical', 3), ('weight', 12000)]},
+     'attrs': [('primarytype', 'armors'), ('armor', 12), ('skillsword', 1), ('skillaxe', 1), ('skillclub', 1), ('absorbpercentphysical', 2), ('weight', 12000)]},
     {'id': 60072, 'old': 2645, 'ref': 3554, 'name': 'old steel boots', 'slot': 'feet', 'level': 60,
-     'attrs': [('primarytype', 'boots'), ('showAttributes', 1), ('armor', 4), ('speed', 10), ('absorbpercentphysical', 2), ('weight', 2900)]},
+     'attrs': [('primarytype', 'boots'), ('showAttributes', 1), ('armor', 3), ('speed', 6), ('absorbpercentphysical', 1), ('weight', 2900)]},
 ]
 
 # stage: (look 0-2, seconds, container, corpse flag)
