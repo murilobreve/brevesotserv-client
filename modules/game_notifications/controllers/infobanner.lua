@@ -22,6 +22,7 @@ local MAX_WIDTH = 289
 local BANNER_HEIGHT = 88
 local FRAME_MS = 45
 local DEFAULT_HOLD_MS = 3000
+local TASK_HOLD_MS = 4000
 local FADE_IN_MS = 400
 local FADE_OUT_MS = 300
 local FADE_INTERVAL_MS = 20
@@ -311,6 +312,31 @@ function notificationsController:onClientEvent(eventCat, ...)
     self:show(title, description, img, DEFAULT_HOLD_MS, extraData)
 end
 
+-- Mythos: a banner of the server's own systems (a hunt task done). Shown
+-- like the others, queued after them, and only with the banners option on.
+-- outfit: a creature to show in the frame, or nil for the task icon.
+function showTaskBanner(title, desc, outfit)
+    if not modules.client_options.getOption("showInfoBanner") then
+        return false
+    end
+    local img = outfit and "/game_notifications/assets/images/nodo/icon-infobanner-unlock"
+        or "/game_notifications/assets/images/nodo/icon-infobanner-weeklytask"
+    notificationsController:show(title, desc, img, TASK_HOLD_MS, { outfit = outfit })
+    return true
+end
+
+-- Mythos: the banner lies over the top of the map; it lets every click and
+-- the mouse through (a monster under it could not be clicked while it showed)
+local function letClicksThrough(widget)
+    if not widget or widget:isDestroyed() then
+        return
+    end
+    widget:setPhantom(true)
+    for _, child in ipairs(widget:getChildren()) do
+        letClicksThrough(child)
+    end
+end
+
 function infoBanner_onTerminate()
     notificationsController:hideImmediate()
     if notificationsController.ui then
@@ -325,6 +351,7 @@ function notificationsController:ensure()
 
     self:loadHtml("templates/infobanner.html", modules.game_interface.getMapPanel())
     self.ui:hide()
+    letClicksThrough(self.ui)
 
     self.widgets = {
         paper = self:findWidget("#paper"),
@@ -450,7 +477,12 @@ function notificationsController:processNext()
         local appendW = self.widgets.append
         appendW:destroyChildren()
 
-        if data.extraData.itemId then
+        if data.extraData.outfit then
+            local creature = appendW:append([[
+            <uicreature style="width: 64px; height: 64px"/>
+            ]])
+            creature:setOutfit(data.extraData.outfit)
+        elseif data.extraData.itemId then
             local itemId = data.extraData.itemId
             local html = string.format([[
             <uiitem item-id="%d" style="width: 64px; height: 64px"></uiitem>
@@ -492,6 +524,7 @@ function notificationsController:processNext()
         end
     end
 
+    letClicksThrough(self.widgets.append)
     self.state = "opening"
     debugPrint("Starting Banner ->", data.title)
     self:animateOpen(data.holdMs)
