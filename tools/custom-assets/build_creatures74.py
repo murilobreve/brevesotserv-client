@@ -28,17 +28,19 @@ sys.path.insert(0, HERE)
 ART = os.path.join(HERE, 'art', 'creatures74')
 DIRS = 'NESW'
 
-# looktype here, outfit of the 7.40 Tibia.dat, folder, colours (head, body, legs, feet)
+# looktype here, outfit of the 7.40 Tibia.dat, folder, colours (head, body, legs, feet);
+# 'animate': its walk frames run while it stands too (animate_always), as the
+# rotworm, the slime and the wasp of today's client do (they stood frozen)
 CREATURES = [
-    {'id': 2910, 'old': 26, 'folder': 'rotworm', 'name': 'Ancient Rotworm'},
+    {'id': 2910, 'old': 26, 'folder': 'rotworm', 'name': 'Ancient Rotworm', 'animate': True},
     {'id': 2911, 'old': 15, 'folder': 'troll', 'name': 'Ancient Troll'},
-    {'id': 2912, 'old': 19, 'folder': 'slime', 'name': 'Ancient Slime'},
+    {'id': 2912, 'old': 19, 'folder': 'slime', 'name': 'Ancient Slime', 'animate': True},
     {'id': 2913, 'old': 37, 'folder': 'demon_skeleton', 'name': 'Ancient Demon Skeleton'},
     {'id': 2914, 'old': 45, 'folder': 'bug', 'name': 'Ancient Bug'},
     {'id': 2915, 'old': 131, 'folder': 'wild_warrior', 'name': 'Ancient Wild Warrior', 'colors': (57, 57, 57, 57)},
     # the second batch (the humans in the colours of today's monster)
     {'id': 2916, 'old': 27, 'folder': 'wolf', 'name': 'Ancient Wolf'},
-    {'id': 2917, 'old': 44, 'folder': 'wasp', 'name': 'Ancient Wasp'},
+    {'id': 2917, 'old': 44, 'folder': 'wasp', 'name': 'Ancient Wasp', 'animate': True},
     {'id': 2918, 'old': 76, 'folder': 'swamp_troll', 'name': 'Ancient Swamp Troll'},
     {'id': 2919, 'old': 16, 'folder': 'bear', 'name': 'Ancient Bear'},
     {'id': 2920, 'old': 33, 'folder': 'skeleton', 'name': 'Ancient Skeleton'},
@@ -79,7 +81,8 @@ CORPSES = [
     {'first': 60112, 'name': 'dead human', 'old': (3058, 3059, 3060), 'size': 10, 'fluid': 'blood', 'weight': 80000},
     {'first': 60116, 'name': 'dead amazon', 'old': (3065, 3066, 3064), 'size': 10, 'fluid': 'blood', 'weight': 70000},
     {'first': 60120, 'name': 'dead polar bear', 'old': (2893, 2894, 2895), 'size': 10, 'fluid': 'blood', 'weight': 100000},
-    {'first': 60124, 'name': 'dead valkyrie', 'old': (3128, 3129, 3130), 'size': 10, 'fluid': 'blood', 'weight': 75000},
+    # a woman's body, as the amazon's (3128-3130 of the 7.40 Tibia.dat are a man's)
+    {'first': 60124, 'name': 'dead valkyrie', 'old': (3065, 3066, 3064), 'size': 10, 'fluid': 'blood', 'weight': 75000},
 ]
 # Old equipment: the 7.4 look of an item the Ancient monsters drop, with its
 # own attributes. Each copies the flags of today's item (`ref`: slot, weapon
@@ -414,6 +417,8 @@ def build(client_dir, server_dat):
                 bb = si.bounding_box_per_direction.add()
                 bb.x, bb.y, bb.width, bb.height = x, y, w, h
         o.flags.SetInParent()
+        if c.get('animate'):
+            o.flags.animate_always = True
         outfits.append(o)
 
     # the corpses: 32x32 sprites after the creatures'
