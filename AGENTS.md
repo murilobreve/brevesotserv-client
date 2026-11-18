@@ -70,6 +70,6 @@ Reference: `docs/client-assets-auto-install.md`
 
 ## Short updates on the site
 
-- A change a player notices (game, client or site) gets one line at the top of `docker/quickstart/myaac/plugins/brevesot/data/changelog.php` of the server repository, in the same push: date, area (`jogo`, `cliente` or `site`) and one sentence of at most 90 characters in Portuguese and in English. The site lists them at the top of its home page.
-- Write what changed for the player, never file, function or commit names. Refactors, builds, deploy scripts and staff tools get no line; a security fix says no more than "more protection". Several commits of one change are one line. The rules are repeated at the top of that file.
+- A change that affects how players play (mechanics, content, rewards, balance, a fixed behaviour, a new tool of the site; in the game, the client or the site) gets one line at the top of `docker/quickstart/myaac/plugins/brevesot/data/changelog.php` of the server repository, in the same push: date, area (`jogo`, `cliente` or `site`) and one sentence of at most 90 characters in Portuguese and in English. The site lists them at the top of its home page.
+- Write what changed for the player, never file, function or commit names. Visual changes get no line (look, layout, colour, animation, sprite, wording), nor do refactors, builds, deploy scripts and staff tools; a security fix says no more than "more protection". Several commits of one change are one line. The rules are repeated at the top of that file.
 - The long patch notes (`data/patches.php`, also the client's Novidades window) stay for the larger releases.
