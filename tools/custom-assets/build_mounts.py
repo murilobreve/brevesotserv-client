@@ -35,12 +35,13 @@ ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art')
 
 # Each car is art/<folder>/<direction>.png, one 64x64 frame per direction in
 # Tibia's angle. It goes in two layers: y pattern 0 is the whole car, under
-# the rider; y pattern 1 is drawn over the rider so he sits in the car. That
-# front layer is art/<folder>/<direction>_frente.png when the folder has it
-# (the doors, hood and windscreen in front of the rider, drawn by hand: the
-# Uno and the Gol since 2026-11-18, an open cabin around the mounted pose),
-# else the part of the car from `cut` down (a cut of 64 leaves it empty: the
-# Fusca is open with a saddle, the rider sits on top). `offset` moves both
+# the rider; y pattern 1 is drawn over the rider. That front layer is
+# art/<folder>/<direction>_frente.png when the folder has one (doors or a
+# hood in front of the rider), else the part of the car from `cut` down; a
+# cut of 64 leaves it empty. The three cars are open with a saddle and the
+# rider sits on top, the Uno and the Gol drawn over the Fusca's size and
+# place in the frame (2026-11-18: a bigger car with an open cabin looked out
+# of scale next to the rider and the official mounts). `offset` moves both
 # layers. Outfit ids are far above the official.
 MOUNTS = [
     {'id': 2900, 'name': 'Blue Fusca', 'folder': 'fusca',
