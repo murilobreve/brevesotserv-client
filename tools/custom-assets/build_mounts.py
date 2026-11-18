@@ -10,6 +10,12 @@ Writes data/things/custom/ for the client (catalog-content.json, the sprite
 sheets, appearances-custom.dat) and adds the outfits to the server's
 data/items/appearances.dat (the server only lets a mount use a registered
 looktype, and reads the items' flags from there).
+
+Only the cars' art changed (same mounts, same number of frames):
+  python3 build_mounts.py ../../data/things/custom - --mounts-only
+rewrites just the mounts' sheets and their outfits in the pack; every other
+sheet, item and the 7.4 creatures stay as they are, and the server is not
+touched (its copy of the looktypes only registers them).
 """
 import json, lzma, struct, sys, hashlib
 import numpy as np
@@ -29,11 +35,13 @@ ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art')
 
 # Each car is art/<folder>/<direction>.png, one 64x64 frame per direction in
 # Tibia's angle. It goes in two layers: y pattern 0 is the whole car, under
-# the rider; y pattern 1 is the part from `cut` down (doors, hood, rear), which
-# the client draws over the rider so he sits in the car. `offset` moves the
-# art so the seat is under the rider; a cut of 64 leaves the front layer empty
-# (the cars are open with a saddle, the rider sits on top). Outfit ids are far
-# above the official.
+# the rider; y pattern 1 is drawn over the rider so he sits in the car. That
+# front layer is art/<folder>/<direction>_frente.png when the folder has it
+# (the doors, hood and windscreen in front of the rider, drawn by hand: the
+# Uno and the Gol since 2026-11-18, an open cabin around the mounted pose),
+# else the part of the car from `cut` down (a cut of 64 leaves it empty: the
+# Fusca is open with a saddle, the rider sits on top). `offset` moves both
+# layers. Outfit ids are far above the official.
 MOUNTS = [
     {'id': 2900, 'name': 'Blue Fusca', 'folder': 'fusca',
      'offset': {'N': (0, 0), 'E': (0, 0), 'S': (0, 0), 'W': (0, 0)},
@@ -134,15 +142,23 @@ def make_ref_item(item, ref, sprite_ids):
 
 
 def car(mount, d, bob=0):
-    art = np.array(Image.open(os.path.join(ART, mount['folder'], NAMES[d] + '.png')).convert('RGBA'))
+    folder = os.path.join(ART, mount['folder'])
+    art = np.array(Image.open(os.path.join(folder, NAMES[d] + '.png')).convert('RGBA'))
+    front_file = os.path.join(folder, NAMES[d] + '_frente.png')
+    drawn_front = np.array(Image.open(front_file).convert('RGBA')) if os.path.exists(front_file) else None
     back, front = np.zeros_like(art), np.zeros_like(art)
     dx, dy = mount['offset'][d][0], mount['offset'][d][1] - bob
     for y, x in np.argwhere(art[..., 3] > 0):
         X, Y = x + dx, y + dy
         if 0 <= X < 64 and 0 <= Y < 64:
             back[Y, X] = art[y, x]
-            if y >= mount['cut'][d]:
+            if drawn_front is None and y >= mount['cut'][d]:
                 front[Y, X] = art[y, x]
+    if drawn_front is not None:
+        for y, x in np.argwhere(drawn_front[..., 3] > 0):
+            X, Y = x + dx, y + dy
+            if 0 <= X < 64 and 0 <= Y < 64:
+                front[Y, X] = drawn_front[y, x]
     return [Image.fromarray(back), Image.fromarray(front)]
 
 
@@ -264,6 +280,34 @@ sheets = []
 for first in range(0, len(frames), 36):
     cip = sheet_bytes(frames[first:first + 36])
     sheets.append(('sprites-mounts-' + hashlib.sha256(cip).hexdigest()[:16] + '.bmp.lzma', cip, FIRST_SPRITE + first, FIRST_SPRITE + min(first + 36, len(frames)) - 1))
+
+if len(sys.argv) > 3 and sys.argv[3] == '--mounts-only':
+    catalog = json.load(open(os.path.join(CLIENT_DIR, 'catalog-content.json')))
+    old_mounts = [e for e in catalog if e.get('type') == 'sprite' and e['file'].startswith('sprites-mounts-')]
+    if [(e['firstspriteid'], e['lastspriteid']) for e in old_mounts] != [(first, last) for _n, _c, first, last in sheets]:
+        raise SystemExit('the mounts need other sprite ids than the pack has: run the whole build')
+    for e in old_mounts:
+        path = os.path.join(CLIENT_DIR, e['file'])
+        if os.path.exists(path):
+            os.remove(path)
+    by_first = {first: name for name, _c, first, _l in sheets}
+    for name, cip, _first, _last in sheets:
+        with open(os.path.join(CLIENT_DIR, name), 'wb') as f:
+            f.write(cip)
+    for e in old_mounts:
+        e['file'] = by_first[e['firstspriteid']]
+    with open(os.path.join(CLIENT_DIR, 'catalog-content.json'), 'w') as f:
+        json.dump(catalog, f, indent=2)
+    custom = A.Appearances()
+    custom.ParseFromString(open(os.path.join(CLIENT_DIR, 'appearances-custom.dat'), 'rb').read())
+    fresh = {o.id: o for o in outfits}
+    kept = [fresh.get(o.id, o) for o in custom.outfit]
+    del custom.outfit[:]
+    custom.outfit.extend(kept)
+    with open(os.path.join(CLIENT_DIR, 'appearances-custom.dat'), 'wb') as f:
+        f.write(custom.SerializeToString())
+    print('ok, mounts only:', ', '.join(f'{n} ({len(c)} bytes)' for n, c, _, _ in sheets))
+    sys.exit(0)
 
 # the items go on 32x32 sheets after the mount sprites
 small, objects = [], []
