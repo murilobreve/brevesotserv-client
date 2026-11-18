@@ -1,9 +1,11 @@
 # Draws data/images/game/huntboard/boost_badges.png: the badges the client
 # puts above a boosted monster's name (Creature::drawBoostBadges).
-# 12x12 cells; rows: loot tier 1-3 (coins), rare monsters tier 1-3 (crystals),
-# experience tier 1-3 (a star: pale at 2x, orange at 3x, red with a hot core
-# from 4x); 6 frames a row: 0 at rest, 1-5 a glint crossing the badge (drawn
-# for every tier, used by the third).
+# Only the icon, no number: its colour says how near the rate is to the
+# highest of the Hunt Board (green, yellow, orange, red at the top).
+# 12x12 cells; rows: loot heat 1-4 (a bag), rare monsters heat 1-4
+# (crystals), experience heat 1-4 (the letters XP);
+# 6 frames a row: 0 at rest, 1-5 a glint crossing the badge (drawn for every
+# row, used by the red one).
 #   python3 tools/huntboard-badges/make_badges.py [out.png]
 import math
 import sys
@@ -13,13 +15,12 @@ S = 12
 FRAMES = 6
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'data/images/game/huntboard/boost_badges.png'
 
-GOLD = {'o': (56, 36, 8), 'h': (255, 240, 170), 'm': (240, 196, 82), 's': (188, 132, 36)}
-CYAN = {'o': (8, 38, 58), 'h': (222, 251, 255), 'm': (112, 216, 255), 's': (44, 132, 186)}
-# the star of each experience tier; 'c' is the core of the third
-XP = (
-    {'o': (52, 44, 20), 'h': (255, 255, 240), 'm': (250, 238, 170), 's': (206, 178, 96)},
-    {'o': (66, 28, 4), 'h': (255, 226, 150), 'm': (255, 160, 52), 's': (212, 100, 20)},
-    {'o': (70, 6, 6), 'h': (255, 170, 130), 'm': (240, 62, 46), 's': (168, 22, 26), 'c': (255, 232, 140)},
+# the same scale for the three badges, from a rate just above 1x to the top
+HEAT = (
+    {'o': (14, 50, 18), 'h': (214, 255, 196), 'm': (112, 214, 92), 's': (50, 148, 50)},
+    {'o': (60, 46, 6), 'h': (255, 250, 196), 'm': (250, 214, 70), 's': (194, 148, 24)},
+    {'o': (70, 30, 4), 'h': (255, 214, 150), 'm': (255, 146, 44), 's': (206, 90, 16)},
+    {'o': (72, 6, 6), 'h': (255, 170, 130), 'm': (240, 62, 46), 's': (168, 22, 26), 'c': (255, 232, 140)},
 )
 
 
@@ -65,6 +66,50 @@ def coin(px, cx, cy, r, pal):
     px[int(cx), int(cy) - 1] = pal['s'] + (255,)
 
 
+def bag(px, pal):
+    """A loot bag: a round body lit from the top left, a tied neck and a
+    flared mouth."""
+    cx, cy, r = 6.0, 7.4, 3.9
+    for y in range(S):
+        for x in range(S):
+            dx, dy = x + 0.5 - cx, y + 0.5 - cy
+            # the body, a little wider than tall
+            if (dx / 1.08) ** 2 + dy * dy <= r * r:
+                k = dx + dy
+                px[x, y] = (pal['h'] if k <= -r * 0.8 else pal['s'] if k >= r * 0.55 else pal['m']) + (255,)
+    # the neck and the mouth above it
+    for x in range(5, 7):
+        px[x, 3] = pal['m'] + (255,)
+    for x in range(4, 8):
+        px[x, 2] = (pal['h'] if x < 6 else pal['m']) + (255,)
+    px[3, 1] = pal['m'] + (255,)
+    px[8, 1] = pal['s'] + (255,)
+    # the string tied round the neck
+    for x in range(4, 8):
+        px[x, 4] = pal['s'] + (255,)
+
+
+# "XP" in bold pixel letters, 7 rows tall
+XP_LETTERS = (
+    '1...1.111.',
+    '11.11.11.1',
+    '.111..11.1',
+    '..1...111.',
+    '.111..11..',
+    '11.11.11..',
+    '1...1.11..',
+)
+
+
+def letters(px, pal):
+    """The letters XP: light on top, shaded at the bottom."""
+    for row, line in enumerate(XP_LETTERS):
+        for col, ch in enumerate(line):
+            if ch == '1':
+                c = pal['h'] if row <= 1 else pal['s'] if row >= 5 else pal['m']
+                px[1 + col, 2 + row] = c + (255,)
+
+
 def shard(px, cx, top, bottom, half, pal):
     """A crystal: a tall rhombus, its left facet in the light."""
     mid = (top + bottom) / 2.0
@@ -105,36 +150,19 @@ def sparkle(px, x, y, big):
                 px[nx, ny] = (255, 255, 255, 230)
 
 
-def base(kind, tier):
+def base(kind, heat):
+    pal = HEAT[heat - 1]
     im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
     px = im.load()
     if kind == 'loot':
-        if tier == 1:
-            coin(px, 5.5, 6.5, 3, GOLD)
-        elif tier == 2:
-            coin(px, 7.5, 4.5, 3, GOLD)
-            coin(px, 4.5, 7.5, 3, GOLD)
-        else:
-            coin(px, 5.5, 3.5, 2.6, GOLD)
-            coin(px, 8.2, 7.6, 2.8, GOLD)
-            coin(px, 3.6, 7.8, 2.8, GOLD)
-        outline(im, GOLD)
+        bag(px, pal)
     elif kind == 'xp':
-        star(px, 6.0, 6.4, (4.3, 5.0, 5.4)[tier - 1], (1.9, 2.2, 2.4)[tier - 1], XP[tier - 1])
-        outline(im, XP[tier - 1])
+        letters(px, pal)
     else:
-        if tier == 1:
-            shard(px, 5.5, 2, 10, 2.6, CYAN)
-        elif tier == 2:
-            shard(px, 8.5, 5, 10, 1.7, CYAN)
-            outline(im, CYAN)
-            shard(px, 4.5, 1, 10, 2.9, CYAN)
-        else:
-            shard(px, 2.5, 5, 10, 1.6, CYAN)
-            shard(px, 9.0, 4, 10, 1.9, CYAN)
-            outline(im, CYAN)
-            shard(px, 5.6, 0, 10, 2.8, CYAN)
-        outline(im, CYAN)
+        shard(px, 8.5, 5, 10, 1.7, pal)
+        outline(im, pal)
+        shard(px, 4.5, 1, 10, 2.9, pal)
+    outline(im, pal)
     return im
 
 
@@ -157,13 +185,13 @@ def glint(im, frame, pal):
     return out
 
 
-sheet = Image.new('RGBA', (S * FRAMES, S * 9), (0, 0, 0, 0))
+sheet = Image.new('RGBA', (S * FRAMES, S * 12), (0, 0, 0, 0))
 row = 0
-for kind, pals in (('loot', (GOLD,) * 3), ('rare', (CYAN,) * 3), ('xp', XP)):
-    for tier in (1, 2, 3):
-        b = base(kind, tier)
+for kind in ('loot', 'rare', 'xp'):
+    for heat in (1, 2, 3, 4):
+        b = base(kind, heat)
         for f in range(FRAMES):
-            sheet.paste(b if f == 0 else glint(b, f, pals[tier - 1]), (f * S, row * S))
+            sheet.paste(b if f == 0 else glint(b, f, HEAT[heat - 1]), (f * S, row * S))
         row += 1
 sheet.save(OUT)
 print('wrote', OUT, sheet.size)

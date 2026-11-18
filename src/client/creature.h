@@ -191,12 +191,14 @@ minHeight,
     void setRateText(const std::string& text);
     std::string getRateText() const { return m_rateText.getText(); }
     void setRateColor(const Color& color) { m_rateColor = color; }
-    // Hunt Board boosts on the monster (modules/game_huntboard): the loot
-    // and rare monsters rates as badges above the name (tenths: 28 = 2.8x,
-    // shown rounded: "3x"; a rate that rounds to 1x has no badge), and a
-    // shader for a very strong monster
-    // that the creature's own shader (a rare tier's) always comes before
+    // Hunt Board boosts on the monster (modules/game_huntboard): the loot,
+    // rare monsters and experience rates as icons above the name (tenths:
+    // 28 = 2.8x; a rate that rounds to 1x has no icon), coloured by how near
+    // each is to its highest rate (setBoostMaxima, for every creature), and
+    // a shader for a very strong monster that the creature's own shader (a
+    // rare tier's) always comes before
     void setBoostBadges(int lootTenths, int rareTenths, int xpTenths);
+    static void setBoostMaxima(int lootTenths, int rareTenths, int xpTenths);
     void setStrongShader(std::string_view name);
     bool canShoot(int distance);
 
@@ -318,8 +320,7 @@ private:
     // badge is set
     struct BoostBadges
     {
-        uint8_t times[3]{ 0, 0, 0 }; // the rounded rate: 0 none, 2 and up
-        CachedText text[3];
+        uint8_t heat[3]{ 0, 0, 0 }; // 0 none, 1-4 green to red
     };
     std::unique_ptr<BoostBadges> m_boosts;
     uint8_t m_strongShaderId{ 0 };

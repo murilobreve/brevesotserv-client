@@ -1025,17 +1025,18 @@ local rateByName = {}
 -- comes before it (Creature::setStrongShader).
 local STRONG_SHADER = 'Hunt - Strong'
 
--- What a monster shows of its rates: badges above its name
--- (Creature::setBoostBadges), each an icon and the rounded rate, from 2x:
---   experience  a star (pale, orange, red with "5x!") and, from RATE_ALERT,
---               the strong shader: that rate also makes the monster tougher
---   loot        coins
+-- What a monster shows of its rates: icons above its name
+-- (Creature::setBoostBadges), from 2x, no number: the colour says how near
+-- the rate is to the highest (green, yellow, orange, red at the top):
+--   experience  the letters XP and, from RATE_ALERT, the strong shader:
+--               that rate also makes the monster tougher
+--   loot        a loot bag
 --   rare        crystals: the chance of a rare monster
 local function labelCreature(creature)
     if not creature or not creature.setRateText or not creature:isMonster() then
         return
     end
-    -- the number beside the health bar gave way to the star above the name
+    -- the number beside the health bar gave way to the icons above the name
     creature:setRateText('')
     -- clients from before the badges and the shader have neither
     if not creature.setBoostBadges then
@@ -1116,6 +1117,10 @@ function handlers.rates(data)
     rates.max = data.max or 100
     rates.lootMax = data.lootMax or 30
     rates.rareMax = data.rareMax or 40
+    -- the top of each rate, for the colour of the icons on the monsters
+    if Creature and Creature.setBoostMaxima then
+        Creature.setBoostMaxima(rates.lootMax, rates.rareMax, rates.max)
+    end
     local fields = data.fields or {}
     local index = {}
     for i, name in ipairs(fields) do
