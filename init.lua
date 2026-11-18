@@ -93,9 +93,16 @@ Services = {
         allowMissingPackedRawFallback = true,
         preferArchive = true,
         fallbackToArchiveOnManifestFailure = false,
-        installArchiveExtras = true,
+        -- the archive's bin/ is the official client's programs: OTClient
+        -- never reads them, and a third-party archive must not put programs
+        -- into the player's client folder
+        installArchiveExtras = false,
         archiveExtraPrefixes = { "bin" },
-        installPackagedFiles = true
+        -- the repository's loose archives (.zip/.rar) are unpacked into the
+        -- client folder with no filter: in 15.25 the only one is
+        -- bin/Qt6WebEngineCore.rar (the official client's, unused here), and
+        -- a new one could put programs or Lua into the player's client
+        installPackagedFiles = false
     }, -- ./client_assets
 }
 

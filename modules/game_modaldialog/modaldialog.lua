@@ -95,6 +95,19 @@ local function resolveModalButtons(buttons, enterButton, escapeButton)
     return enterButton, escapeButton
 end
 
+-- Text from the server goes into this window's HTML: as plain text only.
+-- The HTML engine decodes entities first and then runs every {{ ... }} as Lua
+-- (and <script>, on* and *attr too), so a message, choice or button text with
+-- {{ os.execute(...) }} ran code on the player's computer. Tags are escaped and
+-- any "{{" is broken apart (an entity would be decoded back into a brace).
+local function plainHtml(text)
+    text = tostring(text or ''):gsub('&', '&amp;'):gsub('<', '&lt;'):gsub('>', '&gt;')
+    while text:find('{{', 1, true) do
+        text = text:gsub('{{', '{ {')
+    end
+    return text
+end
+
 local function calculateAndSetWidth(ui, messageLabel, buttonsWidth, message)
     local horizontalPadding = ui:getPaddingLeft() + ui:getPaddingRight()
     local totalButtonsWidth = buttonsWidth + horizontalPadding
@@ -140,7 +153,7 @@ local function styleAntibot(ui, messageLabel, message)
             '<div style="color: #ffffff; text-align: center; height: 16px;">%s</div>' ..
             '<div style="color: #ffd23a; text-align: center; height: 24px;">%s</div>' ..
             '<div style="color: %s; text-align: center; height: 16px;">%d segundos / seconds</div>%s',
-            word and 'Escolha a palavra / Choose:' or 'Clique em / Click:', title,
+            word and 'Escolha a palavra / Choose:' or 'Clique em / Click:', plainHtml(title),
             left <= 10 and '#ff3030' or '#ff8a5c', left,
             word and '' or '<div style="color: #ff8a5c; text-align: center; height: 16px;">ou voce sera desconectado</div>'))
         local big = messageLabel:getChildren()[2]
@@ -208,7 +221,7 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
     if passive then
         styleAntibot(ui, messageLabel, message)
     else
-        messageLabel:html(message)
+        messageLabel:html(plainHtml(message))
     end
     local labelHeight = nil
     local buttonsWidth = 0
@@ -220,7 +233,7 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
             local choiceName = choices[i][2]
             local displayName = shortText(choiceName, MAX_CHOICE_TEXT)
             local choiceHtml = string.format('<div class="choice-item" style="width: %d;" data-choice-id="%d">%s</div>',
-                MINIMUM_WIDTH, choiceId, displayName)
+                MINIMUM_WIDTH, tonumber(choiceId) or 0, plainHtml(displayName))
             local choiceWidget = controllerModal:createWidgetFromHTML(choiceHtml, choiceList)
             if choiceWidget then
                 choiceWidget.choiceId = choiceId
@@ -250,7 +263,7 @@ function onModalDialog(id, title, message, buttons, enterButton, escapeButton, c
     for i = #buttons, 1, -1 do
         local buttonId = buttons[i][1]
         local buttonText = buttons[i][2]
-        local buttonHtml = string.format('<button class="modal-button">%s</button>', buttonText)
+        local buttonHtml = string.format('<button class="modal-button">%s</button>', plainHtml(buttonText))
         local button = controllerModal:createWidgetFromHTML(buttonHtml, buttonsPanel)
 
         if button then

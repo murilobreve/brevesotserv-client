@@ -81,17 +81,24 @@ local function onCharacterList(protocol, characters, account, otui)
     g_settings.set('httpLogin', httpLogin)
 
     if enterGame:getChildById('rememberEmailBox'):isChecked() then
+        -- in the browser the settings live in the site's storage (same origin
+        -- as the website) and g_crypt there is only an obfuscation: any script
+        -- on the site could read them back, so the browser keeps the e-mail
+        -- only, never the password (and so no auto login)
+        local browser = g_platform.isBrowser and g_platform.isBrowser()
+        local savedPassword = browser and '' or G.password
+        local autologin = not browser and enterGame:getChildById('autoLoginBox'):isChecked()
         local account = g_crypt.encrypt(G.account)
-        local password = g_crypt.encrypt(G.password)
+        local password = g_crypt.encrypt(savedPassword)
 
         g_settings.set('account', account)
         g_settings.set('password', password)
 
         ServerList.setServerAccount(G.host, G.account)
-        ServerList.setServerPassword(G.host, G.password)
-        ServerList.setServerAutologin(G.host, enterGame:getChildById('autoLoginBox'):isChecked())
+        ServerList.setServerPassword(G.host, savedPassword)
+        ServerList.setServerAutologin(G.host, autologin)
 
-        g_settings.set('autologin', enterGame:getChildById('autoLoginBox'):isChecked())
+        g_settings.set('autologin', autologin)
         ServerList.save()
     else
         -- reset server list account/password
@@ -176,7 +183,41 @@ local function loadServerListModule()
 end
 
 -- public functions
+-- the browser keeps no password (the settings live in the site's storage):
+-- one an older build saved there is wiped at start, with its auto login
+local function forgetBrowserPasswords()
+    if not (g_platform.isBrowser and g_platform.isBrowser()) then
+        return
+    end
+    local saved = g_settings.getNode('ServerList')
+    local changed = false
+    if type(saved) == 'table' then
+        for host, data in pairs(saved) do
+            if type(data) == 'table' and ((data.password and data.password ~= '') or data.autologin) then
+                if ServerList and ServerList.setServerPassword then
+                    ServerList.setServerPassword(host, '')
+                    ServerList.setServerAutologin(host, false)
+                end
+                data.password = ''
+                data.autologin = false
+                changed = true
+            end
+        end
+        if changed then
+            g_settings.setNode('ServerList', saved)
+        end
+    end
+    if g_settings.get('password') ~= '' then
+        g_settings.remove('password')
+        changed = true
+    end
+    if changed then
+        g_configs.saveSettings()
+    end
+end
+
 function EnterGame.init()
+    forgetBrowserPasswords()
     enterGame = g_ui.displayUI('entergame')
     Keybind.new("Misc.", "Change Character", "Ctrl+G", "")
     Keybind.bind("Misc.", "Change Character", {
@@ -265,9 +306,11 @@ function EnterGame.init()
             local password = enterGame:getChildById('accountPasswordTextEdit'):getText()
 
             if checked and #account > 0 then
+                -- in the browser: the e-mail only, as on login (EnterGame.doLogin)
+                local browser = g_platform.isBrowser and g_platform.isBrowser()
                 ServerList.setServerAccount(host, account)
-                ServerList.setServerPassword(host, password)
-                ServerList.setServerAutologin(host, enterGame:getChildById('autoLoginBox'):isChecked() or false)
+                ServerList.setServerPassword(host, browser and '' or password)
+                ServerList.setServerAutologin(host, not browser and (enterGame:getChildById('autoLoginBox'):isChecked() or false))
                 g_settings.set('host', host)
             else
                 ServerList.setServerAccount(host, '')

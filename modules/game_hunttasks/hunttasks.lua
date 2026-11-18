@@ -955,6 +955,36 @@ function handlers.message(data)
     showMessage(data.text, data.ok)
 end
 
+-- a daily task or a Trail step just done: a banner at the top of the map,
+-- the task's monster in its frame, gone by itself in a few seconds and
+-- letting clicks through (the whole reward text was in the middle of the
+-- screen, over the hunt; it now goes to the status line and the Server Log)
+function handlers.done(data)
+    local notifications = modules.game_notifications
+    if not notifications or not notifications.showTaskBanner then
+        return
+    end
+    local title, second
+    local points = tr('+%d Hunt Points', tonumber(data.points) or 0)
+    if data.kind == 'daily' then
+        title = tr('Task diária completa!')
+        local streak = tonumber(data.streak) or 0
+        second = streak > 1 and (points .. tr(' · %d dias', streak)) or points
+    else
+        title = data.last and tr('Trilha completa!') or tr('Etapa %d da Trilha!', tonumber(data.step) or 0)
+        second = data.milestone and (points .. tr(' · marco!')) or points
+    end
+    local first = tr('+%s exp', goldText(data.experience))
+    if (tonumber(data.gold) or 0) > 0 then
+        first = first .. tr(' · +%s ouro', goldText(data.gold))
+    end
+    local outfit = outfitOf(data.outfit)
+    if outfit.type == 0 and outfit.auxType == 0 then
+        outfit = nil
+    end
+    notifications.showTaskBanner(title, first .. '\n' .. second, outfit)
+end
+
 local function onTaskOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
         return
