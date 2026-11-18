@@ -1434,11 +1434,13 @@ void Creature::setRateText(const std::string& text)
 
 namespace
 {
-    // data/images/game/huntboard/boost_badges.png: 12x12 cells, a row per
-    // badge and heat (loot 1-4, rare monsters 1-4, then experience 1-4),
-    // 6 frames each (0 at rest, 1-5 the glint of the top heat)
-    constexpr int BOOST_ICON = 12;
-    constexpr int BOOST_GAP = 3;
+    // data/images/game/huntboard/boost_badges.png: 9x7 cells (the bag and
+    // the crystal 7 wide in the middle), a row per badge and heat (loot 1-4,
+    // rare monsters 1-4, then experience 1-4), 6 frames each (0 at rest, 1-5
+    // the glint of the top heat)
+    constexpr int BOOST_W = 9;
+    constexpr int BOOST_H = 7;
+    constexpr int BOOST_GAP = 1;
     constexpr int BOOST_HEATS = 4;
     constexpr int BOOST_GLINT_FRAMES = 5;
     constexpr int BOOST_GLINT_FRAME_MS = 70;
@@ -1507,21 +1509,21 @@ void Creature::drawBoostBadges(const Rect& nameRect)
     int count = 0;
     for (const uint8_t heat : m_boosts->heat)
         count += heat ? 1 : 0;
-    const int width = count * BOOST_ICON + (count - 1) * BOOST_GAP;
+    const int width = count * BOOST_W + (count - 1) * BOOST_GAP;
 
     const auto elapsed = (g_clock.millis() + getId() * 137) % BOOST_GLINT_EVERY_MS;
     const int glint = elapsed < BOOST_GLINT_FRAMES * BOOST_GLINT_FRAME_MS ? 1 + static_cast<int>(elapsed / BOOST_GLINT_FRAME_MS) : 0;
 
     int x = nameRect.center().x - width / 2;
-    const int y = nameRect.top() - BOOST_ICON + 1;
+    const int y = nameRect.top() - BOOST_H;
     for (const int i : BOOST_ORDER) {
         const int heat = m_boosts->heat[i];
         if (!heat)
             continue;
         const int frame = heat == BOOST_HEATS ? glint : 0;
-        g_drawPool.addTexturedRect(Rect(x, y, BOOST_ICON, BOOST_ICON), texture,
-                                   Rect(frame * BOOST_ICON, (i * BOOST_HEATS + heat - 1) * BOOST_ICON, BOOST_ICON, BOOST_ICON));
-        x += BOOST_ICON + BOOST_GAP;
+        g_drawPool.addTexturedRect(Rect(x, y, BOOST_W, BOOST_H), texture,
+                                   Rect(frame * BOOST_W, (i * BOOST_HEATS + heat - 1) * BOOST_H, BOOST_W, BOOST_H));
+        x += BOOST_W + BOOST_GAP;
     }
 }
 
