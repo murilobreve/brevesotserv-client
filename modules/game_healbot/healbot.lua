@@ -4,7 +4,7 @@
 
 local window, toolbarButton, countEvent
 local cfg
-local CONFIG_VERSION = 3
+local CONFIG_VERSION = 4
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
 local FRIEND_PARTY, FRIEND_ANYONE = HealData.FRIEND_PARTY, HealData.FRIEND_ANYONE
 local PAGES = { 'healing', 'potions', 'friends', 'support', 'loot' }
@@ -122,7 +122,8 @@ local function defaults(player)
         cures = false,
         -- eats the food in the backpacks until full (engine.lua)
         food = true,
-        antiIdle = false,
+        -- on for everyone: a turn every 5 minutes keeps the character online
+        antiIdle = true,
         -- "Using one of 37 great health potions..." when a potion is used
         usingMsg = true,
         -- `below` is the mana it trains from (the slider is shared)
@@ -220,6 +221,13 @@ local function load()
     if version == CONFIG_VERSION then
         merge(cfg, saved)
         sanitize(cfg, HealData.vocation(player))
+    elseif version == 3 then
+        -- version 3 saved the anti idle off for everyone (its old default):
+        -- it comes on once, and a player who turns it off keeps it off
+        merge(cfg, saved)
+        cfg.support.antiIdle = true
+        cfg.version = CONFIG_VERSION
+        sanitize(cfg, HealData.vocation(player))
     elseif version == 2 then
         -- version 2 started with every rule off: keep what the player turned
         -- on, and give the defaults to who never turned anything on
@@ -235,6 +243,7 @@ local function load()
             cfg.spells[1].on = fresh.spells[1].on
             cfg.potions[1].on, cfg.potions[2].on = fresh.potions[1].on, fresh.potions[2].on
         end
+        cfg.support.antiIdle = true
         cfg.version = CONFIG_VERSION
         sanitize(cfg, HealData.vocation(player))
     end
