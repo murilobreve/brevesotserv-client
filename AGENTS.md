@@ -67,3 +67,9 @@ Reference: `docs/client-assets-auto-install.md`
 - A request a module sends by itself when the game starts waits `g_game.spreadDelay(min, max)` (gamelib), so a login rush does not bring every client's requests in the same second; calls of one burst come `SPREAD_STEP` apart.
 - `client_assets`: a missing sprite sheet offers the download but never locks the player out ("Play anyway"; still missing after a download in the same session opens the game). Only missing core files (appearances, staticdata) are required.
 - Extended opcode 139 is the client build report (`client_updater` -> server `scripts/custom/client_version.lua`); check the server's opcode list before taking a new number.
+
+## Short updates on the site
+
+- A change a player notices (game, client or site) gets one line at the top of `docker/quickstart/myaac/plugins/brevesot/data/changelog.php` of the server repository, in the same push: date, area (`jogo`, `cliente` or `site`) and one sentence of at most 90 characters in Portuguese and in English. The site shows the newest lines in its right column.
+- Write what changed for the player, never file, function or commit names. Refactors, builds, deploy scripts and staff tools get no line; a security fix says no more than "more protection". Several commits of one change are one line. The rules are repeated at the top of that file.
+- The long patch notes (`data/patches.php`, also the client's Novidades window) stay for the larger releases.
