@@ -992,18 +992,6 @@ function createThingMenu(menuPosition, lookThing, useThing, creatureThing)
     menu:display(menuPosition)
 end
 
--- a click on the monster already attacked keeps attacking it: g_game.attack
--- toggles (a second attack on the same creature cancels it), so clicking the
--- target again, when it looked lost in a crowded box, used to drop it. Esc,
--- the battle list's click on the target and the menu's "Stop Attack" still
--- cancel
-local function attackKeep(creature)
-    if creature and g_game.getAttackingCreature() == creature then
-        return
-    end
-    g_game.attack(creature)
-end
-
 function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, useThing, creatureThing, attackCreature)
     local keyboardModifiers = g_keyboard.getModifiers()
 
@@ -1066,11 +1054,11 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
         elseif shortcut == "attack" then
             if attackCreature and attackCreature ~= player then
                 modules.game_shortcuts.resetShortcuts()
-                attackKeep(attackCreature)
+                g_game.attack(attackCreature)
                 return true
             elseif creatureThing and creatureThing ~= player and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z then
                 modules.game_shortcuts.resetShortcuts()
-                attackKeep(creatureThing)
+                g_game.attack(creatureThing)
                 return true
             end
             return true
@@ -1110,10 +1098,10 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
 
             -- Handle creature attacks (but not NPCs)
             if attackCreature and attackCreature ~= player and not attackCreature:isNpc() then
-                attackKeep(attackCreature)
+                g_game.attack(attackCreature)
                 return true
             elseif creatureThing and creatureThing ~= player and not creatureThing:isNpc() and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z then
-                attackKeep(creatureThing)
+                g_game.attack(creatureThing)
                 return true
             elseif useThing then
                 -- Handle interactive items first, without looking at them
@@ -1254,11 +1242,11 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
             return true
         elseif attackCreature and not attackCreature:isNpc() and g_keyboard.isAltPressed() and
             (mouseButton == MouseLeftButton or mouseButton == MouseRightButton) then
-            attackKeep(attackCreature)
+            g_game.attack(attackCreature)
             return true
         elseif creatureThing and not creatureThing:isNpc() and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z and g_keyboard.isAltPressed() and
             (mouseButton == MouseLeftButton or mouseButton == MouseRightButton) then
-            attackKeep(creatureThing)
+            g_game.attack(creatureThing)
             return true
         end
 
@@ -1288,10 +1276,10 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                 
                 -- Handle creature attacks (match Smart Left-Click behavior)
                 if attackCreature and attackCreature ~= player then
-                    attackKeep(attackCreature)
+                    g_game.attack(attackCreature)
                     return true
                 elseif creatureThing and creatureThing ~= player and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z then
-                    attackKeep(creatureThing)
+                    g_game.attack(creatureThing)
                     return true
                 elseif useThing then
                     -- For containers/corpses
@@ -1373,10 +1361,10 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                 
                 -- Handle creature attacks
                 if attackCreature and attackCreature ~= player then
-                    attackKeep(attackCreature)
+                    g_game.attack(attackCreature)
                     return true
                 elseif creatureThing and creatureThing ~= player and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z then
-                    attackKeep(creatureThing)
+                    g_game.attack(creatureThing)
                     return true
                 elseif useThing then
                     -- For containers
@@ -1462,10 +1450,10 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                 
                 -- Handle creature attacks
                 if attackCreature and attackCreature ~= player then
-                    attackKeep(attackCreature)
+                    g_game.attack(attackCreature)
                     return true
                 elseif creatureThing and creatureThing ~= player and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z then
-                    attackKeep(creatureThing)
+                    g_game.attack(creatureThing)
                     return true
                     -- Use the item if it's a container in inventory or use other items
                 elseif useThing then
@@ -1513,11 +1501,11 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
             return true
         elseif attackCreature and not attackCreature:isNpc() and g_keyboard.isAltPressed() and
             (mouseButton == MouseLeftButton or mouseButton == MouseRightButton) then
-            attackKeep(attackCreature)
+            g_game.attack(attackCreature)
             return true
         elseif creatureThing and not creatureThing:isNpc() and autoWalkPos and creatureThing:getPosition().z == autoWalkPos.z and g_keyboard.isAltPressed() and
             (mouseButton == MouseLeftButton or mouseButton == MouseRightButton) then
-            attackKeep(creatureThing)
+            g_game.attack(creatureThing)
             return true
         end
     end
