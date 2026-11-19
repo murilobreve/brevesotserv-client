@@ -115,7 +115,7 @@ WIKI_GROUPS = {
     { section = 'mythos', title = 'Monstros raros', pages = { 'tiers', 'pale', 'ashen', 'obsidian', 'deathlord', 'huntboard' } },
     { section = 'mythos', title = 'Itens raros', pages = { 'items', 'grades', 'quality', 'pools' } },
     { section = 'mythos', title = 'Bônus', pages = { 'affixes', 'stacking', 'experience' } },
-    { section = 'mythos', title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'bosses', 'ascensao', 'vip' } },
+    { section = 'mythos', title = 'Sistemas Mythos', pages = { 'rates', 'hunttasks', 'bosses', 'ascensao', 'bless', 'vip' } },
     { section = 'mythos', title = 'Loot', pages = { 'autoloot' } },
 }
 
@@ -291,6 +291,58 @@ WIKI_PAGES.bosses = {
               { 'Lord of Death', '1%', '+170%', '+50%', '3 rolagens extras, gold x5, 1 item raro, e 20% de chance de um 2º e de um 3º' },
           } },
         { 'p', 'A chance vale por luta, e um VIP no time aumenta todas. As rolagens extras multiplicam a chance de cada item do loot do boss (até 50% por rolagem; itens abaixo de 0,3% não sobem). O item raro é uma peça do loot da bag que vira rara, ou uma peça comum quando a bag não tem equipamento. As magias do tier batem conforme o nível da alavanca. O boss raro não renasce, não mata os monstros em volta, e morrer para ele não traz a maldição do Lord of Death.' },
+    },
+}
+
+WIKI_PAGES.bless = {
+    menu = 'Bênçãos (bless)',
+    title = 'Bênçãos (bless)',
+    -- the numbers: the server's data/libs/systems/blessing.lua (prices and
+    -- losses), scripts/vip/vip.lua (blessDiscount), scripts/rarity/
+    -- 00_config.lua (deathCurse) and config.lua (adventurersBlessingLevel)
+    blocks = {
+        { 'lead', 'As bênçãos protegem você na morte: com todas elas você não perde nenhum item e perde muito menos experiência e skills. No Mythos é simples: digite !bless e pague.' },
+        { 'h', 'Como pegar' },
+        { 'p', 'Digite !bless no chat, em qualquer lugar, fora de combate. Aparece uma janela com o preço; ao confirmar, você recebe de uma vez todas as bênçãos que faltam. O gold sai da mochila ou do banco. Não precisa visitar NPC nem fazer quest.' },
+        { 'table', widths = { 170, 370 }, head = { 'Regra', 'Como é' },
+          rows = {
+              { 'Até o nível 150', { 'Grátis: você recebe todas as bênçãos ao entrar no jogo', '#63c08a' } },
+              { 'Acima do nível 150', 'Paga com gold pelo !bless, depois de cada morte' },
+              { 'Mythos VIP', { '30% de desconto no preço', '#e2a443' } },
+              { 'Onde ver', 'Clique no ícone de bênçãos do inventário (ao lado do colar): dourado ou verde = protegido, cinza = falta bênção' },
+              { 'Depois de morrer', 'As bênçãos são gastas na morte. Digite !bless de novo antes de voltar a caçar' },
+          } },
+        { 'h', 'Quanto custa' },
+        { 'p', 'O preço sobe com o nível. Valores para comprar todas as 8 bênçãos de uma vez:' },
+        { 'table', widths = { 120, 210, 210 }, head = { 'Nível', 'Preço', 'Com Mythos VIP (-30%)' },
+          rows = {
+              { '200', '234.000 gold', { '163.800 gold', '#e2a443' } },
+              { '300', '305.500 gold', { '213.850 gold', '#e2a443' } },
+              { '500', '420.500 gold', { '294.350 gold', '#e2a443' } },
+              { '1000', '708.000 gold', { '495.600 gold', '#e2a443' } },
+          } },
+        { 'h', 'O que você perde ao morrer' },
+        { 'p', 'Cada bênção tira 8% da perda de experiência e skills. Os itens dependem de quantas bênçãos você tem (sem amulet of loss):' },
+        { 'table', widths = { 150, 195, 195 }, head = { 'Bênçãos', 'Perder a mochila', 'Perder cada item equipado' },
+          rows = {
+              { 'Nenhuma', { '100%', '#f75f5f' }, { '10%', '#f75f5f' } },
+              { '1', '70%', '7%' },
+              { '2', '45%', '4,5%' },
+              { '3', '25%', '2,5%' },
+              { '4', '10%', '1%' },
+              { '5 ou mais (o !bless dá todas)', { '0%', '#63c08a' }, { '0%', '#63c08a' } },
+          } },
+        { 'p', 'Quem morre com caveira vermelha ou preta perde tudo, com ou sem bênção.' },
+        { 'h', 'Atenção: Lord of Death' },
+        { 'note', 'A bênção NÃO garante tudo contra um Lord of Death. Se um Lord of Death matar você, há 70% de chance de a maldição dele ignorar as bênçãos e o amulet of loss: você perde a mochila (100%) e cada item equipado tem 30% de chance de ficar no corpo. Nos outros 30% das vezes, as bênçãos protegem normalmente.' },
+        { 'table', widths = { 270, 135, 135 }, head = { 'Morte para', 'Mochila', 'Cada item equipado' },
+          rows = {
+              { 'Qualquer monstro, com todas as bênçãos', { '0%', '#63c08a' }, { '0%', '#63c08a' } },
+              { 'Lord of Death, maldição (70% das mortes)', { '100%', '#f75f5f' }, { '30%', '#f75f5f' } },
+              { 'Lord of Death, sem maldição (30% das mortes)', { '0%', '#63c08a' }, { '0%', '#63c08a' } },
+          } },
+        { 'p', 'A maldição vale só para o Lord of Death das hunts. Pale, Ashen e Obsidian não têm maldição, e morrer para um boss raro da janela Bosses também não. Os itens perdidos ficam no seu corpo: dá para voltar e pegar.' },
+        { 'links', { 'deathlord', 'vip' } },
     },
 }
 

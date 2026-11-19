@@ -53,8 +53,35 @@ function BlessingController:showHistory()
     end
 end
 
+-- Mythos: the blessings are bought with !bless (a confirmation window with
+-- the price comes first); the wiki page explains the whole system
+function BlessingController:buyBless()
+    g_game.talk('!bless')
+end
+
+function BlessingController:openWiki()
+    hide()
+    if modules.game_wiki then
+        modules.game_wiki.show('bless')
+    end
+end
+
+-- The numbers are the server's: adventurersBlessingLevel (config.lua),
+-- blessDiscount (scripts/vip/vip.lua) and the Lord of Death's deathCurse
+-- (scripts/rarity/00_config.lua). The wiki page "bless" repeats them.
+local function setHowTexts(ui)
+    ui.howPanel:setText(tr('How to get blessed'))
+    ui.howPanel.howBuyLabel:setColoredText(tr(
+        "- Type {!bless, #f7d05f} in the chat (or click the button below) to buy all missing blessings.\n- The gold comes from your backpack or bank. Up to level {150, #5fd75f} they are {free, #5fd75f} at login."))
+    ui.howPanel.howVipLabel:setColoredText(tr(
+        "- {Mythos VIP, #f7d05f} pays {30%, #5fd75f} less for the blessings."))
+    ui.howPanel.howLordLabel:setColoredText(tr(
+        "- {Lord of Death, #f75f5f}: blessings do not guarantee everything. If one kills you, there is a\n  {70%, #f75f5f} chance that blessings and amulet of loss are ignored: you lose your {backpack, #f75f5f}\n  and each equipped item has a {30%, #f75f5f} chance to stay in your corpse."))
+end
+
 function setHistoryView()
     local ui = BlessingController.ui
+    ui.howPanel:hide()
     ui.blessingsRecordPanel:hide()
     ui.promotionPanel:hide()
     ui.deathPenaltyPanel:hide()
@@ -66,6 +93,8 @@ function setBlessingView()
     ui.blessingsRecordPanel:show()
     ui.promotionPanel:show()
     ui.deathPenaltyPanel:show()
+    ui.howPanel:show()
+    setHowTexts(ui)
     ui.historyPanel:hide()
 end
 
