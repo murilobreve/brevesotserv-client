@@ -433,18 +433,6 @@ MythosWindow
           anchors.right: parent.right
           anchors.bottom: parent.bottom
 
-      // sells a backpack or loot pouch item to Gersao (next to him only)
-      ForgeButton
-        id: sellButton
-        anchors.top: parent.top
-        anchors.left: head.right
-        anchors.right: parent.right
-        margin-left: 10
-        margin-top: 10
-        height: 24
-        visible: false
-        @onClick: modules.game_raritybonus.forgeSell()
-
       ForgeDim
         id: empty
         anchors.centerIn: parent
