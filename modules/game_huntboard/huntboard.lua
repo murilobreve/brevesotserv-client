@@ -571,7 +571,16 @@ end
 local function updateTpButtons()
     local left = math.max(0, tpReadyAt - os.time())
     for _, button in ipairs(tpButtons) do
-        if left > 0 then
+        if button.go then
+            -- the simple view's one button says what it does
+            if left > 0 then
+                button:setText(tr('Wait %d seconds', left))
+            elseif button.hunts > 1 then
+                button:setText(tr('Choose the hunt (%d)', button.hunts))
+            else
+                button:setText(tr('Teleport to the hunt'))
+            end
+        elseif left > 0 then
             button:setText(left .. 's')
         elseif button.hunts > 1 then
             button:setText(string.format('%s (%d)', tr('TP'), button.hunts))
@@ -654,6 +663,150 @@ local function chooseHunt(monster)
     menu:display()
 end
 
+-- ---------------------------------------------------------------- simple view
+
+-- The list as most players want it (the owner, 2026-11-19: "less information
+-- right in front of the player"): each hunt is a name, its level and how
+-- good it is in this roll; the chosen one shows the rest on the right, with
+-- one button. The table with every column is behind "Table and filters".
+local selectedName -- the hunt shown on the right
+local cards = {} -- lname -> its row of the list
+
+-- the colour of a level against the player's, and what it means
+local function fitOf(lvl)
+    local mine = g_game.getLocalPlayer() and g_game.getLocalPlayer():getLevel() or 0
+    lvl = tonumber(lvl) or 0
+    if lvl == 0 then
+        return '#cbc0e0', ''
+    elseif mine >= lvl then
+        return '#7fd35a', tr('Good for your level')
+    elseif mine >= lvl * 0.75 then
+        return '#e2a443', tr('A little above your level')
+    end
+    return '#ff7a6b', tr('Far above your level')
+end
+
+local function tile(widget, key, value, color)
+    widget.key:setText(key)
+    widget.value:setText(value)
+    widget.value:setColor(color or '#ece6dc')
+end
+
+local function showDetail(monster)
+    local detail = window.ratesPanel.simplePanel.detail
+    detail:setVisible(monster ~= nil)
+    if not monster then
+        return
+    end
+    selectedName = monster.lname
+    for lname, card in pairs(cards) do
+        card:setChecked(lname == selectedName)
+    end
+    detail.pedestal.creature:setOutfit(outfitOf(monster))
+    detail.name:setText(monster.name)
+    local color, fit = fitOf(monster.lvl)
+    detail.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')
+    detail.level:setColor(color)
+    detail.fit:setText(fit)
+    tile(detail.xpTile, tr('XP rate'), multText(monster.xp), xpTone(monster.xp))
+    tile(detail.lootTile, tr('Loot rate'), multText(monster.loot), lootTone(monster.loot))
+    tile(detail.rareTile, tr('Rare monsters'), multText(monster.rare), rareTone(monster.rare))
+    tile(detail.killTile, tr('XP per kill'), formatNumber(monster.perKill))
+    tile(detail.goldTile, tr('Gold per kill'), monster.goldPerKill and formatNumber(monster.goldPerKill) or '-', '#e2a443')
+    tile(detail.spawnTile, tr('Spawns'), tostring(monster.spawns))
+    -- up to four lines: tougher at this rate, weak to, resists, immune to
+    local lines = {}
+    if monster.dmgMult > 1 then
+        lines[#lines + 1] = { tr('Stronger at this rate: health x%.1f, damage x%.1f', monster.hpMult, monster.dmgMult), '#ef9a62' }
+    end
+    local weak, resists, immune = {}, {}, {}
+    for _, entry in ipairs(monster.elements or {}) do
+        if CHIP_ELEMENT[entry.key] and entry.taken ~= 100 then
+            local name = tr(ELEMENTS[entry.key][1])
+            if entry.taken == 0 then
+                immune[#immune + 1] = name
+            elseif entry.taken > 100 then
+                weak[#weak + 1] = name
+            else
+                resists[#resists + 1] = name
+            end
+        end
+    end
+    if #weak > 0 then
+        lines[#lines + 1] = { tr('Weak to: %s', table.concat(weak, ', ')), '#7fd35a' }
+    end
+    if #resists > 0 then
+        lines[#lines + 1] = { tr('Resists: %s', table.concat(resists, ', ')), '#e2a443' }
+    end
+    if #immune > 0 then
+        lines[#lines + 1] = { tr('Immune to: %s', table.concat(immune, ', ')), '#a3abb5' }
+    end
+    for i = 1, 4 do
+        local label = detail['line' .. i]
+        label:setText(lines[i] and lines[i][1] or '')
+        label:setColor(lines[i] and lines[i][2] or '#a59d92')
+    end
+    -- the one action
+    local go = detail.go
+    go:setVisible(monster.tp > 0)
+    detail.goIcon:setVisible(monster.tp > 0)
+    if monster.tp > 0 then
+        go.go = true
+        go.hunts = monster.tpHunts and #monster.tpHunts or 1
+        go.onClick = function()
+            if go.hunts > 1 then
+                chooseHunt(monster)
+            else
+                teleportTo(monster.name)
+            end
+        end
+        go:setTooltip(tr('Teleport to the %s hunt (every 30 seconds)', monster.name))
+        local kept = {}
+        for _, button in ipairs(tpButtons) do
+            if button ~= go then
+                kept[#kept + 1] = button
+            end
+        end
+        kept[#kept + 1] = go
+        tpButtons = kept
+        updateTpButtons()
+    end
+end
+
+local function renderCards(first, last)
+    local panel = window.ratesPanel.simplePanel
+    local list = panel.cardList
+    list:destroyChildren()
+    cards = {}
+    local chosen
+    for i = first, last do
+        local monster = filtered[i]
+        local card = g_ui.createWidget('HuntCard', list)
+        card.frame.creature:setOutfit(outfitOf(monster))
+        card.name:setText(monster.name)
+        if monster.xp >= 40 or monster.loot >= 25 then
+            card.name:setColor('#ffb020')
+        end
+        card.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')
+        card.level:setColor((fitOf(monster.lvl)))
+        card.xp:setText(tr('XP %s', multText(monster.xp)))
+        card.xp:setColor(xpTone(monster.xp))
+        card.loot:setText(tr('Loot %s', multText(monster.loot)))
+        card.onClick = function()
+            showDetail(monster)
+        end
+        cards[monster.lname] = card
+        if monster.lname == selectedName then
+            chosen = monster
+        end
+    end
+    -- the hunt that was open stays; else the first of the page
+    showDetail(chosen or filtered[first])
+    panel.cardEmpty:setVisible(#filtered == 0)
+    panel.cardEmpty:setText(#rates.monsters == 0 and tr('Loading monster rates...') or tr('No monster matches your filters.'))
+    panel.cardScroll:setValue(0)
+end
+
 local function renderPage()
     if not window then
         return
@@ -667,7 +820,10 @@ local function renderPage()
     page = math.max(1, math.min(page, pages))
     local first = (page - 1) * PAGE_SIZE + 1
     local last = math.min(#filtered, page * PAGE_SIZE)
-    for i = first, last do
+    if not filtersShown then
+        renderCards(first, last)
+    end
+    for i = first, filtersShown and last or first - 1 do
         local monster = filtered[i]
         local row = g_ui.createWidget(i % 2 == 0 and 'RateRowEven' or 'RateRow', list)
         row.rank:setText('#' .. i)
@@ -683,8 +839,6 @@ local function renderPage()
         end
         row.info:setText(tr('%d spawns', monster.spawns))
         fillElementChips(row.elements, monster.elements)
-        -- the health is detail: with the filters (setFiltersShown)
-        row.health:setVisible(filtersShown)
         -- a column each: level, health (while this rate lasts), XP and gold
         -- per kill, the XP and loot rates
         row.level:setText(monster.lvl and tostring(monster.lvl) or '-')
@@ -740,7 +894,7 @@ local function renderPage()
     end
     updateTpButtons()
 
-    panel.rateEmpty:setVisible(#filtered == 0)
+    panel.rateEmpty:setVisible(filtersShown and #filtered == 0)
     panel.rateEmpty:setText(#rates.monsters == 0 and tr('Loading monster rates...') or tr('No monster matches your filters.'))
     -- a TP refusal on show keeps the label until it goes
     panel.pageLabel.pageText = tr('Page %d of %d  (%d of %d monsters)', page, pages, #filtered, #rates.monsters)
@@ -785,7 +939,7 @@ updateQuickBar = function()
     bar.sortBest:setChecked(currentSort == 'combined' and sortDesc)
     bar.sortXp:setChecked(currentSort == 'perKill' and sortDesc)
     bar.sortGold:setChecked(currentSort == 'gold' and sortDesc)
-    bar.filtersButton:setText(filtersShown and tr('Fewer filters') or tr('Filters'))
+    bar.filtersButton:setText(filtersShown and tr('Simple view') or tr('Table and filters'))
 end
 
 local function setLevelRange(low, high)
@@ -803,7 +957,12 @@ function setFiltersShown(shown)
     panel.filterSection:setVisible(filtersShown)
     panel.filterSection:setHeight(filtersShown and 84 or 0)
     panel.filterSection:setMarginTop(filtersShown and 6 or 0)
-    panel.rateHeader.sortHp:setVisible(filtersShown)
+    -- the table with every column goes with the filters; without them, the
+    -- simple view (renderCards)
+    panel.rateHeader:setVisible(filtersShown)
+    panel.rateList:setVisible(filtersShown)
+    panel.rateScroll:setVisible(filtersShown)
+    panel.simplePanel:setVisible(not filtersShown)
 end
 
 function toggleFilters()
@@ -888,7 +1047,7 @@ local function setupFilterPanel()
     bar.sortBest:setTooltip(tr('XP rate and loot rate together, the best first.'))
     bar.sortXp:setTooltip(tr('The most experience per kill first.'))
     bar.sortGold:setTooltip(tr('The most gold per kill first.'))
-    bar.filtersButton:setTooltip(tr('Every filter, and the health column.'))
+    bar.filtersButton:setTooltip(tr('The table with every column and every filter.'))
     bar.mineChip.onClick = function()
         setLevelRange(myLevelRange())
         g_settings.set(MINE_KEY, false)
@@ -1396,7 +1555,7 @@ end
 -- with the Mythos panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
-    rates = { title = 'Hunts TP', intro = 'Pick a monster and click TP to go hunt it.' },
+    rates = { title = 'Hunts TP', intro = 'Pick a hunt and teleport to it.' },
     board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
 }
 

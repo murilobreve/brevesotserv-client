@@ -5,6 +5,146 @@ HuntTab < BrevesTab
 PeriodTab < BrevesTab
   size: 110 24
 
+// ---- the simple view (the default): a short list of hunts and the chosen
+// one in full beside it, as the Bosses and Quests windows do
+HuntCard < UIWidget
+  height: 50
+  background-color: #141117
+  border-width: 1
+  border-color: #221e26
+  $hover !checked:
+    background-color: #1d1922
+  $checked:
+    background-color: #241c30
+    border-color: #d9b45a
+
+  UIWidget
+    id: frame
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 5
+    size: 40 40
+    background-color: #17131a
+    border-width: 1
+    border-color: #2a2430
+    phantom: true
+
+    UICreature
+      id: creature
+      anchors.centerIn: parent
+      size: 38 38
+      creature-size: 38
+      phantom: true
+
+  // how good the hunt is in this roll: the experience rate, and the loot
+  // rate under it
+  Label
+    id: xp
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-right: 10
+    margin-top: 9
+    width: 84
+    height: 14
+    text-align: right
+    font: Verdana Bold-11px
+    phantom: true
+
+  Label
+    id: loot
+    anchors.right: parent.right
+    anchors.top: xp.bottom
+    margin-right: 10
+    margin-top: 3
+    width: 84
+    height: 14
+    text-align: right
+    font: verdana-11px-antialised
+    color: #a59d92
+    phantom: true
+
+  Label
+    id: name
+    anchors.left: frame.right
+    anchors.right: xp.left
+    anchors.top: parent.top
+    margin-left: 8
+    margin-right: 6
+    margin-top: 9
+    height: 14
+    font: Verdana Bold-11px
+    color: #ece6dc
+    phantom: true
+
+  Label
+    id: level
+    anchors.left: name.left
+    anchors.right: xp.left
+    anchors.top: name.bottom
+    margin-top: 3
+    margin-right: 6
+    height: 14
+    font: verdana-11px-antialised
+    phantom: true
+
+// a number of the chosen hunt with its name over it
+HuntTile < UIWidget
+  height: 44
+  background-color: #17141a
+  border-width: 1
+  border-color: #2a2430
+  phantom: true
+
+  Label
+    id: key
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-left: 8
+    margin-top: 6
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #a59d92
+    phantom: true
+
+  Label
+    id: value
+    anchors.left: key.left
+    anchors.top: key.bottom
+    margin-top: 3
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #ece6dc
+    phantom: true
+
+// the one action of the simple view: go to the hunt
+HuntGoButton < UIButton
+  height: 38
+  font: Verdana Bold-11px
+  color: #f3d38a
+  background-color: #2a2219
+  border-width: 1
+  border-color: #8a6d36
+  change-cursor-image: true
+  cursor: pointer
+  $hover !disabled:
+    background-color: #3a2e1f
+    border-color: #b08a42
+    color: #ffe9b5
+  $pressed:
+    background-color: #1f1912
+  $disabled:
+    color: #7d7468
+    background-color: #1a1612
+    border-color: #4a3d28
+
+// a line of the chosen hunt's elements (weak to, resists, immune to)
+HuntElementLine < Label
+  anchors.left: parent.left
+  anchors.right: parent.right
+  height: 14
+  font: verdana-11px-antialised
+  phantom: true
+
 // a quick choice over the hunts list: one of a few, the one in use in gold
 HuntChip < UIButton
   height: 22
@@ -493,7 +633,7 @@ MythosWindow
         anchors.top: parent.top
         anchors.left: prev.right
         margin-left: 18
-        size: 130 22
+        size: 116 22
         !placeholder: tr('Search monster...')
         placeholder-color: #75688f
         @onTextChange: modules.game_huntboard.onFilterChanged()
@@ -502,9 +642,180 @@ MythosWindow
         id: filtersButton
         anchors.top: parent.top
         anchors.right: parent.right
-        size: 92 22
-        !text: tr('Filters')
+        size: 118 22
+        !text: tr('Table and filters')
         @onClick: modules.game_huntboard.toggleFilters()
+
+    // the simple view: the hunts of the page on the left, the chosen one on
+    // the right with what matters and one button (huntboard.lua, showDetail)
+    Panel
+      id: simplePanel
+      anchors.top: quickBar.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: prevPage.top
+      margin-top: 8
+      margin-bottom: 6
+
+      HuntList
+        id: cardList
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: 420
+        vertical-scrollbar: cardScroll
+
+      MythosScrollBar
+        id: cardScroll
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: cardList.right
+        step: 50
+        pixel-scroll: true
+
+      UIWidget
+        id: detail
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: cardScroll.right
+        anchors.right: parent.right
+        margin-left: 10
+        background-color: #141117
+        border-width: 1
+        border-color: #221e26
+        padding: 14
+
+        UIWidget
+          id: pedestal
+          anchors.top: parent.top
+          anchors.left: parent.left
+          size: 88 88
+          background-color: #17131a
+          border-width: 1
+          border-color: #2a2430
+          phantom: true
+
+          UICreature
+            id: creature
+            anchors.centerIn: parent
+            size: 72 72
+            creature-size: 72
+            phantom: true
+
+        Label
+          id: name
+          anchors.top: pedestal.top
+          anchors.left: pedestal.right
+          anchors.right: parent.right
+          margin-left: 12
+          margin-top: 12
+          height: 20
+          ttf-font: cinzel-bold
+          ttf-font-size: 16
+          color: #ece6dc
+
+        Label
+          id: level
+          anchors.top: name.bottom
+          anchors.left: name.left
+          anchors.right: parent.right
+          margin-top: 8
+          height: 14
+          font: Verdana Bold-11px
+
+        Label
+          id: fit
+          anchors.top: level.bottom
+          anchors.left: name.left
+          anchors.right: parent.right
+          margin-top: 3
+          height: 14
+          font: verdana-11px-antialised
+          color: #a59d92
+
+        HuntTile
+          id: xpTile
+          anchors.top: pedestal.bottom
+          anchors.left: parent.left
+          margin-top: 12
+          width: 146
+
+        HuntTile
+          id: lootTile
+          anchors.top: xpTile.top
+          anchors.left: xpTile.right
+          margin-left: 8
+          width: 146
+
+        HuntTile
+          id: rareTile
+          anchors.top: xpTile.top
+          anchors.left: lootTile.right
+          anchors.right: parent.right
+          margin-left: 8
+
+        HuntTile
+          id: killTile
+          anchors.top: xpTile.bottom
+          anchors.left: parent.left
+          margin-top: 8
+          width: 146
+
+        HuntTile
+          id: goldTile
+          anchors.top: killTile.top
+          anchors.left: killTile.right
+          margin-left: 8
+          width: 146
+
+        HuntTile
+          id: spawnTile
+          anchors.top: killTile.top
+          anchors.left: goldTile.right
+          anchors.right: parent.right
+          margin-left: 8
+
+        HuntElementLine
+          id: line1
+          anchors.top: killTile.bottom
+          margin-top: 14
+
+        HuntElementLine
+          id: line2
+          anchors.top: line1.bottom
+          margin-top: 5
+
+        HuntElementLine
+          id: line3
+          anchors.top: line2.bottom
+          margin-top: 5
+
+        HuntElementLine
+          id: line4
+          anchors.top: line3.bottom
+          margin-top: 5
+
+        HuntGoButton
+          id: go
+          anchors.bottom: parent.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+
+        UIWidget
+          id: goIcon
+          anchors.left: go.left
+          anchors.verticalCenter: go.verticalCenter
+          margin-left: 14
+          size: 16 16
+          image-source: /game_brevespanel/images/teleport
+          phantom: true
+
+      Label
+        id: cardEmpty
+        anchors.centerIn: parent
+        color: #9789b3
+        text-auto-resize: true
+        visible: false
 
     // every filter of the list: the first line picks which monsters and
     // the order, the second takes ranges ("6k" and up, "1000" and down...)
@@ -636,7 +947,7 @@ MythosWindow
       id: countdown
       anchors.verticalCenter: quickBar.verticalCenter
       anchors.right: quickBar.right
-      margin-right: 102
+      margin-right: 128
       text-auto-resize: true
       font: verdana-11px-monochrome
       color: #7fd35a
