@@ -1,0 +1,8 @@
+Module
+  name: game_npcsigns
+  description: A small sign over the NPCs players look for (loot buyer, imbuements, food)
+  author: Mythos
+  sandboxed: true
+  scripts: [ npcsigns ]
+  @onLoad: init()
+  @onUnload: terminate()

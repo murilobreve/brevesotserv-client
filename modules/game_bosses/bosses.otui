@@ -98,6 +98,24 @@ BossPill < Label
   border-width: 1
   phantom: true
 
+// a quick choice over the list: one of two, the one in use in gold
+BossQuick < UIButton
+  height: 24
+  font: verdana-11px-antialised
+  color: #b4afc3
+  background-color: #171221
+  border-width: 1
+  border-color: #3e2d5e
+  change-cursor-image: true
+  cursor: pointer
+  $hover !checked:
+    border-color: #8a76b0
+    color: #f3f0fa
+  $checked:
+    background-color: #d9a43a38
+    border-color: #d9b45a
+    color: #ffe7b0
+
 // one boss of the list
 BossRow < UIWidget
   height: 48
@@ -748,12 +766,32 @@ MythosWindow
         margin-left: 10
         width: 386
 
+        // the quick choice, always there: the bosses the player's level
+        // reaches, or all of them (bosses.lua: setMine)
+        BossQuick
+          id: mineChip
+          anchors.top: parent.top
+          anchors.left: parent.left
+          width: 84
+          !text: tr('Para mim')
+          @onClick: modules.game_bosses.setMine(true)
+
+        BossQuick
+          id: allChip
+          anchors.top: parent.top
+          anchors.left: prev.right
+          margin-left: 4
+          width: 60
+          !text: tr('Todos')
+          @onClick: modules.game_bosses.setMine(false)
+
         // opens and closes the filters' column (bosses.lua: toggleFilters)
         UIButton
           id: filtersToggle
           anchors.top: parent.top
-          anchors.left: parent.left
-          size: 84 24
+          anchors.left: allChip.right
+          margin-left: 8
+          size: 66 24
           font: verdana-11px-antialised
           color: #b9b0a3
           background-color: #19151c
@@ -771,6 +809,7 @@ MythosWindow
           anchors.verticalCenter: filtersToggle.verticalCenter
           anchors.left: filtersToggle.right
           margin-left: 8
+          visible: false
           text-auto-resize: true
           font: verdana-11px-antialised
           color: #b9b0a3
@@ -795,7 +834,7 @@ MythosWindow
           anchors.verticalCenter: dir.verticalCenter
           anchors.right: dir.left
           margin-right: 4
-          width: 150
+          width: 126
           @onOptionChange: modules.game_bosses.refreshList()
 
         BossDim
@@ -1008,3 +1047,13 @@ MythosWindow
           anchors.bottom: parent.bottom
           margin-left: 8
           @onClick: modules.game_bosses.goSelected()
+
+        // a teleport: the portal of the Teleports row of the bar
+        UIWidget
+          id: goIcon
+          anchors.left: go.left
+          anchors.verticalCenter: go.verticalCenter
+          margin-left: 12
+          size: 16 16
+          image-source: /game_brevespanel/images/teleport
+          phantom: true

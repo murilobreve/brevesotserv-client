@@ -143,6 +143,28 @@ QuestTab < BrevesTab
   size: 96 24
   anchors.top: parent.top
 
+// the one action of the window: go to the quest (the gold button of the
+// Hunts and Bosses windows)
+QuestGoButton < UIButton
+  height: 36
+  font: Verdana Bold-11px
+  color: #f3d38a
+  background-color: #2a2219
+  border-width: 1
+  border-color: #8a6d36
+  change-cursor-image: true
+  cursor: pointer
+  $hover !disabled:
+    background-color: #3a2e1f
+    border-color: #b08a42
+    color: #ffe9b5
+  $pressed:
+    background-color: #1f1912
+  $disabled:
+    color: #7d7468
+    background-color: #1a1612
+    border-color: #4a3d28
+
 MythosWindow
   id: questsWindow
   size: 760 640
@@ -352,14 +374,23 @@ MythosWindow
       margin-bottom: 6
       text-auto-resize: false
 
-    MythosPrimaryButton
+    QuestGoButton
       id: go
       anchors.bottom: parent.bottom
       anchors.left: parent.left
       anchors.right: parent.right
-      height: 28
-      !text: tr('Go to the quest')
+      !text: tr('Teleport to the quest')
       @onClick: modules.game_quests.goSelected()
+
+    // a teleport: the portal of the Teleports row of the bar
+    UIWidget
+      id: goIcon
+      anchors.left: go.left
+      anchors.verticalCenter: go.verticalCenter
+      margin-left: 12
+      size: 16 16
+      image-source: /game_brevespanel/images/teleport
+      phantom: true
 
   Label
     id: message

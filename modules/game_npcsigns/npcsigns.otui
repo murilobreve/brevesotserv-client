@@ -1,0 +1,9 @@
+NpcSign < UILabel
+  font: verdana-11px-rounded
+  color: #f2c45c
+  height: 13
+  text-align: right
+  icon-align: left
+  icon-size: 12 13
+  phantom: true
+  focusable: false

@@ -646,9 +646,9 @@ local function fillRow(row, boss)
         row.filled = true
         row.frame.creature:setOutfit(outfitOf(boss.outfit))
         row.name:setText(boss.name)
-        -- the level the boss really asks for, then the numbers
-        local level = recommended(boss) > 0 and tr('Level %d', recommended(boss)) or tr('Level livre')
-        row.info:setText(tr('%s · %s XP · %s vida', level, shortNumber(boss.experience), shortNumber(boss.health)))
+        -- only the level in the row (2026-11-19): the experience and the
+        -- health are on the right, with the rest of the chosen boss
+        row.info:setText(recommended(boss) > 0 and tr('Level %d', recommended(boss)) or tr('Level livre'))
         row.star.onClick = function()
             favorites[boss.name] = not favorites[boss.name] or nil
             saveFavorites()
@@ -719,7 +719,9 @@ function refreshList()
             row:setVisible(false)
         end
     end
-    middle.count:setText(tr('%d de %d bosses', #bosses, #state.bosses))
+    -- the quick choice over the list: the bosses the player's level reaches, or all
+    middle.mineChip:setChecked(filters.mine and true or false)
+    middle.allChip:setChecked(not filters.mine)
     middle.empty:setText(tr('Nenhum boss com esses filtros.'))
     middle.empty:setVisible(#bosses == 0)
     local focus = keep or (bosses[1] and rows[bosses[1].name])
@@ -735,6 +737,12 @@ function refreshList()
     rebuilding = false
     fillFilters()
     renderDetail()
+end
+
+-- the quick choice over the list (bosses.otui: mineChip, allChip)
+function setMine(mine)
+    filters.mine = mine and true or false
+    refreshList()
 end
 
 function clearFilters()

@@ -1541,6 +1541,7 @@ locale = {
     ["Every hunt, with a free TP."] = "Todas as hunts, com TP grátis.",
     ["Hunts, bosses and quests, each with a free TP."] = "Hunts, bosses e quests, cada um com TP grátis.",
     ["%d new"] = "%d novos",
+    ["Teleport to the quest"] = "Teleportar para a quest",
     ["Good for your level"] = "Bom para o seu level",
     ["A little above your level"] = "Um pouco acima do seu level",
     ["Far above your level"] = "Muito acima do seu level",

@@ -232,11 +232,11 @@ local function setRarityShown(card, shown)
     card.rarityTitle:setMarginTop(shown and 6 or 0)
     card.rarityBar:setHeight(shown and 8 or 0)
     card.rarityBar:setMarginTop(shown and 2 or 0)
-    card.rarityText:setHeight(shown and 28 or 0)
-    card.rarityText:setMarginTop(shown and 3 or 0)
+    card.rarityText:setHeight(0)
+    card.rarityText:setMarginTop(0)
     card.rarityTitle:setVisible(shown)
     card.rarityBar:setVisible(shown)
-    card.rarityText:setVisible(shown)
+    card.rarityText:setVisible(false)
 end
 
 local function renderRarity(card, quest)
@@ -249,12 +249,16 @@ local function renderRarity(card, quest)
     local parts = RarityOdds.parts(rarity.grades, rarity.chance)
     card.rarityTitle:setText(tr('Chance to come out a rarity item: %s', RarityOdds.percent(rarity.chance)))
     card.rarityBar:setOdds(parts)
-    -- two lines: the first three, the rest
-    local first, second = {}, {}
-    for index, part in ipairs(parts) do
-        table.insert(index <= 3 and first or second, part)
+    -- the bar says it; each grade's chance is in its tooltip (2026-11-19:
+    -- two lines of numbers stood under it)
+    local lines = {}
+    for _, part in ipairs(parts) do
+        if part.chance > 0 then
+            lines[#lines + 1] = part.label .. ' ' .. RarityOdds.percent(part.chance)
+        end
     end
-    card.rarityText:setColoredText(RarityOdds.legend(first) .. '\n' .. RarityOdds.legend(second))
+    card.rarityBar:setTooltip(table.concat(lines, '\n'))
+    card.rarityTitle:setTooltip(table.concat(lines, '\n'))
 end
 
 local function renderCard()
@@ -402,12 +406,9 @@ function refreshList()
                 row.creature:setOutfit(outfitOf(main.outfit))
             end
             row.name:setText(nameOf(quest))
-            local total = 0
-            for _, monster in ipairs(quest.monsters or {}) do
-                total = total + (monster.count or 0)
-            end
-            -- the level the cave really asks for, in the readiness colour
-            row.info:setText(tr('Level %d - %d monsters', recommended(quest), total))
+            -- only the level the cave really asks for, in the readiness
+            -- colour (2026-11-19): the monsters are on the right
+            row.info:setText(tr('Level %d', recommended(quest)))
             row.info:setColor(readiness(quest))
             row.onFocusChange = function(widget, focused)
                 if focused then
