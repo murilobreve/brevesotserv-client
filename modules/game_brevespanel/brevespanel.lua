@@ -530,29 +530,45 @@ end
 
 -- ---------------------------------------------------------------- hub
 
--- Hunts, Bosses and Quests are one place with one row in the bar: each of
--- the three windows carries the same three tabs in its title bar, with how
--- many bosses are ready and how many quests are open (their rows' states).
-local HUB = { 'rates', 'bosses', 'quests' }
-local HUB_LABEL = { rates = 'Hunts', bosses = 'Bosses', quests = 'Quests' }
+-- Hunts, Bosses, Quests and the Ranking are one place: each of their
+-- windows carries the same four tabs across its title bar, in place of its
+-- title (the lit tab says which window this is), with how many bosses are
+-- ready and how many quests are open (their rows' states). The Hunt Board
+-- window is two of them: Hunts and Ranking (setHubCurrent).
+local HUB = { 'rates', 'bosses', 'quests', 'board' }
+local HUB_LABEL = { rates = 'Hunts', bosses = 'Bosses', quests = 'Quests', board = 'Ranking' }
+local HUB_ICON = { rates = 'teleport', bosses = 'bosses', quests = 'quests', board = 'board' }
+local HUB_TIP = {
+    rates = 'Every hunt, with a free TP.',
+    bosses = 'The bosses and their lever rooms.',
+    quests = 'Caves with a reward chest at the end.',
+    board = 'Top hunters of the hour, day and month',
+}
+local HUB_COUNT = { bosses = '%s bosses ready for you', quests = '%s quests to do' }
 
 refreshHubs = function()
     for window, hub in pairs(hubs) do
+        if hub.shown then
+            window:setText('')
+        end
         for _, id in ipairs(HUB) do
             local tab = hub.tabs[id]
-            local state = states[id]
-            local text = tr(HUB_LABEL[id])
-            if id ~= 'rates' and state and state.text then
-                text = text .. ' ' .. state.text
-            end
-            tab:setText(text)
+            local state = HUB_COUNT[id] and states[id]
+            local tooltip = tr(HUB_TIP[id])
+            tab:setText(tr(HUB_LABEL[id]))
             tab:setChecked(id == hub.current)
             tab:setVisible(hub.shown and (callbacks[id] ~= nil or id == hub.current))
+            tab.count:setVisible(state ~= nil and state.text ~= nil)
+            if state and state.text then
+                tab.count:setText(state.text)
+                tooltip = tooltip .. '\n' .. tr(HUB_COUNT[id], state.text)
+            end
+            tab:setTooltip(tooltip)
         end
     end
 end
 
--- window: one of the three; current: its feature id; hideWindow closes it
+-- window: one of the hub's; current: its feature id; hideWindow closes it
 function attachHub(window, current, hideWindow)
     if not window or hubs[window] then
         return
@@ -561,17 +577,19 @@ function attachHub(window, current, hideWindow)
     for _, id in ipairs(HUB) do
         local tab = g_ui.createWidget('BrevesHubTab', window)
         tab:setId('hubTab_' .. id)
+        tab.icon:setImageSource(iconPath(HUB_ICON[id]))
         tab:addAnchor(AnchorTop, 'parent', AnchorTop)
         if previous then
             tab:addAnchor(AnchorLeft, previous:getId(), AnchorRight)
-            tab:setMarginLeft(3)
+            tab:setMarginLeft(4)
         else
             tab:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-            tab:setMarginLeft(-4)
+            tab:setMarginLeft(-6)
         end
-        tab:setMarginTop(-33)
+        tab:setMarginTop(-36)
         tab.onClick = function()
-            if id ~= current and callbacks[id] then
+            local hub = hubs[window]
+            if hub and id ~= hub.current and callbacks[id] then
                 hideWindow()
                 callbacks[id]()
             end
@@ -584,10 +602,11 @@ function attachHub(window, current, hideWindow)
     refreshHubs()
 end
 
--- the Hunt Board window is the Leaderboard's too, which is not of the three
-function showHub(window, shown)
+-- which of the hub's tabs a window is showing now (the Hunt Board window
+-- is the Hunts and the Ranking)
+function setHubCurrent(window, current)
     if hubs[window] then
-        hubs[window].shown = shown
+        hubs[window].current = current
         refreshHubs()
     end
 end

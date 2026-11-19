@@ -58,6 +58,9 @@ local MEDALS = {
 }
 
 local window
+local filtersShown = false -- the filter panel and the detail columns (setFiltersShown)
+local quickReady = false -- the level of the player went into the list once
+local updateQuickBar
 local toolbarButton -- old single button, when game_brevespanel is missing
 local sectionButtons = {} -- rates / board rows in the Mythos panel
 local toast
@@ -393,7 +396,7 @@ end
 -- every choice of the filters panel, read once per filtering
 local function readFilters(section)
     local filters = {
-        search = section.searchEdit:getText():lower():trim(),
+        search = window.ratesPanel.quickBar.searchEdit:getText():lower():trim(),
         show = comboKey(section.showBox, 'tp'),
         rate = comboKey(section.rateBox, 'any'),
     }
@@ -655,7 +658,12 @@ local function renderPage()
             row.name:setColor('#e07bff')
         end
         row.info:setText(tr('%d spawns', monster.spawns))
-        fillElementCells(row.elements, monster.taken)
+        -- the health and the elements are detail: with the filters (setFiltersShown)
+        row.elements:setVisible(filtersShown)
+        row.health:setVisible(filtersShown)
+        if filtersShown then
+            fillElementCells(row.elements, monster.taken)
+        end
         -- a column each: level, health (while this rate lasts), XP and gold
         -- per kill, the XP and loot rates
         row.level:setText(monster.lvl and tostring(monster.lvl) or '-')
@@ -722,6 +730,68 @@ local function renderPage()
     panel.rateScroll:setValue(0)
 end
 
+-- ---------------------------------------------------------------- quick bar
+
+-- The list opens simple (the owner, 2026-11-19): the hunts of the player's
+-- level, best rate first, with three orders and a name to search. "Filters"
+-- opens the whole filter panel and the detail columns (health, elements);
+-- the client remembers it open.
+local FILTERS_KEY = 'huntboard-filters-shown'
+local MINE_KEY = 'huntboard-my-level-off'
+
+local function myLevelRange()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return nil
+    end
+    local level = player:getLevel()
+    return tostring(math.floor(level * MY_LEVEL[1])), tostring(math.floor(level * MY_LEVEL[2]))
+end
+
+-- the chips show what the list is doing, whoever set it (a chip, the
+-- filter panel, a column title)
+updateQuickBar = function()
+    if not window then
+        return
+    end
+    local bar = window.ratesPanel.quickBar
+    local section = window.ratesPanel.filterSection
+    local low, high = section.levelMin:getText(), section.levelMax:getText()
+    local mineLow, mineHigh = myLevelRange()
+    bar.mineChip:setChecked(mineLow ~= nil and low == mineLow and high == mineHigh)
+    bar.allChip:setChecked(low == '' and high == '')
+    bar.sortBest:setChecked(currentSort == 'combined' and sortDesc)
+    bar.sortXp:setChecked(currentSort == 'perKill' and sortDesc)
+    bar.sortGold:setChecked(currentSort == 'gold' and sortDesc)
+    bar.filtersButton:setText(filtersShown and tr('Fewer filters') or tr('Filters'))
+end
+
+local function setLevelRange(low, high)
+    local section = window.ratesPanel.filterSection
+    section.levelMin:setText(low or '')
+    section.levelMax:setText(high or '')
+end
+
+function setFiltersShown(shown)
+    filtersShown = shown and true or false
+    if not window then
+        return
+    end
+    local panel = window.ratesPanel
+    panel.filterSection:setVisible(filtersShown)
+    panel.filterSection:setHeight(filtersShown and 84 or 0)
+    panel.filterSection:setMarginTop(filtersShown and 6 or 0)
+    panel.rateHeader.elementHead:setVisible(filtersShown)
+    panel.rateHeader.sortHp:setVisible(filtersShown)
+end
+
+function toggleFilters()
+    setFiltersShown(not filtersShown)
+    g_settings.set(FILTERS_KEY, filtersShown)
+    updateQuickBar()
+    renderPage()
+end
+
 local function applyFilters()
     if not window then
         return
@@ -750,6 +820,7 @@ local function applyFilters()
     end
     page = 1
     updateSortHeads()
+    updateQuickBar()
     renderPage()
 end
 
@@ -790,13 +861,36 @@ local function setupFilterPanel()
             widget:setTooltip(tr('Monsters for your level: %d to %d.', math.floor(level * MY_LEVEL[1]), math.floor(level * MY_LEVEL[2])))
         end
     end
+    local bar = window.ratesPanel.quickBar
+    bar.mineChip:setTooltip(tr('The hunts for your level.'))
+    bar.allChip:setTooltip(tr('The hunts of every level.'))
+    bar.sortBest:setTooltip(tr('XP rate and loot rate together, the best first.'))
+    bar.sortXp:setTooltip(tr('The most experience per kill first.'))
+    bar.sortGold:setTooltip(tr('The most gold per kill first.'))
+    bar.filtersButton:setTooltip(tr('Every filter, and the health and element columns.'))
+    bar.mineChip.onClick = function()
+        setLevelRange(myLevelRange())
+        g_settings.set(MINE_KEY, false)
+        applyFilters()
+    end
+    bar.allChip.onClick = function()
+        setLevelRange()
+        g_settings.set(MINE_KEY, true)
+        applyFilters()
+    end
+    for id, key in pairs({ sortBest = 'combined', sortXp = 'perKill', sortGold = 'gold' }) do
+        bar[id].onClick = function()
+            setSort(key, false)
+            applyFilters()
+        end
+    end
     section.advancedButton.onClick = function()
         openAdvanced()
     end
     section.advancedButton:setTooltip(tr('Filters that stack like a spreadsheet: keep only, sort by, keep the first N... over what the filters here let through.'))
     section.clearButton.onClick = function()
         advancedClear()
-        section.searchEdit:setText('')
+        window.ratesPanel.quickBar.searchEdit:setText('')
         for _, id in ipairs(RANGE_BOXES) do
             section[id]:setText('')
         end
@@ -1291,7 +1385,7 @@ end
 -- with the Mythos panel, Hunt Rates and Leaderboard open as two windows
 -- (the same window showing one section, without the tabs)
 local SECTIONS = {
-    rates = { title = 'Hunts TP', intro = 'Every hunt with its XP, its loot and gold per kill, and a TP' },
+    rates = { title = 'Hunts TP', intro = 'Pick a monster and click TP to go hunt it.' },
     board = { title = 'Leaderboard', intro = 'Top hunters of the hour, day and month' },
 }
 
@@ -1325,8 +1419,10 @@ function selectTab(tab)
         window:setText(tr(SECTIONS[tab].title))
         window.sectionIntro:setText(tr(SECTIONS[tab].intro))
     end
-    if modules.game_brevespanel and modules.game_brevespanel.showHub then
-        modules.game_brevespanel.showHub(window, tab == 'rates')
+    -- the title bar holds the tabs of the hub (Hunts, Bosses, Quests,
+    -- Ranking): the lit one says which this is
+    if modules.game_brevespanel and modules.game_brevespanel.setHubCurrent then
+        modules.game_brevespanel.setHubCurrent(window, tab == 'board' and 'board' or 'rates')
     end
     updateFooter()
     updateSectionButtons()
@@ -1351,6 +1447,16 @@ end
 function show()
     if not window then
         return
+    end
+    -- the first time a character opens it: the hunts of its level, unless
+    -- the player chose every level before
+    if not quickReady and g_game.getLocalPlayer() then
+        quickReady = true
+        setFiltersShown(g_settings.getBoolean(FILTERS_KEY))
+        if not g_settings.getBoolean(MINE_KEY) then
+            setLevelRange(myLevelRange())
+        end
+        applyFilters()
     end
     window:show()
     window:raise()
@@ -1445,8 +1551,7 @@ local function onGameStart()
     end
     -- Hunts, Bosses and Quests as tabs in the title bar (the bar has one row for the three)
     if modules.game_brevespanel and modules.game_brevespanel.attachHub then
-        modules.game_brevespanel.attachHub(window, 'rates', hide)
-        modules.game_brevespanel.showHub(window, currentTab == 'rates')
+        modules.game_brevespanel.attachHub(window, currentTab == 'board' and 'board' or 'rates', hide)
     end
     if not next(sectionButtons) and not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntBoardButton', tr('Hunt Board (rates & leaderboard)'),
@@ -1467,6 +1572,7 @@ local function onGameEnd()
     rates.monsters = {}
     rates.nextAt = 0
     boards = {}
+    quickReady = false -- the next character has its own level
 end
 
 function init()
@@ -1485,6 +1591,7 @@ function init()
     end
     advancedInit()
     setupFilterPanel()
+    setFiltersShown(false)
     updateOnline()
 
     ProtocolGame.registerExtendedJSONOpcode(HUNT_OPCODE, onHuntOpcode)

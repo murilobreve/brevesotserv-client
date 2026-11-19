@@ -124,9 +124,53 @@ BrevesPrimaryButton < BrevesFeatureButton
     color: #ffffff
     border-color: #ffe7b0
 
-// Hunts, Bosses and Quests in the title bar of each of their windows
-BrevesHubTab < MythosTab
-  size: 96 22
+// Hunts, Bosses, Quests and Ranking across the title bar of each of their
+// windows: an icon, the name and, for bosses and quests, how many wait
+BrevesHubTab < UIButton
+  size: 150 26
+  font: verdana-11px-antialised
+  color: #b4afc3
+  text-align: left
+  text-offset: 30 0
+  background-color: #171221
+  border-width: 1
+  border-color: #3e2d5e
+  change-cursor-image: true
+  cursor: pointer
+  $hover !checked:
+    background-color: #221a33
+    border-color: #8a76b0
+    color: #f3f0fa
+  $checked:
+    font: Verdana Bold-11px
+    background-color: #d9a43a38
+    border-color: #d9b45a
+    color: #ffe7b0
+
+  UIWidget
+    id: icon
+    size: 16 16
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    phantom: true
+
+  Label
+    id: count
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 7
+    height: 14
+    text-auto-resize: true
+    text-align: center
+    padding: 1 5 0 5
+    font: verdana-9px-bold
+    color: #7fd35a
+    background-color: #00000080
+    border-width: 1
+    border-color: #2f5a2a
+    phantom: true
+    visible: false
 
 // the "+N" that rises from a badge when its number goes up
 // sized from its text in brevespanel.lua (auto resize misreads the TTF font)

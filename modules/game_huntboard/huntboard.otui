@@ -5,6 +5,24 @@ HuntTab < BrevesTab
 PeriodTab < BrevesTab
   size: 110 24
 
+// a quick choice over the hunts list: one of a few, the one in use in gold
+HuntChip < UIButton
+  height: 22
+  font: verdana-11px-antialised
+  color: #b4afc3
+  background-color: #171221
+  border-width: 1
+  border-color: #3e2d5e
+  change-cursor-image: true
+  cursor: pointer
+  $hover !checked:
+    border-color: #8a76b0
+    color: #f3f0fa
+  $checked:
+    background-color: #d9a43a38
+    border-color: #d9b45a
+    color: #ffe7b0
+
 // multiplier bar: dark track, coloured fill, value on top
 MultBar < UIWidget
   size: 118 14
@@ -300,21 +318,21 @@ HistoryLine < Label
 
 // a range of the filters panel: its name, the low box, a dash, the high box
 HuntRangeLabel < Label
-  anchors.top: searchEdit.bottom
+  anchors.top: showBox.bottom
   margin-top: 10
   text-auto-resize: true
   font: verdana-11px-antialised
   color: #cbc0e0
 
 HuntRangeEdit < MythosTextEdit
-  anchors.top: searchEdit.bottom
+  anchors.top: showBox.bottom
   margin-top: 6
   size: 62 22
   placeholder-color: #75688f
   @onTextChange: modules.game_huntboard.onFilterChanged()
 
 HuntRangeDash < Label
-  anchors.top: searchEdit.bottom
+  anchors.top: showBox.bottom
   margin-top: 9
   width: 12
   text-align: center
@@ -457,30 +475,88 @@ MythosWindow
     margin-top: 6
     margin-bottom: 6
 
-    // every filter of the list: the first line picks which monsters and
-    // the order, the second takes ranges ("6k" and up, "1000" and down...)
-    BrevesSection
-      id: filterSection
+    // what a player wants first, always there: the hunts of his level or
+    // all of them, three orders and a name. Everything else is behind
+    // "Filters" (huntboard.lua, setFiltersShown)
+    Panel
+      id: quickBar
       anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: parent.right
-      height: 84
-      !text: tr('Filters')
+      height: 22
+
+      HuntChip
+        id: mineChip
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 120
+        !text: tr('For my level')
+
+      HuntChip
+        id: allChip
+        anchors.top: parent.top
+        anchors.left: prev.right
+        margin-left: 4
+        width: 104
+        !text: tr('Every level')
+
+      HuntChip
+        id: sortBest
+        anchors.top: parent.top
+        anchors.left: prev.right
+        margin-left: 18
+        width: 94
+        !text: tr('Best rate')
+
+      HuntChip
+        id: sortXp
+        anchors.top: parent.top
+        anchors.left: prev.right
+        margin-left: 4
+        width: 78
+        !text: tr('Most XP')
+
+      HuntChip
+        id: sortGold
+        anchors.top: parent.top
+        anchors.left: prev.right
+        margin-left: 4
+        width: 86
+        !text: tr('Most gold')
 
       MythosTextEdit
         id: searchEdit
         anchors.top: parent.top
-        anchors.left: parent.left
-        size: 150 22
+        anchors.left: prev.right
+        margin-left: 18
+        size: 130 22
         !placeholder: tr('Search monster...')
         placeholder-color: #75688f
         @onTextChange: modules.game_huntboard.onFilterChanged()
 
+      MythosButton
+        id: filtersButton
+        anchors.top: parent.top
+        anchors.right: parent.right
+        size: 92 22
+        !text: tr('Filters')
+        @onClick: modules.game_huntboard.toggleFilters()
+
+    // every filter of the list: the first line picks which monsters and
+    // the order, the second takes ranges ("6k" and up, "1000" and down...)
+    BrevesSection
+      id: filterSection
+      anchors.top: quickBar.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      margin-top: 6
+      height: 84
+      !text: tr('Filters')
+
       MythosComboBox
         id: showBox
         anchors.top: parent.top
-        anchors.left: searchEdit.right
-        margin-left: 6
+        anchors.left: parent.left
         size: 134 22
 
       MythosComboBox
@@ -594,10 +670,9 @@ MythosWindow
 
     Label
       id: countdown
-      anchors.top: filterSection.top
-      anchors.right: filterSection.right
-      margin-top: 3
-      margin-right: 8
+      anchors.verticalCenter: quickBar.verticalCenter
+      anchors.right: quickBar.right
+      margin-right: 102
       text-auto-resize: true
       font: verdana-11px-monochrome
       color: #7fd35a
