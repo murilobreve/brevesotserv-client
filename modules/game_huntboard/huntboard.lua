@@ -717,7 +717,13 @@ local function showDetail(monster)
     -- up to four lines: tougher at this rate, weak to, resists, immune to
     local lines = {}
     if monster.dmgMult > 1 then
-        lines[#lines + 1] = { tr('Stronger at this rate: health x%.1f, damage x%.1f', monster.hpMult, monster.dmgMult), '#ef9a62' }
+        -- the health only when the rate raises it (the server's
+        -- strength.hp: 0 since 2026-11-19, the rate raises the damage only)
+        if monster.hpMult > 1 then
+            lines[#lines + 1] = { tr('Stronger at this rate: health x%.1f, damage x%.1f', monster.hpMult, monster.dmgMult), '#ef9a62' }
+        else
+            lines[#lines + 1] = { tr('Hits harder at this rate: damage x%.1f', monster.dmgMult), '#ef9a62' }
+        end
     end
     local weak, resists, immune = {}, {}, {}
     for _, entry in ipairs(monster.elements or {}) do
@@ -868,7 +874,11 @@ local function renderPage()
             tooltip = tooltip .. '\n' .. tr('Recommended level: %d', monster.lvl)
         end
         if monster.dmgMult > 1 then
-            tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
+            if monster.hpMult > 1 then
+                tooltip = tooltip .. '\n' .. tr('Tougher while this rate lasts: health x%.2f, damage x%.2f', monster.hpMult, monster.dmgMult)
+            else
+                tooltip = tooltip .. '\n' .. tr('Hits harder while this rate lasts: damage x%.2f', monster.dmgMult)
+            end
         end
         if monster.elements then
             tooltip = tooltip .. '\n' .. elementLines(monster.elements)

@@ -408,7 +408,7 @@ WIKI_PAGES.huntboard = {
         { 'h', 'Loot' },
         { 'p', 'O loot tem o seu próprio sorteio, separado da XP: de 1x a 3x. Um monstro pode estar com XP alta e loot normal, ou o contrário. Nenhum monstro fica abaixo de 1x: um terço fica em 1x, outro terço perto de 1,5x, e o resto vai ficando mais raro até 3x. Acima de 1x o monstro rola o loot mais vezes; itens únicos nunca saem duas vezes.' },
         { 'h', 'Força' },
-        { 'p', 'Acima de 1x o monstro também fica mais forte: vida x (1 + (rate - 1) x 0,35) e dano x (1 + (rate - 1) x 0,15). A 4x ele tem 2,05 vezes a vida e bate 1,45 vez mais forte; a 5x, 2,4 vezes a vida e 1,6 vez o dano. É vida de verdade: o seu dano entra inteiro.' },
+        { 'p', 'Acima de 1x o monstro também bate mais forte: dano x (1 + (rate - 1) x 0,125). A 4x ele bate 1,375 vez mais forte; a 5x, 1,5 vez. A vida dele não muda. Um monstro raro (Pale, Ashen, Obsidian, Lord of Death) sobe mais, na vida e no dano: 3 vezes a 5x, além da força do próprio tier.' },
         { 'p', 'O Hunt Board (no painel Mythos, à direita) mostra a rate de cada monstro agora. A rotação muda a cada 2 horas.' },
         { 'p', 'Os três bônus do sorteio aparecem em cima do nome de cada monstro, a partir de 2x, cada um com um ícone e o valor arredondado ao lado (2x, 3x, 4x). Em 1x não aparece nada.' },
         { 'p', 'A estrela é a rate de XP: clara em 2x, laranja em 3x e vermelha a partir de 4x, quando vem com um ponto de exclamação, como 5x!. As moedas douradas são o loot e os cristais azuis são a chance de monstros raros: quanto maior o bônus, mais moedas ou cristais. No valor mais alto (XP 4x ou mais, loot 3x, raros 4x) o ícone brilha de tempos em tempos.' },
