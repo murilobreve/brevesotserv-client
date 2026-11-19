@@ -132,7 +132,6 @@ local ELEMENTS = {
 -- only monsters deal, is in the tooltip with the rest.
 local ELEMENT_COLUMNS = { 'physical', 'earth', 'fire', 'death', 'energy', 'holy', 'ice' }
 local IMMUNE_MARK = '\215' -- the multiplication sign of the fonts (cp1252)
-local NORMAL_MARK = '\183' -- the middle dot
 
 -- the element filter: weak to it (takes more than 100%), or at least no
 -- resistance (100% or more)
@@ -182,20 +181,51 @@ local function elementChange(entry)
     return string.format('%+d%%', entry.taken - 100)
 end
 
-local function elementCell(taken)
-    if not taken or taken == 100 then
-        return NORMAL_MARK, '#4d4463'
-    elseif taken == 0 then
-        return IMMUNE_MARK, '#a3abb5'
-    end
-    return string.format('%+d', taken - 100), taken > 100 and '#7fd35a' or '#f1c84b'
+-- The elements of a row as a few marks (huntboard.otui, ElementChip): the
+-- weaknesses first, the biggest first, then a gap and what not to use, the
+-- immunities and the strongest resistances first (the order of `list`).
+-- An element the monster takes normal damage from has no mark.
+local CHIP_ELEMENT = {}
+for _, key in ipairs(ELEMENT_COLUMNS) do
+    CHIP_ELEMENT[key] = true
 end
+local CHIP_STEP, CHIP_GAP = 17, 6
 
-local function fillElementCells(cells, taken)
-    for _, key in ipairs(ELEMENT_COLUMNS) do
-        local text, color = elementCell(taken and taken[key])
-        cells[key]:setText(text)
-        cells[key]:setColor(color)
+local function fillElementChips(holder, list)
+    if not list then
+        return
+    end
+    local x, weakDone = 0, false
+    for _, entry in ipairs(list) do
+        if CHIP_ELEMENT[entry.key] and entry.taken ~= 100 then
+            local weak, immune = entry.taken > 100, entry.taken == 0
+            if not weak and not weakDone then
+                weakDone = true
+                x = x > 0 and x + CHIP_GAP or 0
+            end
+            local chip = g_ui.createWidget('ElementChip', holder)
+            chip:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+            chip:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+            chip:setMarginLeft(x)
+            chip.icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. entry.key .. '-resist')
+            local name = tr(ELEMENTS[entry.key][1])
+            if weak then
+                -- a big weakness stands out
+                chip:setBorderColor(entry.taken >= 115 and '#7fd35a' or '#3f8a36')
+                chip:setBackgroundColor('#16301a')
+                chip:setTooltip(tr('%s: it takes %d%% more damage', name, entry.taken - 100))
+            elseif immune then
+                chip:setBorderColor('#4a4458')
+                chip.icon:setOpacity(0.35)
+                chip:setTooltip(tr('%s: immune', name))
+            else
+                chip:setBorderColor(entry.taken <= 60 and '#d9772e' or '#8a6a2a')
+                chip:setBackgroundColor('#30220f')
+                chip.icon:setOpacity(0.75)
+                chip:setTooltip(tr('%s: it takes %d%% less damage', name, 100 - entry.taken))
+            end
+            x = x + CHIP_STEP
+        end
     end
 end
 
@@ -520,12 +550,6 @@ local function updateSortHeads()
             widget:setColor(active and '#f3dcae' or '#9789b3')
         end
     end
-    for _, key in ipairs(ELEMENT_COLUMNS) do
-        local cell = head.elementHead[key]
-        local active = currentSort == 'el:' .. key
-        cell:setBackgroundColor(active and '#ffffff26' or '#00000000')
-        cell:setBorderWidth(active and 1 or 0)
-    end
 end
 
 -- a column picked: again on the same one reverses it
@@ -658,12 +682,9 @@ local function renderPage()
             row.name:setColor('#e07bff')
         end
         row.info:setText(tr('%d spawns', monster.spawns))
-        -- the health and the elements are detail: with the filters (setFiltersShown)
-        row.elements:setVisible(filtersShown)
+        fillElementChips(row.elements, monster.elements)
+        -- the health is detail: with the filters (setFiltersShown)
         row.health:setVisible(filtersShown)
-        if filtersShown then
-            fillElementCells(row.elements, monster.taken)
-        end
         -- a column each: level, health (while this rate lasts), XP and gold
         -- per kill, the XP and loot rates
         row.level:setText(monster.lvl and tostring(monster.lvl) or '-')
@@ -700,6 +721,7 @@ local function renderPage()
         end
         row:setTooltip(tooltip)
         row.tp:setVisible(monster.tp > 0)
+        row.tpIcon:setVisible(monster.tp > 0)
         if monster.tp > 0 then
             row.tp.hunts = monster.tpHunts and #monster.tpHunts or 1
             if row.tp.hunts > 1 then
@@ -781,7 +803,6 @@ function setFiltersShown(shown)
     panel.filterSection:setVisible(filtersShown)
     panel.filterSection:setHeight(filtersShown and 84 or 0)
     panel.filterSection:setMarginTop(filtersShown and 6 or 0)
-    panel.rateHeader.elementHead:setVisible(filtersShown)
     panel.rateHeader.sortHp:setVisible(filtersShown)
 end
 
@@ -867,7 +888,7 @@ local function setupFilterPanel()
     bar.sortBest:setTooltip(tr('XP rate and loot rate together, the best first.'))
     bar.sortXp:setTooltip(tr('The most experience per kill first.'))
     bar.sortGold:setTooltip(tr('The most gold per kill first.'))
-    bar.filtersButton:setTooltip(tr('Every filter, and the health and element columns.'))
+    bar.filtersButton:setTooltip(tr('Every filter, and the health column.'))
     bar.mineChip.onClick = function()
         setLevelRange(myLevelRange())
         g_settings.set(MINE_KEY, false)
@@ -900,18 +921,8 @@ local function setupFilterPanel()
         applyFilters()
     end
 
-    -- the Cyclopedia's icon of each element over its column; a click sorts
-    -- by it, the weakest first
     local sortHint = tr('Click to sort, click again to reverse.')
-    local head = window.ratesPanel.rateHeader.elementHead
-    for _, key in ipairs(ELEMENT_COLUMNS) do
-        head[key].icon:setImageSource('/game_cyclopedia/images/bestiary/icons/monster-icon-' .. key .. '-resist')
-        head[key]:setTooltip(tr('%s damage on the monster:\n+10 = it takes 10%% more\n-15 = it takes 15%% less\n%s = immune', tr(ELEMENTS[key][1]), IMMUNE_MARK) .. '\n' .. sortHint)
-        head[key].onClick = function()
-            setSort('el:' .. key, true)
-            applyFilters()
-        end
-    end
+    window.ratesPanel.rateHeader.elementHead:setTooltip(tr('Green: the monster takes more damage from the element.\nAmber: it resists it.\nGrey: it is immune.'))
     -- every other column title sorts too
     local titles = window.ratesPanel.rateHeader
     for _, entry in ipairs(SORT_HEADS) do

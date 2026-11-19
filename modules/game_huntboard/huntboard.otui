@@ -57,69 +57,20 @@ MultBar < UIWidget
     color: #ffffff
     phantom: true
 
-// one column per element a player deals, in the Cyclopedia's order: the
-// change in damage the monster takes (huntboard.lua fills them), under the
-// element's icon in the list header (ElementHead)
-ElementCell < Label
-  width: 24
-  text-align: center
-  font: verdana-11px-monochrome
-  phantom: true
-
-ElementCells < Panel
-  width: 168
-  phantom: true
-  layout:
-    type: horizontalBox
-
-  ElementCell
-    id: physical
-  ElementCell
-    id: earth
-  ElementCell
-    id: fire
-  ElementCell
-    id: death
-  ElementCell
-    id: energy
-  ElementCell
-    id: holy
-  ElementCell
-    id: ice
-
-ElementHeadCell < UIWidget
-  width: 24
-  border-color: #6b5a8e
-  change-cursor-image: true
-  cursor: pointer
-  $hover:
-    background-color: #ffffff12
+// the elements that matter to hunt a monster, as a few small marks in place
+// of a column of numbers each: what it is weak to (green), what it resists
+// (amber) and what it is immune to (grey, dimmed). The numbers are in each
+// mark's tooltip and in the row's (huntboard.lua, fillElementChips)
+ElementChip < UIWidget
+  size: 15 15
+  border-width: 1
+  background-color: #0f0a19
 
   UIWidget
     id: icon
     anchors.centerIn: parent
     size: 9 9
     phantom: true
-
-ElementHead < Panel
-  width: 168
-  layout:
-    type: horizontalBox
-
-  ElementHeadCell
-    id: physical
-  ElementHeadCell
-    id: earth
-  ElementHeadCell
-    id: fire
-  ElementHeadCell
-    id: death
-  ElementHeadCell
-    id: energy
-  ElementHeadCell
-    id: holy
-  ElementHeadCell
-    id: ice
 
 RateRow < BrevesRow
   height: 46
@@ -149,7 +100,19 @@ RateRow < BrevesRow
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 6
-    size: 54 24
+    size: 64 24
+    // its text to the right of the portal (tpIcon)
+    text-offset: 8 1
+
+  // a teleport: the portal of the Teleports row of the bar
+  UIWidget
+    id: tpIcon
+    anchors.left: tp.left
+    anchors.verticalCenter: tp.verticalCenter
+    margin-left: 5
+    size: 11 11
+    image-source: /game_brevespanel/images/teleport_small
+    phantom: true
 
   // a column per number, each one off the row's right edge only (anchors
   // between siblings that wait on each other crash the browser client); the
@@ -159,28 +122,28 @@ RateRow < BrevesRow
     id: rareBar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 68
+    margin-right: 78
     width: 56
 
   MultBar
     id: lootBar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 130
+    margin-right: 140
     width: 56
 
   MultBar
     id: xpBar
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 192
+    margin-right: 202
     width: 56
 
   Label
     id: goldKill
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 254
+    margin-right: 264
     width: 62
     text-align: right
     color: #e2a443
@@ -190,7 +153,7 @@ RateRow < BrevesRow
     id: perKill
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 320
+    margin-right: 330
     width: 62
     text-align: right
     color: #cbc0e0
@@ -200,7 +163,7 @@ RateRow < BrevesRow
     id: health
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 386
+    margin-right: 396
     width: 60
     text-align: right
     color: #cbc0e0
@@ -210,18 +173,19 @@ RateRow < BrevesRow
     id: level
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 450
+    margin-right: 460
     width: 36
     text-align: center
     color: #e6e0f2
     phantom: true
 
-  ElementCells
+  UIWidget
     id: elements
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.right: parent.right
-    margin-right: 492
+    margin-right: 502
+    width: 132
 
   Label
     id: name
@@ -693,56 +657,61 @@ MythosWindow
         width: 150
         text-align: left
 
-      ElementHead
+      Label
         id: elementHead
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        margin-right: 496
+        margin-right: 506
+        width: 132
+        font: verdana-11px-monochrome
+        color: #9789b3
+        text-align: left
+        !text: tr('Weak / resists')
 
       HuntSortHead
         id: sortLevel
         anchors.right: parent.right
-        margin-right: 454
+        margin-right: 464
         width: 36
         text-align: center
 
       HuntSortHead
         id: sortHp
         anchors.right: parent.right
-        margin-right: 390
+        margin-right: 400
         width: 60
 
       HuntSortHead
         id: sortXpKill
         anchors.right: parent.right
-        margin-right: 324
+        margin-right: 334
         width: 62
 
       HuntSortHead
         id: sortGoldKill
         anchors.right: parent.right
-        margin-right: 258
+        margin-right: 268
         width: 62
 
       HuntSortHead
         id: sortXpRate
         anchors.right: parent.right
-        margin-right: 196
+        margin-right: 206
         width: 56
         text-align: center
 
       HuntSortHead
         id: sortLootRate
         anchors.right: parent.right
-        margin-right: 134
+        margin-right: 144
         width: 56
         text-align: center
 
       HuntSortHead
         id: sortRareRate
         anchors.right: parent.right
-        margin-right: 72
+        margin-right: 82
         width: 56
         text-align: center
 
@@ -750,7 +719,7 @@ MythosWindow
         id: sortTp
         anchors.right: parent.right
         margin-right: 10
-        width: 54
+        width: 64
         text-align: center
 
     HuntList
