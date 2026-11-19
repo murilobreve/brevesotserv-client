@@ -11,7 +11,8 @@
 --
 -- Not every feature has a row (2026-11-19): Bosses and Quests open from the
 -- Teleports row's window, which has the three of them as tabs in its title
--- bar (attachHub), and the Auto Loot opens from the Heal Bot's Loot page.
+-- bar (attachHub), the Auto Loot opens from the Heal Bot's Loot page, and
+-- the Daily Task is a tab of the Trail row's window.
 -- Their modules still call addFeature and setFeatureState as before.
 
 local NEWS_VERSION = 12
@@ -20,7 +21,7 @@ local NEWS_VERSION = 12
 local FEATURES = {
     { id = 'vip', group = 'vip', label = 'Mythos VIP', icon = 'vip',
       news = 'Mythos VIP: +10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. The row shows your days left and opens the Store.' },
-    { id = 'tasks', group = 'tasks', label = 'Daily Task', short = 'Task', icon = 'tasks',
+    { id = 'tasks', group = 'tasks', label = 'Daily Task', short = 'Task', icon = 'tasks', inside = 'trail',
       tip = 'Go hunt: free teleport to the monster.',
       news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
     { id = 'trail', group = 'tasks', label = "Hunter's Trail", short = 'Trail', icon = 'trail',
@@ -829,9 +830,21 @@ function setFeatureHighlight(id, on)
     end
 end
 
+-- the row that stands for a feature: its own, or the one it opens from
+local function rowOf(id)
+    local feature = featureOf(id)
+    return feature and feature.inside or id
+end
+
+-- true when the feature has no row of its own in the bar
+function isInside(id)
+    local feature = featureOf(id)
+    return feature ~= nil and feature.inside ~= nil
+end
+
 -- the row button of a feature (the tour points at it), or nil
 function getFeatureButton(id)
-    return buttons[id]
+    return buttons[rowOf(id)]
 end
 
 -- the bar itself (the tour points at it), or nil
@@ -1018,6 +1031,7 @@ end
 -- the callout over row `id`: a title, a text and an optional detail line;
 -- onClose runs once it is closed or the row is opened
 function point(id, title, text, detail, onClose)
+    id = rowOf(id)
     local button = buttons[id]
     if not panel or not button then
         return

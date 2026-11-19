@@ -1014,8 +1014,11 @@ function selectTab(tab)
     window:setHeight(tab == 'tasks' and 502 or 560)
     window.trailPanel:setVisible(tab == 'trail')
     window.shopPanel:setVisible(tab == 'shop')
-    -- opened from one of the three panel rows: no tabs, the row says where
-    local split = next(sectionButtons) ~= nil
+    -- opened from one of the three panel rows: no tabs, the row says where.
+    -- With no row for the Daily Task in the bar (2026-11-19) the tabs stay:
+    -- they are the way to it
+    local bar = modules.game_brevespanel
+    local split = next(sectionButtons) ~= nil and not (bar and bar.isInside and bar.isInside('tasks'))
     window.tasksTab:setVisible(not split)
     window.trailTab:setVisible(not split)
     window.shopTab:setVisible(not split)
