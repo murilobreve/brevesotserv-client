@@ -1086,18 +1086,26 @@ function hidePoint(id)
     end
 end
 
--- the map ends where the bar starts: its bottom margin is the bar's height
--- (open or folded), so the bar covers no tile of it
+-- the bar lies over the bottom of the map (the owner, 2026-11-19: no black
+-- band at its sides, the game shows behind it): the map keeps its whole
+-- height, and the status line of the game ("You see...", "Sorry, not
+-- possible.") rises above the bar
 local MAP_MARGIN = 1 -- gameMapPanel's own margin-bottom (gameinterface.otui)
+local STATUS_MARGIN = 7 -- statusLabel's own margin-bottom (textmessage.otui)
 local function fitMap()
     local map = modules.game_interface and modules.game_interface.getMapPanel()
     if map then
-        local height = (panel and panel:isVisible()) and panel:getHeight() or 0
-        map:setMarginBottom(MAP_MARGIN + height)
+        map:setMarginBottom(MAP_MARGIN)
+    end
+    local height = (panel and panel:isVisible()) and panel:getHeight() or 0
+    local messages = modules.game_textmessage and modules.game_textmessage.messagesPanel
+    local status = messages and not messages:isDestroyed() and messages:recursiveGetChildById('statusLabel')
+    if status then
+        status:setMarginBottom(STATUS_MARGIN + height)
     end
 end
 
--- the bar sits under the map, just above the spell bars
+-- the bar sits over the bottom of the map, just above the spell bars
 local function placeBar()
     local root = modules.game_interface and modules.game_interface.getRootPanel()
     if panel or not root then
@@ -1106,7 +1114,7 @@ local function placeBar()
     panel = g_ui.createWidget('BrevesBar', root)
     panel:addAnchor(AnchorLeft, 'gameMapPanel', AnchorLeft)
     panel:addAnchor(AnchorRight, 'gameMapPanel', AnchorRight)
-    panel:addAnchor(AnchorTop, 'gameMapPanel', AnchorBottom)
+    panel:addAnchor(AnchorBottom, 'gameMapPanel', AnchorBottom)
     for _, sector in ipairs(SECTORS) do
         local widget = g_ui.createWidget('BrevesSector', panel.strip)
         widget:setId('sector_' .. sector.id)

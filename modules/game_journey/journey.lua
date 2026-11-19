@@ -15,6 +15,10 @@
 -- starts the tour, brings it back (reopen).
 
 local OPCODE = 136
+-- the recommended hunt card over the map is off (the owner, 2026-11-19: no
+-- such notices over the game): the journey window and the bar still lead to
+-- the hunts
+local HUNT_CARD = false
 local IDLE_SECONDS = 25 -- standing still in a protection zone, before the card
 local CARD_COOLDOWN = 10 * 60 -- seconds between two idle cards
 local PORTAL_RANGE = 2 -- sqm from the hunts teleport of a temple
@@ -344,6 +348,9 @@ end
 
 local function showCard(hunt)
     hideCard()
+    if not HUNT_CARD then
+        return
+    end
     local interface = modules.game_interface
     local root = interface and interface.getRootPanel and interface.getRootPanel()
     if not hunt or not root or not g_game.isOnline() then
@@ -498,7 +505,7 @@ end
 local function check()
     checkEvent = scheduleEvent(check, 5000)
     local player = g_game.getLocalPlayer()
-    if not player or not journey or allDone() or card or rareWindow or cardDismissed or isHidden() then
+    if not HUNT_CARD or not player or not journey or allDone() or card or rareWindow or cardDismissed or isHidden() then
         return
     end
     if os.time() - lastMoveAt < IDLE_SECONDS or os.time() - cardShownAt < CARD_COOLDOWN then

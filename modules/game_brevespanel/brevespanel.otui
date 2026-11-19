@@ -274,9 +274,7 @@ BrevesSector < UIWidget
 BrevesBar < UIWidget
   id: brevespanel
   height: 53
-  background-color: #0d091570
-  border-width-top: 1
-  border-color-top: #6a522699
+  background-color: #00000000
   focusable: false
   phantom: true
 
