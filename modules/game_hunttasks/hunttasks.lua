@@ -823,8 +823,8 @@ function updateBarTeleports()
     local trailOn = state and state.teleportTrail and trail and not trail.finished
     -- on a bar short of room
     local short = left > 0 and text or tr('Hunt')
-    panel.setFeatureAction('tasks', dailyOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'daily' }) end, left <= 0, short)
-    panel.setFeatureAction('trail', trailOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'trail' }) end, left <= 0, short)
+    panel.setFeatureAction('tasks', dailyOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'daily' }) end, left <= 0, short, 'teleport_small')
+    panel.setFeatureAction('trail', trailOn and text or nil, tooltip, function() send({ action = 'teleport', which = 'trail' }) end, left <= 0, short, 'teleport_small')
     if left > 0 and (dailyOn or trailOn) then
         barTeleportEvent = scheduleEvent(updateBarTeleports, 1000)
     end

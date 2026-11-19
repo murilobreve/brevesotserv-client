@@ -442,7 +442,33 @@ end
 
 local handlers = {}
 
+-- how many items were listed since the player last opened the market: the
+-- number on the Market row of the bar (the server counts at login and then
+-- tells each new listing as it happens)
+local newListings = 0
+local newsEvent
+
+local function showNews()
+    if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
+        modules.game_brevespanel.setFeatureState('rarity', newListings > 0 and tr('%d new', newListings) or nil, '#7fd35a')
+    end
+end
+
+function handlers.news(data)
+    if window and window:isVisible() then
+        -- the market is open: its list is what is new
+        newListings = 0
+    elseif data.count then
+        newListings = tonumber(data.count) or 0
+    else
+        newListings = newListings + (tonumber(data.add) or 0)
+    end
+    showNews()
+end
+
 function handlers.open(data)
+    newListings = 0
+    showNews()
     maxPrice = data.maxPrice or maxPrice
     setBank(data.bank)
     show()
@@ -581,11 +607,26 @@ local function onGameStart()
         marketButton = modules.game_mainpanel.addToggleButton('rarityMarketButton', tr('Rarity Market'),
             '/game_raritymarket/images/button', toggle, false, 20)
     end
+    -- the new listings, each client at its own moment after the login
+    if newsEvent then
+        removeEvent(newsEvent)
+    end
+    newsEvent = scheduleEvent(function()
+        newsEvent = nil
+        if g_game.isOnline() then
+            send({ action = 'news' })
+        end
+    end, g_game.spreadDelay and g_game.spreadDelay(3000, 9000) or 3000)
 end
 
 local function onGameEnd()
     hide()
     clearDetails()
+    newListings = 0
+    if newsEvent then
+        removeEvent(newsEvent)
+        newsEvent = nil
+    end
 end
 
 function init()

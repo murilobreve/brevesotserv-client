@@ -94,6 +94,40 @@ BrevesFeatureButton < UIButton
       background-color: #00000060
       border-color: #4a3d28
 
+  // what the quick action does, drawn over its left end (setFeatureAction):
+  // the portal of a teleport. The action's text leaves it the room
+  UIWidget
+    id: actionIcon
+    size: 11 11
+    anchors.left: action.left
+    anchors.verticalCenter: action.verticalCenter
+    margin-left: 3
+    phantom: true
+    visible: false
+
+// the row the bar wants seen first (Teleports: hunts, bosses and quests):
+// gold text in a gold frame, at the rows' own height
+BrevesPrimaryButton < BrevesFeatureButton
+  font: Verdana Bold-11px
+  color: #ffe7b0
+  background-color: #d9a43a30
+  border-width: 1
+  border-color: #d9b45a
+  $hover !on:
+    background-color: #f1d39948
+    color: #ffffff
+    border-color: #ffe7b0
+  $pressed:
+    background-color: #f1d39960
+  $on:
+    background-color: #f1d39955
+    color: #ffffff
+    border-color: #ffe7b0
+
+// Hunts, Bosses and Quests in the title bar of each of their windows
+BrevesHubTab < MythosTab
+  size: 96 22
+
 // the "+N" that rises from a badge when its number goes up
 // sized from its text in brevespanel.lua (auto resize misreads the TTF font)
 BrevesGainLabel < Label

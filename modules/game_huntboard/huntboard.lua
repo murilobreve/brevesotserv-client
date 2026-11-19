@@ -1182,16 +1182,11 @@ function handlers.rates(data)
         applyFilters()
     end
     pointNewRates()
-    -- the best rate of the roll over the Teleports row
+    -- no best rate over the Teleports row (the owner, 2026-11-19): the row
+    -- is the bar's gold one, and the window opens sorted by the best rate
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureFlag then
-        local best = 0
-        for _, monster in ipairs(rates.monsters) do
-            if monster.tp > 0 then
-                best = math.max(best, monster.xp)
-            end
-        end
-        panel.setFeatureFlag('rates', best > 10 and string.format('x%.1f', best / 10) or nil, '#c8541c')
+        panel.setFeatureFlag('rates', nil)
     end
 end
 
@@ -1330,6 +1325,9 @@ function selectTab(tab)
         window:setText(tr(SECTIONS[tab].title))
         window.sectionIntro:setText(tr(SECTIONS[tab].intro))
     end
+    if modules.game_brevespanel and modules.game_brevespanel.showHub then
+        modules.game_brevespanel.showHub(window, tab == 'rates')
+    end
     updateFooter()
     updateSectionButtons()
     if tab == 'board' then
@@ -1444,6 +1442,11 @@ local function onGameStart()
     if not next(sectionButtons) and modules.game_brevespanel then
         sectionButtons.rates = modules.game_brevespanel.addFeature('rates', toggleRates)
         sectionButtons.board = modules.game_brevespanel.addFeature('board', toggleBoard)
+    end
+    -- Hunts, Bosses and Quests as tabs in the title bar (the bar has one row for the three)
+    if modules.game_brevespanel and modules.game_brevespanel.attachHub then
+        modules.game_brevespanel.attachHub(window, 'rates', hide)
+        modules.game_brevespanel.showHub(window, currentTab == 'rates')
     end
     if not next(sectionButtons) and not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('huntBoardButton', tr('Hunt Board (rates & leaderboard)'),

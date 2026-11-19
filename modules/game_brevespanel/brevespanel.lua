@@ -8,6 +8,11 @@
 -- The feature modules register their row with addFeature() and get back the
 -- button, which they use like the old toolbar button (setOn, setTooltip).
 -- point() puts a callout over a row (NEW RATES over Teleports).
+--
+-- Not every feature has a row (2026-11-19): Bosses and Quests open from the
+-- Teleports row's window, which has the three of them as tabs in its title
+-- bar (attachHub), and the Auto Loot opens from the Heal Bot's Loot page.
+-- Their modules still call addFeature and setFeatureState as before.
 
 local NEWS_VERSION = 12
 
@@ -23,19 +28,19 @@ local FEATURES = {
       news = 'The hunt monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',
       news = 'Hunt Points buy XP potions, rarity scrolls, Rarity XP, Mythos Coins, the Bag of Mythical and more.' },
-    { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'rates',
-      tip = 'Every hunt, with a free TP.',
+    { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'teleport', primary = true,
+      tip = 'Hunts, bosses and quests, each with a free TP.',
       news = 'Every hunt in one list: the XP and loot rate of each monster, which change every 2 hours, and a TP to its hunt every 30 seconds.' },
     { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
       news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
-    { id = 'loot', group = 'hunt', label = 'Auto Loot', short = 'Loot', icon = 'loot',
+    { id = 'loot', group = 'hunt', label = 'Auto Loot', short = 'Loot', icon = 'loot', inside = 'healbot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
-    { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses',
+    { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses', inside = 'rates',
       news = 'The bosses of the official quests, each in its own lever room: pick one, go there with your team and pull the lever. The list shows your wait for each.' },
-    { id = 'quests', group = 'hunt', label = 'Quests', icon = 'quests',
+    { id = 'quests', group = 'hunt', label = 'Quests', icon = 'quests', inside = 'rates',
       tip = 'Caves with a reward chest at the end.',
       news = 'Quests of level 50 to 1000: caves of the official map with their own monsters and a chest at the far end, once per character. Up to level 250, an item of your vocation; from level 150, challenges with guards at the chest and a prize for every vocation.' },
-    { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'rarity',
+    { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'market',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
       tip = 'New bonuses for your rare items.',
@@ -73,6 +78,9 @@ local flags = {} -- row id -> { text, color }: a pill over the row's corner
 local highlights = {} -- row id -> true: the row's gold light breathes
 local sectors = {} -- section id -> section widget
 local vipHolder -- the VIP button's box in the bar
+local stash -- holds, out of sight, the buttons of the features with no row (inside)
+local hubs = {} -- window -> { current, tabs }: the Hunts, Bosses and Quests tabs (attachHub)
+local refreshHubs
 
 local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
 local SECTOR_SPACING = 4 -- between the sections (otui)
@@ -104,6 +112,7 @@ local compact = false
 local shortLabels = {} -- row id -> its label in short (setFeatureLabel)
 
 local styleButton
+local iconRoom -- the spaces that leave an action's icon its room (styleButton)
 local placeCallout, closeCallout -- the callout over a row (point)
 
 local function featureOf(id)
@@ -116,7 +125,11 @@ end
 
 -- the text color of a row: its label's (setFeatureLabel), else the plain one
 local function labelColor(id)
-    return labels[id] and labelColors[id] or (id == 'vip' and '#fff4d8' or '#e6e0f2')
+    if labels[id] and labelColors[id] then
+        return labelColors[id]
+    end
+    local feature = featureOf(id)
+    return id == 'vip' and '#fff4d8' or (feature and feature.primary and '#ffe7b0') or '#e6e0f2'
 end
 
 local function iconPath(name)
@@ -176,6 +189,10 @@ local function buttonWidth(button)
         return ICON_ONLY
     end
     local width = button:getText() == '' and ICON_ONLY or 23 + button:getTextSize().width + 4
+    local feature = featureOf(id)
+    if feature and feature.primary and button:getText() ~= '' then
+        width = width + 6 -- its frame
+    end
     if button.badge:isVisible() then
         width = width + widestOf(id .. ':badge', button.badge:getWidth()) + 4
     end
@@ -284,7 +301,7 @@ local function resize()
             return true
         end
         for _, id in ipairs(COLLAPSE_ORDER) do
-            if buttons[id] then
+            if buttons[id] and not featureOf(id).inside then
                 levels[id] = STATES
                 styleButton(id)
                 if fits(false) then
@@ -399,8 +416,22 @@ styleButton = function(id)
     -- the row's quick action, left of the badge; none in the icons-only bar
     local action = actions[id]
     button.action:setVisible(action ~= nil and not iconsOnly)
+    button.actionIcon:setVisible(action ~= nil and action.icon ~= nil and not iconsOnly)
     if action then
-        button.action:setText((level >= SHORT or compact) and action.short or action.text)
+        -- its icon goes over the left end of the action, whose text starts
+        -- after it: spaces before the text make that room (the button takes
+        -- its width from its text)
+        local text = (level >= SHORT or compact) and action.short or action.text
+        if action.icon then
+            if not iconRoom then
+                button.action:setText('    ')
+                local space = button.action:getTextSize().width / 4
+                iconRoom = space > 0 and string.rep(' ', math.ceil(13 / space)) or ''
+            end
+            text = iconRoom .. text
+            button.actionIcon:setImageSource(iconPath(action.icon))
+        end
+        button.action:setText(text)
         button.action:setTooltip(action.tooltip or '')
         button.action:setEnabled(action.enabled ~= false)
         button.action.onClick = function()
@@ -445,8 +476,17 @@ function addFeature(id, callback)
             button = g_ui.createWidget('BrevesVipButton', vipHolder)
             -- the crown clear of the pointed end
             button.icon:setMarginLeft(18)
+        elseif feature.inside then
+            -- no row in the bar: the button its module works on stays out of sight
+            if not stash then
+                stash = g_ui.createWidget('UIWidget', panel)
+                stash:setSize({ width = 0, height = 0 })
+                stash:setPhantom(true)
+                stash:hide()
+            end
+            button = g_ui.createWidget('BrevesFeatureButton', stash)
         else
-            button = g_ui.createWidget('BrevesFeatureButton', sectors[feature.group].rows)
+            button = g_ui.createWidget(feature.primary and 'BrevesPrimaryButton' or 'BrevesFeatureButton', sectors[feature.group].rows)
         end
         button:setId(id)
         button:setText(tr(feature.label))
@@ -474,15 +514,81 @@ function addFeature(id, callback)
                 buttons[id] = nil
                 callbacks[id] = nil
                 scheduleEvent(resize, 1)
+                scheduleEvent(refreshHubs, 1)
             end
         end
-        if feature.group ~= 'vip' then
+        if feature.group ~= 'vip' and not feature.inside then
             sortRows(sectors[feature.group].rows)
         end
     end
     styleButton(id)
     resize()
+    refreshHubs()
     return button
+end
+
+-- ---------------------------------------------------------------- hub
+
+-- Hunts, Bosses and Quests are one place with one row in the bar: each of
+-- the three windows carries the same three tabs in its title bar, with how
+-- many bosses are ready and how many quests are open (their rows' states).
+local HUB = { 'rates', 'bosses', 'quests' }
+local HUB_LABEL = { rates = 'Hunts', bosses = 'Bosses', quests = 'Quests' }
+
+refreshHubs = function()
+    for window, hub in pairs(hubs) do
+        for _, id in ipairs(HUB) do
+            local tab = hub.tabs[id]
+            local state = states[id]
+            local text = tr(HUB_LABEL[id])
+            if id ~= 'rates' and state and state.text then
+                text = text .. ' ' .. state.text
+            end
+            tab:setText(text)
+            tab:setChecked(id == hub.current)
+            tab:setVisible(hub.shown and (callbacks[id] ~= nil or id == hub.current))
+        end
+    end
+end
+
+-- window: one of the three; current: its feature id; hideWindow closes it
+function attachHub(window, current, hideWindow)
+    if not window or hubs[window] then
+        return
+    end
+    local tabs, previous = {}, nil
+    for _, id in ipairs(HUB) do
+        local tab = g_ui.createWidget('BrevesHubTab', window)
+        tab:setId('hubTab_' .. id)
+        tab:addAnchor(AnchorTop, 'parent', AnchorTop)
+        if previous then
+            tab:addAnchor(AnchorLeft, previous:getId(), AnchorRight)
+            tab:setMarginLeft(3)
+        else
+            tab:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+            tab:setMarginLeft(-4)
+        end
+        tab:setMarginTop(-33)
+        tab.onClick = function()
+            if id ~= current and callbacks[id] then
+                hideWindow()
+                callbacks[id]()
+            end
+        end
+        tabs[id] = tab
+        previous = tab
+    end
+    hubs[window] = { current = current, tabs = tabs, shown = true }
+    connect(window, { onDestroy = function() hubs[window] = nil end })
+    refreshHubs()
+end
+
+-- the Hunt Board window is the Leaderboard's too, which is not of the three
+function showHub(window, shown)
+    if hubs[window] then
+        hubs[window].shown = shown
+        refreshHubs()
+    end
 end
 
 -- ---------------------------------------------------------------- gains
@@ -613,6 +719,7 @@ function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color } or nil
     styleButton(id)
     resizeSoon()
+    refreshHubs()
     local after = numberIn(text)
     if before and after and after > before then
         animateGain(id, before, after, text)
@@ -638,19 +745,21 @@ end
 -- a small button on the right of a row (nil text removes it), e.g. the Trail
 -- row's hunt teleport; `enabled` false greys it, for a cooldown; `short` is
 -- its text when the bar is short of room
-function setFeatureAction(id, text, tooltip, callback, enabled, short)
+-- icon: an image of this folder drawn before the text ('teleport_small':
+-- the action takes the player somewhere)
+function setFeatureAction(id, text, tooltip, callback, enabled, short, icon)
     local old = actions[id]
     if not (text and callback) then
         if not old then
             return
         end
         actions[id] = nil
-    elseif old and old.text == text and old.short == (short or text) and old.tooltip == tooltip and old.enabled == enabled then
+    elseif old and old.text == text and old.short == (short or text) and old.tooltip == tooltip and old.enabled == enabled and old.icon == icon then
         -- the same button: its click runs the newest callback
         old.callback = callback
         return
     else
-        actions[id] = { text = text, short = short or text, tooltip = tooltip, callback = callback, enabled = enabled }
+        actions[id] = { text = text, short = short or text, tooltip = tooltip, callback = callback, enabled = enabled, icon = icon }
     end
     if buttons[id] then
         styleButton(id)

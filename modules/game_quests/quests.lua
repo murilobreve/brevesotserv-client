@@ -730,6 +730,9 @@ local function onGameStart()
     if not panelButton and modules.game_brevespanel then
         panelButton = modules.game_brevespanel.addFeature('quests', toggle)
     end
+    if modules.game_brevespanel and modules.game_brevespanel.attachHub then
+        modules.game_brevespanel.attachHub(window, 'quests', hide)
+    end
     if not panelButton and not toolbarButton and modules.game_mainpanel then
         toolbarButton = modules.game_mainpanel.addToggleButton('questsButton', tr('Quests'),
             '/game_brevespanel/images/quests', toggle, false, 24)
