@@ -687,10 +687,21 @@ void Creature::onDisappear()
         self->m_oldPosition = {};
         self->m_disappearEvent = nullptr;
 
-        if (g_game.getAttackingCreature() == self)
-            g_game.cancelAttack();
-        else if (g_game.getFollowingCreature() == self)
-            g_game.cancelFollow();
+        // the target is let go only if it is still gone a moment later: in
+        // a box full of corpses the server can take a monster off a crowded
+        // tile and put it back in a later packet, and the attack (and the
+        // red square) used to drop right away. A real disappearance (death,
+        // out of sight) is also cancelled by the server itself.
+        if (g_game.getAttackingCreature() == self || g_game.getFollowingCreature() == self) {
+            g_dispatcher.scheduleEvent([self] {
+                if (!self->m_removed)
+                    return;
+                if (g_game.getAttackingCreature() == self)
+                    g_game.cancelAttack();
+                else if (g_game.getFollowingCreature() == self)
+                    g_game.cancelFollow();
+            }, 1000);
+        }
     });
 
     Thing::onDisappear();
