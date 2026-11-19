@@ -444,6 +444,16 @@ local function fillHead(entry)
         table.insert(tip, tr('Found by you: +20%'))
     end
     head.info:setTooltip(#tip > 0 and table.concat(tip, '\n') or nil)
+    -- a backpack or loot pouch item Gersao buys: sold here, next to him
+    local sell = page().sellButton
+    local price = entry.bag and tonumber(entry.sellPrice) or nil
+    sell:setVisible(price ~= nil and price > 0)
+    if sell:isVisible() then
+        local near = data and data.nearGersao == true
+        sell:setText(tr('Sell: %s gold', formatGold(price)))
+        sell:setEnabled(near and roll == nil)
+        sell:setTooltip(near and tr('Gersao buys it: the gold goes to your bank.') or tr('Go to Gersao to sell rare items here.'))
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -991,6 +1001,9 @@ function Forge.refresh()
     end
     right.empty:setVisible(entry == nil and tab ~= 'totals')
     right.head:setVisible(entry ~= nil and tab ~= 'totals')
+    if not right.head:isVisible() then
+        right.sellButton:setVisible(false)
+    end
     right.rollPage:setVisible(entry ~= nil and tab == 'roll')
     right.upPage:setVisible(entry ~= nil and tab == 'up')
     right.totalsPage:setVisible(tab == 'totals')
@@ -1242,6 +1255,18 @@ local function upTick()
     tickEvent = scheduleEvent(upTick, 30)
 end
 
+-- sells the backpack or loot pouch item shown to Gersao, after a yes
+function forgeSell()
+    local now = bySlot[selected]
+    if not now or not now.bag or roll then
+        return
+    end
+    local price = tonumber(now.sellPrice) or 0
+    Forge.confirm(tr('Sell to Gersao'), tr('Sell %s for %s gold? The gold goes to your bank.', titleCase(now.name), formatGold(price)), function()
+        Forge.send({ action = 'sellItem', fid = now.fid })
+    end)
+end
+
 function forgeUpgrade()
     local entry = bySlot[selected]
     local up = entry and entry.upgrade
@@ -1312,6 +1337,10 @@ local function messageOf(d)
         return tr('This pack costs %d Hunt Points and you have %d.', tonumber(res.price) or 0, tonumber(res.have) or 0)
     elseif code == 'pack' then
         return tr('This pack is not sold any more.')
+    elseif code == 'sold' then
+        return tr('Sold to Gersao: %s for %s gold (to your bank).', titleCase(res.name), formatGold(res.total))
+    elseif code == 'far' then
+        return tr('Go to Gersao to sell rare items here.')
     end
     return d.message and tr(d.message) or nil
 end
