@@ -3,7 +3,7 @@
   .blessings-window {
     position: relative;
     width: 615px;
-    height: 410px;
+    height: 545px;
     display: block;
   }
 
@@ -20,6 +20,13 @@
     height: 113px;
     margin-top: 10px;
     padding-top: 45px;
+  }
+
+  /* Mythos: how the blessings are bought (!bless) and the Lord of Death */
+  .how-panel {
+    width: 100%;
+    height: 125px;
+    margin-top: 10px;
   }
 
   .death-panel {
@@ -67,8 +74,12 @@
     width: 40px;
   }
 
+  .buttons #buyBlessButton {
+    width: 60px;
+  }
+
   .history-panel {
-    height: 370px;
+    height: 505px;
   }
 
   /* History scroll area */
@@ -144,12 +155,20 @@
     <label id="containerLossLabel" class="justified"></label>
     <label id="equipmentLossLabel" class="justified"></label>
   </div>
+  <!-- Mythos: how to get blessed -->
+  <div id="howPanel" class="how-panel minipanel" title="How to get blessed">
+    <label id="howBuyLabel" class="justified"></label>
+    <label id="howVipLabel" class="justified"></label>
+    <label id="howLordLabel" class="justified"></label>
+  </div>
   <!-- Separator -->
   <hr class="full-separator" />
   <!-- Action Buttons -->
   <div id="buttonsPanel" class="buttons" focusable="false">
     <button id="historyButton" onclick="self:showHistory()">{{self.historyButtonText}}</button>
     <button onclick="self:close()">Close</button>
+    <button id="wikiButton" onclick="self:openWiki()">Wiki</button>
+    <button id="buyBlessButton" onclick="self:buyBless()">!bless</button>
   </div>
 </Window>
 
