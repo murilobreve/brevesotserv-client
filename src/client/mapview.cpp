@@ -141,36 +141,50 @@ void MapView::drawFloor()
         const bool alwaysTransparent = m_floorViewMode == Otc::ALWAYS_WITH_TRANSPARENCY && z < m_cachedFirstVisibleFloor && _camera.coveredUp(cameraPosition.z - z);
 
         const auto& map = m_floors[z].cachedVisibleTiles;
-        std::vector<TilePtr> walking_tiles;
+        // A tile whose upper right neighbour has a walking creature waits for that
+        // neighbour, so the creature that overlaps both is not cut by the floor.
+        // Each tile keeps the flags canRender() gave it: a tile outside the view
+        // keeps only its names and bars, and a visible tile drawn with those
+        // flags would be left blank.
+        std::vector<std::pair<TilePtr, uint32_t>> walking_tiles;
+
+        const auto drawWalkingTiles = [&] {
+            for (int i = walking_tiles.size() - 1; i >= 0; i--) {
+                const auto& [queuedTile, queuedFlags] = walking_tiles[i];
+
+                if (alwaysTransparent) {
+                    const bool inRange = queuedTile->getPosition().isInRange(_camera, g_gameConfig.getTileTransparentFloorViewRange(), g_gameConfig.getTileTransparentFloorViewRange(), true);
+                    g_drawPool.setOpacity(inRange ? .16 : .7);
+                }
+
+                queuedTile->draw(m_posInfo, transformPositionTo2D(queuedTile->getPosition()), queuedFlags);
+
+                if (alwaysTransparent)
+                    g_drawPool.resetOpacity();
+            }
+            walking_tiles.clear();
+        };
 
         for (const auto& tile : map.tiles) {
             uint32_t tileFlags = flags;
 
-            if (!m_drawViewportEdge && !tile->canRender(tileFlags, cameraPosition, m_viewport))
+            if (!m_drawViewportEdge && !tile->canRender(tileFlags, cameraPosition, m_viewport)) {
+                // a tile that is not drawn holds nothing back
+                drawWalkingTiles();
                 continue;
+            }
 
-            walking_tiles.emplace_back(tile);
+            walking_tiles.emplace_back(tile, tileFlags);
 
             // if this tile is the edge or if upper right tile doesn't have walking creatures
             // -> draw it and all walking_tiles depending on it (if there are any queued up)
-            TilePtr upper_right_tile = g_map.getTile(tile->getPosition().translated(1, -1, 0));
-            if (!upper_right_tile || !upper_right_tile->hasWalkingCreature()) {
-                for (int i = walking_tiles.size() - 1; i >= 0; i--) {
-                    auto const &tile = walking_tiles[i];
-
-                    if (alwaysTransparent) {
-                        const bool inRange = tile->getPosition().isInRange(_camera, g_gameConfig.getTileTransparentFloorViewRange(), g_gameConfig.getTileTransparentFloorViewRange(), true);
-                        g_drawPool.setOpacity(inRange ? .16 : .7);
-                    }
-
-                    tile->draw(m_posInfo, transformPositionTo2D(tile->getPosition()), tileFlags);
-
-                    if (alwaysTransparent)
-                        g_drawPool.resetOpacity();
-                }
-                walking_tiles.clear();
-            }
+            const auto& upper_right_tile = g_map.getTile(tile->getPosition().translated(1, -1, 0));
+            if (!upper_right_tile || !upper_right_tile->hasWalkingCreature())
+                drawWalkingTiles();
         }
+
+        // the last tiles of the floor may still be waiting
+        drawWalkingTiles();
 
         for (const auto& missile : g_map.getFloorMissiles(z))
             missile->draw(transformPositionTo2D(missile->getPosition()), true);
