@@ -323,7 +323,7 @@ WIKI_PAGES.bless = {
           } },
         { 'h', 'O que você perde ao morrer' },
         { 'p', 'Cada bênção tira 8% da perda de experiência e skills. Os itens dependem de quantas bênçãos você tem (sem amulet of loss):' },
-        { 'table', widths = { 150, 195, 195 }, head = { 'Bênçãos', 'Chance de perder a mochila', 'Chance de perder cada item equipado' },
+        { 'table', widths = { 150, 195, 195 }, head = { 'Bênçãos', 'Perder a mochila', 'Perder cada item equipado' },
           rows = {
               { 'Nenhuma', { '100%', '#f75f5f' }, { '10%', '#f75f5f' } },
               { '1', '70%', '7%' },

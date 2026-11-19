@@ -72,11 +72,11 @@ end
 local function setHowTexts(ui)
     ui.howPanel:setText(tr('How to get blessed'))
     ui.howPanel.howBuyLabel:setColoredText(tr(
-        "- Type {!bless, #f7d05f} in the chat (or click the button below) to buy every missing blessing at once.\n  The gold comes from your backpack or your bank. Up to level {150, #5fd75f} the blessings are {free, #5fd75f} at login."))
+        "- Type {!bless, #f7d05f} in the chat (or click the button below) to buy all missing blessings.\n- The gold comes from your backpack or bank. Up to level {150, #5fd75f} they are {free, #5fd75f} at login."))
     ui.howPanel.howVipLabel:setColoredText(tr(
         "- {Mythos VIP, #f7d05f} pays {30%, #5fd75f} less for the blessings."))
     ui.howPanel.howLordLabel:setColoredText(tr(
-        "- {Lord of Death, #f75f5f}: blessings do not guarantee everything. If one kills you, there is a {70%, #f75f5f} chance\n  that blessings and amulet of loss are ignored: you lose your {backpack, #f75f5f} and each equipped item\n  has a {30%, #f75f5f} chance to stay in your corpse."))
+        "- {Lord of Death, #f75f5f}: blessings do not guarantee everything. If one kills you, there is a\n  {70%, #f75f5f} chance that blessings and amulet of loss are ignored: you lose your {backpack, #f75f5f}\n  and each equipped item has a {30%, #f75f5f} chance to stay in your corpse."))
 end
 
 function setHistoryView()
