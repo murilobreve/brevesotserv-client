@@ -525,7 +525,13 @@ local function monsterBlocks(d)
             table.insert(immune, ELEMENTS[cell.key][2])
         end
     end
+    -- a monster sees the invisible when it is immune to invisibility: its own
+    -- row, so the answer is there for every monster
+    local seesInvisible = false
     for _, condition in ipairs(d.immune or {}) do
+        if condition == 'invisible' then
+            seesInvisible = true
+        end
         table.insert(immune, IMMUNE[condition] or titleCase(condition))
     end
     local passes = {}
@@ -534,6 +540,7 @@ local function monsterBlocks(d)
     if flags.walkPoison then table.insert(passes, 'veneno') end
     table.insert(blocks, { 'table', widths = { 150, 396 }, rows = {
         { T('Imunidades'), #immune > 0 and T(table.concat(immune, ', ')) or { T('Nenhuma'), DIM } },
+        { T('Vê invisível'), yesNo(seesInvisible) },
         { T('Pode ser puxado'), yesNo(flags.pushable) },
         { T('Passa por'), #passes > 0 and T(titleCase(table.concat(passes, ', '))) or { T('Nada'), DIM } },
         { T('Empurra objetos'), yesNo(flags.pushItems) },
