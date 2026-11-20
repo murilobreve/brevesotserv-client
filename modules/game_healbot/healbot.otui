@@ -150,6 +150,96 @@ SupportRule < HealBotRule
     text-wrap: true
     text-auto-resize: true
 
+// the magic shield: the spell and the health it comes on at (100: always)
+ShieldRule < HealBotRule
+  Label
+    id: label
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('Health up to')
+    text-auto-resize: true
+
+  HealBotSlider
+    id: below
+    anchors.left: label.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 70
+    minimum: 10
+    maximum: 100
+
+  HealBotPercent
+    id: belowEdit
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 40
+    max-length: 3
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    color: #e6e0f2
+    text: %
+
+// exana vita: the health from which the magic shield is taken off
+UnshieldRule < BrevesPanelBox
+  height: 42
+
+  QtCheckBox
+    id: enabled
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  UIWidget
+    id: icon
+    size: 32 32
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    border-width: 1
+    border-color: #4a3670
+
+  Label
+    id: label
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('Remove the shield (exana vita): health from')
+    text-auto-resize: true
+
+  HealBotSlider
+    id: below
+    anchors.left: label.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    width: 70
+    minimum: 20
+
+  HealBotPercent
+    id: belowEdit
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    color: #e6e0f2
+    text: %
+
 // train magic level: the spell and the mana it is cast from
 TrainRule < HealBotRule
   Label

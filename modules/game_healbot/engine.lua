@@ -237,10 +237,24 @@ local function pickSpell(player, cfg, hp, mp, t)
         return cast(haste, t)
     end
 
+    -- the magic shield at `below` percent of health or less (100: always),
+    -- and exana vita once the health is back over the other rule's
     local shield = support.shield.on and HealData.spell(support.shield.spell)
-    if shield and not hasState(player, PlayerStates.ManaShield) and not hasState(player, PlayerStates.NewManaShield)
-        and spellReady(player, shield, t) then
+    local shielded = hasState(player, PlayerStates.ManaShield) or hasState(player, PlayerStates.NewManaShield)
+    local shieldAt = tonumber(support.shield.below) or 100
+    if shield and not shielded and hp <= shieldAt and spellReady(player, shield, t) then
         return cast(shield, t)
+    end
+    local unshield = support.unshield
+    if unshield and unshield.on and shielded then
+        local offAt = tonumber(unshield.below) or 90
+        -- never where the shield rule would put it right back
+        if hp >= offAt and (not shield or offAt > shieldAt) then
+            local off = HealData.unshieldSpell(HealData.vocation(player))
+            if off and spellReady(player, off, t) then
+                return cast(off, t)
+            end
+        end
     end
 
     -- last: only mana nobody else needs goes to training

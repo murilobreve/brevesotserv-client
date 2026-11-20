@@ -284,6 +284,14 @@ function HealData.shieldSpells(vocation)
     end)
 end
 
+-- exana vita, which takes the magic shield off (nil for a vocation
+-- without it)
+function HealData.unshieldSpell(vocation)
+    return vocationSpells(vocation, function(spell)
+        return spell.words == 'exana vita'
+    end)[1]
+end
+
 -- spells that only spend mana on the caster (utana vid, utevo lux, the
 -- heals): what the bot casts to train magic level. Runes are left out:
 -- they need a blank rune in the hand

@@ -117,7 +117,12 @@ local function defaults(player)
     end
     config.friends[1].spell = bestSpell(HealData.friendSpells(vocation))
     config.support = {
-        shield = { on = false, spell = bestSpell(HealData.shieldSpells(vocation)) },
+        -- `below`: the health the magic shield comes on at (100: always,
+        -- as it was before the slider)
+        shield = { on = false, spell = bestSpell(HealData.shieldSpells(vocation)), below = 100 },
+        -- exana vita once the health is back at `below` or more (the slider
+        -- is shared, the field keeps its name): only over the shield's own
+        unshield = { on = false, below = 90 },
         haste = { on = false, spell = bestSpell(HealData.hasteSpells(vocation)) },
         cures = false,
         -- eats the food in the backpacks until full (engine.lua)
@@ -503,6 +508,33 @@ local function addSupportRule(panel, rule, spells, note)
     widget.note:setText(note)
 end
 
+-- the magic shield: its spell and the health it is cast at
+local function addShieldRule(panel, rule, spells)
+    local widget = g_ui.createWidget('ShieldRule', panel)
+    widget.choice:setWidth(110)
+    bindCheck(widget.enabled, rule, 'on')
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    bindSlider(widget, rule)
+    widget.label:setTooltip(tr('The magic shield is cast when your health is at this percentage or less. 100 keeps it always on.'))
+end
+
+-- exana vita: only for the vocations that have it
+local function addUnshieldRule(panel, rule, spell)
+    if not spell then
+        return
+    end
+    local widget = g_ui.createWidget('UnshieldRule', panel)
+    bindCheck(widget.enabled, rule, 'on')
+    setSpellIcon(widget.icon, spell)
+    bindSlider(widget, rule)
+    widget.label:setTooltip(tr('Takes the magic shield off when your health is back at this percentage or more. It must be above the health the shield comes on at.'))
+end
+
 local function addTrainRule(panel, rule, spells)
     local widget = g_ui.createWidget('TrainRule', panel)
     widget.choice:setWidth(120)
@@ -597,7 +629,8 @@ fill = function()
 
     page = window.content.supportPage
     clearRules(page)
-    addSupportRule(page, cfg.support.shield, HealData.shieldSpells(vocation), tr('Magic shield'))
+    addShieldRule(page, cfg.support.shield, HealData.shieldSpells(vocation))
+    addUnshieldRule(page, cfg.support.unshield, HealData.unshieldSpell(vocation))
     addSupportRule(page, cfg.support.haste, HealData.hasteSpells(vocation), tr('Haste (also when paralyzed)'))
     addCureRule(page, vocation)
     local food = g_ui.createWidget('CureRule', page)
