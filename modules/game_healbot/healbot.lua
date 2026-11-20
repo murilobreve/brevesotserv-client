@@ -8,7 +8,7 @@ local CONFIG_VERSION = 4
 local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
 local FRIEND_PARTY, FRIEND_ANYONE = HealData.FRIEND_PARTY, HealData.FRIEND_ANYONE
 local PAGES = { 'healing', 'potions', 'friends', 'support', 'caster', 'loot' }
-local CASTER_SPELLS, CASTER_RUNES, CASTER_COUNT = 5, 2, 10
+local CASTER_SPELLS, CASTER_RUNES, CASTER_COUNT, CASTER_PRESETS = 6, 3, 10, 5
 local PAGE_ICONS = {
     healing = '/images/icons/icon-healing',
     potions = '/images/icons/icon_health',
@@ -136,15 +136,21 @@ local function defaults(player)
         -- `below` is the mana it trains from (the slider is shared)
         train = { on = false, spell = bestTrainSpell(HealData.trainSpells(vocation)), below = 90 },
     }
-    -- the caster (engine.lua, pickAttack): attack spells from the top, each
-    -- with the mana it needs left (`below`: the slider is shared) and the
-    -- monsters it waits for; then the runes. Off until the player turns it on
-    config.caster = { on = false, noPlayers = true, runesFirst = false, spells = {}, runes = {} }
-    for i = 1, CASTER_SPELLS do
-        config.caster.spells[i] = { on = false, spell = 0, below = 10, count = 1 }
-    end
-    for i = 1, CASTER_RUNES do
-        config.caster.runes[i] = { on = false, item = 0, count = 1 }
+    -- the caster (engine.lua, pickAttack): a preset is a list of attack
+    -- spells tried from the top, each with the mana it needs left (`below`)
+    -- and the monsters it waits for, and a list of runes. The player keeps
+    -- CASTER_PRESETS of them (one per hunt, say) and picks which is in use.
+    -- Off until the player turns it on
+    config.caster = { on = false, noPlayers = true, runesFirst = false, current = 1, presets = {} }
+    for p = 1, CASTER_PRESETS do
+        local preset = { name = 'Preset ' .. p, spells = {}, runes = {} }
+        for i = 1, CASTER_SPELLS do
+            preset.spells[i] = { on = false, spell = 0, below = 10, count = 1 }
+        end
+        for i = 1, CASTER_RUNES do
+            preset.runes[i] = { on = false, item = 0, count = 1 }
+        end
+        config.caster.presets[p] = preset
     end
     -- the bot starts on with the best heal and potions
     config.running = true
@@ -214,12 +220,15 @@ local function sanitize(config, vocation)
     check(config.support.haste, 'spell', HealData.hasteSpells(vocation))
     check(config.support.train, 'spell', HealData.trainSpells(vocation))
     local attack = HealData.attackSpells(vocation)
-    for _, rule in ipairs(config.caster.spells) do
-        check(rule, 'spell', attack)
+    for _, preset in ipairs(config.caster.presets) do
+        for _, rule in ipairs(preset.spells) do
+            check(rule, 'spell', attack)
+        end
+        for _, rule in ipairs(preset.runes) do
+            check(rule, 'item', HealData.runes)
+        end
     end
-    for _, rule in ipairs(config.caster.runes) do
-        check(rule, 'item', HealData.runes)
-    end
+    config.caster.current = math.max(1, math.min(#config.caster.presets, math.floor(tonumber(config.caster.current) or 1)))
 end
 
 local function load()
@@ -242,8 +251,18 @@ local function load()
             old.target = FRIEND_ANYONE
         end
     end
+    -- the caster's first days kept one list of spells and runes: it becomes
+    -- the first preset
+    local function oldCaster()
+        local old = saved.caster
+        if type(old) == 'table' and old.presets == nil and (old.spells or old.runes) then
+            merge(cfg.caster.presets[1].spells, old.spells)
+            merge(cfg.caster.presets[1].runes, old.runes)
+        end
+    end
     if version == CONFIG_VERSION then
         merge(cfg, saved)
+        oldCaster()
         sanitize(cfg, HealData.vocation(player))
     elseif version == 3 then
         -- version 3 saved the anti idle off for everyone (its old default):
@@ -554,50 +573,6 @@ local function addUnshieldRule(panel, rule, spell)
     widget.label:setTooltip(tr('Takes the magic shield off when your health is back at this percentage or more. It must be above the health the shield comes on at.'))
 end
 
--- how many monsters a rule of the caster waits for: "1+" ... "10+"
-local function bindCount(combo, rule)
-    combo:clearOptions()
-    for count = 1, CASTER_COUNT do
-        combo:addOption(count .. '+', count)
-    end
-    combo:setCurrentOptionByData(tonumber(rule.count) or 1, true)
-    combo.onOptionChange = function(_, _, data)
-        rule.count = data
-        save()
-    end
-    combo:setTooltip(tr('Monsters it waits for: within 3 sqm of you for a spell cast on yourself, within 2 sqm of the target for a spell with a range or a rune.'))
-end
-
-local function addCasterRule(panel, rule, spells)
-    local widget = g_ui.createWidget('CasterRule', panel)
-    widget.choice:setWidth(132)
-    bindCheck(widget.enabled, rule, 'on')
-    setSpellIcon(widget.icon, HealData.spell(rule.spell))
-    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
-        rule.spell = id
-        HealEngine.forget(id)
-        setSpellIcon(widget.icon, HealData.spell(id))
-    end)
-    bindSlider(widget, rule)
-    widget.label:setTooltip(tr('Cast only with this much mana or more.'))
-    bindCount(widget.count, rule)
-end
-
-local function addCasterRuneRule(panel, rule)
-    local widget = g_ui.createWidget('CasterRuneRule', panel)
-    widget.icon:hide()
-    widget.choice:setWidth(170)
-    bindCheck(widget.enabled, rule, 'on')
-    widget.item:setItemId(rule.item)
-    fillCombo(widget.choice, HealData.runes, rule.item, function(rune)
-        return rune.name
-    end, function(id)
-        rule.item = id
-        widget.item:setItemId(id)
-    end)
-    bindCount(widget.count, rule)
-end
-
 local function addTrainRule(panel, rule, spells)
     local widget = g_ui.createWidget('TrainRule', panel)
     widget.choice:setWidth(120)
@@ -634,7 +609,7 @@ end
 
 -- rules the player opened with "Add rule" this session, by page and slot
 -- (an empty rule in use is not hidden again under his hands)
-local opened = { spells = {}, potions = {}, friends = {}, casterSpells = {}, casterRunes = {} }
+local opened = { spells = {}, potions = {}, friends = {} }
 
 local fill
 
@@ -657,6 +632,208 @@ local function addRules(page, kind, rules, field, add)
             fill()
         end
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- the Caster page: presets of attack spells and runes, in the order tried
+-- ---------------------------------------------------------------------------
+
+-- rules opened with "Add" this session and still empty: they stay in sight
+local shown = setmetatable({}, { __mode = 'k' })
+local fillCaster
+
+local function casterPreset()
+    local caster = cfg.caster
+    return caster.presets[caster.current] or caster.presets[1]
+end
+
+local function inUse(rule, field)
+    return (tonumber(rule[field]) or 0) ~= 0 or shown[rule] == true
+end
+
+-- the rules in use first, in their order: the list has no holes
+local function compact(rules, field)
+    local used, empty = {}, {}
+    for _, rule in ipairs(rules) do
+        table.insert(inUse(rule, field) and used or empty, rule)
+    end
+    for index = 1, #rules do
+        rules[index] = used[index] or empty[index - #used]
+    end
+    return #used
+end
+
+-- the percentage typed in a rule's box (mana it needs left)
+local function bindPercent(edit, rule, field, low, high)
+    local function show()
+        edit:setText(tostring(rule[field]))
+    end
+    show()
+    edit:setTooltip(tr('Cast only with this much mana or more.'))
+    edit.onTextChange = function(_, text)
+        local digits = text:gsub('[^%d]', '')
+        if digits ~= text then
+            edit:setText(digits)
+            return
+        end
+        local value = tonumber(digits)
+        if value and value >= low and value <= high then
+            rule[field] = value
+            save()
+        end
+    end
+    edit.onFocusChange = function(_, focused)
+        if not focused then
+            show()
+        end
+    end
+end
+
+-- how many monsters a rule waits for: "1+" ... "10+"
+local function bindCount(combo, rule)
+    combo:clearOptions()
+    for count = 1, CASTER_COUNT do
+        combo:addOption(count .. '+', count)
+    end
+    combo:setCurrentOptionByData(tonumber(rule.count) or 1, true)
+    combo.onOptionChange = function(_, _, data)
+        rule.count = data
+        save()
+    end
+    combo:setTooltip(tr('Monsters it waits for: within 3 sqm of you for a spell cast on yourself, within 2 sqm of the target for a spell with a range or a rune.'))
+end
+
+-- the order number, the switch and the three buttons every rule has
+local function bindRow(widget, rules, index, used, field, blank)
+    local rule = rules[index]
+    widget.order:setText(tostring(index))
+    bindCheck(widget.enabled, rule, 'on')
+    widget.up:setEnabled(index > 1)
+    widget.down:setEnabled(index < used)
+    widget.up:setTooltip(tr('Try it earlier'))
+    widget.down:setTooltip(tr('Try it later'))
+    widget.remove:setTooltip(tr('Remove this rule'))
+    widget.up.onClick = function()
+        rules[index], rules[index - 1] = rules[index - 1], rules[index]
+        save()
+        fillCaster()
+    end
+    widget.down.onClick = function()
+        rules[index], rules[index + 1] = rules[index + 1], rules[index]
+        save()
+        fillCaster()
+    end
+    widget.remove.onClick = function()
+        shown[rule] = nil
+        for key, value in pairs(blank) do
+            rule[key] = value
+        end
+        save()
+        fillCaster()
+    end
+end
+
+local function addCasterSpell(list, rules, index, used, spells)
+    local rule = rules[index]
+    local widget = g_ui.createWidget('CasterSpellRow', list)
+    bindRow(widget, rules, index, used, 'spell', { on = false, spell = 0, below = 10, count = 1 })
+    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
+        rule.spell = id
+        -- picked: it works at once, no second click on its box
+        rule.on = id ~= 0
+        widget.enabled:setChecked(rule.on)
+        HealEngine.forget(id)
+        setSpellIcon(widget.icon, HealData.spell(id))
+    end)
+    bindPercent(widget.below, rule, 'below', 0, 99)
+    bindCount(widget.count, rule)
+end
+
+local function addCasterRune(list, rules, index, used)
+    local rule = rules[index]
+    local widget = g_ui.createWidget('CasterRuneRow', list)
+    bindRow(widget, rules, index, used, 'item', { on = false, item = 0, count = 1 })
+    widget.item:setItemId(rule.item)
+    fillCombo(widget.choice, HealData.runes, rule.item, function(rune)
+        return rune.name
+    end, function(id)
+        rule.item = id
+        rule.on = id ~= 0
+        widget.enabled:setChecked(rule.on)
+        widget.item:setItemId(id)
+    end)
+    bindCount(widget.count, rule)
+end
+
+-- one part of the list: its heading, the rules in use and the button that
+-- opens the next one
+local function addCasterPart(list, title, rules, field, addText, add)
+    g_ui.createWidget('CasterHeading', list):setText(title)
+    local used = compact(rules, field)
+    for index = 1, used do
+        add(index, used)
+    end
+    if used < #rules then
+        local button = g_ui.createWidget('HealBotAdd', list)
+        button:setText(addText)
+        button.onClick = function()
+            shown[rules[used + 1]] = true
+            fillCaster()
+        end
+    end
+end
+
+fillCaster = function()
+    local player = g_game.getLocalPlayer()
+    if not window or not cfg or not player then
+        return
+    end
+    local page, caster = window.content.casterPage, cfg.caster
+    local preset = casterPreset()
+    bindCheck(page.on, caster, 'on')
+    bindCheck(page.noPlayers, caster, 'noPlayers')
+    bindCheck(page.runesFirst, caster, 'runesFirst')
+    page.noPlayers:setTooltip(tr('Wait while a player who is not of my party is on screen'))
+
+    -- the presets by number and name; the box beside it renames the one in use
+    local function listPresets()
+        page.preset.onOptionChange = nil
+        page.preset:clearOptions()
+        for index, entry in ipairs(caster.presets) do
+            page.preset:addOption(index .. '. ' .. entry.name, index)
+        end
+        page.preset:setCurrentOptionByData(caster.current, true)
+        page.preset.onOptionChange = function(_, _, data)
+            caster.current = data
+            save()
+            fillCaster()
+        end
+    end
+    listPresets()
+    page.presetName.onTextChange = nil
+    page.presetName:setText(preset.name)
+    page.presetName:setTooltip(tr('The name of this preset'))
+    page.presetName.onTextChange = function(_, text)
+        text = text:gsub('^%s+', ''):sub(1, 16)
+        preset.name = text ~= '' and text or ('Preset ' .. caster.current)
+        save()
+    end
+    page.presetName.onFocusChange = function(_, focused)
+        if not focused then
+            listPresets()
+        end
+    end
+
+    local list = page.list
+    list:destroyChildren()
+    local spells = HealData.attackSpells(HealData.vocation(player))
+    addCasterPart(list, tr('Spells: the first that fits, from the top'), preset.spells, 'spell', tr('+ Add spell'), function(index, used)
+        addCasterSpell(list, preset.spells, index, used, spells)
+    end)
+    addCasterPart(list, tr('Runes on the target'), preset.runes, 'item', tr('+ Add rune'), function(index, used)
+        addCasterRune(list, preset.runes, index, used)
+    end)
 end
 
 fill = function()
@@ -705,27 +882,7 @@ fill = function()
     idle.note:setText(tr('Anti idle'))
     idle.note:setTooltip(tr('Turns your character every 5 minutes so the server does not log you out.'))
 
-    -- the caster: its switch and options, the spells in the order they
-    -- are tried, then the runes
-    page = window.content.casterPage
-    clearRules(page)
-    local caster = cfg.caster
-    local switch = g_ui.createWidget('CureRule', page)
-    bindCheck(switch.enabled, caster, 'on')
-    switch.note:setText(tr('Cast attack spells and runes on the monster I attack, from the top'))
-    local careful = g_ui.createWidget('CureRule', page)
-    bindCheck(careful.enabled, caster, 'noPlayers')
-    careful.note:setText(tr('Wait while a player who is not of my party is on screen'))
-    local attackSpells = HealData.attackSpells(vocation)
-    addRules(page, 'casterSpells', caster.spells, 'spell', function(rule)
-        addCasterRule(page, rule, attackSpells)
-    end)
-    addRules(page, 'casterRunes', caster.runes, 'item', function(rule)
-        addCasterRuneRule(page, rule)
-    end)
-    local first = g_ui.createWidget('CureRule', page)
-    bindCheck(first.enabled, caster, 'runesFirst')
-    first.note:setText(tr('Runes before the spells'))
+    fillCaster()
 
     fillLoot()
 end

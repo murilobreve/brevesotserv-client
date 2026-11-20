@@ -240,63 +240,130 @@ UnshieldRule < BrevesPanelBox
     color: #e6e0f2
     text: %
 
-// the caster: an attack spell, the mana it needs left and how many monsters
-CasterRule < HealBotRule
+// The caster page (healbot.lua, fillCaster): its switch, the preset and its
+// name, two options, and the list of rules that scrolls. A rule is one
+// line: its place in the order, on or off, the spell (or rune), the mana it
+// needs left, how many monsters it waits for, and the buttons that move it
+// up or down and take it out.
+CasterButton < MythosButton
+  size: 20 20
+  font: verdana-11px-rounded
+  text-offset: 0 0
+
+CasterRow < BrevesPanelBox
+  height: 36
+
+  Label
+    id: order
+    width: 14
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 2
+    font: verdana-11px-rounded
+    color: #f3dcae
+    text-align: center
+
+  QtCheckBox
+    id: enabled
+    anchors.left: order.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  CasterButton
+    id: remove
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+    text: x
+
+  CasterButton
+    id: down
+    anchors.right: remove.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+    text: v
+
+  CasterButton
+    id: up
+    anchors.right: down.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+    text: ^
+
+CasterSpellRow < CasterRow
+  UIWidget
+    id: icon
+    size: 28 28
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    border-width: 1
+    border-color: #4a3670
+
+  MythosComboBox
+    id: choice
+    width: 190
+    anchors.left: icon.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    text-align: left
+    text-offset: 6 0
+
   Label
     id: label
     anchors.left: choice.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
+    margin-left: 8
     font: verdana-11px-monochrome
     color: #9789b3
-    !text: tr('mana')
+    !text: tr('mana from')
     text-auto-resize: true
 
-  HealBotSlider
+  HealBotPercent
     id: below
     anchors.left: label.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
-    width: 56
-    minimum: 0
-
-  HealBotPercent
-    id: belowEdit
-    anchors.left: below.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 4
 
   Label
-    id: belowLabel
-    width: 12
-    anchors.left: belowEdit.right
+    id: percent
+    width: 10
+    anchors.left: below.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 3
+    margin-left: 2
     color: #e6e0f2
     text: %
 
   MythosComboBox
     id: count
-    width: 52
-    anchors.left: belowLabel.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
-
-// the caster: a rune and how many monsters around the target
-CasterRuneRule < HealBotRule
-  Item
-    id: item
-    size: 32 32
-    anchors.left: enabled.right
+    width: 50
+    anchors.left: percent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 8
+
+CasterRuneRow < CasterRow
+  Item
+    id: item
+    size: 28 28
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
     virtual: true
+
+  MythosComboBox
+    id: choice
+    width: 190
+    anchors.left: item.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    text-align: left
+    text-offset: 6 0
 
   Label
     id: label
     anchors.left: choice.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
+    margin-left: 8
     font: verdana-11px-monochrome
     color: #9789b3
     !text: tr('monsters')
@@ -304,10 +371,103 @@ CasterRuneRule < HealBotRule
 
   MythosComboBox
     id: count
-    width: 52
+    width: 50
     anchors.left: label.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
+
+// a heading of the list ("Spells", "Runes")
+CasterHeading < Label
+  height: 16
+  font: verdana-11px-rounded
+  color: #f3dcae
+
+CasterPage < UIWidget
+  anchors.fill: parent
+  visible: false
+
+  QtCheckBox
+    id: on
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin-top: 4
+    margin-left: 4
+    width: 150
+    !text: tr('Caster on')
+
+  MythosTextEdit
+    id: presetName
+    anchors.verticalCenter: on.verticalCenter
+    anchors.right: parent.right
+    margin-right: 4
+    width: 120
+    height: 20
+    max-length: 16
+
+  MythosComboBox
+    id: preset
+    anchors.verticalCenter: on.verticalCenter
+    anchors.right: presetName.left
+    margin-right: 6
+    width: 130
+    text-align: left
+    text-offset: 6 0
+
+  Label
+    id: presetLabel
+    anchors.verticalCenter: on.verticalCenter
+    anchors.right: preset.left
+    margin-right: 6
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('Preset')
+    text-auto-resize: true
+
+  QtCheckBox
+    id: noPlayers
+    anchors.top: on.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    margin-left: 4
+    width: 300
+    !text: tr('Wait with a stranger on screen')
+
+  QtCheckBox
+    id: runesFirst
+    anchors.verticalCenter: noPlayers.verticalCenter
+    anchors.left: noPlayers.right
+    margin-left: 8
+    width: 200
+    !text: tr('Runes before the spells')
+
+  MythosSeparator
+    id: rule
+    anchors.top: noPlayers.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  VerticalScrollBar
+    id: scroll
+    anchors.top: rule.bottom
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    margin-top: 6
+    step: 20
+    pixels-scroll: true
+
+  ScrollablePanel
+    id: list
+    anchors.top: rule.bottom
+    anchors.left: parent.left
+    anchors.right: scroll.left
+    anchors.bottom: parent.bottom
+    margin-top: 6
+    margin-right: 4
+    vertical-scrollbar: scroll
+    layout:
+      type: verticalBox
+      spacing: 4
 
 // train magic level: the spell and the mana it is cast from
 TrainRule < HealBotRule
@@ -367,7 +527,7 @@ CureRule < BrevesPanelBox
 MythosWindow
   id: healBotWindow
   !text: tr('Heal Bot')
-  size: 640 520
+  size: 720 520
   @onEscape: modules.game_healbot.hide()
 
   UIWidget
@@ -422,7 +582,7 @@ MythosWindow
     HealBotPage
       id: supportPage
 
-    HealBotPage
+    CasterPage
       id: casterPage
 
     HealBotPage

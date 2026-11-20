@@ -231,12 +231,12 @@ local function distance(a, b)
     return math.max(math.abs(a.x - b.x), math.abs(a.y - b.y))
 end
 
-local function castRunes(player, caster, target, here, there, t)
+local function castRunes(player, preset, target, here, there, t)
     if runeUntil > t or (groupUntil[ATTACK_GROUP] or 0) > t or distance(here, there) > RUNE_RANGE then
         return false
     end
     local around
-    for _, rule in ipairs(caster.runes) do
+    for _, rule in ipairs(preset.runes) do
         local rune = rule.on and HealData.rune(rule.item)
         if rune and player:getLevel() >= rune.level and itemCount(player, rune.id) > 0 then
             around = around or monstersAround(there, AROUND_TARGET)
@@ -292,9 +292,9 @@ local function castAimed(spell, aim, target, here, there, t)
     return true
 end
 
-local function castSpells(player, caster, target, here, there, mp, t)
+local function castSpells(player, preset, target, here, there, mp, t)
     local aroundSelf, aroundTarget
-    for _, rule in ipairs(caster.spells) do
+    for _, rule in ipairs(preset.spells) do
         local spell = rule.on and HealData.spell(rule.spell)
         local aim = HealData.aimed(spell)
         if spell and aim and mp >= (tonumber(rule.below) or 0) then
@@ -344,10 +344,15 @@ local function pickAttack(player, cfg, mp, t)
     if caster.noPlayers and strangerInSight(player) then
         return false
     end
-    if caster.runesFirst then
-        return castRunes(player, caster, target, here, there, t) or castSpells(player, caster, target, here, there, mp, t)
+    -- the preset in use: its spells and its runes
+    local preset = caster.presets and (caster.presets[tonumber(caster.current) or 1] or caster.presets[1])
+    if not preset then
+        return false
     end
-    return castSpells(player, caster, target, here, there, mp, t) or castRunes(player, caster, target, here, there, t)
+    if caster.runesFirst then
+        return castRunes(player, preset, target, here, there, t) or castSpells(player, preset, target, here, there, mp, t)
+    end
+    return castSpells(player, preset, target, here, there, mp, t) or castRunes(player, preset, target, here, there, t)
 end
 
 -- one spell per tick: own health first, then friends, then support
