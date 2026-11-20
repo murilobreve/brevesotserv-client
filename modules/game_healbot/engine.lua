@@ -190,6 +190,120 @@ local function woundedFriend(player, rule)
     return best
 end
 
+-- ---------------------------------------------------------------------------
+-- the caster: attack spells and runes on the monster being attacked
+-- ---------------------------------------------------------------------------
+
+local RUNE_WAIT = 2000 -- a rune shares the attack spells' 2 s
+local ATTACK_GROUP = 1
+local AROUND_SELF, AROUND_TARGET, RUNE_RANGE = 3, 2, 7
+local runeUntil = 0
+
+local function isWildMonster(creature)
+    if not creature or not creature:isMonster() or creature:getHealthPercent() <= 0 then
+        return false
+    end
+    -- never the player's own summon
+    return not (creature.getType and CreatureTypeSummonOwn and creature:getType() == CreatureTypeSummonOwn)
+end
+
+local function monstersAround(centre, radius)
+    local count = 0
+    for _, creature in ipairs(g_map.getSpectatorsInRange(centre, false, radius, radius) or {}) do
+        if isWildMonster(creature) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+-- another player in sight who is not of the party: an area spell could hit him
+local function strangerInSight(player)
+    for _, creature in ipairs(g_map.getSpectators(player:getPosition(), false) or {}) do
+        if creature:isPlayer() and not creature:isLocalPlayer() and not isPartyMember(creature) then
+            return true
+        end
+    end
+    return false
+end
+
+local function distance(a, b)
+    return math.max(math.abs(a.x - b.x), math.abs(a.y - b.y))
+end
+
+local function castRunes(player, caster, target, here, there, t)
+    if runeUntil > t or (groupUntil[ATTACK_GROUP] or 0) > t or distance(here, there) > RUNE_RANGE then
+        return false
+    end
+    local around
+    for _, rule in ipairs(caster.runes) do
+        local rune = rule.on and HealData.rune(rule.item)
+        if rune and player:getLevel() >= rune.level and itemCount(player, rune.id) > 0 then
+            around = around or monstersAround(there, AROUND_TARGET)
+            if around >= (tonumber(rule.count) or 1) then
+                g_game.useInventoryItemWith(rune.id, target)
+                runeUntil = t + RUNE_WAIT
+                groupUntil[ATTACK_GROUP] = math.max(groupUntil[ATTACK_GROUP] or 0, t + RUNE_WAIT)
+                if onAction then
+                    onAction(tr('Used %s', rune.name))
+                end
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function castSpells(player, caster, here, there, mp, t)
+    local aroundSelf, aroundTarget
+    for _, rule in ipairs(caster.spells) do
+        local spell = rule.on and HealData.spell(rule.spell)
+        if spell and mp >= (tonumber(rule.below) or 0) then
+            local ranged = (spell.range or -1) > 0
+            local count
+            if ranged then
+                aroundTarget = aroundTarget or monstersAround(there, AROUND_TARGET)
+                count = aroundTarget
+            else
+                aroundSelf = aroundSelf or monstersAround(here, AROUND_SELF)
+                count = aroundSelf
+            end
+            if count >= (tonumber(rule.count) or 1) and (not ranged or distance(here, there) <= spell.range)
+                and spellReady(player, spell, t) then
+                cast(spell, t)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- The first rule that fits, from the top: enough mana, enough monsters (around
+-- the character for a spell cast on itself, around the target for a spell
+-- with a range and for a rune) and its cooldown over. Only with a monster
+-- being attacked; with another player in sight it waits, if asked to.
+local function pickAttack(player, cfg, mp, t)
+    local caster = cfg.caster
+    if not caster or not caster.on then
+        return false
+    end
+    local target = g_game.getAttackingCreature()
+    if not isWildMonster(target) then
+        return false
+    end
+    local here, there = player:getPosition(), target:getPosition()
+    if not here or not there or here.z ~= there.z then
+        return false
+    end
+    if caster.noPlayers and strangerInSight(player) then
+        return false
+    end
+    if caster.runesFirst then
+        return castRunes(player, caster, target, here, there, t) or castSpells(player, caster, here, there, mp, t)
+    end
+    return castSpells(player, caster, here, there, mp, t) or castRunes(player, caster, target, here, there, t)
+end
+
 -- one spell per tick: own health first, then friends, then support
 local function pickSpell(player, cfg, hp, mp, t)
     for _, rule in ipairs(cfg.spells) do
@@ -255,6 +369,11 @@ local function pickSpell(player, cfg, hp, mp, t)
                 return cast(off, t)
             end
         end
+    end
+
+    -- the caster, once nobody needs healing or a support spell
+    if pickAttack(player, cfg, mp, t) then
+        return
     end
 
     -- last: only mana nobody else needs goes to training

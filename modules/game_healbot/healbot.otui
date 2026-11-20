@@ -240,6 +240,75 @@ UnshieldRule < BrevesPanelBox
     color: #e6e0f2
     text: %
 
+// the caster: an attack spell, the mana it needs left and how many monsters
+CasterRule < HealBotRule
+  Label
+    id: label
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('mana')
+    text-auto-resize: true
+
+  HealBotSlider
+    id: below
+    anchors.left: label.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    width: 56
+    minimum: 0
+
+  HealBotPercent
+    id: belowEdit
+    anchors.left: below.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+
+  Label
+    id: belowLabel
+    width: 12
+    anchors.left: belowEdit.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+    color: #e6e0f2
+    text: %
+
+  MythosComboBox
+    id: count
+    width: 52
+    anchors.left: belowLabel.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
+// the caster: a rune and how many monsters around the target
+CasterRuneRule < HealBotRule
+  Item
+    id: item
+    size: 32 32
+    anchors.left: enabled.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    virtual: true
+
+  Label
+    id: label
+    anchors.left: choice.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    font: verdana-11px-monochrome
+    color: #9789b3
+    !text: tr('monsters')
+    text-auto-resize: true
+
+  MythosComboBox
+    id: count
+    width: 52
+    anchors.left: label.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+
 // train magic level: the spell and the mana it is cast from
 TrainRule < HealBotRule
   Label
@@ -298,7 +367,7 @@ CureRule < BrevesPanelBox
 MythosWindow
   id: healBotWindow
   !text: tr('Heal Bot')
-  size: 640 428
+  size: 640 520
   @onEscape: modules.game_healbot.hide()
 
   UIWidget
@@ -326,6 +395,9 @@ MythosWindow
       id: support
       !text: tr('Support')
     HealBotCategory
+      id: caster
+      !text: tr('Caster')
+    HealBotCategory
       id: loot
       !text: tr('Loot')
 
@@ -349,6 +421,9 @@ MythosWindow
 
     HealBotPage
       id: supportPage
+
+    HealBotPage
+      id: casterPage
 
     HealBotPage
       id: lootPage

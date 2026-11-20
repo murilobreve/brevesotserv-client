@@ -292,6 +292,48 @@ function HealData.unshieldSpell(vocation)
     end)[1]
 end
 
+-- The caster: the attack spells it may cast on its own. Not the aimed
+-- spells of the Ascensão (they go where the mouse points), nor a spell
+-- that asks for a name.
+local AIMED = {
+    ['exori tera ico'] = true, ['exani gran ico'] = true, ['exori grip'] = true,
+    ['exori gran san vis'] = true, ['exevo gran san vis'] = true, ['exori con vis'] = true,
+    ['exevo gran vis'] = true, ['exevo meteor'] = true, ['exevo vis mort'] = true,
+    ['exori frigo vis'] = true, ['exevo frigo grav'] = true, ['exori tera vis'] = true,
+    ['exori sonic pug'] = true, ['exori dra pug'] = true, ['exani tera pug'] = true,
+}
+local ATTACK_GROUP = 1
+
+function HealData.attackSpells(vocation)
+    return vocationSpells(vocation, function(spell)
+        return Spells.getPrimaryGroup(spell) == ATTACK_GROUP and spell.type == 'Instant' and not spell.parameter
+            and not AIMED[spell.words]
+    end)
+end
+
+-- the runes the caster throws at the target (client ids)
+HealData.runes = {
+    { id = 3155, name = 'Sudden death rune', level = 45 },
+    { id = 3191, name = 'Great fireball rune', level = 30 },
+    { id = 3161, name = 'Avalanche rune', level = 30 },
+    { id = 3202, name = 'Thunderstorm rune', level = 28 },
+    { id = 3175, name = 'Stone shower rune', level = 28 },
+    { id = 3200, name = 'Explosion rune', level = 31 },
+    { id = 3158, name = 'Icicle rune', level = 28 },
+    { id = 3198, name = 'Heavy magic missile rune', level = 25 },
+    { id = 3189, name = 'Fireball rune', level = 27 },
+    { id = 3182, name = 'Holy missile rune', level = 27 },
+}
+
+function HealData.rune(id)
+    for _, rune in ipairs(HealData.runes) do
+        if rune.id == id then
+            return rune
+        end
+    end
+    return nil
+end
+
 -- spells that only spend mana on the caster (utana vid, utevo lux, the
 -- heals): what the bot casts to train magic level. Runes are left out:
 -- they need a blank rune in the hand
