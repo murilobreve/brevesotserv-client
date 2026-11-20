@@ -292,22 +292,48 @@ function HealData.unshieldSpell(vocation)
     end)[1]
 end
 
--- The caster: the attack spells it may cast on its own. Not the aimed
--- spells of the Ascensão (they go where the mouse points), nor a spell
--- that asks for a name.
+-- The caster: the attack spells it may cast on its own, never one that asks
+-- for a name. The aimed spells of the Ascensão go at the monster being
+-- attacked (game_skillshot's castAt) instead of where the mouse points:
+--   cooldown : the spell's own, for those the server times in Lua (the
+--              cooldown the client hears of is the short one that lets the
+--              second cast through)
+--   recast   : the two-step spells are said again after this many ms (`sqm`
+--              to the target): the charged ones at full strength, the orb
+--              and the shard when they reach the target, the palm's dash
+--              once its wave has hit; never before the server takes the
+--              spell again (half a second, one for the palm), so the orb
+--              and the shard burst past a target that stands next to the
+--              character
+-- The Muralha Glacial is left out: a wall across the way is no attack.
 local AIMED = {
-    ['exori tera ico'] = true, ['exani gran ico'] = true, ['exori grip'] = true,
-    ['exori gran san vis'] = true, ['exevo gran san vis'] = true, ['exori con vis'] = true,
-    ['exevo gran vis'] = true, ['exevo meteor'] = true, ['exevo vis mort'] = true,
-    ['exori frigo vis'] = true, ['exevo frigo grav'] = true, ['exori tera vis'] = true,
-    ['exori sonic pug'] = true, ['exori dra pug'] = true, ['exani tera pug'] = true,
+    ['exori tera ico'] = { cooldown = 14000, recast = function() return 1600 end },
+    ['exani gran ico'] = { cooldown = 18000 },
+    ['exori grip'] = {},
+    ['exori gran san vis'] = {},
+    ['exevo gran san vis'] = {},
+    ['exori con vis'] = { cooldown = 10000 },
+    ['exevo gran vis'] = { cooldown = 14000, recast = function() return 1600 end },
+    ['exevo meteor'] = {},
+    ['exevo vis mort'] = { cooldown = 16000, recast = function(sqm) return math.max(650, sqm * 150 + 100) end },
+    ['exori frigo vis'] = { cooldown = 12000, recast = function(sqm) return math.max(650, sqm * 200 + 100) end },
+    ['exori tera vis'] = {},
+    ['exori sonic pug'] = { cooldown = 12000, recast = function(sqm) return math.max(1150, sqm * 80 + 250) end },
+    ['exori dra pug'] = {},
+    ['exani tera pug'] = {},
 }
+local NOT_CAST = { ['exevo frigo grav'] = true }
 local ATTACK_GROUP = 1
+
+-- how the caster handles an aimed spell, nil for a plain one
+function HealData.aimed(spell)
+    return spell and AIMED[spell.words] or nil
+end
 
 function HealData.attackSpells(vocation)
     return vocationSpells(vocation, function(spell)
         return Spells.getPrimaryGroup(spell) == ATTACK_GROUP and spell.type == 'Instant' and not spell.parameter
-            and not AIMED[spell.words]
+            and not NOT_CAST[spell.words]
     end)
 end
 

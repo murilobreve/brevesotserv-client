@@ -123,6 +123,19 @@ local function sendAim(text)
     protocol:sendExtendedJSONOpcode(OPCODE, { x = pos.x, y = pos.y, z = pos.z, t = fromTarget and 1 or nil })
 end
 
+-- For the Heal Bot's caster: says a skillshot aimed at `pos` (the monster
+-- being attacked), whatever the mouse is on. False when it could not be said.
+function castAt(text, pos)
+    local protocol = g_game.getProtocolGame()
+    if not protocol or not pos or not words[normalize(text)] then
+        return false
+    end
+    protocol:sendExtendedJSONOpcode(OPCODE, { x = pos.x, y = pos.y, z = pos.z })
+    local talk = originalTalk or g_game.talk
+    talk(text)
+    return true
+end
+
 local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
         return

@@ -254,11 +254,57 @@ local function castRunes(player, caster, target, here, there, t)
     return false
 end
 
-local function castSpells(player, caster, here, there, mp, t)
+-- an aimed spell of the Ascensão, at the target: said through
+-- game_skillshot, which tells the server where it goes; a two-step spell
+-- is said again when its moment comes
+local aimedUntil = {}
+local AIMED_MARGIN = 500
+
+local function castAimed(spell, aim, target, here, there, t)
+    local skillshot = modules.game_skillshot
+    if not skillshot or not skillshot.castAt or not skillshot.castAt(spell.words, there) then
+        return false
+    end
+    spellUntil[spell.id] = t + (spell.exhaustion or 1000)
+    -- a little over the spell's cooldown: said the instant it ends here, the
+    -- server (which heard the last cast a moment later) still refused it,
+    -- and the second cast then started the spell instead of finishing it
+    aimedUntil[spell.id] = t + (aim.cooldown or spell.exhaustion or 1000) + AIMED_MARGIN
+    for group, delay in pairs(spell.group) do
+        groupUntil[group] = math.max(groupUntil[group] or 0, t + delay)
+    end
+    table.insert(castLog, 1, { spell = spell, time = t })
+    castLog[6] = nil
+    if onAction then
+        onAction(tr('Used %s', spell.words))
+    end
+    if aim.recast then
+        local targetId = target:getId()
+        scheduleEvent(function()
+            if not g_game.isOnline() or not running then
+                return
+            end
+            local again = g_map.getCreatureById(targetId)
+            local pos = again and again:getPosition()
+            skillshot.castAt(spell.words, pos and pos.z == there.z and pos or there)
+        end, aim.recast(distance(here, there)))
+    end
+    return true
+end
+
+local function castSpells(player, caster, target, here, there, mp, t)
     local aroundSelf, aroundTarget
     for _, rule in ipairs(caster.spells) do
         local spell = rule.on and HealData.spell(rule.spell)
-        if spell and mp >= (tonumber(rule.below) or 0) then
+        local aim = HealData.aimed(spell)
+        if spell and aim and mp >= (tonumber(rule.below) or 0) then
+            aroundTarget = aroundTarget or monstersAround(there, AROUND_TARGET)
+            if aroundTarget >= (tonumber(rule.count) or 1) and distance(here, there) <= (spell.range or 1)
+                and (aimedUntil[spell.id] or 0) <= t and spellReady(player, spell, t)
+                and castAimed(spell, aim, target, here, there, t) then
+                return true
+            end
+        elseif spell and mp >= (tonumber(rule.below) or 0) then
             local ranged = (spell.range or -1) > 0
             local count
             if ranged then
@@ -299,9 +345,9 @@ local function pickAttack(player, cfg, mp, t)
         return false
     end
     if caster.runesFirst then
-        return castRunes(player, caster, target, here, there, t) or castSpells(player, caster, here, there, mp, t)
+        return castRunes(player, caster, target, here, there, t) or castSpells(player, caster, target, here, there, mp, t)
     end
-    return castSpells(player, caster, here, there, mp, t) or castRunes(player, caster, target, here, there, t)
+    return castSpells(player, caster, target, here, there, mp, t) or castRunes(player, caster, target, here, there, t)
 end
 
 -- one spell per tick: own health first, then friends, then support
@@ -484,6 +530,7 @@ end
 
 function HealEngine.reset()
     spellUntil, groupUntil, potionUntil = {}, {}, 0
+    aimedUntil, runeUntil = {}, 0
     unlearned, confirmed, castLog = {}, {}, {}
     lastTurn = now()
     local player = g_game.getLocalPlayer()
