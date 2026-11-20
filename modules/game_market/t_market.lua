@@ -1815,7 +1815,11 @@ function createMarketOffer()
     end
 
     local n = mainMarket.createOfferAmount:getText()
-    local amount = tonumber(n:gsub("%D", ""))
+    -- the digits of "Amount: 18". In brackets: gsub also returns how many
+    -- characters it took out (8, of "Amount: "), which tonumber read as
+    -- the base: 18 was no number in base 8 ("Invalid amount or price."),
+    -- and 10 went to the server as 8
+    local amount = tonumber((n:gsub("%D", "")))
     local piecePrice = tonumber(mainMarket.grossAmount.value)
 
     if not amount or not piecePrice then
