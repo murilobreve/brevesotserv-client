@@ -323,11 +323,45 @@ local AIMED = {
     ['exani tera pug'] = {},
 }
 local NOT_CAST = { ['exevo frigo grav'] = true }
+
+-- The spells that go the way the character faces (waves, beams, sweeps): the
+-- caster turns the character for them. `rows` is how many tiles to each side
+-- of the middle a row reaches, from the row in front of the character
+-- outwards; `beside` how many tiles to each side of the character itself are
+-- hit as well. The server's areas (register_spells.lua), without the larger
+-- ones the Wheel gives.
+local WAVE = { rows = { 0, 1, 1, 2 } }
+local SQUARE_WAVE = { rows = { 0, 0, 1, 1, 1 } }
+local FRONT_SWEEP = { rows = { 1 } }
+local DIRECTIONAL = {
+    ['exevo flam hur'] = WAVE,
+    ['exevo frigo hur'] = WAVE,
+    ['exevo infir flam hur'] = WAVE,
+    ['exevo infir frigo hur'] = WAVE,
+    ['exevo dis flam hur'] = WAVE,
+    ['exevo gran flam hur'] = { rows = { 0, 1, 1, 2, 2 } },
+    ['exevo gran frigo hur'] = { rows = { 0, 1, 1 } },
+    ['exevo tera hur'] = SQUARE_WAVE,
+    ['exevo vis hur'] = SQUARE_WAVE,
+    ['exevo vis lux'] = { rows = { 0, 0, 0, 0, 0 } },
+    ['exevo gran vis lux'] = { rows = { 0, 0, 0, 0, 0, 0, 0, 0 } },
+    ['exevo max mort'] = { rows = { 0, 0, 0, 0, 0, 0 } },
+    ['exori min'] = FRONT_SWEEP,
+    ['exori infir min'] = FRONT_SWEEP,
+    ['exori mas pug'] = { rows = { 1, 1, 0 }, beside = 1 },
+    ['exori gran mas pug'] = { rows = { 2, 1, 1, 0 }, beside = 1 },
+    ['exori mas nia'] = { rows = { 2, 2, 2, 1 }, beside = 2 },
+}
 local ATTACK_GROUP = 1
 
 -- how the caster handles an aimed spell, nil for a plain one
 function HealData.aimed(spell)
     return spell and AIMED[spell.words] or nil
+end
+
+-- the tiles a spell cast the way the character faces hits, nil for the others
+function HealData.directional(spell)
+    return spell and DIRECTIONAL[spell.words] or nil
 end
 
 function HealData.attackSpells(vocation)

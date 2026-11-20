@@ -700,7 +700,7 @@ local function bindCount(combo, rule)
         rule.count = data
         save()
     end
-    combo:setTooltip(tr('Monsters it waits for: within 3 sqm of you for a spell cast on yourself, within 2 sqm of the target for a spell with a range or a rune.'))
+    combo:setTooltip(tr('Monsters it waits for: within 3 sqm of you for a spell cast on yourself, within 2 sqm of the target for a spell with a range or a rune, the ones the wave hits for a wave or a beam.'))
 end
 
 -- the order number, the switch and the three buttons every rule has
@@ -737,14 +737,23 @@ local function addCasterSpell(list, rules, index, used, spells)
     local rule = rules[index]
     local widget = g_ui.createWidget('CasterSpellRow', list)
     bindRow(widget, rules, index, used, 'spell', { on = false, spell = 0, below = 10, count = 1 })
-    setSpellIcon(widget.icon, HealData.spell(rule.spell))
+    -- a wave or a beam says so: the character is turned for it
+    local function showSpell(id)
+        local spell = HealData.spell(id)
+        setSpellIcon(widget.icon, spell)
+        if HealData.directional(spell) then
+            widget.icon:setTooltip(widget.icon:getTooltip() .. '\n' ..
+                tr('The character turns to the target by itself. Not cast with the target in a diagonal or out of reach.'))
+        end
+    end
+    showSpell(rule.spell)
     fillCombo(widget.choice, spells, rule.spell, spellLabel, function(id)
         rule.spell = id
         -- picked: it works at once, no second click on its box
         rule.on = id ~= 0
         widget.enabled:setChecked(rule.on)
         HealEngine.forget(id)
-        setSpellIcon(widget.icon, HealData.spell(id))
+        showSpell(id)
     end)
     bindPercent(widget.below, rule, 'below', 0, 99)
     bindCount(widget.count, rule)

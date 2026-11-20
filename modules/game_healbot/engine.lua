@@ -292,32 +292,92 @@ local function castAimed(spell, aim, target, here, there, t)
     return true
 end
 
+-- For each way the character can face: how far ahead and how far to the
+-- side a tile `dx, dy` away from it lies.
+local FACINGS = {
+    { dir = Directions.North, ahead = function(dx, dy) return -dy, dx end },
+    { dir = Directions.East, ahead = function(dx, dy) return dx, dy end },
+    { dir = Directions.South, ahead = function(dx, dy) return dy, dx end },
+    { dir = Directions.West, ahead = function(dx, dy) return -dx, dy end },
+}
+local WAVE_SIGHT = 8 -- the longest beam
+
+local function inWave(shape, ahead, side)
+    side = math.abs(side)
+    if ahead == 0 then
+        return side >= 1 and side <= (shape.beside or 0)
+    end
+    local half = shape.rows[ahead]
+    return half ~= nil and side <= half
+end
+
+-- The way to face for a wave to hit the target, and how many monsters it
+-- hits then; nil when the target is out of it whichever way (in a diagonal,
+-- too far). Of two ways that hit the target, the one with more monsters;
+-- the same number, the way the character already faces.
+local function waveFacing(shape, player, target, here, there)
+    local facing = player:getDirection()
+    local monsters, best, bestCount
+    for _, way in ipairs(FACINGS) do
+        if inWave(shape, way.ahead(there.x - here.x, there.y - here.y)) then
+            monsters = monsters or g_map.getSpectatorsInRange(here, false, WAVE_SIGHT, WAVE_SIGHT) or {}
+            local count = 0
+            for _, creature in ipairs(monsters) do
+                local pos = isWildMonster(creature) and creature:getPosition()
+                if pos and inWave(shape, way.ahead(pos.x - here.x, pos.y - here.y)) then
+                    count = count + 1
+                end
+            end
+            if not best or count > bestCount or (count == bestCount and way.dir == facing) then
+                best, bestCount = way.dir, count
+            end
+        end
+    end
+    return best, bestCount or 0
+end
+
 local function castSpells(player, preset, target, here, there, mp, t)
     local aroundSelf, aroundTarget
     for _, rule in ipairs(preset.spells) do
         local spell = rule.on and HealData.spell(rule.spell)
-        local aim = HealData.aimed(spell)
-        if spell and aim and mp >= (tonumber(rule.below) or 0) then
-            aroundTarget = aroundTarget or monstersAround(there, AROUND_TARGET)
-            if aroundTarget >= (tonumber(rule.count) or 1) and distance(here, there) <= (spell.range or 1)
-                and (aimedUntil[spell.id] or 0) <= t and spellReady(player, spell, t)
-                and castAimed(spell, aim, target, here, there, t) then
-                return true
-            end
-        elseif spell and mp >= (tonumber(rule.below) or 0) then
-            local ranged = (spell.range or -1) > 0
-            local count
-            if ranged then
+        local need = tonumber(rule.count) or 1
+        if spell and mp >= (tonumber(rule.below) or 0) then
+            local aim = HealData.aimed(spell)
+            local wave = not aim and HealData.directional(spell)
+            if aim then
                 aroundTarget = aroundTarget or monstersAround(there, AROUND_TARGET)
-                count = aroundTarget
+                if aroundTarget >= need and distance(here, there) <= (spell.range or 1)
+                    and (aimedUntil[spell.id] or 0) <= t and spellReady(player, spell, t)
+                    and castAimed(spell, aim, target, here, there, t) then
+                    return true
+                end
+            elseif wave then
+                -- a wave, a beam, a sweep: turned to the target first
+                if spellReady(player, spell, t) then
+                    local dir, count = waveFacing(wave, player, target, here, there)
+                    if dir and count >= need then
+                        if player:getDirection() ~= dir then
+                            g_game.turn(dir)
+                        end
+                        cast(spell, t)
+                        return true
+                    end
+                end
             else
-                aroundSelf = aroundSelf or monstersAround(here, AROUND_SELF)
-                count = aroundSelf
-            end
-            if count >= (tonumber(rule.count) or 1) and (not ranged or distance(here, there) <= spell.range)
-                and spellReady(player, spell, t) then
-                cast(spell, t)
-                return true
+                local ranged = (spell.range or -1) > 0
+                local count
+                if ranged then
+                    aroundTarget = aroundTarget or monstersAround(there, AROUND_TARGET)
+                    count = aroundTarget
+                else
+                    aroundSelf = aroundSelf or monstersAround(here, AROUND_SELF)
+                    count = aroundSelf
+                end
+                if count >= need and (not ranged or distance(here, there) <= spell.range)
+                    and spellReady(player, spell, t) then
+                    cast(spell, t)
+                    return true
+                end
             end
         end
     end
@@ -326,7 +386,8 @@ end
 
 -- The first rule that fits, from the top: enough mana, enough monsters (around
 -- the character for a spell cast on itself, around the target for a spell
--- with a range and for a rune) and its cooldown over. Only with a monster
+-- with a range and for a rune, inside the wave for one cast the way the
+-- character faces) and its cooldown over. Only with a monster
 -- being attacked; with another player in sight it waits, if asked to.
 local function pickAttack(player, cfg, mp, t)
     local caster = cfg.caster
