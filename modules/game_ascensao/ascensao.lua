@@ -1,8 +1,10 @@
--- Ascens√£o: the talent tree window. The server (data-otservbr-global/
--- scripts/ascensao) sends the state on extended opcode OPCODE; this shows
--- the three paths with their circles, the skillshot each one teaches and
--- how strong it is, the relics, the title and the reset. Every button asks
--- the server, which answers with a message and the new state.
+-- Ascens„o: the web window. The server (data-otservbr-global/scripts/
+-- ascensao) sends the web once (its nodes and links) and the state on
+-- extended opcode OPCODE; this draws the web - the three paths as its
+-- spines, with their circles and relics, and the nodes between them -,
+-- lets the player drag and zoom it, tells about the chosen node and buys
+-- it. Every button asks the server, which answers with a message and the
+-- new state.
 
 local OPCODE = 132
 
@@ -10,12 +12,6 @@ local window
 local state
 local confirmBox
 local panelButton
-
-local COLORS = {
-    owned = { name = '#f3dcae', desc = '#d8cfbf', border = '#8a7d5c', number = '#170f24', numberBg = '#f3dcae' },
-    next = { name = '#ffffff', desc = '#cbc0e0', border = '#b296f5', number = '#ffffff', numberBg = '#b296f560' },
-    locked = { name = '#7d7590', desc = '#6f6782', border = '#3a3346', number = '#6f6782', numberBg = '#00000060' },
-}
 
 local function send(data)
     local protocol = g_game.getProtocolGame()
@@ -142,123 +138,358 @@ local function setLocked(widget, locked)
     widget:setOpacity(locked and 0.75 or 1)
 end
 
--- ---------------------------------------------------------------- drawing
+-- ---------------------------------------------------------------- the web
 
-local function fillCircle(widget, index, circle, owned, cost, soon, pathId)
-    local look = index <= owned and COLORS.owned or index == owned + 1 and COLORS.next or COLORS.locked
-    local slug = vocationArt()
-    widget.art:setVisible(slug ~= nil)
-    widget.number:setVisible(slug == nil)
-    if slug then
-        widget.art.icon:setImageSource(string.format('%s%s/circulo_%s_%s_%d', IMAGES, slug, slug, pathId, index))
-        setLocked(widget.art.icon, index > owned)
-        local frame = index <= owned and 'comprado' or index == owned + 1 and 'proximo' or 'bloqueado'
-        widget.art.frame:setImageSource(IMAGES .. 'moldura_' .. frame)
-        widget.name:setMarginLeft(8)
+-- the web the server sent ("tree"): nodes by id, the links, who is beside
+-- whom. It only changes with the server's version of it.
+local web
+local nodeWidgets, linkWidgets = {}, {}
+local chosenId, chosenRing
+local view = { zoom = 0.45, panX = 0, panY = 0, fitted = false }
+
+local ZOOM_MIN, ZOOM_MAX, ZOOM_STEP = 0.4, 1.6, 1.15
+local SIZES = { start = 46, circle = 40, relic = 42, small = 16, notable = 26, keystone = 36 }
+local KIND_NAMES = {
+    start = 'Centro', circle = 'C\237rculo', relic = 'Rel\237quia',
+    small = 'N\243', notable = 'Not\225vel', keystone = 'Pedra angular',
+}
+local TINTS = {
+    owned = '#f0cf8a', open = '#c9b6ff', locked = '#4c4560',
+    linkOwned = '#c9a45c', linkOpen = '#6a5aa0', linkLocked = '#2c2638',
+}
+
+local function pathState(id)
+    for index, path in ipairs(state and state.paths or {}) do
+        if path.id == id then
+            return path, index
+        end
     end
-    widget.number:setText(tostring(index))
-    widget.number:setColor(look.number)
-    widget.number:setBackgroundColor(look.numberBg)
-    widget:setBorderColor(look.border)
-    widget.name:setText(circle.name)
-    widget.name:setColor(look.name)
-    widget.cost:setText(index <= owned and 'ok' or (tostring(cost) .. ' pts'))
-    local desc = circle.desc
-    if soon then
-        desc = desc .. ' ' .. '(efeito em breve)'
-    end
-    widget.desc:setText(desc)
-    widget.desc:setColor(look.desc)
+    return nil
 end
 
-local function drawPath(path)
-    local widget = g_ui.createWidget('AscensaoPath', window.paths)
-    widget:setText(path.name .. '  -  ' .. path.kind)
-    local owned = path.owned or 0
-    widget.skillshot:setText(path.skillshot)
-    widget.words:setText(path.words)
-    -- the seal: the skillshot's icon, a segment lit per circle, all of it
-    -- with the relic
-    local skill = SKILL_ICONS[path.words]
-    if skill then
-        widget.seal.icon:setImageSource(IMAGES .. 'magias/' .. skill)
-        setLocked(widget.seal.icon, owned == 0)
-        widget.previewArea.onHoverChange = function(self, hovered)
-            if hovered then
-                showPreview(self, skill, path.skillshot .. '  -  ' .. path.words, path.use)
+local ownedNodes = {}
+
+local function owns(node)
+    if not state or not node then
+        return false
+    end
+    if node.kind == 'start' then
+        return true
+    elseif node.kind == 'circle' then
+        local path = pathState(node.ref)
+        return path ~= nil and (path.owned or 0) >= node.circle
+    elseif node.kind == 'relic' then
+        return state.relic == node.ref
+    end
+    return ownedNodes[node.id] == true
+end
+
+-- can it be bought now, points aside? the reason when it cannot
+local function reachable(node)
+    if not state or not web then
+        return false, ''
+    end
+    if node.kind == 'start' then
+        return false, ''
+    elseif node.kind == 'circle' then
+        local path = pathState(node.ref)
+        if path and node.circle == (path.owned or 0) + 1 then
+            return true
+        end
+        return false, 'Compre antes o c\237rculo anterior deste caminho.'
+    elseif node.kind == 'relic' then
+        if state.relic ~= '' then
+            return false, 'Outra rel\237quia j\225 foi despertada (um reset libera a escolha).'
+        elseif (state.complete or 0) < #(state.paths or {}) then
+            return false, 'A rel\237quia desperta com os tr\234s caminhos completos.'
+        end
+        return true
+    end
+    for _, beside in ipairs(web.next[node.id] or {}) do
+        if owns(web.nodes[beside]) then
+            return true
+        end
+    end
+    return false, 'Ainda n\227o est\225 ligado \224 sua teia: compre um vizinho dele.'
+end
+
+local function nodeSize(node)
+    local scale = math.max(0.7, math.min(1.5, 0.72 + (view.zoom - 0.45) * 0.95))
+    return math.floor((SIZES[node.kind] or 16) * scale + 0.5)
+end
+
+-- where everything stands: the holder is a square around the web, moved
+-- with the mouse; nodes and links sit in it by their own coordinates
+local function layout()
+    if not window or not web then
+        return
+    end
+    local canvas = window.canvas
+    local half = math.floor((web.radius + 70) * view.zoom)
+    canvas.holder:setSize({ width = half * 2, height = half * 2 })
+    canvas.holder:setMarginLeft(math.floor(canvas:getWidth() / 2 - half + view.panX))
+    canvas.holder:setMarginTop(math.floor(canvas:getHeight() / 2 - half + view.panY))
+    for id, widget in pairs(nodeWidgets) do
+        local node = web.nodes[id]
+        local size = nodeSize(node)
+        widget:setSize({ width = size, height = size })
+        widget:setMarginLeft(math.floor(half + node.x * view.zoom - size / 2))
+        widget:setMarginTop(math.floor(half + node.y * view.zoom - size / 2))
+        if widget.icon:isVisible() then
+            local inner = math.floor(size * (node.kind == 'circle' and 0.72 or 0.8))
+            widget.icon:setSize({ width = inner, height = inner })
+        end
+    end
+    for _, entry in ipairs(linkWidgets) do
+        local a, b = web.nodes[entry.a], web.nodes[entry.b]
+        local dx, dy = (b.x - a.x) * view.zoom, (b.y - a.y) * view.zoom
+        local length = math.max(2, math.floor(math.sqrt(dx * dx + dy * dy) + 0.5))
+        local thick = entry.thick or 2
+        entry.widget:setSize({ width = length, height = thick })
+        entry.widget:setMarginLeft(math.floor(half + (a.x + b.x) / 2 * view.zoom - length / 2))
+        entry.widget:setMarginTop(math.floor(half + (a.y + b.y) / 2 * view.zoom - thick / 2))
+    end
+    if chosenRing then
+        local node = chosenId and web.nodes[chosenId]
+        chosenRing:setVisible(node ~= nil)
+        if node then
+            local size = nodeSize(node) + 12
+            chosenRing:setSize({ width = size, height = size })
+            chosenRing:setMarginLeft(math.floor(half + node.x * view.zoom - size / 2))
+            chosenRing:setMarginTop(math.floor(half + node.y * view.zoom - size / 2))
+        end
+    end
+end
+
+-- the whole web in the canvas, centred
+function centre()
+    if not window or not web then
+        return
+    end
+    local canvas = window.canvas
+    local side = math.min(canvas:getWidth(), canvas:getHeight())
+    if side <= 0 then
+        return
+    end
+    view.zoom = math.max(ZOOM_MIN, math.min(ZOOM_MAX, side / (2 * (web.radius + 40))))
+    view.panX, view.panY = 0, 0
+    view.fitted = true
+    layout()
+end
+
+-- the colours of the state: what the character has, what it can reach, the rest
+local function paint()
+    if not window or not web or not state then
+        return
+    end
+    local slug = vocationArt()
+    for id, widget in pairs(nodeWidgets) do
+        local node = web.nodes[id]
+        local mine = owns(node)
+        local open = not mine and reachable(node)
+        local tint = mine and TINTS.owned or open and TINTS.open or TINTS.locked
+        if node.kind == 'circle' and slug then
+            widget:setImageSource(IMAGES .. 'moldura_' .. (mine and 'comprado' or open and 'proximo' or 'bloqueado'))
+            widget:setImageColor('#ffffff')
+            setLocked(widget.icon, not mine)
+        elseif node.kind == 'relic' and slug then
+            widget:setImageColor(tint)
+            setLocked(widget.icon, not mine)
+        else
+            widget:setImageColor(tint)
+        end
+        widget:setOpacity((mine or open) and 1 or 0.85)
+    end
+    for _, entry in ipairs(linkWidgets) do
+        local a, b = owns(web.nodes[entry.a]), owns(web.nodes[entry.b])
+        local thick = 2
+        if a and b then
+            entry.widget:setImageColor(TINTS.linkOwned)
+            thick = 3
+        elseif a or b then
+            entry.widget:setImageColor(TINTS.linkOpen)
+        else
+            entry.widget:setImageColor(TINTS.linkLocked)
+        end
+        if entry.thick ~= thick then
+            entry.thick = thick
+            entry.widget:setHeight(thick)
+        end
+    end
+end
+
+-- the panel on the right: the chosen node, and what the web adds up to
+local function describe()
+    if not window then
+        return
+    end
+    local side = window.side
+    local node = web and chosenId and web.nodes[chosenId]
+    local width = side:getWidth() - 20
+    side.skill:hide()
+    side.skill.onHoverChange = nil
+    side.buy:hide()
+    side.why:setText('')
+    if not node or not state then
+        side.kind:setText('')
+        side.name:setText('Escolha um n\243 da teia')
+        side.text:setText(wrapLines(side.text, 'Clique num n\243 para ver o que ele d\225. Arraste a teia com o mouse e use a roda para aproximar.', width))
+        side.text:setHeight(side.text:getTextSize().height)
+    else
+        local kind = KIND_NAMES[node.kind] or ''
+        if node.kind == 'circle' then
+            local path = pathState(node.ref)
+            kind = string.format('%s  -  c\237rculo %d de 5', path and (path.name .. ' (' .. path.kind .. ')') or '', node.circle)
+            if path and node.circle == 1 then
+                local skill = SKILL_ICONS[path.words]
+                -- its words, or how strong it is once the character has it
+                if (path.owned or 0) > 0 then
+                    side.skill:setText(string.format('%s  -  for\231a %d%%', path.skillshot, path.power or 0))
+                else
+                    side.skill:setText(string.format('%s (%s)', path.skillshot, path.words))
+                end
+                side.skill:show()
+                if skill then
+                    side.skill.onHoverChange = function(self, hovered)
+                        if hovered then
+                            showPreview(self, skill, path.skillshot .. '  -  ' .. path.words, path.use)
+                        else
+                            hidePreview()
+                        end
+                    end
+                end
+            end
+        end
+        side.kind:setText(kind)
+        side.name:setText(node.name)
+        side.text:setText(wrapLines(side.text, node.text, width))
+        side.text:setHeight(side.text:getTextSize().height)
+        if node.kind ~= 'start' then
+            local can, why = reachable(node)
+            local free = state.free or 0
+            side.buy:show()
+            if owns(node) then
+                side.buy:setText('Voc\234 tem')
+                side.buy:setEnabled(false)
             else
-                hidePreview()
+                side.buy:setText(string.format(node.kind == 'relic' and 'Despertar (%d pts)' or 'Aprender (%d pts)', node.cost))
+                side.buy:setEnabled(can and free >= node.cost)
+                if not can then
+                    side.why:setText(wrapLines(side.why, why or '', width))
+                elseif free < node.cost then
+                    side.why:setText(string.format('Faltam pontos: voc\234 tem %d.', free))
+                end
             end
         end
     end
-    widget.seal.ring:setImageSource(IMAGES .. (state.relic ~= '' and owned >= #path.circles and 'selo_reliquia' or ('selo_' .. owned)))
-    local slug = vocationArt()
-    if slug then
-        widget.emblem:setImageSource(string.format('%s%s/emblema_%s_%s', IMAGES, slug, slug, path.id))
-    else
-        widget.emblem:hide()
+    side.skill:setHeight(side.skill:isVisible() and 14 or 0)
+    side.skill:setMarginTop(side.skill:isVisible() and 6 or 0)
+    side.buy:setHeight(side.buy:isVisible() and 26 or 0)
+    side.why:setHeight(math.max(0, side.why:getTextSize().height))
+    side.totalsTitle:setText('B\244nus da teia')
+    side.totals:destroyChildren()
+    local lines = state and state.summary or {}
+    if #lines == 0 then
+        g_ui.createWidget('AscensaoTotal', side.totals):setText('Nenhum n\243 entre os caminhos ainda.')
     end
-    if owned > 0 then
-        widget.power:setText(string.format('For\231a %d%%', path.power))
-    else
-        widget.power:setText('Aprende no 1\186 c\237rculo')
-    end
-    for index, circle in ipairs(path.circles) do
-        local row = g_ui.createWidget('AscensaoCircle', widget.circles)
-        fillCircle(row, index, circle, owned, state.circleCost[index] or 0, circle.soon, path.id)
-    end
-    local button = widget.buy
-    if owned >= #path.circles then
-        button:setText(string.format('Completo: %s', path.title))
-        button:setEnabled(false)
-    else
-        local cost = state.circleCost[owned + 1] or 0
-        button:setText(string.format('Comprar c\237rculo %d (%d pts)', owned + 1, cost))
-        button:setEnabled((state.free or 0) >= cost)
-        button.onClick = function()
-            send({ action = 'buy', path = path.id })
-        end
+    for _, line in ipairs(lines) do
+        g_ui.createWidget('AscensaoTotal', side.totals):setText(line)
     end
 end
 
-local function drawRelic(relic)
-    local widget = g_ui.createWidget('AscensaoRelic', window.relicBox.relics)
-    widget.name:setText(relic.name)
-    local slug = vocationArt()
-    if slug then
-        widget.icon:setImageSource(string.format('%s%s/reliquia_%s_%s', IMAGES, slug, slug, relic.id))
-        setLocked(widget.icon, state.relic ~= relic.id)
-    else
-        widget.icon:hide()
-        widget.name:setMarginLeft(0)
+local function choose(id)
+    chosenId = id
+    hidePreview()
+    layout()
+    describe()
+end
+
+-- asks the server for the chosen node (the button on the right)
+function buyChosen()
+    local node = web and chosenId and web.nodes[chosenId]
+    if not node or not state or owns(node) then
+        return
     end
-    local desc = relic.desc
-    if relic.soon then
-        desc = desc .. ' ' .. '(efeito em breve)'
+    if node.kind == 'circle' then
+        send({ action = 'buy', path = node.ref })
+    elseif node.kind == 'relic' then
+        confirm('Rel\237quia', string.format('Despertar %s? S\243 uma rel\237quia pode ser despertada (um reset libera a escolha).', node.name), function()
+            send({ action = 'relic', relic = node.ref })
+        end)
+    elseif node.kind ~= 'start' then
+        send({ action = 'node', node = node.id })
     end
-    widget.desc:setText(desc)
-    local owned = state.relic == relic.id
-    local action = widget.action
-    if owned then
-        widget:setBorderColor('#f3dcae')
-        widget.name:setColor('#f3dcae')
-        action:setText('Despertada')
-        action:setEnabled(false)
-    elseif state.relic ~= '' then
-        action:setText('Outra rel\237quia despertada')
-        action:setEnabled(false)
-    elseif (state.complete or 0) < #state.paths then
-        action:setText('Precisa dos 3 caminhos completos')
-        action:setEnabled(false)
-    else
-        action:setText(string.format('Despertar (%d pts)', state.relicCost or 0))
-        action:setEnabled((state.free or 0) >= (state.relicCost or 0))
-        action.onClick = function()
-            confirm('Rel\237quia', string.format('Despertar %s? S\243 uma rel\237quia pode ser despertada (um reset libera a escolha).', relic.name), function()
-                send({ action = 'relic', relic = relic.id })
-            end)
+end
+
+-- the widgets of the web, once per web the server sends
+local function build(data)
+    if not window then
+        return
+    end
+    local holder = window.canvas.holder
+    holder:destroyChildren()
+    nodeWidgets, linkWidgets, chosenRing = {}, {}, nil
+    web = { nodes = {}, order = {}, next = {}, radius = 0, version = data.version }
+    for _, raw in ipairs(data.nodes or {}) do
+        local node = { id = raw[1], x = raw[2], y = raw[3], kind = raw[4], cost = raw[5], name = raw[6], text = raw[7], ref = raw[8], circle = raw[9] }
+        web.nodes[node.id] = node
+        web.order[#web.order + 1] = node.id
+        web.next[node.id] = {}
+        web.radius = math.max(web.radius, math.sqrt(node.x * node.x + node.y * node.y))
+    end
+    -- links first: the nodes are drawn over them
+    for _, pair in ipairs(data.links or {}) do
+        local a, b = web.nodes[pair[1]], web.nodes[pair[2]]
+        if a and b then
+            table.insert(web.next[a.id], b.id)
+            table.insert(web.next[b.id], a.id)
+            local widget = g_ui.createWidget('AscensaoLink', holder)
+            widget:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+            widget:addAnchor(AnchorTop, 'parent', AnchorTop)
+            widget:setRotation(math.deg(math.atan2(b.y - a.y, b.x - a.x)))
+            linkWidgets[#linkWidgets + 1] = { widget = widget, a = a.id, b = b.id }
         end
     end
+    chosenRing = g_ui.createWidget('UIWidget', holder)
+    chosenRing:setImageSource(IMAGES .. 'teia/chosen')
+    chosenRing:setImageColor('#ffffff')
+    chosenRing:setPhantom(true)
+    chosenRing:setFocusable(false)
+    chosenRing:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    chosenRing:addAnchor(AnchorTop, 'parent', AnchorTop)
+    chosenRing:hide()
+    local slug = vocationArt()
+    for _, id in ipairs(web.order) do
+        local node = web.nodes[id]
+        local widget = g_ui.createWidget('AscensaoNode', holder)
+        widget:setId('node_' .. id)
+        widget:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+        widget:addAnchor(AnchorTop, 'parent', AnchorTop)
+        if node.kind == 'circle' and slug then
+            widget:setImageSource(IMAGES .. 'moldura_bloqueado')
+            widget.icon:setImageSource(string.format('%s%s/circulo_%s_%s_%d', IMAGES, slug, slug, node.ref, node.circle))
+            widget.icon:show()
+        elseif node.kind == 'relic' and slug then
+            widget:setImageSource(IMAGES .. 'teia/chosen')
+            widget.icon:setImageSource(string.format('%s%s/reliquia_%s_%s', IMAGES, slug, slug, node.ref))
+            widget.icon:show()
+        elseif node.kind == 'start' then
+            widget:setImageSource(IMAGES .. 'teia/core')
+        elseif node.kind == 'circle' or node.kind == 'relic' then
+            widget:setImageSource(IMAGES .. 'teia/keystone')
+        else
+            widget:setImageSource(IMAGES .. 'teia/' .. node.kind)
+        end
+        widget:setTooltip(node.name .. '\n' .. node.text .. (node.cost > 0 and string.format('\n%d pts', node.cost) or ''))
+        widget.onClick = function()
+            choose(id)
+        end
+        nodeWidgets[id] = widget
+    end
+    if chosenId and not web.nodes[chosenId] then
+        chosenId = nil
+    end
+    view.fitted = false
 end
 
 local function refresh()
@@ -266,13 +497,15 @@ local function refresh()
         return
     end
     hidePreview()
-    window.paths:destroyChildren()
-    window.relicBox.relics:destroyChildren()
     if not state.supported then
         window.titleLabel:setText('Sua voca\231\227o n\227o tem Ascens\227o.')
         window.points:setText('')
         window.resetButton:setEnabled(false)
         return
+    end
+    ownedNodes = {}
+    for _, id in ipairs(state.nodes or {}) do
+        ownedNodes[id] = true
     end
     window.titleLabel:setText(state.title ~= '' and state.title or string.format('%s - sem t\237tulo ainda (complete um caminho)', state.vocation))
     local points = string.format('Pontos: %d livres de %d', state.free or 0, state.total or 0)
@@ -282,14 +515,24 @@ local function refresh()
         points = points .. '  -  ' .. string.format('pr\243ximo no level %d', state.nextLevel)
     end
     window.points:setText(points)
-    for _, path in ipairs(state.paths or {}) do
-        drawPath(path)
-    end
-    for _, relic in ipairs(state.relics or {}) do
-        drawRelic(relic)
-    end
     window.resetButton:setEnabled((state.spent or 0) > 0)
     window.resetButton:setTooltip((state.resetCost or 0) > 0 and string.format('Custa %d gold', state.resetCost) or 'O primeiro reset \233 gr\225tis')
+    window.canvas.hint:setText('arraste para mover  -  roda do mouse para aproximar')
+    if web then
+        if not view.fitted then
+            centre()
+        end
+        paint()
+        layout()
+    end
+    describe()
+end
+
+local webAsked = false
+
+-- does the client still need the web (none yet, or another version of it)?
+local function needsWeb()
+    return web == nil or (state ~= nil and state.treeVersion ~= nil and web.version ~= state.treeVersion)
 end
 
 -- ---------------------------------------------------------------- module
@@ -303,7 +546,7 @@ function show()
     window:show()
     window:raise()
     window:focus()
-    send({ action = 'open' })
+    send({ action = 'open', tree = needsWeb() or nil })
 end
 
 function hide()
@@ -338,7 +581,14 @@ local function onOpcode(protocol, opcode, data)
     if type(data) ~= 'table' then
         return
     end
-    if data.action == 'state' then
+    if data.action == 'tree' then
+        -- the web itself: asked for when the window opens without one
+        webAsked = false
+        build(data)
+        if window and window:isVisible() and state then
+            refresh()
+        end
+    elseif data.action == 'state' then
         state = data
         updateButton()
         if data.open and window then
@@ -351,6 +601,18 @@ local function onOpcode(protocol, opcode, data)
         -- the middle of a hunt
         if window and window:isVisible() then
             refresh()
+            -- opened by the server (!ascensao) or the web changed there: ask
+            -- for it, a moment later (the server takes a request every 250 ms)
+            if needsWeb() and not webAsked then
+                webAsked = true
+                scheduleEvent(function()
+                    if g_game.isOnline() and needsWeb() then
+                        send({ action = 'open', tree = true })
+                    else
+                        webAsked = false
+                    end
+                end, 350)
+            end
         end
     elseif data.action == 'message' and window then
         window.message:setText(data.text or '')
@@ -383,14 +645,51 @@ local function onGameEnd()
     openEvent = nil
     hide()
     state = nil
+    -- another character, another vocation: its own web
+    web, chosenId, webAsked = nil, nil, false
+    nodeWidgets, linkWidgets, chosenRing = {}, {}, nil
+    if window then
+        window.canvas.holder:destroyChildren()
+    end
     clearStatus()
+end
+
+-- the web follows the mouse: dragged to move, the wheel to zoom
+local function bindCanvas()
+    local canvas = window.canvas
+    canvas:setDraggable(true)
+    canvas.onDragEnter = function()
+        return true
+    end
+    canvas.onDragMove = function(widget, mousePos, moved)
+        view.panX = view.panX + moved.x
+        view.panY = view.panY + moved.y
+        layout()
+        return true
+    end
+    canvas.onDragLeave = function()
+        return true
+    end
+    canvas.onMouseWheel = function(widget, mousePos, direction)
+        local before = view.zoom
+        if direction == MouseWheelUp then
+            view.zoom = math.min(ZOOM_MAX, view.zoom * ZOOM_STEP)
+        else
+            view.zoom = math.max(ZOOM_MIN, view.zoom / ZOOM_STEP)
+        end
+        -- what was in the middle stays in the middle
+        view.panX = view.panX * view.zoom / before
+        view.panY = view.panY * view.zoom / before
+        layout()
+        return true
+    end
 end
 
 function init()
     window = g_ui.displayUI('ascensao')
     window:setText('Ascens\227o')
-    window.relicBox:setText('Rel\237quias')
     window:hide()
+    bindCanvas()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     if g_game.isOnline() then
