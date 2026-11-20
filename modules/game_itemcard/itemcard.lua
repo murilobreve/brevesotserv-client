@@ -40,6 +40,9 @@ local BAD = '#d2442f'
 -- them as verbs ("Attack" is "Atacar" on a button)
 local PT = {
     ['Attack'] = 'Ataque',
+    ['Hands'] = 'Mãos',
+    ['Two-handed'] = 'Duas mãos',
+    ['One-handed'] = 'Uma mão',
     ['Defence'] = 'Defesa',
     ['Armor'] = 'Armadura',
     ['Range'] = 'Alcance',
@@ -331,7 +334,7 @@ local function fill(widget, data)
     g_ui.createWidget('ItemCardDivider', widget)
 
     for _, stat in ipairs(data.stats or {}) do
-        addStat(widget, t(stat.label or ''), stat.value)
+        addStat(widget, t(stat.label or ''), stat.label == 'Hands' and t(stat.value or '') or stat.value)
     end
 
     if rarity and rarity.bonuses and #rarity.bonuses > 0 then

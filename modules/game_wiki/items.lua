@@ -36,8 +36,10 @@ local CATEGORIES = {
 local STATS = {
     Attack = 'Ataque', Defence = 'Defesa', Armor = 'Armadura', Range = 'Alcance', ['Hit Chance'] = 'Chance de acerto',
     Volume = 'Capacidade', Protection = 'Proteção', Spell = 'Magia', Reflection = 'Reflexão de dano',
-    ['Magic Shield'] = 'Escudo mágico', Speed = 'Velocidade', ['Magic level'] = 'Magic level',
+    ['Magic Shield'] = 'Escudo mágico', Speed = 'Velocidade', ['Magic level'] = 'Magic level', Hands = 'Mãos',
 }
+-- the server's values of the Hands stat
+local HANDS = { ['Two-handed'] = 'Duas mãos', ['One-handed'] = 'Uma mão' }
 
 local VOCATIONS = { K = 'Knight', P = 'Paladin', S = 'Sorcerer', D = 'Druid', M = 'Monk' }
 
@@ -277,7 +279,7 @@ local function statRows(d)
     local rows = {}
     for _, stat in ipairs(d.stats or {}) do
         local label = STATS[stat.label] or stat.label
-        table.insert(rows, { T(label), L(stat.value ~= '' and stat.value or '-') })
+        table.insert(rows, { T(label), L(HANDS[stat.value] or (stat.value ~= '' and stat.value or '-')) })
     end
     local wield = d.wield or {}
     local needs = {}
@@ -451,7 +453,7 @@ function WIKI_BUILDERS.itemhead(parent, block)
         if i > 4 then
             break
         end
-        table.insert(left, line((STATS[stat.label] or stat.label) .. ':', L(stat.value)))
+        table.insert(left, line((STATS[stat.label] or stat.label) .. ':', L(HANDS[stat.value] or stat.value)))
     end
     if #left == 0 then
         table.insert(left, line('Peso:', T('%s oz', weight(d.weight))))
