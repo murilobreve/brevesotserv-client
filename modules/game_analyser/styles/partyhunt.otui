@@ -1,3 +1,65 @@
+PartyLootTab < Button
+  height: 16
+  font: verdana-11px-rounded
+  text-offset: 0 0
+  color: #9d9d9d
+  $on:
+    color: #ffffff
+
+PartyLootSmallButton < Button
+  height: 16
+  font: verdana-11px-rounded
+  text-offset: 0 0
+
+PartyLootRow < UIWidget
+  height: 34
+  margin-top: 2
+  background-color: #ffffff08
+  phantom: false
+  Item
+    id: item
+    size: 32 32
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    virtual: true
+    phantom: true
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: item.right
+    anchors.right: claim.left
+    margin-left: 4
+    margin-top: 2
+    margin-right: 2
+    font: verdana-11px-rounded
+    color: #c0c0c0
+    text-auto-resize: false
+    phantom: true
+  Label
+    id: value
+    anchors.bottom: parent.bottom
+    anchors.left: item.right
+    anchors.right: claim.left
+    margin-left: 4
+    margin-bottom: 2
+    margin-right: 2
+    font: verdana-11px-rounded
+    color: #e8d27a
+    phantom: true
+  PartyLootSmallButton
+    id: claim
+    width: 38
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 2
+
+PartyLootLine < Label
+  font: verdana-11px-rounded
+  color: #c0c0c0
+  text-wrap: true
+  text-auto-resize: true
+  margin-top: 1
+
 LeaderInfo < UIWidget
   size: 151 63
   margin-top: 5
@@ -205,11 +267,37 @@ MiniWindow
     color: #9d9d9dff
     !text: tr('Party Hunt')
 
+  Panel
+    id: tabBar
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin: 18 18 0 5
+    height: 16
+
+    PartyLootTab
+      id: summaryTab
+      !text: tr('Resumo')
+      anchors.top: parent.top
+      anchors.left: parent.left
+      width: 60
+      @onClick: modules.game_analyser.PartyLoot.showTab('summary')
+
+    PartyLootTab
+      id: lootTab
+      !text: tr('Loot')
+      anchors.top: parent.top
+      anchors.left: prev.right
+      margin-left: 2
+      width: 60
+      @onClick: modules.game_analyser.PartyLoot.showTab('loot')
+
   ScrollablePanel
     id: contentsPanel
     anchors.fill: parent
-    margin: 16 18 5 5
+    margin: 37 18 5 5
     vertical-scrollbar: miniwindowScrollBar
+
 
     Label
       id: sessionLabel
@@ -354,6 +442,68 @@ MiniWindow
       margin-top: 5
       layout:
         type: verticalBox
+
+  ScrollablePanel
+    id: lootPanel
+    anchors.fill: parent
+    margin: 37 18 5 5
+    visible: false
+    layout:
+      type: verticalBox
+
+    PartyLootLine
+      id: status
+      color: #9d9d9d
+
+    Panel
+      id: actions
+      height: 18
+      margin-top: 3
+
+      PartyLootSmallButton
+        id: split
+        !text: tr('Dividir loot')
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        @onClick: modules.game_analyser.PartyLoot.send('propose')
+
+      PartyLootSmallButton
+        id: accept
+        !text: tr('Aceitar')
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: 70
+        color: #6fd36f
+        visible: false
+        @onClick: modules.game_analyser.PartyLoot.send('accept')
+
+      PartyLootSmallButton
+        id: cancel
+        !text: tr('Cancelar')
+        anchors.top: parent.top
+        anchors.right: parent.right
+        width: 70
+        visible: false
+        @onClick: modules.game_analyser.PartyLoot.send('cancel')
+
+    Panel
+      id: proposal
+      visible: false
+      margin-top: 3
+      layout:
+        type: verticalBox
+        fit-children: true
+
+    HorizontalSeparator
+      margin-top: 4
+
+    Panel
+      id: drops
+      margin-top: 2
+      layout:
+        type: verticalBox
+        fit-children: true
 
   UIWidget
     id: miniborder

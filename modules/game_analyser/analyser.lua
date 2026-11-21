@@ -163,6 +163,7 @@ function init()
 
   PartyHuntAnalyser:create()
   PartyHuntAnalyser:updateWindow()
+  PartyLoot.create()
 
   BossCooldown:create()
   BossCooldown:updateWindow()
@@ -198,6 +199,7 @@ function init()
 end
 
 function terminate()
+  PartyLoot.terminate()
   if xpGainEvent then
     removeEvent(xpGainEvent)
     xpGainEvent = nil
@@ -302,6 +304,7 @@ end
 function onlineAnalyser()
   local benchmark = g_clock.millis()
   startNewSession(true)
+  PartyLoot.onGameStart()
 
   loadGainAndWastConfigJson()
 end
