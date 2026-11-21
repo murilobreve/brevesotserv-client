@@ -152,11 +152,19 @@ MythosWindow
       id: searchEdit
       anchors.top: parent.top
       anchors.left: parent.left
-      anchors.right: parent.right
+      anchors.right: kindBox.left
+      margin-right: 5
       height: 22
       !placeholder: tr('Search by name...')
       placeholder-color: #75688f
       @onTextChange: modules.game_raritymarket.onSearchChanged()
+
+    // all offers, Buy Now only, auctions only
+    MythosComboBox
+      id: kindBox
+      anchors.top: parent.top
+      anchors.right: parent.right
+      size: 140 22
 
     MythosComboBox
       id: categoryBox
@@ -524,6 +532,92 @@ MythosWindow
         anchors.bottom: priceGold.top
         margin-bottom: 8
         color: #9789b3
+        text-wrap: true
+        text-auto-resize: true
+
+      // ------------------------------------------------ auctions
+      // Sell: fixed price or auction (starting bid, Buy Now, time)
+      MythosTextEdit
+        id: buyNowEdit
+        anchors.right: parent.right
+        anchors.bottom: priceEdit.top
+        margin-bottom: 6
+        size: 150 22
+        max-length: 9
+        !placeholder: tr('optional')
+        placeholder-color: #75688f
+        visible: false
+        @onTextChange: modules.game_raritymarket.onPriceChanged()
+
+      Label
+        id: buyNowCaption
+        anchors.left: parent.left
+        anchors.verticalCenter: buyNowEdit.verticalCenter
+        color: #d3cee0
+        text-auto-resize: true
+        visible: false
+        !text: tr('Buy Now (gold):')
+
+      MythosComboBox
+        id: hoursBox
+        anchors.right: parent.right
+        anchors.bottom: buyNowEdit.top
+        margin-bottom: 6
+        size: 150 22
+        visible: false
+
+      Label
+        id: hoursCaption
+        anchors.left: parent.left
+        anchors.verticalCenter: hoursBox.verticalCenter
+        color: #d3cee0
+        text-auto-resize: true
+        visible: false
+        !text: tr('Duration:')
+
+      Panel
+        id: modeRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: hoursBox.top
+        margin-bottom: 8
+        height: 22
+        visible: false
+
+        MythosButton
+          id: modeFixed
+          anchors.top: parent.top
+          anchors.bottom: parent.bottom
+          anchors.left: parent.left
+          anchors.right: parent.horizontalCenter
+          margin-right: 2
+          !text: tr('Fixed price')
+          @onClick: modules.game_raritymarket.setSellMode('fixed')
+
+        MythosButton
+          id: modeAuction
+          anchors.top: parent.top
+          anchors.bottom: parent.bottom
+          anchors.left: parent.horizontalCenter
+          anchors.right: parent.right
+          margin-left: 2
+          !text: tr('Auction')
+          @onClick: modules.game_raritymarket.setSellMode('auction')
+
+      // Browse: an auction's Buy Now, next to Place bid
+      MythosPrimaryButton
+        id: buyNowButton
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.left: parent.horizontalCenter
+        margin-left: 3
+        height: 28
+        font: verdana-11px-rounded
+        color: #f4f4f4
+        visible: false
+        $disabled:
+          color: #f4f4f466
+        @onClick: modules.game_raritymarket.onBuyNow()
 
   MythosSeparator
     id: bottomSep

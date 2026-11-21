@@ -48,7 +48,15 @@ local SORTS = {
     { key = 'newest', label = 'Newest first' },
     { key = 'price_asc', label = 'Lowest price' },
     { key = 'price_desc', label = 'Highest price' },
+    { key = 'ending', label = 'Ending soon' },
     { key = 'oldest', label = 'Oldest first' },
+}
+
+-- fixed prices, auctions or both (custom_market.lua: request.kind)
+local KINDS = {
+    { key = nil, label = 'All offers' },
+    { key = 'fixed', label = 'Buy Now only' },
+    { key = 'auction', label = 'Auctions' },
 }
 
 local window
@@ -58,6 +66,13 @@ local selected -- { kind = 'offer'|'sell'|'own'|'sold', data = <entry> }
 local browseState = { page = 1, pages = 1 }
 local searchEvent
 local maxPrice = 999999999
+-- auctions (custom_market.lua): the times a seller may pick, the least raise
+-- and the market fee, as the server says on open
+local auctionHours = { 1, 3, 6, 12, 24 }
+local auctionStep = 5
+local marketFee = 5
+local sellMode = 'fixed'
+local auctionClock
 
 local function formatNumber(value)
     local text = tostring(math.floor(tonumber(value) or 0))
@@ -123,6 +138,22 @@ local function shorten(text, maxLen)
         return text
     end
     return text:sub(1, maxLen - 3) .. '...'
+end
+
+-- "2h 13m", "4m 05s", "Ended"
+local function timeText(seconds)
+    seconds = math.max(0, math.floor(seconds or 0))
+    if seconds <= 0 then
+        return tr('Ended')
+    elseif seconds >= 3600 then
+        return string.format('%dh %02dm', math.floor(seconds / 3600), math.floor(seconds % 3600 / 60))
+    end
+    return string.format('%dm %02ds', math.floor(seconds / 60), seconds % 60)
+end
+
+-- an auction's seconds left now (endsIn was counted when it arrived)
+local function secondsLeft(entry)
+    return (entry.endsIn or 0) - math.floor((g_clock.millis() - (entry.receivedAt or g_clock.millis())) / 1000)
 end
 
 local function affixSummary(entry)
@@ -224,35 +255,96 @@ local function showDetails(kind, entry)
     end
 
     local isSell = kind == 'sell'
-    content.priceEdit:setVisible(isSell)
-    content.priceCaption:setVisible(isSell)
+    local isAuction = entry.auction and true or false
+    local biddable = kind == 'offer' and isAuction and not entry.own
+    local auctionSell = isSell and sellMode == 'auction'
+    content.priceEdit:setVisible(isSell or biddable)
+    content.priceCaption:setVisible(isSell or biddable)
     content.price:setVisible(not isSell)
     content.priceGold:setVisible(not isSell)
     content.priceTitle:setVisible(not isSell)
-    if not isSell then
-        content.price:setText(formatNumber(entry.price))
+    content.modeRow:setVisible(isSell)
+    content.buyNowEdit:setVisible(auctionSell)
+    content.buyNowCaption:setVisible(auctionSell)
+    content.hoursBox:setVisible(auctionSell)
+    content.hoursCaption:setVisible(auctionSell)
+    content.buyNowButton:setVisible(false)
+    -- what sits above the price row: the seller line, or the sell mode
+    content.modeRow:breakAnchors()
+    content.modeRow:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    content.modeRow:addAnchor(AnchorRight, 'parent', AnchorRight)
+    content.modeRow:addAnchor(AnchorBottom, auctionSell and 'hoursBox' or 'priceEdit', AnchorTop)
+    content.seller:breakAnchors()
+    content.seller:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    content.seller:addAnchor(AnchorRight, 'parent', AnchorRight)
+    content.seller:addAnchor(AnchorBottom, isSell and 'modeRow' or 'priceGold', AnchorTop)
+    -- the main button takes the whole width unless Buy Now sits next to it
+    local button = content.actionButton
+    button:breakAnchors()
+    button:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    button:addAnchor(AnchorBottom, 'parent', AnchorBottom)
+    local withBuyNow = biddable and (entry.buyNow or 0) > 0
+    button:addAnchor(AnchorRight, withBuyNow and 'buyNowButton' or 'parent', withBuyNow and AnchorLeft or AnchorRight)
+    if withBuyNow then
+        button:setMarginRight(3)
+        content.buyNowButton:setVisible(true)
+        content.buyNowButton:setEnabled(secondsLeft(entry) > 0)
+        content.buyNowButton:setText(tr('Buy Now %s', formatNumber(entry.buyNow)))
+    else
+        button:setMarginRight(0)
     end
 
-    local button = content.actionButton
+    if not isSell then
+        content.price:setText(formatNumber(entry.price))
+        if isAuction then
+            content.priceTitle:setText(entry.bids and tr('Current bid:') or tr('Starting bid:'))
+        else
+            content.priceTitle:setText(tr('Price:'))
+        end
+    end
+    if isSell then
+        content.modeRow.modeFixed:setColor(sellMode == 'fixed' and '#ffd76a' or '#9a9a9a')
+        content.modeRow.modeAuction:setColor(sellMode == 'auction' and '#ffd76a' or '#9a9a9a')
+        content.priceCaption:setText(auctionSell and tr('Starting bid (gold):') or tr('Your price (gold):'))
+    elseif biddable then
+        content.priceCaption:setText(tr('Your bid (gold):'))
+        content.priceEdit:setText(tostring(entry.minBid or 0))
+    end
+
     button:setVisible(true)
     button:setEnabled(true)
     if kind == 'offer' then
-        content.seller:setText(tr('Seller: %s', entry.seller or ''))
+        if isAuction then
+            local who = entry.myBid and tr('Your bid leads') or (entry.bids and tr('Someone is bidding') or tr('No bids yet'))
+            content.seller:setText(tr('Seller: %s', entry.seller or '') .. '  -  ' .. tr('Ends in %s', timeText(secondsLeft(entry))) .. '  -  ' .. who)
+        else
+            content.seller:setText(tr('Seller: %s', entry.seller or ''))
+        end
         if entry.own then
             button:setText(tr('This is your listing'))
             button:setEnabled(false)
+        elseif isAuction then
+            button:setText(entry.myBid and tr('You lead') or tr('Place bid'))
+            button:setEnabled(not entry.myBid and secondsLeft(entry) > 0)
         else
             button:setText(tr('Buy'))
         end
     elseif kind == 'sell' then
         content.seller:setText(entry.location and entry.location ~= '' and tr('Carried in: %s', entry.location) or '')
         content.priceEdit:setText('')
+        content.buyNowEdit:setText('')
         content.priceEdit:focus()
-        button:setText(tr('List for sale'))
+        button:setText(auctionSell and tr('Start auction') or tr('List for sale'))
         button:setEnabled(false)
     elseif kind == 'own' then
-        content.seller:setText(tr('Listed by you'))
-        button:setText(tr('Cancel listing'))
+        if isAuction then
+            content.seller:setText(tr('Your auction') .. '  -  ' .. tr('Ends in %s', timeText(secondsLeft(entry))))
+            button:setText(entry.bids and tr('Has bids: cannot cancel') or tr('Cancel auction'))
+            button:setEnabled(not entry.bids)
+        else
+            content.seller:setText(tr('Listed by you'))
+            button:setText(tr('Cancel listing'))
+        end
     else
         content.seller:setText(tr('Sold'))
         button:setVisible(false)
@@ -266,6 +358,8 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
     local previousId = selected and selected.kind == kind and (selected.data.id or selected.data.token)
     local reselect
     for index, entry in ipairs(entries or {}) do
+        local kind = entry._kind or kind
+        entry.receivedAt = entry.receivedAt or g_clock.millis()
         local row = g_ui.createWidget(index % 2 == 0 and 'MarketRowEven' or 'MarketRow', list)
         local rarity = rarityOf(entry.rarity)
         applyFrame(row.frame, entry)
@@ -280,7 +374,14 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
             row.seller:setText(entry.location or '')
         else
             row.price:setText(formatNumber(entry.price))
-            row.seller:setText(kind == 'offer' and (entry.seller or '') or '')
+            if entry.auction then
+                row.auctionEntry = entry
+                local tag = entry.myBid and tr('your bid') or (entry.bids and tr('bids') or tr('no bids'))
+                row.seller:setText(timeText(secondsLeft(entry)) .. ' - ' .. tag)
+                row.seller:setColor(entry.myBid and '#7fd35a' or '#e2a443')
+            else
+                row.seller:setText(kind == 'offer' and (entry.seller or '') or '')
+            end
         end
         row.onFocusChange = function(widget, focused)
             if focused then
@@ -321,6 +422,7 @@ local function currentFilters()
         search = panel.searchEdit:getText(),
         category = panel.categoryBox:getCurrentOption().data,
         rarity = panel.rarityBox:getCurrentOption().data,
+        kind = panel.kindBox:getCurrentOption().data,
         sort = panel.sortBox:getCurrentOption().data,
     }
 end
@@ -370,17 +472,44 @@ function selectTab(tab)
     end
 end
 
-local function parsePrice()
-    local text = window.details.content.priceEdit:getText():gsub('[^%d]', '')
+local function parsePrice(edit)
+    local text = (edit or window.details.content.priceEdit):getText():gsub('[^%d]', '')
     return tonumber(text)
 end
 
 function onPriceChanged()
-    if not selected or selected.kind ~= 'sell' then
+    if not selected then
         return
     end
+    local content = window.details.content
     local price = parsePrice()
-    window.details.content.actionButton:setEnabled(price ~= nil and price > 0 and price <= maxPrice)
+    if selected.kind == 'sell' then
+        local ok = price ~= nil and price > 0 and price <= maxPrice
+        if ok and sellMode == 'auction' then
+            local buyNow = parsePrice(content.buyNowEdit)
+            ok = buyNow == nil or (buyNow > price and buyNow <= maxPrice)
+        end
+        content.actionButton:setEnabled(ok)
+    elseif selected.kind == 'offer' and selected.data.auction and not selected.data.own and not selected.data.myBid then
+        content.actionButton:setEnabled(price ~= nil and price >= (selected.data.minBid or 0) and secondsLeft(selected.data) > 0)
+    end
+end
+
+function setSellMode(mode)
+    sellMode = mode
+    if selected and selected.kind == 'sell' then
+        showDetails('sell', selected.data)
+    end
+end
+
+function onBuyNow()
+    if not selected or selected.kind ~= 'offer' or not selected.data.auction then
+        return
+    end
+    local entry = selected.data
+    confirm(tr('Confirm purchase'), tr('Buy %s now for %s gold and end the auction?\nThe gold is taken from your bank balance.', entry.name, formatNumber(entry.buyNow)), function()
+        send({ action = 'buy', id = entry.id })
+    end)
 end
 
 local confirmBox
@@ -411,9 +540,33 @@ function onAction()
         return
     end
     local entry = selected.data
-    if selected.kind == 'offer' then
+    if selected.kind == 'offer' and entry.auction then
+        local amount = parsePrice()
+        if not amount or amount < (entry.minBid or 0) then
+            return
+        end
+        confirm(tr('Confirm bid'), tr('Bid %s gold on %s?\nThe gold leaves your bank now and comes back if someone outbids you.', formatNumber(amount), entry.name), function()
+            send({ action = 'bid', id = entry.id, amount = amount })
+        end)
+    elseif selected.kind == 'offer' then
         confirm(tr('Confirm purchase'), tr('Buy %s for %s gold?\nThe gold is taken from your bank balance.', entry.name, formatNumber(entry.price)), function()
             send({ action = 'buy', id = entry.id })
+        end)
+    elseif selected.kind == 'sell' and sellMode == 'auction' then
+        local start = parsePrice()
+        if not start or start <= 0 then
+            return
+        end
+        local buyNow = parsePrice(window.details.content.buyNowEdit) or 0
+        local option = window.details.content.hoursBox:getCurrentOption()
+        local hours = option and tonumber(option.data) or auctionHours[1]
+        local text = tr('Auction %s for %d hours, starting at %s gold?', entry.name, hours, formatNumber(start))
+        if buyNow > 0 then
+            text = text .. '\n' .. tr('Buy Now: %s gold.', formatNumber(buyNow))
+        end
+        text = text .. '\n' .. tr('The best bid wins at the end; the market keeps %d%%. With no bid the item comes back to you.', marketFee)
+        confirm(tr('Confirm auction'), text, function()
+            send({ action = 'sell', token = entry.token, mode = 'auction', startBid = start, buyNow = buyNow, hours = hours })
         end)
     elseif selected.kind == 'sell' then
         local price = parsePrice()
@@ -424,6 +577,10 @@ function onAction()
         local net = price - math.floor(price * 5 / 100)
         confirm(tr('Confirm listing'), tr('List %s for %s gold?\nWhen it sells you get %s gold: the market keeps 5%%.\nThe item leaves your inventory until it sells or you cancel the listing.', entry.name, formatNumber(price), formatNumber(net)), function()
             send({ action = 'sell', token = entry.token, price = price })
+        end)
+    elseif selected.kind == 'own' and entry.auction then
+        confirm(tr('Cancel auction'), tr('Cancel the auction of %s and get the item back?', entry.name), function()
+            send({ action = 'cancel', id = entry.id })
         end)
     elseif selected.kind == 'own' then
         confirm(tr('Cancel listing'), tr('Cancel the listing of %s and get the item back?', entry.name), function()
@@ -470,6 +627,17 @@ function handlers.open(data)
     newListings = 0
     showNews()
     maxPrice = data.maxPrice or maxPrice
+    marketFee = tonumber(data.fee) or marketFee
+    auctionStep = tonumber(data.auctionStep) or auctionStep
+    if type(data.auctionHours) == 'table' and #data.auctionHours > 0 then
+        auctionHours = data.auctionHours
+    end
+    local hoursBox = window.details.content.hoursBox
+    hoursBox:clearOptions()
+    for _, hours in ipairs(auctionHours) do
+        hoursBox:addOption(tr('%d hours', hours), hours)
+    end
+    hoursBox:setCurrentIndex(math.min(3, #auctionHours), true)
     setBank(data.bank)
     show()
     currentTab = 'browse'
@@ -504,7 +672,16 @@ end
 
 function handlers.myOffers(data)
     local panel = window.myPanel
-    fillList(panel.activeList, data.active, 'own', panel.activeEmpty)
+    -- the auctions this player leads come after their own offers
+    local active = {}
+    for _, entry in ipairs(data.active or {}) do
+        active[#active + 1] = entry
+    end
+    for _, entry in ipairs(data.bids or {}) do
+        entry._kind = 'offer'
+        active[#active + 1] = entry
+    end
+    fillList(panel.activeList, active, 'own', panel.activeEmpty)
     fillList(panel.soldList, data.sold, 'sold', panel.soldEmpty)
 end
 
@@ -521,6 +698,20 @@ local function translateResult(message)
     name, price = message:match("^You bought '(.+)' for (%d+) gold%.$")
     if name then
         return tr("You bought '%s' for %s gold.", name, formatNumber(tonumber(price)))
+    end
+    local amount
+    amount, name = message:match("^Your bid of (%d+) gold on '(.+)' is the highest now%.$")
+    if amount then
+        return tr("Your bid of %s gold on '%s' is the highest now.", formatNumber(tonumber(amount)), name)
+    end
+    amount = message:match("^The bid must be at least (%d+) gold%.$")
+    if amount then
+        return tr('The bid must be at least %s gold.', formatNumber(tonumber(amount)))
+    end
+    local hours, start
+    name, hours, start = message:match("^'(.+)' is up for auction for (%d+) hours, starting at (%d+) gold")
+    if name then
+        return tr("'%s' is up for auction for %d hours, starting at %s gold.", name, tonumber(hours), formatNumber(tonumber(start)))
     end
     name = message:match("^Your listing was cancelled%. '(.+)' has been returned to you%.$")
     if name then
@@ -636,6 +827,37 @@ function init()
     setupCombo(window.browsePanel.categoryBox, CATEGORIES)
     setupCombo(window.browsePanel.rarityBox, RARITY_FILTERS)
     setupCombo(window.browsePanel.sortBox, SORTS)
+    setupCombo(window.browsePanel.kindBox, KINDS)
+    window.details.content.buyNowEdit.onEnter = onAction
+    -- the auction clocks of the list and the details, once a second
+    auctionClock = cycleEvent(function()
+        if not window or not window:isVisible() then
+            return
+        end
+        for _, list in ipairs({ window.browsePanel.offersList, window.myPanel.activeList }) do
+            for _, row in ipairs(list:getChildren()) do
+                if row.auctionEntry then
+                    local entry = row.auctionEntry
+                    local tag = entry.myBid and tr('your bid') or (entry.bids and tr('bids') or tr('no bids'))
+                    row.seller:setText(timeText(secondsLeft(entry)) .. ' - ' .. tag)
+                end
+            end
+        end
+        if selected and selected.data.auction and (selected.kind == 'offer' or selected.kind == 'own') then
+            local entry = selected.data
+            local content = window.details.content
+            if selected.kind == 'offer' then
+                local who = entry.myBid and tr('Your bid leads') or (entry.bids and tr('Someone is bidding') or tr('No bids yet'))
+                content.seller:setText(tr('Seller: %s', entry.seller or '') .. '  -  ' .. tr('Ends in %s', timeText(secondsLeft(entry))) .. '  -  ' .. who)
+                if secondsLeft(entry) <= 0 then
+                    content.actionButton:setEnabled(false)
+                    content.buyNowButton:setEnabled(false)
+                end
+            else
+                content.seller:setText(tr('Your auction') .. '  -  ' .. tr('Ends in %s', timeText(secondsLeft(entry))))
+            end
+        end
+    end, 1000)
     window.details.content.priceEdit.onEnter = onAction
     window.browsePanel.searchEdit.onEnter = function()
         requestBrowse(true)
@@ -650,6 +872,10 @@ function init()
 end
 
 function terminate()
+    if auctionClock then
+        removeEvent(auctionClock)
+        auctionClock = nil
+    end
     disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     ProtocolGame.unregisterExtendedJSONOpcode(MARKET_OPCODE)
     if searchEvent then
