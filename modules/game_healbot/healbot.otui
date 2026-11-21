@@ -440,9 +440,18 @@ CasterPage < UIWidget
     width: 200
     !text: tr('Runes before the spells')
 
+  QtCheckBox
+    id: autoAttack
+    anchors.top: noPlayers.bottom
+    anchors.left: parent.left
+    margin-top: 6
+    margin-left: 4
+    width: 300
+    !text: tr('Attack the next monster by itself')
+
   MythosSeparator
     id: rule
-    anchors.top: noPlayers.bottom
+    anchors.top: autoAttack.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 8

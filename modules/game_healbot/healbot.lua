@@ -141,7 +141,7 @@ local function defaults(player)
     -- and the monsters it waits for, and a list of runes. The player keeps
     -- CASTER_PRESETS of them (one per hunt, say) and picks which is in use.
     -- Off until the player turns it on
-    config.caster = { on = false, noPlayers = true, runesFirst = false, current = 1, presets = {} }
+    config.caster = { on = false, noPlayers = true, runesFirst = false, autoAttack = false, current = 1, presets = {} }
     for p = 1, CASTER_PRESETS do
         local preset = { name = 'Preset ' .. p, spells = {}, runes = {} }
         for i = 1, CASTER_SPELLS do
@@ -803,6 +803,8 @@ fillCaster = function()
     bindCheck(page.on, caster, 'on')
     bindCheck(page.noPlayers, caster, 'noPlayers')
     bindCheck(page.runesFirst, caster, 'runesFirst')
+    bindCheck(page.autoAttack, caster, 'autoAttack')
+    page.autoAttack:setTooltip(tr('With no monster being attacked, attack the nearest one on screen that can be reached'))
     page.noPlayers:setTooltip(tr('Wait while a player who is not of my party is on screen'))
 
     -- the presets by number and name; the box beside it renames the one in use

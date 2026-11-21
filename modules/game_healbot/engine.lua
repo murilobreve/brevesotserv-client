@@ -416,6 +416,64 @@ local function pickAttack(player, cfg, mp, t)
     return castSpells(player, preset, target, here, there, mp, t) or castRunes(player, preset, target, here, there, t)
 end
 
+-- the caster's auto attack (caster.autoAttack): with no monster being
+-- attacked, the nearest wild one on screen that can be reached and seen;
+-- never in a protection zone, never with a stranger on screen if the caster
+-- waits for them
+local AUTO_ATTACK_EVERY = 400
+
+-- a monster can be walked up to: a path to one of the tiles around it (the
+-- path finder never takes the monster's own tile as a goal)
+local function reachable(here, there)
+    for dx = -1, 1 do
+        for dy = -1, 1 do
+            if dx ~= 0 or dy ~= 0 then
+                local goal = { x = there.x + dx, y = there.y + dy, z = there.z }
+                if goal.x == here.x and goal.y == here.y then
+                    return true
+                end
+                local _, result = g_map.findPath(here, goal, 60, 0)
+                if result == PathFindResults.Ok then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+local autoAttackAt = 0
+
+local function autoAttack(player, cfg, t)
+    local caster = cfg.caster
+    if not caster or not caster.on or not caster.autoAttack or t < autoAttackAt then
+        return
+    end
+    autoAttackAt = t + AUTO_ATTACK_EVERY
+    if isWildMonster(g_game.getAttackingCreature()) or hasState(player, PlayerStates.Pz) then
+        return
+    end
+    if caster.noPlayers and strangerInSight(player) then
+        return
+    end
+    local here = player:getPosition()
+    if not here then
+        return
+    end
+    local best, bestDistance
+    for _, creature in ipairs(g_map.getSpectators(here, false) or {}) do
+        local there = isWildMonster(creature) and creature:getPosition()
+        if there and there.z == here.z then
+            local d = math.max(math.abs(there.x - here.x), math.abs(there.y - here.y))
+            if (not best or d < bestDistance) and g_map.isSightClear(here, there) and (d <= 1 or reachable(here, there)) then
+                best, bestDistance = creature, d
+            end
+        end
+    end
+    if best then
+        g_game.attack(best)
+    end
+end
+
 -- one spell per tick: own health first, then friends, then support
 local function pickSpell(player, cfg, hp, mp, t)
     for _, rule in ipairs(cfg.spells) do
@@ -572,6 +630,7 @@ local function tick()
     end
     local hp = percent(player:getHealth(), player:getMaxHealth())
     local mp = percent(player:getMana(), player:getMaxMana())
+    autoAttack(player, cfg, t)
     -- spells and potions are separate exhausts in Tibia, so both can go off
     pickSpell(player, cfg, hp, mp, t)
     local drank = pickPotion(player, cfg, hp, mp, t)
