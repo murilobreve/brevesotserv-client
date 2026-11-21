@@ -64,6 +64,19 @@ if not defined VSPATH (
 echo == carregando o ambiente do Visual Studio
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 goto :falhou
+rem o vcvars64 as vezes termina sem erro e sem o compilador (Visual Studio
+rem atualizando sozinho, ou pedindo para reiniciar): sem esta checagem o erro
+rem so aparece la no CMake, como "cl.exe not found" e "vcpkg install failed"
+where cl >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ERRO: o compilador do Visual Studio ^(cl.exe^) nao foi encontrado.
+    echo O Visual Studio provavelmente se atualizou ou esta no meio de uma atualizacao.
+    echo  1. Abra o "Visual Studio Installer" e deixe terminar qualquer atualizacao.
+    echo  2. Clique em Modificar e confira se "Desenvolvimento para desktop com C++" esta marcado.
+    echo  3. Reinicie o computador e rode este bat de novo.
+    goto :falhou
+)
 
 if defined LIMPO (
     echo == apagando a configuracao antiga
