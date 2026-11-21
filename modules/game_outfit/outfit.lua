@@ -317,8 +317,129 @@ local function buyShop(kind, id)
     return true
 end
 
+-- ------------------------------------------------------- Addons for items
+-- The selected outfit's addons that Varkhal trades for items: what each asks
+-- for and how much of it the player has, and "Obter addon" takes them right
+-- here (server: scripts/outfit_shop/outfit_shop.lua, the same opcode).
+
+-- the fonts draw one glyph per byte (Latin-1); the server's JSON is UTF-8
+local function latin1(text)
+    return (tostring(text):gsub('[\194\195][\128-\191]', function(pair)
+        local a, b = pair:byte(1, 2)
+        return string.char((a - 194) * 64 + b)
+    end))
+end
+
+local function money(value)
+    local text = tostring(math.floor(tonumber(value) or 0)):reverse():gsub('(%d%d%d)', '%1.'):reverse()
+    return (text:gsub('^%.', ''))
+end
+
+local addonLookType = nil
+
+local function requestAddons(lookType)
+    addonLookType = lookType
+    local area = window and window.configure and window.configure.addonArea
+    if area then
+        area.addonScroll.addonShop:destroyChildren()
+        area:hide()
+    end
+    if lookType then
+        sendShop({ action = 'addons', lookType = lookType })
+    end
+end
+
+local function showAddons(data)
+    local area = window and window.configure and window.configure.addonArea
+    local panel = area and area.addonScroll.addonShop
+    if not panel or tonumber(data.lookType) ~= addonLookType then
+        return
+    end
+    panel:destroyChildren()
+    local any = false
+    for _, addon in ipairs(data.addons or {}) do
+        any = true
+        local box = g_ui.createWidget('AddonShopBox', panel)
+        box.head.title:setText(latin1(tr('Addon %d', addon.addon)))
+        if addon.owned then
+            box.head.state:setText(latin1('já tem'))
+            box.head.state:setColor('#7ed67e')
+            box.items:hide()
+            box.gold:hide()
+            box.take:hide()
+        else
+            local missing = {}
+            for _, item in ipairs(addon.items or {}) do
+                local cell = g_ui.createWidget('AddonShopCell', box.items)
+                cell.item:setItemId(item.id)
+                local enough = item.have >= item.count
+                cell.count:setText(string.format('%d/%d', math.min(item.have, item.count), item.count))
+                cell.count:setColor(enough and '#7ed67e' or '#e06c6c')
+                cell:setTooltip(latin1(string.format('%s: tem %d de %d', item.name, item.have, item.count)))
+                if not enough then
+                    missing[#missing + 1] = string.format('%dx %s', item.count - item.have, item.name)
+                end
+            end
+            if #(addon.items or {}) == 0 then
+                box.items:hide()
+            end
+            if (addon.gold or 0) > 0 then
+                box.gold:setText(money(addon.gold) .. ' gold')
+                box.gold:setColor((addon.haveGold or 0) >= addon.gold and '#e8d27a' or '#e06c6c')
+                if (addon.haveGold or 0) < addon.gold then
+                    missing[#missing + 1] = money(addon.gold - addon.haveGold) .. ' gold'
+                end
+            else
+                box.gold:hide()
+            end
+            if addon.premium then
+                box.head.state:setText('premium')
+                box.head.state:setColor('#9a9a9a')
+            end
+            box.take:setEnabled(addon.ready and true or false)
+            if addon.ready then
+                box.take:setTooltip(latin1('Entrega os itens e libera o addon agora.'))
+            else
+                box.take:setTooltip(latin1('Faltam: ' .. table.concat(missing, ', ')))
+            end
+            local number = addon.addon
+            box.take.onClick = function()
+                askShop(latin1(tr('Addon %d', number)), latin1('Entregar os itens e liberar o addon?'), function()
+                    sendShop({ action = 'addon', lookType = addonLookType, addon = number })
+                end)
+            end
+        end
+    end
+    area:setVisible(any)
+    area.addonScrollBar:setVisible(any)
+end
+
 local function onShopMessage(protocol, opcode, data)
     if type(data) ~= 'table' then
+        return
+    end
+    if data.action == 'addons' then
+        showAddons(data)
+        return
+    elseif data.action == 'addonResult' then
+        local lookType = tonumber(data.lookType)
+        if data.ok then
+            local entry = lookType and shopEntry('outfit', lookType)
+            if entry then
+                entry[3] = tonumber(data.addons) or entry[3]
+            end
+            local focused = window and window.selectionList:getFocusedChild()
+            if focused and tonumber(focused:getId()) == lookType and shownKind() == 'outfit' then
+                local creature = focused.outfit and focused.outfit:getCreature()
+                if creature then
+                    local outfit = creature:getOutfit()
+                    outfit.addons = tonumber(data.addons) or outfit.addons
+                    creature:setOutfit(outfit)
+                end
+                configureAddons(tonumber(data.addons) or 0)
+            end
+        end
+        tellShop(latin1(tr('Addon %d', tonumber(data.addon) or 0)), latin1(data.message or ''))
         return
     end
     storeCoins = tonumber(data.coins) or storeCoins
@@ -1041,6 +1162,7 @@ function onAppearanceChange(widget, selectedWidget)
 end
 
 function showPresets()
+    requestAddons(nil)
     window.listSearch:hide()
     window.selectionList:hide()
     window.selectionScroll:hide()
@@ -1161,6 +1283,7 @@ function showOutfits()
 end
 
 function showMounts()
+    requestAddons(nil)
     window.presetsList:hide()
     window.presetsScroll:hide()
     window.presetButtons:hide()
@@ -1227,6 +1350,7 @@ function showMounts()
 end
 
 function showFamiliars()
+    requestAddons(nil)
     window.presetsList:hide()
     window.presetsScroll:hide()
     window.presetButtons:hide()
@@ -1277,6 +1401,7 @@ function showFamiliars()
 end
 
 function showShaders()
+    requestAddons(nil)
     window.presetsList:hide()
     window.presetsScroll:hide()
     window.presetButtons:hide()
@@ -1341,6 +1466,7 @@ function showShaders()
 end
 
 function showHealthBars()
+    requestAddons(nil)
     window.presetsList:hide()
     window.presetsScroll:hide()
     window.presetButtons:hide()
@@ -1398,6 +1524,7 @@ function showHealthBars()
 end
 
 function showTitle()
+    requestAddons(nil)
     window.presetsList:hide()
     window.presetsScroll:hide()
     window.presetButtons:hide()
@@ -1532,6 +1659,7 @@ function onOutfitSelect(list, focusedChild, unfocusedChild, reason)
             updatePreview()
         end
         updateAppearanceText("outfit", focusedChild.name:getText())
+        requestAddons(outfitType)
     end
     updateBuyBar()
 end
