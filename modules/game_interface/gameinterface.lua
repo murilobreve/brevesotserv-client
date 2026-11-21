@@ -1292,8 +1292,8 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                             -- For pickupable containers like quivers, backpacks, etc., open them instead of quicklooting
                             g_game.open(useThing)
                             return true
-                        elseif table.find({ 3497, 3498, 3499, 3500, 3502, 12902 }, useThing:getId()) then
-                            -- For depot chests, lockers, depot boxes, inbox, etc., always open them
+                        elseif table.find({ 3497, 3498, 3499, 3500, 3502, 12902, 19250 }, useThing:getId()) then
+                            -- For depot chests, lockers, depot boxes, inbox, the boss reward chest (19250), etc., always open them
                             g_game.open(useThing)
                             return true
                         elseif g_game.getFeature(GameThingQuickLoot) and modules.game_quickloot then
@@ -1412,8 +1412,8 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                     -- ONLY quickloot containers/corpses in the game world
                     if (useThing:isContainer() or useThing:isLyingCorpse()) and not useThing:getParentContainer() then
                         -- Only handle containers that are in the game world (not in inventory)
-                        if table.find({ 3497, 3498, 3499, 3500, 3502, 12902 }, useThing:getId()) then
-                            -- For depot chests, lockers, depot boxes, inbox, etc., always open them
+                        if table.find({ 3497, 3498, 3499, 3500, 3502, 12902, 19250 }, useThing:getId()) then
+                            -- For depot chests, lockers, depot boxes, inbox, the boss reward chest (19250), etc., always open them
                             g_game.open(useThing)
                             return true
                         elseif g_game.getFeature(GameThingQuickLoot) and modules.game_quickloot then
