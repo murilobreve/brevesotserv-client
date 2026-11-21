@@ -203,8 +203,16 @@ local function isWildMonster(creature)
     if not creature or not creature:isMonster() or creature:getHealthPercent() <= 0 then
         return false
     end
-    -- never the player's own summon
-    return not (creature.getType and CreatureTypeSummonOwn and creature:getType() == CreatureTypeSummonOwn)
+    -- never a summon: the player's own or another player's (the vocation
+    -- familiars too; the name covers a server that sends them as monsters)
+    local kind = creature.getType and creature:getType()
+    if kind == CreatureTypeSummonOwn or kind == CreatureTypeSummonOther then
+        return false
+    end
+    if creature.getMasterId and (creature:getMasterId() or 0) ~= 0 then
+        return false
+    end
+    return not creature:getName():lower():find("familiar", 1, true)
 end
 
 local function monstersAround(centre, radius)
