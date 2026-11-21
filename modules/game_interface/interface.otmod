@@ -42,6 +42,7 @@ Module
     - game_attachedeffects
     - game_paperdolls
     - game_npcsigns
+    - game_huntmark
     - game_stash
     - game_healthcircle
     - game_notifications

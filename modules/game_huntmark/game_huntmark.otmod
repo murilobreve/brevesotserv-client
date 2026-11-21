@@ -1,0 +1,8 @@
+Module
+  name: game_huntmark
+  description: The teleport icon on the minimap where a hunt or quest teleport left the player
+  author: Mythos
+  sandboxed: true
+  scripts: [ huntmark ]
+  @onLoad: init()
+  @onUnload: terminate()
