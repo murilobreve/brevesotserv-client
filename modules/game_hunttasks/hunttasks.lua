@@ -508,8 +508,9 @@ local function renderTrailList()
     local done = trail.finished and #steps or trail.index - 1
     panel.summary:setText(tr('%d de %d etapas completas', done, #steps))
     fillLegend(panel.legend)
-    panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.',
-        formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0))
+    local bonusText = (trail.milestoneShare or 0) > 0 and tr('+%d%% dos pontos da etapa', trail.milestoneShare) or tr('+%d', trail.milestonePoints or 0)
+    panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, %s de bônus. A trilha inteira vale %s pontos.',
+        formatNumber(trail.exp), trail.milestoneEvery or 5, bonusText, formatNumber(trail.totalPoints or 0))
         .. ((trail.totalCharms or 0) > 0 and tr(' E %s charm points.', formatNumber(trail.totalCharms)) or ''))
 
     if not trailBuilt then

@@ -219,9 +219,15 @@ function WIKI_BUILDERS.tasksinfo(parent)
         { T('Trocar o monstro'), T('%d vez de graça por dia; depois, level x %s gold', t.freeRerolls or 0, num(t.rerollGold)) },
     })
     heading(parent, T('Trilha do Caçador'))
+    if (t.milestoneShare or 0) > 0 then
+        paragraph(parent, T('Uma corrente fixa de %d monstros, do %s até o %s. Cada passo pede de %s a %s kills, dá %d%% de um level, Hunt Points e charm points; a cada %d passos vem um bônus de %d%% dos pontos do passo e %d charm points.',
+            t.trailSteps or 0, L(t.trailFirst), L(t.trailLast), num(t.trailKills[1]), num(t.trailKills[2]), math.floor((t.trailExperience or 0) * 100 + 0.5),
+            t.milestoneEvery or 0, t.milestoneShare, t.milestoneCharms or 0))
+    else
     paragraph(parent, T('Uma corrente fixa de %d monstros, do %s até o %s. Cada passo pede de %s a %s kills, dá %d%% de um level, Hunt Points e charm points; a cada %d passos vem um bônus de %d pontos e %d charm points.',
         t.trailSteps or 0, L(t.trailFirst), L(t.trailLast), num(t.trailKills[1]), num(t.trailKills[2]), math.floor((t.trailExperience or 0) * 100 + 0.5),
         t.milestoneEvery or 0, t.milestonePoints or 0, t.milestoneCharms or 0))
+    end
     paragraph(parent, T('A janela de Hunt Tasks leva até o monstro da tarefa e da trilha pelo mesmo teleport do Hunts TP (%d segundos de espera, só fora de luta).', t.cooldown or 0))
     heading(parent, T('Loja do Szuszkin'))
     local rows = {}
