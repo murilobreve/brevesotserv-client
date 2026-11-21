@@ -181,41 +181,61 @@ local function renderProposal(panel, proposal, width)
     local title = addText(panel, '', '#e8d27a', 'PartyLootText')
     title:setFont('Verdana Bold-11px')
     fit(title, string.format(tr('Divisão de %s'), proposal.by or '?'), inner)
-    title:setTooltip(string.format(tr('Loot %s gold, supplies %s gold, lucro %s gold para cada um. Todos precisam aceitar.'),
-        money(proposal.total), money(proposal.supplies), money(proposal.share)))
+    title:setTooltip(tr('Cada um recebe de volta o que gastou em supplies, mais a sua parte do lucro. O loot é vendido pelo preço do Gersão. Todos precisam aceitar.'))
 
-    local each = g_ui.createWidget('PartyLootMember', panel)
-    each.dot:setVisible(false)
-    each.name:setMarginLeft(-7)
-    each.name:setText(tr('Lucro cada'))
-    each.name:setColor('#9d9d9d')
-    each.amount:setText(money(proposal.share))
-    each.amount:setColor(proposal.share >= 0 and '#e8d27a' or '#f36500')
+    -- the hunt in four lines: loot, what was spent, the profit, each one's part
+    local function sum(label, value, color, bold)
+        local row = g_ui.createWidget('PartyLootSum', panel)
+        row.label:setText(label)
+        row.amount:setText(value)
+        if color then
+            row.amount:setColor(color)
+        end
+        if bold then
+            row.label:setFont('Verdana Bold-11px')
+            row.amount:setFont('Verdana Bold-11px')
+            row.label:setColor('#c0c0c0')
+            row:setHeight(16)
+        end
+        return row
+    end
+    local profit = (proposal.total or 0) - (proposal.supplies or 0)
+    sum(tr('Loot'), money(proposal.total), '#e8d27a')
+    sum(tr('Gastos (supplies)'), '-' .. money(proposal.supplies), '#c88a5a')
+    sum(profit >= 0 and tr('Lucro') or tr('Prejuízo'), money(profit), profit >= 0 and '#4fd14f' or '#f36500')
+    sum(tr('Cada um'), money(proposal.share), proposal.share >= 0 and '#4fd14f' or '#f36500', true)
+        :setTooltip(tr('O lucro (ou prejuízo) dividido igualmente entre todos.'))
 
     local sep = g_ui.createWidget('HorizontalSeparator', panel)
     sep:setMarginTop(3)
 
     for _, line in ipairs(proposal.lines or {}) do
-        local row = g_ui.createWidget('PartyLootMember', panel)
+        local row = g_ui.createWidget('PartyLootPerson', panel)
         row.dot:setBackgroundColor(line.accepted and '#4fd14f' or '#6a6a6a')
         local amount = (line.payout > 0 and '+' or '') .. money(line.payout)
         row.amount:setText(amount)
         row.amount:setColor(line.payout >= 0 and '#4fd14f' or '#f36500')
-        local nameWidth = inner - 11 - row.amount:getTextSize().width - 4
-        fit(row.name, line.name, nameWidth)
+        fit(row.name, line.name, inner - 11 - row.amount:getTextSize().width - 4)
         row.name:setColor(line.accepted and '#e0e0e0' or '#a8a8a8')
+        row.spent:setText(string.format(tr('gasto %s'), money(line.supplies)))
+        row.looted:setText(string.format(tr('loot %s'), money(line.loot)))
+        -- both on one line only when they fit (the loot is in the tooltip too)
+        if row.spent:getTextSize().width + row.looted:getTextSize().width + 11 + 6 > inner then
+            row.looted:setVisible(false)
+        end
         local tip = {
-            line.accepted and tr('Aceitou') or tr('Ainda não aceitou'),
-            string.format(tr('Lootou: %s gold'), money(line.loot)),
-            string.format(tr('Supplies: %s gold'), money(line.supplies)),
+            line.accepted and tr('Já aceitou') or tr('Ainda não aceitou'),
+            string.format(tr('Gastou em supplies: %s (volta para ele)'), money(line.supplies)),
+            string.format(tr('Parte do lucro: %s'), money(proposal.share)),
+            string.format(tr('Lootou: %s (é vendido na divisão)'), money(line.loot)),
         }
         if (line.missing or 0) > 0 then
-            tip[#tip + 1] = string.format(tr('Já não tem (usou, vendeu, guardou ou equipou): %s gold'), money(line.missing))
+            tip[#tip + 1] = string.format(tr('Já não tem parte do loot (usou, vendeu, guardou ou equipou): -%s'), money(line.missing))
         end
         if line.claimed and #line.claimed > 0 then
-            tip[#tip + 1] = string.format(tr('Fica com: %s'), table.concat(line.claimed, ', '))
+            tip[#tip + 1] = string.format(tr('Fica com: %s (o valor sai da parte dele)'), table.concat(line.claimed, ', '))
         end
-        tip[#tip + 1] = line.payout >= 0 and tr('Recebe no banco.') or tr('Paga do banco.')
+        tip[#tip + 1] = line.payout >= 0 and string.format(tr('Recebe %s no banco.'), money(line.payout)) or string.format(tr('Paga %s do banco.'), money(-line.payout))
         row:setTooltip(table.concat(tip, '\n'))
         if line.claimed and #line.claimed > 0 then
             local claimed = addText(panel, '', '#c9a0ff', 'PartyLootText')
