@@ -43,10 +43,28 @@ local function window()
     return openedWindows and openedWindows['partyButton']
 end
 
+-- 12.345 (PT-BR)
 local function money(value)
-    value = tonumber(value) or 0
-    local text = comma_value(tostring(math.abs(value)))
+    value = math.floor(tonumber(value) or 0)
+    local text = tostring(math.abs(value)):reverse():gsub('(%d%d%d)', '%1.'):reverse()
+    text = text:gsub('^%.', '')
     return (value < 0 and '-' or '') .. text
+end
+
+-- the text cut with "..." to fit `width` pixels of the label's font
+local function fit(label, text, width)
+    label:setText(text)
+    if width <= 0 or label:getTextSize().width <= width then
+        return
+    end
+    local cut = text
+    while #cut > 1 do
+        cut = cut:sub(1, -2)
+        label:setText(cut .. '...')
+        if label:getTextSize().width <= width then
+            return
+        end
+    end
 end
 
 function PartyLoot.send(action, extra)
@@ -143,48 +161,75 @@ local function rowTooltip(row)
     return table.concat(lines, '\n')
 end
 
-local function renderProposal(panel, proposal)
+local function addText(panel, text, color, style)
+    local label = g_ui.createWidget(style or 'PartyLootWrap', panel)
+    label:setText(text)
+    if color then
+        label:setColor(color)
+    end
+    return label
+end
+
+local function renderProposal(panel, proposal, width)
     panel:destroyChildren()
     if not proposal then
         panel:setVisible(false)
         return
     end
     panel:setVisible(true)
-    local head = g_ui.createWidget('PartyLootLine', panel)
-    head:setColor('#e8d27a')
-    head:setText(string.format(tr('Divisão proposta por %s'), proposal.by or '?'))
-    local sums = g_ui.createWidget('PartyLootLine', panel)
-    sums:setText(string.format(tr('Loot %s, supplies %s'), money(proposal.total), money(proposal.supplies)))
-    local each = g_ui.createWidget('PartyLootLine', panel)
-    each:setText(string.format(tr('Lucro para cada um: %s'), money(proposal.share)))
+    local inner = width - 10
+    local title = addText(panel, '', '#e8d27a', 'PartyLootText')
+    title:setFont('Verdana Bold-11px')
+    fit(title, string.format(tr('Divisão de %s'), proposal.by or '?'), inner)
+    title:setTooltip(string.format(tr('Loot %s gold, supplies %s gold, lucro %s gold para cada um. Todos precisam aceitar.'),
+        money(proposal.total), money(proposal.supplies), money(proposal.share)))
+
+    local each = g_ui.createWidget('PartyLootMember', panel)
+    each.dot:setVisible(false)
+    each.name:setMarginLeft(-7)
+    each.name:setText(tr('Lucro cada'))
+    each.name:setColor('#9d9d9d')
+    each.amount:setText(money(proposal.share))
+    each.amount:setColor(proposal.share >= 0 and '#e8d27a' or '#f36500')
+
+    local sep = g_ui.createWidget('HorizontalSeparator', panel)
+    sep:setMarginTop(3)
+
     for _, line in ipairs(proposal.lines or {}) do
-        local label = g_ui.createWidget('PartyLootLine', panel)
-        local mark = line.accepted and '[ok]' or '[...]'
-        local text = string.format('%s %s: %s', mark, line.name, money(line.payout))
-        if line.claimed and #line.claimed > 0 then
-            text = text .. ' + ' .. table.concat(line.claimed, ', ')
-        end
-        label:setText(text)
-        label:setColor(line.accepted and '#6fd36f' or '#c0c0c0')
+        local row = g_ui.createWidget('PartyLootMember', panel)
+        row.dot:setBackgroundColor(line.accepted and '#4fd14f' or '#6a6a6a')
+        local amount = (line.payout > 0 and '+' or '') .. money(line.payout)
+        row.amount:setText(amount)
+        row.amount:setColor(line.payout >= 0 and '#4fd14f' or '#f36500')
+        local nameWidth = inner - 11 - row.amount:getTextSize().width - 4
+        fit(row.name, line.name, nameWidth)
+        row.name:setColor(line.accepted and '#e0e0e0' or '#a8a8a8')
         local tip = {
-            string.format(tr('Lootou: %s'), money(line.loot)),
-            string.format(tr('Supplies: %s'), money(line.supplies)),
+            line.accepted and tr('Aceitou') or tr('Ainda não aceitou'),
+            string.format(tr('Lootou: %s gold'), money(line.loot)),
+            string.format(tr('Supplies: %s gold'), money(line.supplies)),
         }
         if (line.missing or 0) > 0 then
-            tip[#tip + 1] = string.format(tr('Já não tem (usou, vendeu ou guardou): %s'), money(line.missing))
+            tip[#tip + 1] = string.format(tr('Já não tem (usou, vendeu, guardou ou equipou): %s gold'), money(line.missing))
+        end
+        if line.claimed and #line.claimed > 0 then
+            tip[#tip + 1] = string.format(tr('Fica com: %s'), table.concat(line.claimed, ', '))
         end
         tip[#tip + 1] = line.payout >= 0 and tr('Recebe no banco.') or tr('Paga do banco.')
-        label:setTooltip(table.concat(tip, '\n'))
+        row:setTooltip(table.concat(tip, '\n'))
+        if line.claimed and #line.claimed > 0 then
+            local claimed = addText(panel, '', '#c9a0ff', 'PartyLootText')
+            claimed:setMarginLeft(11)
+            fit(claimed, '+ ' .. table.concat(line.claimed, ', '), inner - 11)
+        end
     end
     if proposal.notFound and #proposal.notFound > 0 then
-        local warn = g_ui.createWidget('PartyLootLine', panel)
-        warn:setColor('#f36500')
-        warn:setText(string.format(tr('Não encontrados (ficam fora): %s'), table.concat(proposal.notFound, ', ')))
+        addText(panel, string.format(tr('Fora da divisão (não achados): %s'), table.concat(proposal.notFound, ', ')), '#f36500')
     end
-    local left = g_ui.createWidget('PartyLootLine', panel)
+    local left = addText(panel, '', '#7d7d7d', 'PartyLootText')
     left:setId('left')
-    left:setColor('#9d9d9d')
-    left:setText(string.format(tr('Expira em %ds. Todos precisam aceitar.'), proposal.left or 0))
+    left:setMarginTop(3)
+    left:setText(string.format(tr('Expira em %ds'), proposal.left or 0))
 end
 
 function PartyLoot.render()
@@ -193,11 +238,15 @@ function PartyLoot.render()
         return
     end
     local panel = w.lootPanel
+    local width = math.max(100, panel:getWidth())
     local state = PartyLoot.state
     if not state or state.noParty then
-        panel.status:setText(tr('Entre em uma party para ver o loot e dividir.'))
+        panel.header.count:setText(tr('Sem party'))
+        panel.header.total:setText('')
+        panel.header.goldIcon:setVisible(false)
         panel.actions:setVisible(false)
-        renderProposal(panel.proposal, nil)
+        renderProposal(panel.proposal, nil, width)
+        panel.dropsTitle:setVisible(false)
         panel.drops:destroyChildren()
         return
     end
@@ -205,58 +254,63 @@ function PartyLoot.render()
     for _, row in ipairs(state.drops or {}) do
         total = total + (row.value or 0)
     end
-    if #(state.drops or {}) == 0 then
-        panel.status:setText(tr('Nenhum loot ainda. Os drops da party aparecem aqui.'))
-    else
-        panel.status:setText(string.format(tr('%d drops - %s gold (Gersão)'), #state.drops, money(total)))
-    end
+    local count = #(state.drops or {})
+    panel.header.count:setText(count == 1 and tr('1 drop') or string.format(tr('%d drops'), count))
+    panel.header.total:setText(money(total))
+    panel.header.goldIcon:setVisible(true)
+    panel.header:setTooltip(tr('Valor pelo preço do Gersão'))
     panel.actions:setVisible(true)
     local proposal = state.proposal
     panel.actions.split:setVisible(not proposal)
+    panel.actions.split:setEnabled(count > 0)
     panel.actions.accept:setVisible(proposal ~= nil and not proposal.accepted)
     panel.actions.cancel:setVisible(proposal ~= nil)
+    -- already accepted: Cancelar takes the whole row
+    panel.actions.cancel:breakAnchors()
+    panel.actions.cancel:addAnchor(AnchorTop, 'parent', AnchorTop)
+    panel.actions.cancel:addAnchor(AnchorRight, 'parent', AnchorRight)
     if proposal and proposal.accepted then
-        panel.actions.cancel:breakAnchors()
-        panel.actions.cancel:addAnchor(AnchorTop, 'parent', AnchorTop)
         panel.actions.cancel:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-        panel.actions.cancel:addAnchor(AnchorRight, 'parent', AnchorRight)
+        panel.actions.cancel:setMarginLeft(0)
     else
-        panel.actions.cancel:breakAnchors()
-        panel.actions.cancel:addAnchor(AnchorTop, 'parent', AnchorTop)
-        panel.actions.cancel:addAnchor(AnchorRight, 'parent', AnchorRight)
-        panel.actions.cancel:setWidth(70)
+        panel.actions.cancel:addAnchor(AnchorLeft, 'parent', AnchorHorizontalCenter)
+        panel.actions.cancel:setMarginLeft(1)
     end
-    renderProposal(panel.proposal, proposal)
+    renderProposal(panel.proposal, proposal, width)
 
+    panel.dropsTitle:setVisible(true)
+    panel.dropsTitle:setText(count == 0 and tr('Os drops da party aparecem aqui.') or tr('Drops'))
     panel.drops:destroyChildren()
+    local textWidth = width - 32 - 8
     for _, row in ipairs(state.drops or {}) do
         local widget = g_ui.createWidget('PartyLootRow', panel.drops)
         widget.item:setItemId(row.id)
-        widget.name:setText(row.name)
+        fit(widget.name, row.name, textWidth)
         widget.name:setColor(row.grade and GRADE_COLORS[row.grade] or '#c0c0c0')
         local value = money(row.value)
         if row.count > 1 then
-            value = string.format('%dx - %s', row.count, value)
-        elseif row.gradeName then
-            value = string.format('%s - %s', value, row.gradeName)
+            value = string.format('%dx  %s', row.count, value)
         end
-        widget.value:setText(value)
         widget:setTooltip(rowTooltip(row))
         if not row.claimable then
             widget.claim:setVisible(false)
         elseif row.mine then
             widget.claim:setText(tr('Soltar'))
             widget.claim:setColor('#e8d27a')
+            widget.claim:setTooltip(tr('Desistir do item'))
             widget.claim.onClick = function() PartyLoot.send('unclaim', { n = row.n }) end
         elseif row.claim then
-            widget.claim:setText(row.claim:sub(1, 6))
+            widget.claim:setText(tr('Dono'))
             widget.claim:setEnabled(false)
             widget.claim:setTooltip(string.format(tr('Reivindicado por %s'), row.claim))
+            value = row.claim
+            widget.value:setColor('#c9a0ff')
         else
             widget.claim:setText(tr('Quero'))
-            widget.claim:setTooltip(tr('Reivindicar: fica com você na divisão, pelo valor do Gersão'))
+            widget.claim:setTooltip(tr('Reivindicar: fica com você na divisão, pelo preço do Gersão'))
             widget.claim.onClick = function() PartyLoot.send('claim', { n = row.n }) end
         end
+        fit(widget.value, value, textWidth - (widget.claim:isVisible() and 44 or 0))
     end
     if PartyLoot.tab == 'loot' then
         for _, row in ipairs(state.drops or {}) do
@@ -299,7 +353,7 @@ local function tick()
     local left = math.max(0, (proposal.left or 0) - elapsed)
     local label = w.lootPanel.proposal:getChildById('left')
     if label then
-        label:setText(string.format(tr('Expira em %ds. Todos precisam aceitar.'), left))
+        label:setText(string.format(tr('Expira em %ds'), left))
     end
 end
 
