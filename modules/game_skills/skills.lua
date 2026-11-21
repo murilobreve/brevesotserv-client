@@ -1213,7 +1213,18 @@ local function getStaminaTooltip(hours, minutes, stamina)
     return timeText
 end
 
+-- the XP Gain Rate tooltip tells the time left of the XP boost and of the
+-- stamina bonus: it was only written again when a rate changed, so both
+-- times stood still for hours. The stamina changes every minute of a hunt,
+-- in the packet that also brings the boost's time: once it is read
+local updateExperienceRate
+
 function onStaminaChange(localPlayer, stamina)
+    addEvent(function()
+        if updateExperienceRate and skillsWindow and g_game.isOnline() then
+            updateExperienceRate(g_game.getLocalPlayer())
+        end
+    end)
     local hours = math.floor(stamina / 60)
     local minutes = stamina % 60
     local percent = math.floor(100 * stamina / (42 * 60))
@@ -1310,7 +1321,10 @@ function onBaseSkillChange(localPlayer, id, baseLevel)
     setSkillBase('skillId' .. id, localPlayer:getSkillLevel(id), baseLevel)
 end
 
-local function updateExperienceRate(localPlayer)
+updateExperienceRate = function(localPlayer)
+    if not localPlayer then
+        return
+    end
     local baseRate = ExpRating[ExperienceRate.BASE] or 100
     local expRateTotal = baseRate
 
