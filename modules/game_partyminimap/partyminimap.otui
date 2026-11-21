@@ -3,7 +3,7 @@
 // the map's own colours; the old dot (PartyMinimapDot) is for a server that
 // sends no outfit yet.
 PartyMinimapMark < UIWidget
-  size: 24 28
+  size: 20 24
   focusable: false
   phantom: false
 
@@ -11,7 +11,7 @@ PartyMinimapMark < UIWidget
     id: frame
     anchors.top: parent.top
     anchors.horizontalCenter: parent.horizontalCenter
-    size: 24 24
+    size: 20 20
     background-color: #101010c0
     border-width: 2
     border-color: #ffffff
@@ -20,15 +20,15 @@ PartyMinimapMark < UIWidget
   UICreature
     id: creature
     anchors.centerIn: frame
-    size: 22 22
-    creature-size: 22
+    size: 20 20
+    creature-size: 24
     phantom: true
 
   UIWidget
     id: healthBack
     anchors.bottom: parent.bottom
     anchors.horizontalCenter: parent.horizontalCenter
-    size: 22 4
+    size: 18 4
     background-color: #000000
     border-width: 1
     border-color: #000000
@@ -40,7 +40,7 @@ PartyMinimapMark < UIWidget
     anchors.top: healthBack.top
     margin-left: 1
     margin-top: 1
-    size: 20 2
+    size: 16 2
     background-color: #5fdc6a
     phantom: true
 

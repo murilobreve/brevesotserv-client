@@ -91,7 +91,7 @@ local function refresh()
                 mark.creature:setOutfit(outfit)
             end
             mark.frame:setBorderColor(vocation and vocation.color or '#ffffff')
-            mark.health:setWidth(math.max(1, math.floor(20 * math.max(0, math.min(100, hp)) / 100 + 0.5)))
+            mark.health:setWidth(math.max(1, math.floor(16 * math.max(0, math.min(100, hp)) / 100 + 0.5)))
             mark.health:setBackgroundColor(healthColor(hp))
         else
             mark:setBackgroundColor(healthColor(hp))
