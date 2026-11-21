@@ -716,7 +716,7 @@ MythosWindow
           id: pair
           anchors.top: parent.top
           anchors.horizontalCenter: parent.horizontalCenter
-          margin-top: 64
+          margin-top: 26
           size: 160 52
 
           ForgeSlot
@@ -749,42 +749,121 @@ MythosWindow
           text-auto-resize: true
           font: Verdana Bold-11px
 
-        Label
-          id: chance
-          anchors.top: path.bottom
-          anchors.horizontalCenter: parent.horizontalCenter
-          margin-top: 4
-          text-auto-resize: true
-          font: Verdana Bold-11px
-          color: #eee6d4
-
+        // the odds of the upgrade as one strip, 0 to 100: green is success,
+        // red (at the end) is the item breaking, the dark middle is nothing
+        // happening. The needle runs over it while the server rolls and stops
+        // on the roll (forge.lua, upTick).
         ForgeInset
-          id: forgeBar
-          anchors.top: chance.bottom
+          id: odds
+          anchors.top: path.bottom
           anchors.left: parent.left
           anchors.right: parent.right
-          margin: 16 40 0 40
-          height: 14
-          visible: false
+          margin: 14 40 0 40
+          height: 20
 
           UIWidget
-            id: fill
+            id: win
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             margin: 1
             width: 0
-            background-color: #c9a24a
+            background-color: #3f9a45
+            phantom: true
+
+          UIWidget
+            id: lose
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            margin: 1
+            width: 0
+            background-color: #b5362c
+            phantom: true
+
+          UIWidget
+            id: needle
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            margin-left: 1
+            width: 3
+            background-color: #fff3c4
+            border-width: 1
+            border-color: #000000
+            phantom: true
+            visible: false
 
         Label
-          id: forgePct
-          anchors.top: forgeBar.bottom
-          anchors.horizontalCenter: parent.horizontalCenter
-          margin-top: 4
+          id: chance
+          anchors.top: odds.bottom
+          anchors.left: odds.left
+          margin-top: 5
           text-auto-resize: true
-          font: verdana-11px-antialised
-          color: #e2c46a
-          visible: false
+          font: Verdana Bold-11px
+          color: #7fd36a
+
+        Label
+          id: breakChance
+          anchors.top: odds.bottom
+          anchors.right: odds.right
+          margin-top: 5
+          text-auto-resize: true
+          font: Verdana Bold-11px
+          color: #ff7a6a
+
+        ForgeDim
+          id: nothingChance
+          anchors.top: odds.bottom
+          anchors.horizontalCenter: odds.horizontalCenter
+          margin-top: 5
+          text-auto-resize: true
+
+        // protection against breaking: more gold and Rarity XP, less chance
+        ForgePanel
+          id: protectBox
+          anchors.top: chance.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          margin: 18 40 0 40
+          height: 74
+
+          ForgeText
+            id: title
+            anchors.top: parent.top
+            anchors.left: parent.left
+            margin: 8 0 0 10
+            text-auto-resize: true
+            font: Verdana Bold-11px
+            color: #eee6d4
+
+          ForgeText
+            id: extra
+            anchors.top: parent.top
+            anchors.right: parent.right
+            margin: 8 10 0 0
+            text-auto-resize: true
+            color: #e2c46a
+
+          HorizontalScrollBar
+            id: scroll
+            anchors.top: title.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            margin: 8 10 0 10
+            minimum: 0
+            maximum: 20
+            step: 1
+            @onValueChange: modules.game_raritybonus.forgeProtect(self:getValue())
+
+          ForgeDim
+            id: hint
+            anchors.top: scroll.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            margin: 6 10 0 10
+            height: 14
+            text-align: center
 
         ForgeText
           id: explain
