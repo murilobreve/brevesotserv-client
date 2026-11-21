@@ -591,6 +591,12 @@ local OFFER_INFO = {
     pouch = { name = 'Loot Pouch', lines = { 'Vai para a Store Inbox.' } },
     rarityxp50 = { name = '50 Rarity XP', count = '50x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
     rarityxp = { name = '500 Rarity XP', count = '500x', lines = { 'Para refazer os itens raros que você usa, na janela Rarity Bonuses: o item inteiro é sorteado de novo.', 'Também se ganha matando monstros Pale, Ashen, Obsidian e Lord of Death.' } },
+    wildcards = { name = '5 Prey Wildcards', count = '5x', lines = { 'Para rerrolar e travar as suas presas na janela de Prey.' } },
+    blessings = { name = 'Blessings', lines = { 'Todas as 7 blessings regulares que você ainda não tem (não inclui a Twist of Fate).', 'Fora de luta.' } },
+    templo = { name = 'Temple Teleport', lines = { 'Leva você de volta ao templo na hora.', 'Fora de luta.' } },
+    conversor = { name = 'Magic Gold Converter', lines = { 'Troca as moedas sozinho: 100 gold viram 1 platinum e assim por diante.', 'Vai para a Store Inbox.' } },
+    charmslot = { name = 'Charm Expansion', lines = { 'Permanente: um charm a mais por criatura.' } },
+    preyslot = { name = 'Slot de Prey', lines = { 'Permanente: libera o terceiro slot de Prey.' } },
     montaria = { name = 'Montaria', lines = { 'Qualquer montaria que você ainda não tem.', 'Escolha na lista acima; a montaria já sai liberada.' } },
 }
 
@@ -607,6 +613,12 @@ local quantityKey
 -- mount picture when the player has every mount (nothing left to preview)
 local FALLBACK_MOUNT_LOOK = 370
 
+-- offers with no item of their own: a picture of the client
+local OFFER_IMAGES = {
+    wildcards = '/images/game/prey/prey_select',
+    preyslot = '/images/game/prey/prey_select',
+}
+
 local function setOfferImage(box, offer, mountLook)
     if offer.key == 'montaria' and not (mountLook and mountLook > 0) then
         mountLook = FALLBACK_MOUNT_LOOK
@@ -620,6 +632,9 @@ local function setOfferImage(box, offer, mountLook)
     elseif offer.key == 'coins' then
         box.icon:setVisible(true)
         box.icon:setImageSource('/images/store/icon-tibiacoin')
+    elseif OFFER_IMAGES[offer.key] then
+        box.icon:setVisible(true)
+        box.icon:setImageSource(OFFER_IMAGES[offer.key])
     elseif offer.item and offer.item > 0 then
         box.item:setVisible(true)
         box.item:setItemId(offer.item)
