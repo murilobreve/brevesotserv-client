@@ -1,53 +1,16 @@
-// one party member on the minimap: their outfit in a small frame coloured
-// by vocation, with a health bar under it. The frame keeps them apart from
-// the map's own colours; the old dot (PartyMinimapDot) is for a server that
-// sends no outfit yet.
+// one party member on the minimap: a small dot in the colour of their
+// vocation; the ring turns white when their health is low. Name, vocation,
+// health and floor are in the tooltip.
 PartyMinimapMark < UIWidget
-  size: 20 24
+  size: 6 6
+  border-width: 1
+  border-color: #000000
+  background-color: #ffffff
   focusable: false
-  phantom: false
-
-  UIWidget
-    id: frame
-    anchors.top: parent.top
-    anchors.horizontalCenter: parent.horizontalCenter
-    size: 20 20
-    background-color: #101010c0
-    border-width: 2
-    border-color: #ffffff
-    phantom: true
-
-  UICreature
-    id: creature
-    anchors.centerIn: frame
-    size: 20 20
-    creature-size: 24
-    phantom: true
-
-  UIWidget
-    id: healthBack
-    anchors.bottom: parent.bottom
-    anchors.horizontalCenter: parent.horizontalCenter
-    size: 18 4
-    background-color: #000000
-    border-width: 1
-    border-color: #000000
-    phantom: true
-
-  UIWidget
-    id: health
-    anchors.left: healthBack.left
-    anchors.top: healthBack.top
-    margin-left: 1
-    margin-top: 1
-    size: 16 2
-    background-color: #5fdc6a
-    phantom: true
 
 PartyMinimapDot < UIWidget
-  size: 9 9
-  border-width: 2
-  border-color: #ffffff
+  size: 6 6
+  border-width: 1
+  border-color: #000000
   background-color: #5fdc6a
   focusable: false
-  clipping: true
