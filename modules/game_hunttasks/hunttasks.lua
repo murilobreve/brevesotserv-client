@@ -370,7 +370,19 @@ local function renderTrailCard()
         if step.milestone then
             card.badge:setColor('#ffb020')
         end
-        card.reward:setText(rewardText(trail.exp, string.format('+%d Hunt Points', points), step.charms, step.gold))
+        local rewardLine = rewardText(math.floor((trail.exp or 0) * (step.boost or 1)), string.format('+%d Hunt Points', points), step.charms, step.gold)
+        -- the items on top: a bag, a milestone's exercise weapon
+        local extras = {}
+        if step.bag then
+            extras[#extras + 1] = step.bagName or ''
+        end
+        if step.exercise then
+            extras[#extras + 1] = tr('exercise weapon (500 cargas)')
+        end
+        if #extras > 0 then
+            rewardLine = rewardLine .. ' ' .. tr('E mais: %s.', table.concat(extras, ', '))
+        end
+        card.reward:setText(rewardLine)
         local following = steps[trail.index + 1]
         local after = following and tr('Depois: %s (level %d).', following.name, following.level) or tr('Última etapa!')
         if step.variants and step.variants ~= '' then
@@ -431,12 +443,71 @@ local function updateTrailRowButton()
     end
 end
 
+-- the rewards of a Trail step, each with its icon (TrailReward): the
+-- experience, Hunt Points, charm points, gold, and the items on top (a bag,
+-- a milestone's exercise weapon)
+local REWARD_ICONS = {
+    exp = '/images/icons/icon_experience',
+    points = '/game_brevespanel/images/tasks',
+    charms = '/game_cyclopedia/images/icon_charms',
+    gold = '/images/game/cyclopedia/icons/icon-goldcoin',
+}
+
+local function addReward(panel, icon, text, tooltip)
+    local reward = g_ui.createWidget('TrailReward', panel)
+    reward:setIcon(REWARD_ICONS[icon])
+    reward:setText(text)
+    reward:setTooltip(tooltip)
+    reward:setWidth(17 + reward:getTextSize().width)
+end
+
+local function addRewardItem(panel, itemId, tooltip)
+    if not itemId or itemId == 0 then
+        return
+    end
+    local item = g_ui.createWidget('TrailRewardItem', panel)
+    item:setItemId(itemId)
+    item:setTooltip(tooltip)
+end
+
+local function fillRewards(panel, step, trail)
+    panel:destroyChildren()
+    local exp = math.floor((trail.exp or 0) * (step.boost or 1))
+    if exp > 0 then
+        addReward(panel, 'exp', '+' .. goldText(exp), tr('+%s de experiência', formatNumber(exp)))
+    end
+    addReward(panel, 'points', '+' .. (step.points or 0), step.milestone and tr('+%d Hunt Points (com o bônus de marco)', step.points or 0) or tr('+%d Hunt Points', step.points or 0))
+    if (step.charms or 0) > 0 then
+        addReward(panel, 'charms', '+' .. step.charms, tr('+%d charm points', step.charms))
+    end
+    if (step.gold or 0) > 0 then
+        addReward(panel, 'gold', '+' .. goldText(step.gold), tr('+%s de ouro (no banco)', formatNumber(step.gold)))
+    end
+    if step.bag then
+        addRewardItem(panel, step.bag, tr('Recompensa: %s', step.bagName or ''))
+    end
+    if step.exercise then
+        addRewardItem(panel, trail.exerciseItem, tr('Recompensa de marco: exercise weapon da sua vocação (500 cargas, na Store Inbox)'))
+    end
+end
+
+-- the legend over the list: what each reward icon is
+local function fillLegend(panel)
+    if panel:getChildCount() > 0 then
+        return
+    end
+    for _, entry in ipairs({ { 'exp', tr('Experiência') }, { 'points', tr('Hunt Points') }, { 'charms', tr('Charm points') }, { 'gold', tr('Ouro (banco)') } }) do
+        addReward(panel, entry[1], entry[2], entry[2])
+    end
+end
+
 local function renderTrailList()
     local panel = window.trailPanel
     local trail = state.trail
     local steps = trail.steps or {}
     local done = trail.finished and #steps or trail.index - 1
     panel.summary:setText(tr('%d de %d etapas completas', done, #steps))
+    fillLegend(panel.legend)
     panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, +%d de bônus. A trilha inteira vale %s pontos.',
         formatNumber(trail.exp), trail.milestoneEvery or 5, trail.milestonePoints or 0, formatNumber(trail.totalPoints or 0))
         .. ((trail.totalCharms or 0) > 0 and tr(' E %s charm points.', formatNumber(trail.totalCharms)) or ''))
@@ -450,10 +521,10 @@ local function renderTrailList()
             row.creature:setOutfit(outfitOf(step.outfit))
             fitText(row.name, step.milestone and (step.name .. '  (marco)') or step.name)
             row.name:setTooltip(step.variants and step.variants ~= '' and tr('Valem: %s.', step.variants) or '')
-            row.info:setText(tr('Level %d, mate %s, %s exp cada, +%d pts', step.level, formatNumber(step.need), formatNumber(step.experience), step.points or 0)
-                .. ((step.charms or 0) > 0 and tr(', +%d charms', step.charms) or '')
-                .. ((step.gold or 0) > 0 and tr(', +%s ouro', goldText(step.gold)) or ''))
+            row.info:setText(tr('Lv %d  -  %s kills', step.level, formatNumber(step.need)))
+            row.info:setTooltip(tr('Level recomendado %d. Mate %s (%s de experiência cada).', step.level, formatNumber(step.need), formatNumber(step.experience)))
             row.info:setColor(readiness(step.level))
+            fillRewards(row.rewards, step, trail)
         end
         trailBuilt = true
     end

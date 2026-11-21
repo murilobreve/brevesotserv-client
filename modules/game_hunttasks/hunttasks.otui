@@ -163,8 +163,26 @@ TaskCard < BrevesSection
     size: 150 24
     visible: false
 
+// one reward of a Trail step: its icon and how much (hunttasks.lua:
+// addReward); an item reward is a TrailRewardItem
+TrailReward < UIWidget
+  height: 16
+  phantom: true
+  text-align: left
+  text-offset: 17 0
+  icon-align: left
+  icon-offset: 0 0
+  font: verdana-11px-monochrome
+  color: #e6e0f2
+
+TrailRewardItem < UIItem
+  size: 22 22
+  virtual: true
+
+// a Trail step: its number, picture, name, then "Level - kills" and its
+// rewards with their icons; the status (and the hunt button) on the right
 TrailRow < BrevesRow
-  height: 40
+  height: 42
   padding: 2
 
   Label
@@ -197,7 +215,7 @@ TrailRow < BrevesRow
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 6
-    width: 200
+    width: 150
     text-align: right
     color: #9789b3
     phantom: true
@@ -217,13 +235,23 @@ TrailRow < BrevesRow
     id: info
     anchors.top: name.bottom
     anchors.left: name.left
-    anchors.right: name.right
-    margin-top: 3
-    height: 14
+    margin-top: 4
+    width: 130
+    height: 16
     font: verdana-11px-monochrome
     color: #9789b3
     phantom: true
 
+  Panel
+    id: rewards
+    anchors.top: info.top
+    anchors.left: info.right
+    anchors.right: status.left
+    height: 18
+    phantom: true
+    layout:
+      type: horizontalBox
+      spacing: 10
 // task shop, drawn like the Store: offer rows on the left, the chosen
 // offer on the right (images from game_store)
 ShopPanelDark < UIWidget
@@ -437,11 +465,24 @@ MythosWindow
       id: summary
       anchors.top: parent.top
       anchors.left: parent.left
-      anchors.right: parent.right
+      anchors.right: legend.left
       height: 30
       text-wrap: true
       font: verdana-11px-monochrome
       color: #cbc0e0
+
+    // what each reward icon of the rows is (hunttasks.lua: fillLegend)
+    Panel
+      id: legend
+      anchors.top: parent.top
+      anchors.right: parent.right
+      margin-top: 6
+      height: 18
+      width: 420
+      phantom: true
+      layout:
+        type: horizontalBox
+        spacing: 12
 
     TaskList
       id: list
