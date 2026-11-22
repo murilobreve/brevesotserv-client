@@ -356,6 +356,10 @@ local function fillCombo(combo, entries, selected, label, onChange)
 end
 
 local function spellLabel(spell)
+    local name = HealData.ascensao(spell)
+    if name then
+        return string.format('%s - %s', name, spell.words)
+    end
     return spell.words
 end
 

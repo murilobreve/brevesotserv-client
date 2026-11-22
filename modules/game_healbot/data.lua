@@ -324,6 +324,23 @@ local AIMED = {
 }
 local NOT_CAST = { ['exevo frigo grav'] = true }
 
+-- the Ascensão's spells by their names in its window: the caster lists them
+-- first (they are the strongest a character has) and by name
+local ASCENSAO = {
+    ['exori tera ico'] = 'Corte Sísmico', ['exani gran ico'] = 'Salto do Titã',
+    ['exori grip'] = 'Gancho do Carrasco', ['exori gran san vis'] = 'Flecha do Crepúsculo',
+    ['exevo gran san vis'] = 'Chuva de Juízo', ['exori con vis'] = 'Lança Ricochete',
+    ['exevo gran vis'] = 'Raio Arcano', ['exevo meteor'] = 'Meteoro',
+    ['exevo vis mort'] = 'Esfera do Vazio', ['exori frigo vis'] = 'Estilhaço de Gelo',
+    ['exori tera vis'] = 'Raízes Errantes', ['exori sonic pug'] = 'Palma Sônica',
+    ['exori dra pug'] = 'Chute do Dragão', ['exani tera pug'] = 'Passo Fantasma',
+}
+
+-- the Ascensão name of a spell, nil for the others
+function HealData.ascensao(spell)
+    return spell and ASCENSAO[spell.words] or nil
+end
+
 -- The spells that go the way the character faces (waves, beams, sweeps): the
 -- caster turns the character for them. `rows` is how many tiles to each side
 -- of the middle a row reaches, from the row in front of the character
@@ -365,10 +382,19 @@ function HealData.directional(spell)
 end
 
 function HealData.attackSpells(vocation)
-    return vocationSpells(vocation, function(spell)
+    local list = vocationSpells(vocation, function(spell)
         return Spells.getPrimaryGroup(spell) == ATTACK_GROUP and spell.type == 'Instant' and not spell.parameter
             and not NOT_CAST[spell.words]
     end)
+    -- the Ascensão's first, in the order of their paths
+    local first, rest = {}, {}
+    for _, spell in ipairs(list) do
+        table.insert(ASCENSAO[spell.words] and first or rest, spell)
+    end
+    for _, spell in ipairs(rest) do
+        first[#first + 1] = spell
+    end
+    return first
 end
 
 -- the runes the caster throws at the target (client ids)
