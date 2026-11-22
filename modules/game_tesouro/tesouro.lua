@@ -110,7 +110,7 @@ local function refreshBuy()
     if full then
         box.limit:setText(tr('You hold %d bonds, the most.', #state.bonds))
     else
-        box.limit:setText(tr('min %s, room for %s', gold(limits.min), gold(room)))
+        box.limit:setText(tr('min %s, max %s', gold(limits.min), gold(room)))
     end
 end
 

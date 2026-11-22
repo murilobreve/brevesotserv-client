@@ -108,7 +108,7 @@ TesouroStat < BrevesPanelBox
 
 MythosWindow
   id: tesouroWindow
-  size: 620 560
+  size: 620 568
   @onEscape: modules.game_tesouro.hide()
 
   TesouroStat
@@ -174,7 +174,7 @@ MythosWindow
       anchors.verticalCenter: amountKey.verticalCenter
       anchors.left: amountKey.right
       margin-left: 6
-      width: 130
+      width: 112
       max-length: 12
       @onTextChange: modules.game_tesouro.onAmountChange()
 
@@ -183,7 +183,7 @@ MythosWindow
       anchors.verticalCenter: amountKey.verticalCenter
       anchors.left: amount.right
       margin-left: 6
-      width: 70
+      width: 60
       !text: tr('All')
       @onClick: modules.game_tesouro.fillAll()
 
@@ -239,9 +239,11 @@ MythosWindow
     id: status
     anchors.left: parent.left
     anchors.right: close.left
-    anchors.verticalCenter: close.verticalCenter
+    anchors.bottom: parent.bottom
     margin-right: 8
+    height: 28
     text-align: left
+    text-wrap: true
 
   MythosButton
     id: close
