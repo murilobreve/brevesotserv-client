@@ -273,7 +273,7 @@ WIKI_PAGES.bosses = {
         { 'p', 'De uma área protegida, ou fora de combate, escolha o boss e vá para a sala dele. O time fica nos pisos marcados e alguém puxa a alavanca: todos entram na arena e o boss aparece. Quando ele morre, abre um portal de volta para o templo onde vocês entraram.' },
         { 'table', widths = { 150, 370 }, head = { 'Regra', 'Como é' },
           rows = {
-              { 'Nível', 'Cada boss pede um nível de todo o time. Nos bosses das arenas novas é o nível em que um time de 2 ou 3 mata o boss com folga; nos mais fortes (Ferumbras, Orshabaal, Ghazbaran, Morgaroth...) é a metade disso, para um time maior' },
+              { 'Nível', 'Cada boss tem um nível calculado pela vida e pelo dano que ele tem de verdade no servidor: é o nível recomendado que a janela mostra. A alavanca abre para o time todo na metade desse nível, para quem quer tentar antes com um time maior' },
               { 'Espera', '4 horas entre duas lutas contra o mesmo boss das arenas novas; nos outros, a espera do mapa oficial. A janela mostra a de cada boss' },
               { 'Tempo', '20 minutos para matar o boss; depois a arena esvazia' },
               { 'Time', 'De 1 a 5 jogadores, nos pisos marcados' },
@@ -290,7 +290,7 @@ WIKI_PAGES.bosses = {
               { 'Obsidian', '5%', '+120%', '+35%', '2 rolagens extras, gold x4, 1 item raro e 10% de outro' },
               { 'Lord of Death', '1%', '+170%', '+50%', '3 rolagens extras, gold x5, 1 item raro, e 20% de chance de um 2º e de um 3º' },
           } },
-        { 'p', 'A chance vale por luta, e um VIP no time aumenta todas. As rolagens extras multiplicam a chance de cada item do loot do boss (até 50% por rolagem; itens abaixo de 0,3% não sobem). O item raro é uma peça do loot da bag que vira rara, ou uma peça comum quando a bag não tem equipamento. As magias do tier batem conforme o nível da alavanca. O boss raro não renasce, não mata os monstros em volta, e morrer para ele não traz a maldição do Lord of Death.' },
+        { 'p', 'A chance vale por luta, e um VIP no time aumenta todas. As rolagens extras multiplicam a chance de cada item do loot do boss (até 50% por rolagem; itens abaixo de 0,3% não sobem). O item raro é uma peça do loot da bag que vira rara, ou uma peça comum quando a bag não tem equipamento. As magias do tier batem conforme o nível do boss. O boss raro não renasce, não mata os monstros em volta, e morrer para ele não traz a maldição do Lord of Death.' },
     },
 }
 
