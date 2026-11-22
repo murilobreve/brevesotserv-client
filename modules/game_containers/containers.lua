@@ -975,8 +975,22 @@ function collectRewards()
     protocol:send(msg)
 end
 
+-- the same container sent again (the server re-sends the whole thing after a
+-- batch of loot, e.g. the loot pouch): it keeps the size the player gave it
+local function isSameContainer(a, b)
+    if not a or not b or a:getId() ~= b:getId() or a:getCapacity() ~= b:getCapacity() then
+        return false
+    end
+    local ia, ib = a:getContainerItem(), b:getContainerItem()
+    return ia ~= nil and ib ~= nil and ia:getId() == ib:getId()
+end
+
 function onContainerOpen(container, previousContainer)
     local containerWindow
+    local keepHeight = nil
+    if previousContainer and previousContainer.window and isSameContainer(previousContainer, container) then
+        keepHeight = previousContainer.window:getHeight()
+    end
     if previousContainer then
         containerWindow = previousContainer.window
         previousContainer.window = nil
@@ -1177,7 +1191,7 @@ function onContainerOpen(container, previousContainer)
         panel:addChild(containerWindow)
     end
 
-    if not previousContainer or previousContainer:getCapacity() >= container:getCapacity() then
+    if not keepHeight and (not previousContainer or previousContainer:getCapacity() >= container:getCapacity()) then
         -- Always set the content height based on the current container's content, with a minimum of one row
         local minRows = 1
         if modules.client_options.getOption('openMaximized') then
@@ -1191,6 +1205,9 @@ function onContainerOpen(container, previousContainer)
     end
 
     containerWindow:setup()
+    if keepHeight then
+        containerWindow:setHeight(keepHeight)
+    end
     
     -- Apply current sorting mode if one is active and manual sort mode is disabled
     local currentSortMode = containerSettings and containerSettings['currentSortMode']

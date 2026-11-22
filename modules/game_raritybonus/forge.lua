@@ -954,7 +954,12 @@ local function fillUp(entry)
         local steps = math.max(1, math.floor(100 / step))
         fillingProtect = true
         box.scroll:setMaximum(steps)
-        box.scroll:setValue(math.floor((forging and asc.protect or protect) / step + 0.5))
+        -- while dragging the value is fractional: re-setting the rounded one
+        -- every move snapped the slider back and it never moved
+        local want = math.floor((forging and asc.protect or protect) / step + 0.5)
+        if math.floor(box.scroll:getValue() + 0.5) ~= want then
+            box.scroll:setValue(want)
+        end
         fillingProtect = false
         box.scroll:setEnabled(not busy())
         box.title:setText(tr('Chance of breaking: %s%%', percentText(breaks)))

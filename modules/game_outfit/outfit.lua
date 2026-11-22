@@ -336,17 +336,40 @@ local function money(value)
 end
 
 local addonLookType = nil
+local addonAskedAt = 0
+local addonAnswered = false
+local addonRetry = nil
 
-local function requestAddons(lookType)
-    addonLookType = lookType
+-- the addons of `lookType`, or of the outfit being worn/previewed when nil:
+-- they show from the moment the window opens, on every tab. The same outfit
+-- asked again within a second (colour clicks redraw the list) is skipped
+-- unless `force` (after taking an addon).
+local function requestAddons(lookType, force)
+    lookType = tonumber(lookType) or (tempOutfit and tonumber(tempOutfit.type))
+    if not lookType or lookType == 0 then
+        return
+    end
+    local now = g_clock.millis()
+    -- the server ignores the same request again within 150 ms
+    if lookType == addonLookType and now - addonAskedAt < (force and 300 or 1000) then
+        return
+    end
     local area = window and window.configure and window.configure.addonArea
-    if area then
+    if area and lookType ~= addonLookType then
         area.addonScroll.addonShop:destroyChildren()
         area:hide()
     end
-    if lookType then
-        sendShop({ action = 'addons', lookType = lookType })
-    end
+    addonLookType, addonAskedAt, addonAnswered = lookType, now, false
+    sendShop({ action = 'addons', lookType = lookType })
+    -- no answer (dropped by the cooldown, or lost): ask once more
+    removeEvent(addonRetry)
+    addonRetry = scheduleEvent(function()
+        addonRetry = nil
+        if window and not addonAnswered and addonLookType == lookType then
+            addonAskedAt = g_clock.millis()
+            sendShop({ action = 'addons', lookType = lookType })
+        end
+    end, 1500)
 end
 
 local function showAddons(data)
@@ -355,6 +378,7 @@ local function showAddons(data)
     if not panel or tonumber(data.lookType) ~= addonLookType then
         return
     end
+    addonAnswered = true
     panel:destroyChildren()
     local any = false
     for _, addon in ipairs(data.addons or {}) do
@@ -874,10 +898,13 @@ function create(player, outfitList, creatureMount, mountList, familiarList, wing
         end
     end
     sendShop({ action = 'prices' })
+    requestAddons(tempOutfit and tempOutfit.type, true)
 end
 
 function destroy()
     closeShopBox()
+    removeEvent(addonRetry)
+    addonRetry, addonLookType = nil, nil
     if window then
         floor = nil
         movementCheck = nil
@@ -1594,6 +1621,7 @@ function onPresetSelect(list, focusedChild, unfocusedChild, reason)
         settings.currentPreset = presetId
 
         updatePreview()
+        requestAddons(tempOutfit.type)
 
         updateAppearanceTexts(tempOutfit)
 
