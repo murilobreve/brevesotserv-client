@@ -113,8 +113,12 @@ local answerEvent
 local pendingData -- a refresh that came in while an animation runs
 
 local roll -- { phase = 'wait'|'show', slot, before, lock, pool, after, order, k, stage, t, ... }
-local asc -- { phase = 'forging', slot, offer, fromKey, pct, answer }
+local asc -- { phase = 'forging', slot, offer, fromKey, gold, xp, breakChance, pos, answer, ... }
 local result -- the Upgrade's result screen
+-- protection against breaking chosen on the Upgrade page, in percent (0: none,
+-- 100: the item cannot break), and the item it was chosen for
+local protect, protectSlot = 0, nil
+local fillingProtect = false
 local wheelRot = 0
 local wheelSlices = 0
 local tickEvent
@@ -855,14 +859,35 @@ end
 -- Upgrade
 -- ---------------------------------------------------------------------------
 
+-- "7", "7.5": a chance with at most one decimal
+local function percentText(value)
+    value = math.floor((tonumber(value) or 0) * 10 + 0.5) / 10
+    if value == math.floor(value) then
+        return string.format('%d', value)
+    end
+    return string.format('%.1f', value)
+end
+
+-- what an upgrade costs and its break chance with `pct` percent of protection
+-- (the server's protectedOffer does the same sum and is the one that counts)
+local function upgradePrice(offer, pct)
+    local full = tonumber(offer.breakChance) or 0
+    pct = full > 0 and math.max(0, math.min(100, tonumber(pct) or 0)) or 0
+    local share = (pct / 100) ^ (tonumber(offer.protectPower) or 1)
+    local needGold = (tonumber(offer.gold) or 0) + math.ceil((tonumber(offer.protectGold) or 0) * share)
+    local needXp = (tonumber(offer.xp) or 0) + math.ceil((tonumber(offer.protectXp) or 0) * share)
+    return needGold, needXp, math.floor(full * (100 - pct) / 100 * 10 + 0.5) / 10
+end
+
 local function fillUp(entry)
     local up = page().upPage
     local res = up.result
     res:setVisible(result ~= nil and result.slot == entry.slotId)
     if res:isVisible() then
         local g = grade(result.grade)
-        res.title:setText(result.win and tr('Success!') or tr('Failed'))
+        res.title:setText(result.win and tr('Success!') or (result.broken and tr('The item broke!') or tr('Failed')))
         res.title:setColor(result.win and '#7fd36a' or '#ff7a6a')
+        res.box:setOpacity(result.broken and 0.35 or 1)
         setItem(res.box.item, entry, result.grade)
         hoverCard(res.box, entry)
         res.glow:setVisible(result.win)
@@ -880,14 +905,13 @@ local function fillUp(entry)
     end
     local offer = (asc and asc.slot == entry.slotId and asc.offer) or entry.upgrade
     local has = offer ~= nil
-    for _, id in ipairs({ 'pair', 'path', 'chance', 'explain', 'upCostBar' }) do
+    for _, id in ipairs({ 'pair', 'path', 'odds', 'chance', 'breakChance', 'nothingChance', 'protectBox', 'upCostBar' }) do
         up[id]:setVisible(has)
     end
+    up.explain:setVisible(false)
     up.maxText:setVisible(not has)
     if not has then
         up.maxText:setText(tr('Highest grade: %s', grade(entry.rarity).label))
-        up.forgeBar:setVisible(false)
-        up.forgePct:setVisible(false)
         return
     end
     local from, to = grade(entry.rarity), grade(offer.to)
@@ -896,25 +920,76 @@ local function fillUp(entry)
     setItem(up.pair.toBox.item, entry, offer.to)
     up.path:setText(from.label .. '  >  ' .. to.label)
     up.path:setColor(to.color)
-    up.chance:setText(tr('Success chance: %d%%', tonumber(offer.chance) or 0))
     local forging = asc ~= nil and asc.phase == 'forging' and asc.slot == entry.slotId
-    up.forgeBar:setVisible(forging)
-    up.forgePct:setVisible(forging)
-    -- what success and failure do is in the confirmation of the upgrade
-    up.explain:setVisible(false)
+    if protectSlot ~= entry.slotId and not forging then
+        protect, protectSlot = 0, entry.slotId
+    end
+    -- while it forges: what was paid for, not what the slider says now
+    local needGold, needXp, breaks
     if forging then
-        local width = up.forgeBar:getWidth() - 2
-        up.forgeBar.fill:setWidth(math.max(0, math.floor(width * asc.pct / 100)))
-        up.forgePct:setText(tr('Forging... %d%%', asc.pct))
+        needGold, needXp, breaks = asc.gold, asc.xp, asc.breakChance
+    else
+        needGold, needXp, breaks = upgradePrice(offer, protect)
+    end
+    local chance = tonumber(offer.chance) or 0
+    local fullBreak = tonumber(offer.breakChance) or 0
+    -- the strip: success from the left, break from the right
+    local width = up.odds:getWidth() - 2
+    up.odds.win:setWidth(math.max(0, math.floor(width * chance / 100 + 0.5)))
+    up.odds.lose:setVisible(breaks > 0)
+    up.odds.lose:setWidth(math.max(2, math.floor(width * breaks / 100 + 0.5)))
+    up.odds.needle:setVisible(forging)
+    if forging then
+        up.odds.needle:setMarginLeft(1 + math.max(0, math.min(width - 3, math.floor(width * (asc.pos or 0) / 100) - 1)))
+    end
+    up.chance:setText(tr('Success: %d%%', chance))
+    up.nothingChance:setText(tr('Nothing happens: %s%%', percentText(math.max(0, 100 - chance - breaks))))
+    up.breakChance:setText(tr('Breaks: %s%%', percentText(breaks)))
+    up.breakChance:setColor(breaks > 0 and '#ff7a6a' or '#7fd36a')
+    -- the protection slider (nothing to protect when the item cannot break)
+    local box = up.protectBox
+    box:setVisible(fullBreak > 0)
+    if fullBreak > 0 then
+        local step = math.max(1, tonumber(offer.protectStep) or 5)
+        local steps = math.max(1, math.floor(100 / step))
+        fillingProtect = true
+        box.scroll:setMaximum(steps)
+        box.scroll:setValue(math.floor((forging and asc.protect or protect) / step + 0.5))
+        fillingProtect = false
+        box.scroll:setEnabled(not busy())
+        box.title:setText(tr('Chance of breaking: %s%%', percentText(breaks)))
+        local extraGold, extraXp = needGold - (tonumber(offer.gold) or 0), needXp - (tonumber(offer.xp) or 0)
+        if extraGold > 0 or extraXp > 0 then
+            box.extra:setText(tr('+%s gold, +%d Rarity XP', formatGold(extraGold), extraXp))
+        else
+            box.extra:setText(tr('no protection'))
+        end
+        box.hint:setText(tr('Drag to the right: less chance of breaking, higher price.'))
     end
     local bar = up.upCostBar
-    local needGold, needXp = tonumber(offer.gold) or 0, tonumber(offer.xp) or 0
     bar.upGold:setText(formatGold(needGold))
     bar.upGold:setColor(gold >= needGold and '#e2c46a' or '#ff7a6a')
     bar.upXp:setText(tr('%d Rarity XP', needXp))
     bar.upXp:setColor(rarityXp >= needXp and '#c9a4ff' or '#ff7a6a')
     bar.upButton:setText(forging and tr('Forging...') or tr('Upgrade'))
     bar.upButton:setEnabled(not busy() and gold >= needGold and rarityXp >= needXp)
+end
+
+-- the slider of the Upgrade page moved
+function forgeProtect(value)
+    if fillingProtect or busy() then
+        return
+    end
+    local entry = bySlot[selected]
+    local offer = entry and entry.upgrade
+    if not offer then
+        return
+    end
+    local step = math.max(1, tonumber(offer.protectStep) or 5)
+    protect, protectSlot = math.max(0, math.min(100, (tonumber(value) or 0) * step)), entry.slotId
+    if tab == 'up' and not result then
+        fillUp(entry)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -981,6 +1056,11 @@ function Forge.refresh()
     fillItems()
     local right = page()
     local entry = bySlot[selected]
+    -- the item that broke is no longer in the list: its result screen shows
+    -- what it was, until it is closed or another item is picked
+    if result and result.broken and tab == 'up' then
+        entry = result.entry
+    end
     -- no Upgrade tab for an item at the highest grade
     local canUpgrade = entry == nil or entry.upgrade ~= nil or (asc ~= nil and asc.slot == entry.slotId)
     window.tabs.tabUp:setVisible(canUpgrade)
@@ -1196,7 +1276,7 @@ end
 -- ---------------------------------------------------------------------------
 
 local function upResult(answer)
-    local entry = bySlot[asc.slot] or {}
+    local entry = bySlot[asc.slot] or asc.entry or {}
     local res = answer.result or {}
     local win = res.code == 'rerolled' and res.upgrade
     local r = { slot = asc.slot, win = win, shader = entry.shader }
@@ -1208,12 +1288,50 @@ local function upResult(answer)
             local look = quality(tonumber(line.quality), line.perfect)
             table.insert(r.lines, { text = line.text or '', color = look[3] })
         end
+    elseif res.code == 'upgradeBroken' then
+        -- the item is gone from the list: the screen keeps what it was
+        r.broken, r.entry = true, asc.entry
+        r.grade = asc.fromKey
+        r.text = tr('%s broke in the forge and is gone. Spent: %s gold and %d Rarity XP.', titleCase(asc.entry.name or res.name), formatGold(res.gold or asc.gold), tonumber(res.xp or asc.xp) or 0)
+        r.lines = {}
     else
         r.grade = asc.fromKey
-        r.text = tr('%s stays %s, as it was. Spent: %s gold and %d Rarity XP.', titleCase(entry.name or res.name), grade(asc.fromKey).label, formatGold(res.gold or asc.offer.gold), tonumber(res.xp or asc.offer.xp) or 0)
+        r.text = tr('%s stays %s, as it was. Spent: %s gold and %d Rarity XP.', titleCase(entry.name or res.name), grade(asc.fromKey).label, formatGold(res.gold or asc.gold), tonumber(res.xp or asc.xp) or 0)
         r.lines = {}
     end
     return r
+end
+
+-- The needle of the odds strip. While the server rolls it runs from end to
+-- end; with the answer it slows down and stops on the roll (0..100: under the
+-- success chance the item is raised, in the last `breakChance` it breaks).
+local NEEDLE_SPEED = 100 / 330 -- strip percent per millisecond
+local NEEDLE_MIN = 900 -- it runs at least this long
+local NEEDLE_SETTLE = 1700 -- slowing down to the roll
+local NEEDLE_HOLD = 550 -- standing on the result before its screen
+
+-- back and forth over the strip: 0..100..0 every 200
+local function bounce(u)
+    u = u % 200
+    return u <= 100 and u or 200 - u
+end
+
+-- where the needle stops for this answer
+local function needleTarget(res)
+    local chance = tonumber(asc.offer.chance) or 0
+    local breaks = tonumber(res.breakChance) or asc.breakChance or 0
+    local at = tonumber(res.roll)
+    if not at then
+        -- an older server sends no roll: the middle of the result's zone
+        if res.code == 'rerolled' then
+            at = chance / 2
+        elseif res.code == 'upgradeBroken' then
+            at = 100 - breaks / 2
+        else
+            at = (chance + 100 - breaks) / 2
+        end
+    end
+    return math.max(0.4, math.min(99.6, at))
 end
 
 local function upTick()
@@ -1221,8 +1339,34 @@ local function upTick()
     if not asc or asc.phase ~= 'forging' or not window then
         return
     end
-    asc.pct = math.min(100, math.floor((g_clock.millis() - asc.startedAt) / 18))
-    if asc.pct >= 100 and asc.answer then
+    local now = g_clock.millis()
+    if asc.settleAt then
+        local t = math.min(1, (now - asc.settleAt) / NEEDLE_SETTLE)
+        asc.pos = bounce(asc.from + (asc.to - asc.from) * (1 - (1 - t) ^ 3))
+        if t >= 1 then
+            asc.stoppedAt = asc.stoppedAt or now
+        end
+    else
+        local u = (now - asc.startedAt) * NEEDLE_SPEED
+        asc.pos = bounce(u)
+        if asc.answer and now - asc.startedAt >= NEEDLE_MIN then
+            -- the first pass over the roll at least 160 further on
+            local target = needleTarget(asc.answer.result or {})
+            local to
+            for lap = 0, 8 do
+                for _, candidate in ipairs({ lap * 200 + target, lap * 200 + 200 - target }) do
+                    if candidate >= u + 160 and (not to or candidate < to) then
+                        to = candidate
+                    end
+                end
+                if to then
+                    break
+                end
+            end
+            asc.settleAt, asc.from, asc.to = now, u, to or (u + 200)
+        end
+    end
+    if asc.stoppedAt and now - asc.stoppedAt >= NEEDLE_HOLD then
         local d = asc.answer
         result = upResult(d)
         asc = nil
@@ -1239,7 +1383,7 @@ local function upTick()
     if entry and tab == 'up' then
         fillUp(entry)
     end
-    tickEvent = scheduleEvent(upTick, 30)
+    tickEvent = scheduleEvent(upTick, 25)
 end
 
 function forgeUpgrade()
@@ -1249,6 +1393,8 @@ function forgeUpgrade()
         return
     end
     local slot, itemId = selected, entry.itemId
+    local pct = protectSlot == slot and protect or 0
+    local needGold, needXp, breaks = upgradePrice(up, pct)
     local function go()
         local now = bySlot[slot]
         if not now or now.itemId ~= itemId or not now.upgrade then
@@ -1257,15 +1403,20 @@ function forgeUpgrade()
         end
         selected = slot
         result = nil
-        asc = { phase = 'forging', slot = slot, offer = up, fromKey = now.rarity, pct = 0, startedAt = g_clock.millis() }
+        asc = { phase = 'forging', slot = slot, offer = up, fromKey = now.rarity, entry = now, pos = 0, startedAt = g_clock.millis(),
+            protect = pct, gold = needGold, xp = needXp, breakChance = breaks }
         setStatus(tr('Forging...'), '#e2c46a')
-        Forge.send({ action = 'upgradeItem', slot = now.bag and nil or slot, fid = now.fid })
+        Forge.send({ action = 'upgradeItem', slot = now.bag and nil or slot, fid = now.fid, protect = pct })
         Forge.expectAnswer()
         Forge.refresh()
         stopTick()
         upTick()
     end
-    Forge.confirm(tr('Upgrade'), tr('Upgrade %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid even if it fails.\nChance: %d%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. On a failure it stays exactly as it is.', titleCase(entry.name), up.label or '', formatGold(up.gold), tonumber(up.xp) or 0, tonumber(up.chance) or 0, up.label or ''), go)
+    local text = tr('Upgrade %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid whatever happens.\nSuccess: %d%%. The item breaks: %s%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. When nothing happens it stays exactly as it is.', titleCase(entry.name), up.label or '', formatGold(needGold), needXp, tonumber(up.chance) or 0, percentText(breaks), up.label or '')
+    if breaks > 0 then
+        text = text .. '\n\n' .. tr('If it breaks, the item is destroyed and does not come back.')
+    end
+    Forge.confirm(tr('Upgrade'), text, go)
 end
 
 function forgeCloseResult()
@@ -1295,6 +1446,8 @@ local function messageOf(d)
             text = text .. '. ' .. tr('Perfect roll!')
         end
         return text
+    elseif code == 'upgradeBroken' then
+        return tr('%s broke in the forge and is gone. (-%s gold, -%d Rarity XP)', titleCase(res.name), formatGold(res.gold), tonumber(res.xp) or 0)
     elseif code == 'upgradeFailed' then
         return tr('The upgrade to %s failed (%d%% chance): %s stays as it was. (-%s gold, -%d Rarity XP)', res.to or '', tonumber(res.chance) or 0, titleCase(res.name), formatGold(res.gold), tonumber(res.xp) or 0)
     elseif code == 'xp' then
@@ -1402,7 +1555,7 @@ function Forge.onBonuses(d)
         return
     end
     if res and asc and asc.phase == 'forging' then
-        if (res.code == 'rerolled' and res.upgrade) or res.code == 'upgradeFailed' then
+        if (res.code == 'rerolled' and res.upgrade) or res.code == 'upgradeFailed' or res.code == 'upgradeBroken' then
             Forge.pendingMessage = { message, color }
             asc.answer = d
             pendingData = d

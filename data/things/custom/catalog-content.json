@@ -109,9 +109,9 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-creatures-corpses-06337be664e40784.bmp.lzma",
+    "file": "sprites-creatures-corpses-e4757cf850055a05.bmp.lzma",
     "spritetype": 0,
-    "firstspriteid": 1000668,
+    "firstspriteid": 1000674,
     "lastspriteid": 1000747,
     "area": 32
   },
@@ -165,10 +165,10 @@
   },
   {
     "type": "sprite",
-    "file": "sprites-creatures-c6b3862f87c820ce.bmp.lzma",
+    "file": "sprites-creatures-72467aa71d901d68.bmp.lzma",
     "spritetype": 3,
     "firstspriteid": 1000648,
-    "lastspriteid": 1000667,
+    "lastspriteid": 1000673,
     "area": 64
   }
 ]

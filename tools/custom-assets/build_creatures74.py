@@ -317,8 +317,21 @@ def extract(dat, spr_path):
             old, pattern = old if isinstance(old, tuple) else (old, 0)
             t = things[old]
             px, py = pattern % t['px'], pattern // t['px']
-            tile = spr.get(t['spr'][(py * t['px'] + px) * t['layers'] * t['w'] * t['h']])
-            Image.fromarray(tile).save(os.path.join(folder, corpse_png(old, pattern)))
+            base = (py * t['px'] + px) * t['layers'] * t['w'] * t['h']
+            if t['w'] == 1 and t['h'] == 1:
+                Image.fromarray(spr.get(t['spr'][base])).save(os.path.join(folder, corpse_png(old, pattern)))
+                continue
+            # a body two tiles wide (the bears): every part, in a 64x64
+            # sprite with the item's own tile at the bottom right, as the
+            # client draws it (only the first part was taken, half a bear)
+            out = np.zeros((64, 64, 4), np.uint8)
+            for hh in range(t['h']):
+                for ww in range(t['w']):
+                    part = spr.get(t['spr'][base + hh * t['w'] + ww])
+                    y, x = 32 - hh * 32, 32 - ww * 32
+                    solid = part[..., 3] > 0
+                    out[y:y + 32, x:x + 32][solid] = part[solid]
+            Image.fromarray(out).save(os.path.join(folder, corpse_png(old, pattern)))
     folder = os.path.join(ART, 'items')
     os.makedirs(folder, exist_ok=True)
     for item in OLD_ITEMS:
@@ -421,13 +434,30 @@ def build(client_dir, server_dat):
             o.flags.animate_always = True
         outfits.append(o)
 
-    # the corpses: 32x32 sprites after the creatures'
+    # the corpses: 32x32 sprites after the creatures'; a body two tiles wide
+    # (64x64 picture, the bears) goes with the creatures' 64x64 frames
+    corpse_imgs = {}
+    for c in CORPSES:
+        for old in c['old']:
+            key = corpse_png(*(old if isinstance(old, tuple) else (old, 0)))
+            corpse_imgs[key] = Image.open(os.path.join(ART, 'corpses', key)).convert('RGBA')
+    big_ids = {}
+    for key, img in corpse_imgs.items():
+        if img.size != (32, 32):
+            big_ids[key] = first + len(frames)
+            frames.append(img)
     small = []
     objects = []
     first_small = first + len(frames)
     for c in CORPSES:
-        looks = [first_small + len(small) + i for i in range(3)]
-        small += [Image.open(os.path.join(ART, 'corpses', corpse_png(*(old if isinstance(old, tuple) else (old, 0))))).convert('RGBA') for old in c['old']]
+        keys = [corpse_png(*(old if isinstance(old, tuple) else (old, 0))) for old in c['old']]
+        looks = []
+        for key in keys:
+            if key in big_ids:
+                looks.append(big_ids[key])
+            else:
+                looks.append(first_small + len(small))
+                small.append(corpse_imgs[key])
         for k, (look, _seconds, container, corpse) in enumerate(STAGES):
             o = A.Appearance()
             o.id = c['first'] + k
@@ -436,7 +466,10 @@ def build(client_dir, server_dat):
             si.pattern_width = si.pattern_height = si.pattern_depth = si.layers = 1
             si.sprite_id.append(looks[look])
             si.is_opaque = False
-            x, y, w, h = bbox(small[looks[look] - first_small])
+            img = corpse_imgs[keys[look]]
+            if img.size != (32, 32):
+                si.bounding_square = 64
+            x, y, w, h = bbox(img)
             bb = si.bounding_box_per_direction.add()
             bb.x, bb.y, bb.width, bb.height = x, y, w, h
             o.flags.SetInParent()

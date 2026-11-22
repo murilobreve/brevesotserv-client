@@ -1,9 +1,8 @@
 -- Party on the minimap: the server (scripts/party_minimap.lua) sends every
 -- second where the other party members are, on screen or not, and each one
--- gets a small dot on the minimap in the colour of their vocation, ringed in
--- white when their health is low (coloured by health when the server sends no
--- vocation). A member on another floor is shown faded; the tooltip says the
--- name, vocation, health and floor.
+-- gets their own outfit, small, on the minimap (a dot coloured by health
+-- when the server sends no outfit). A member on another floor is shown
+-- faded; the tooltip says the name, vocation, health and floor.
 
 local OPCODE = 130
 
@@ -31,7 +30,7 @@ local function healthColor(hp)
     return '#e2483a'
 end
 
--- dot colour and name of each base vocation (the server's vocation ids)
+-- name of each base vocation, for the tooltip (the server's vocation ids)
 local VOCATIONS = {
     [1] = { color = '#3fa9f5', name = 'Sorcerer' },
     [2] = { color = '#4fd36a', name = 'Druid' },
@@ -39,6 +38,18 @@ local VOCATIONS = {
     [4] = { color = '#e5483c', name = 'Knight' },
     [9] = { color = '#b07cff', name = 'Monk' },
 }
+
+local function outfitOf(raw)
+    return {
+        type = tonumber(raw[1]) or 0,
+        head = tonumber(raw[2]) or 0,
+        body = tonumber(raw[3]) or 0,
+        legs = tonumber(raw[4]) or 0,
+        feet = tonumber(raw[5]) or 0,
+        addons = tonumber(raw[6]) or 0,
+        mount = 0,
+    }
+end
 
 local function clearMarks()
     for _, mark in pairs(marks) do
@@ -59,7 +70,8 @@ local function refresh()
         local pos = { x = tonumber(member.x) or 0, y = tonumber(member.y) or 0, z = tonumber(member.z) or 7 }
         local hp = tonumber(member.hp) or 100
         local vocation = VOCATIONS[tonumber(member.voc) or 0]
-        local style = vocation and 'PartyMinimapMark' or 'PartyMinimapDot'
+        local outfit = type(member.o) == 'table' and (tonumber(member.o[1]) or 0) > 0 and outfitOf(member.o)
+        local style = outfit and 'PartyMinimapMark' or 'PartyMinimapDot'
         local mark = marks[name]
         if mark and (mark:getParent() ~= minimap or mark.partyStyle ~= style) then
             mark:destroy()
@@ -71,9 +83,12 @@ local function refresh()
             marks[name] = mark
         end
         seen[name] = true
-        if vocation then
-            mark:setBackgroundColor(vocation.color)
-            mark:setBorderColor(hp <= 30 and '#ffffff' or '#000000')
+        if outfit then
+            local key = table.concat(member.o, ',')
+            if mark.outfitKey ~= key then
+                mark.outfitKey = key
+                mark:setOutfit(outfit)
+            end
         else
             mark:setBackgroundColor(healthColor(hp))
         end

@@ -1,0 +1,253 @@
+// one of the three terms on offer: pick it, then say how much
+TesouroOffer < BrevesRow
+  height: 40
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin: 5 0 0 10
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #eee6d4
+    phantom: true
+
+  Label
+    id: rate
+    anchors.top: name.bottom
+    anchors.left: name.left
+    margin-top: 3
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #b4afc3
+    phantom: true
+
+  Label
+    id: total
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 10
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #7fd35a
+    phantom: true
+
+// a bond the character holds
+TesouroBond < UIWidget
+  height: 44
+  background-color: #ffffff07
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: parent.left
+    margin: 6 0 0 10
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #eee6d4
+
+  Label
+    id: when
+    anchors.top: name.bottom
+    anchors.left: name.left
+    margin-top: 3
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #b4afc3
+
+  MythosButton
+    id: redeem
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+    size: 96 22
+
+  Label
+    id: value
+    anchors.top: parent.top
+    anchors.right: redeem.left
+    margin: 6 12 0 0
+    text-auto-resize: true
+    font: Verdana Bold-11px
+    color: #e2c46a
+
+  Label
+    id: earned
+    anchors.top: value.bottom
+    anchors.right: value.right
+    margin-top: 3
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #7fd35a
+
+// a number of the header: what it is, over the value
+TesouroStat < BrevesPanelBox
+  height: 46
+  padding: 6 8 6 8
+
+  Label
+    id: key
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 13
+    font: verdana-11px-antialised
+    color: #b4afc3
+    text-align: center
+
+  Label
+    id: value
+    anchors.top: key.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 3
+    height: 16
+    font: Verdana Bold-11px
+    color: #eee6d4
+    text-align: center
+
+MythosWindow
+  id: tesouroWindow
+  size: 620 568
+  @onEscape: modules.game_tesouro.hide()
+
+  TesouroStat
+    id: statDay
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 140
+
+  TesouroStat
+    id: statWeek
+    anchors.top: parent.top
+    anchors.left: prev.right
+    margin-left: 6
+    width: 140
+
+  TesouroStat
+    id: statBank
+    anchors.top: parent.top
+    anchors.left: prev.right
+    margin-left: 6
+    width: 148
+
+  TesouroStat
+    id: statInvested
+    anchors.top: parent.top
+    anchors.left: prev.right
+    anchors.right: parent.right
+    margin-left: 6
+
+  BrevesNote
+    id: intro
+    anchors.top: statDay.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+
+  BrevesSection
+    id: buyBox
+    anchors.top: intro.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 196
+    !text: tr('Invest')
+
+    BrevesList
+      id: offers
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      height: 126
+
+    BrevesLabel
+      id: amountKey
+      anchors.top: offers.bottom
+      anchors.left: parent.left
+      margin-top: 12
+      text-auto-resize: true
+      !text: tr('Gold:')
+
+    MythosTextEdit
+      id: amount
+      anchors.verticalCenter: amountKey.verticalCenter
+      anchors.left: amountKey.right
+      margin-left: 6
+      width: 112
+      max-length: 12
+      @onTextChange: modules.game_tesouro.onAmountChange()
+
+    MythosButton
+      id: all
+      anchors.verticalCenter: amountKey.verticalCenter
+      anchors.left: amount.right
+      margin-left: 6
+      width: 60
+      !text: tr('All')
+      @onClick: modules.game_tesouro.fillAll()
+
+    BrevesLabel
+      id: limit
+      anchors.verticalCenter: amountKey.verticalCenter
+      anchors.left: all.right
+      anchors.right: buy.left
+      margin: 0 8 0 10
+      text-align: left
+
+    MythosPrimaryButton
+      id: buy
+      anchors.verticalCenter: amountKey.verticalCenter
+      anchors.right: parent.right
+      size: 110 24
+      !text: tr('Invest')
+      @onClick: modules.game_tesouro.buy()
+
+  BrevesSection
+    id: bondsBox
+    anchors.top: buyBox.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: status.top
+    margin: 8 0 6 0
+    !text: tr('My bonds')
+
+    BrevesList
+      id: list
+      anchors.fill: parent
+      vertical-scrollbar: listScroll
+      padding-right: 12
+
+    MythosScrollBar
+      id: listScroll
+      anchors.top: list.top
+      anchors.bottom: list.bottom
+      anchors.right: list.right
+      step: 22
+      pixels-scroll: true
+
+    BrevesLabel
+      id: none
+      anchors.centerIn: list
+      width: 420
+      text-align: center
+      text-wrap: true
+      text-auto-resize: true
+      color: #898293
+
+  BrevesLabel
+    id: status
+    anchors.left: parent.left
+    anchors.right: close.left
+    anchors.bottom: parent.bottom
+    margin-right: 8
+    height: 28
+    text-align: left
+    text-wrap: true
+
+  MythosButton
+    id: close
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    !text: tr('Close')
+    @onClick: modules.game_tesouro.hide()

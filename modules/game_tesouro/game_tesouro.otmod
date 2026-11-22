@@ -1,0 +1,9 @@
+Module
+  name: game_tesouro
+  description: Tesouro Mythos - gold put away in bonds that follow the server's inflation
+  author: Mythos
+  website: http://25.18.172.192
+  sandboxed: true
+  scripts: [ tesouro ]
+  @onLoad: init()
+  @onUnload: terminate()
