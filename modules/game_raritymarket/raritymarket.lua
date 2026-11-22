@@ -355,7 +355,8 @@ end
 
 local function fillList(list, entries, kind, emptyLabel, emptyText)
     list:destroyChildren()
-    local previousId = selected and selected.kind == kind and (selected.data.id or selected.data.token)
+    -- the selection may be a row of another kind in this list (a bid in My Offers)
+    local previousId = selected and (selected.kind == kind or selected.kind == 'offer') and (selected.data.id or selected.data.token)
     local reselect
     for index, entry in ipairs(entries or {}) do
         local kind = entry._kind or kind
@@ -407,7 +408,7 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
     end
     if reselect then
         list:focusChild(reselect, MouseFocusReason)
-    elseif selected and selected.kind == kind then
+    elseif selected and (selected.kind == kind or (kind == 'own' and selected.kind == 'offer')) and list:isVisible() then
         clearDetails()
     end
 end
@@ -498,7 +499,13 @@ end
 function setSellMode(mode)
     sellMode = mode
     if selected and selected.kind == 'sell' then
+        -- what was typed stays
+        local content = window.details.content
+        local price, buyNow = content.priceEdit:getText(), content.buyNowEdit:getText()
         showDetails('sell', selected.data)
+        content.priceEdit:setText(price)
+        content.buyNowEdit:setText(buyNow)
+        onPriceChanged()
     end
 end
 
@@ -536,7 +543,8 @@ local function confirm(title, message, callback)
 end
 
 function onAction()
-    if not selected then
+    -- Enter in a box acts only when the button would
+    if not selected or not window.details.content.actionButton:isEnabled() then
         return
     end
     local entry = selected.data
@@ -730,6 +738,9 @@ function handlers.result(data)
     end
     if data.refresh == 'browse' and currentTab == 'browse' then
         requestBrowse(false)
+    elseif data.ok and currentTab == 'my' then
+        -- a bid or Buy Now from My Offers
+        send({ action = 'myOffers' })
     end
 end
 

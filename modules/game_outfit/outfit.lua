@@ -1280,6 +1280,8 @@ function showOutfits()
     window.selectionScroll:show()
     window.listSearch:show()
     updateBuyBar()
+    -- the outfit focused above got no onOutfitSelect: its addons now
+    requestAddons(focused)
 end
 
 function showMounts()

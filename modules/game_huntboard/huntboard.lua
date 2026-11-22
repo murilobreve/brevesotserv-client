@@ -1719,6 +1719,14 @@ function selectTab(tab)
     window.ratesPanel:setVisible(tab == 'rates')
     window.boardPanel:setVisible(tab == 'board')
     window.questChip:setVisible(tab == 'rates')
+    -- beside the section name, or after the tabs when they show
+    window.questChip:breakAnchors()
+    window.questChip:addAnchor(AnchorVerticalCenter, 'ratesTab', AnchorVerticalCenter)
+    if next(sectionButtons) ~= nil then
+        window.questChip:addAnchor(AnchorLeft, 'sectionIntro', AnchorRight)
+    else
+        window.questChip:addAnchor(AnchorLeft, 'boardTab', AnchorRight)
+    end
     local split = next(sectionButtons) ~= nil
     window.ratesTab:setVisible(not split)
     window.boardTab:setVisible(not split)
@@ -1869,6 +1877,8 @@ end
 
 local function onGameEnd()
     disconnect(Creature, { onAppear = labelCreature })
+    -- the next character asks for the quests' list again
+    quests = nil
     if ratesEvent then
         removeEvent(ratesEvent)
         ratesEvent = nil

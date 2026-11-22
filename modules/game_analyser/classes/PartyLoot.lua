@@ -131,6 +131,8 @@ function PartyLoot.showTab(tab)
             shown.verticalScrollBar = scrollbar
             shown:updateScrollBars()
         end
+        -- each panel starts at its top: the bar left where the other was
+        scrollbar:setValue(0)
     end
     if onLoot then
         PartyLoot.send('open')
@@ -353,7 +355,14 @@ local function onOpcode(protocol, opcode, data)
         if data.proposal then
             PartyLoot.proposalAt = g_clock.millis()
         end
-        PartyLoot.render()
+        -- the list is rebuilt only while someone looks at it; otherwise
+        -- only the tab's count changes (showTab('loot') draws it)
+        local w = window()
+        if w and w:isVisible() and w.lootPanel:isVisible() then
+            PartyLoot.render()
+        else
+            setTabLook()
+        end
     elseif data.action == 'message' and data.text and not data.ok then
         -- the server's own loot message says a split went through
         if modules.game_textmessage then
@@ -381,21 +390,49 @@ function PartyLoot.create()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onOpcode)
     PartyLoot.tab = 'summary'
     PartyLoot.showTab('summary')
+    -- the miniwindow hides and shows only contentsPanel when minimised:
+    -- the tab bar and the loot panel follow it
+    local w = window()
+    if w then
+        connect(w, {
+            onMinimize = function()
+                w.tabBar:hide()
+                w.lootPanel:hide()
+            end,
+            onMaximize = function()
+                w.tabBar:show()
+                PartyLoot.showTab(PartyLoot.tab)
+            end,
+        })
+    end
     if tickEvent then
         removeEvent(tickEvent)
     end
     tickEvent = cycleEvent(tick, 1000)
 end
 
+local openEvent
+
 function PartyLoot.onGameStart()
     PartyLoot.state = nil
     PartyLoot.seen = 0
-    PartyLoot.send('open')
     PartyLoot.render()
+    -- a request of its own at login: each client at its own moment
+    if openEvent then
+        removeEvent(openEvent)
+    end
+    openEvent = scheduleEvent(function()
+        openEvent = nil
+        PartyLoot.send('open')
+    end, g_game.spreadDelay and g_game.spreadDelay(2000, 8000) or 2000)
 end
 
 function PartyLoot.terminate()
     ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
+    if openEvent then
+        removeEvent(openEvent)
+        openEvent = nil
+    end
     if tickEvent then
         removeEvent(tickEvent)
         tickEvent = nil
