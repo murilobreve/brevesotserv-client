@@ -84,6 +84,10 @@ local sendEvent
 local lastSendAt = 0
 local tpReadyAt = 0 -- os.time() when the next hunt teleport is allowed
 local tpButtons = {} -- the TP buttons of the page on screen
+-- the quests' wall of the teleport room (Quests chip): { i, name, note, z }
+local questMode = false
+local quests = nil
+local questButtons = {}
 local tpMessageEvent
 
 -- ---------------------------------------------------------------- helpers
@@ -623,6 +627,101 @@ local function showTpMessage(text)
     end, 6000)
 end
 
+-- ---------------------------------------------------------------- quests
+
+local function updateQuestButtons()
+    local left = math.max(0, tpReadyAt - os.time())
+    for _, button in ipairs(questButtons) do
+        button:setText(left > 0 and tr('Wait %ds', left) or tr('Teleport'))
+        button:setEnabled(left == 0)
+    end
+end
+
+local function renderQuests()
+    if not window then
+        return
+    end
+    local panel = window.ratesPanel.questPanel
+    panel.questList:destroyChildren()
+    questButtons = {}
+    if not quests then
+        panel.questEmpty:setText(tr('Loading...'))
+        panel.questEmpty:setVisible(true)
+        return
+    end
+    local search = window.ratesPanel.quickBar.searchEdit:getText():lower():trim()
+    local shown = 0
+    for _, quest in ipairs(quests) do
+        local name, note = latin1(quest.name or ''), latin1(quest.note or '')
+        if search == '' or name:lower():find(search, 1, true) or note:lower():find(search, 1, true) then
+            shown = shown + 1
+            local row = g_ui.createWidget('QuestTpRow', panel.questList)
+            row.name:setText(name)
+            row.note:setText(note)
+            if note == '' then
+                -- one line: the name in the middle of the row
+                row.name:breakAnchors()
+                row.name:addAnchor(AnchorLeft, 'icon', AnchorRight)
+                row.name:addAnchor(AnchorRight, 'tp', AnchorLeft)
+                row.name:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+            end
+            row:setTooltip(name .. (note ~= '' and ('\n' .. note) or ''))
+            local index = quest.i
+            row.tp.onClick = function()
+                if tpReadyAt > os.time() then
+                    return
+                end
+                send({ action = 'questTeleport', i = index })
+            end
+            questButtons[#questButtons + 1] = row.tp
+        end
+    end
+    panel.questEmpty:setText(search ~= '' and tr('No quest matches the search.') or tr('No quest teleports.'))
+    panel.questEmpty:setVisible(shown == 0)
+    local pageLabel = window.ratesPanel.pageLabel
+    pageLabel.pageText = tr('%d quest teleports', shown)
+    pageLabel:setText(pageLabel.pageText)
+    updateQuestButtons()
+end
+
+local function setQuestMode(on)
+    questMode = on and true or false
+    if not window then
+        return
+    end
+    local panel = window.ratesPanel
+    window.questChip:setChecked(questMode)
+    panel.questPanel:setVisible(questMode)
+    if questMode then
+        panel.simplePanel:setVisible(false)
+        panel.filterSection:setVisible(false)
+        panel.rateHeader:setVisible(false)
+        panel.rateList:setVisible(false)
+        panel.rateScroll:setVisible(false)
+        if panel.quickBar.searchEdit.setPlaceholder then panel.quickBar.searchEdit:setPlaceholder(tr('Search quest...')) end
+    else
+        if panel.quickBar.searchEdit.setPlaceholder then panel.quickBar.searchEdit:setPlaceholder(tr('Search monster...')) end
+        setFiltersShown(filtersShown)
+    end
+    for _, id in ipairs({ 'mineChip', 'allChip', 'sortBest', 'sortXp', 'sortGold', 'filtersButton' }) do
+        panel.quickBar[id]:setEnabled(not questMode)
+    end
+    panel.prevPage:setVisible(not questMode)
+    panel.nextPage:setVisible(not questMode)
+end
+
+function toggleQuests()
+    setQuestMode(not questMode)
+    if questMode then
+        renderQuests()
+        if not quests then
+            send({ action = 'quests' })
+        end
+    else
+        onFilterChanged()
+    end
+end
+
 local function teleportTo(name, option)
     if tpReadyAt > os.time() then
         return
@@ -814,6 +913,10 @@ local function renderCards(first, last)
 end
 
 local function renderPage()
+    -- the quests' list is on screen: the hunts wait until it closes
+    if questMode then
+        return
+    end
     if not window then
         return
     end
@@ -973,6 +1076,14 @@ function setFiltersShown(shown)
     panel.rateList:setVisible(filtersShown)
     panel.rateScroll:setVisible(filtersShown)
     panel.simplePanel:setVisible(not filtersShown)
+    -- the quests' list stays over both while it is on
+    if questMode then
+        panel.filterSection:setVisible(false)
+        panel.rateHeader:setVisible(false)
+        panel.rateList:setVisible(false)
+        panel.rateScroll:setVisible(false)
+        panel.simplePanel:setVisible(false)
+    end
 end
 
 function toggleFilters()
@@ -1239,6 +1350,7 @@ local function tick()
         end
     end
     updateTpButtons()
+    updateQuestButtons()
     local board = boards[currentPeriod]
     if board and board.endsAt then
         local left = board.endsAt - now
@@ -1518,9 +1630,20 @@ end
 handlers.coinsToast = handlers.coins
 
 -- answer to a TP (and, on opening, the wait left)
+function handlers.quests(data)
+    quests = data.quests or {}
+    if data.wait then
+        tpReadyAt = os.time() + (tonumber(data.wait) or 0)
+    end
+    if questMode then
+        renderQuests()
+    end
+end
+
 function handlers.teleport(data)
     tpReadyAt = os.time() + (tonumber(data.wait) or 0)
     updateTpButtons()
+    updateQuestButtons()
     if not data.text then
         return
     end
@@ -1553,7 +1676,11 @@ function onFilterChanged()
     end
     filterEvent = scheduleEvent(function()
         filterEvent = nil
-        applyFilters()
+        if questMode then
+            renderQuests()
+        else
+            applyFilters()
+        end
     end, 250)
 end
 
@@ -1591,6 +1718,7 @@ function selectTab(tab)
     window.boardTab:setChecked(tab == 'board')
     window.ratesPanel:setVisible(tab == 'rates')
     window.boardPanel:setVisible(tab == 'board')
+    window.questChip:setVisible(tab == 'rates')
     local split = next(sectionButtons) ~= nil
     window.ratesTab:setVisible(not split)
     window.boardTab:setVisible(not split)
