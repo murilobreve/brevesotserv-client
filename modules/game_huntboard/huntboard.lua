@@ -889,7 +889,7 @@ local function renderCards(first, last)
         local card = g_ui.createWidget('HuntCard', list)
         card.frame.creature:setOutfit(outfitOf(monster))
         card.name:setText(monster.name)
-        if monster.xp >= 40 or monster.loot >= 25 then
+        if monster.xp >= 25 or monster.loot >= 25 then
             card.name:setColor('#ffb020')
         end
         card.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')
@@ -941,7 +941,7 @@ local function renderPage()
         end
         row.creature:setOutfit(outfitOf(monster))
         row.name:setText(monster.boss == 1 and (monster.name .. '  [boss]') or monster.name)
-        if monster.xp >= 40 or monster.loot >= 25 then
+        if monster.xp >= 25 or monster.loot >= 25 then
             row.name:setColor('#ffb020')
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')

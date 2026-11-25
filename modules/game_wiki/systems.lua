@@ -212,7 +212,9 @@ function WIKI_BUILDERS.tasksinfo(parent)
     tableOf(parent, { 200, 346 }, nil, {
         { T('Monstro'), T('Sorteado entre os que têm level recomendado de %d%% a %d%% do seu', math.floor((window[1] or 0) * 100 + 0.5), math.floor((window[2] or 0) * 100 + 0.5)) },
         { T('Kills'), T('%d a %d (mais spawns, mais kills)', t.kills[1] or 0, t.kills[2] or 0) },
-        { T('Experiência'), T('%d%% do que falta para o próximo level', math.floor((t.experience or 0) * 100 + 0.5)) },
+        { T('Experiência'), (t.experienceKills or 0) > 0
+            and T('%d%% do que falta para o próximo level, no máximo o que %d kills do monstro pagam', math.floor((t.experience or 0) * 100 + 0.5), t.experienceKills)
+            or T('%d%% do que falta para o próximo level', math.floor((t.experience or 0) * 100 + 0.5)) },
         { T('Hunt Points'), T('%d, mais %d por dia seguido (até +%d)', t.points or 0, t.streakBonus or 0, (t.streakBonus or 0) * (t.streakMax or 0)) },
         { T('Monstro em alta'), T('Com XP %sx ou mais no Hunt Board, os pontos dobram', decimal(t.hot)) },
         { T('Charm points'), T('%d', t.charms or 0) },
