@@ -70,7 +70,6 @@ Module
     - game_hunttasks
     - game_bosses
     - game_quests
-    - game_tesouro
     - game_mythosvip
     - game_tutorial
     - game_journey

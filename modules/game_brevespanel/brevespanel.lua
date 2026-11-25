@@ -43,9 +43,6 @@ local FEATURES = {
       news = 'Quests of level 50 to 1000: caves of the official map with their own monsters and a chest at the far end, once per character. Up to level 250, an item of your vocation; from level 150, challenges with guards at the chest and a prize for every vocation.' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'market',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
-    { id = 'tesouro', group = 'rarity', label = 'Tesouro', icon = 'tesouro',
-      tip = 'Invest your bank gold: it follows the inflation.',
-      news = 'Tesouro Mythos: put the gold of your bank in bonds of 7, 15 or 30 days. They pay the inflation of the server plus a fixed rate, so gold put away keeps its worth.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
       tip = 'New bonuses for your rare items.',
       news = 'Every bonus of the rarity items you wear, the total of each one and the item it comes from.' },
@@ -100,7 +97,7 @@ local density = FULL
 -- when the bar is short of room the rows give up their names one at a time,
 -- the least needed first and the task rows last (resize); each one keeps its
 -- icon and its state (ON / OFF, points, minutes), its name in the tooltip
-local COLLAPSE_ORDER = { 'fullscreen', 'wiki', 'messages', 'tesouro', 'board', 'quests', 'bosses', 'ascensao', 'bonus', 'loot', 'rarity', 'healbot', 'rates', 'taskshop', 'trail', 'tasks' }
+local COLLAPSE_ORDER = { 'fullscreen', 'wiki', 'messages', 'board', 'quests', 'bosses', 'ascensao', 'bonus', 'loot', 'rarity', 'healbot', 'rates', 'taskshop', 'trail', 'tasks' }
 local levels = {} -- row id -> its own density in this layout (else `density`)
 local tiny = false -- the sections show their icon without their title
 local vipHidden = false -- the VIP button left out: the last step (resize)
