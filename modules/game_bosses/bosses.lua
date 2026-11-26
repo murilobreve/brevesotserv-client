@@ -785,6 +785,73 @@ local function setSubtab(name)
     renderDetail()
 end
 
+-- The difficulty of the pulls this player makes (the server's
+-- scripts/custom/boss_difficulty.lua): Normal, Heroico or Mitico, picked
+-- here; the rows say what the picked one asks at this boss.
+local function longWait(seconds)
+    local days = math.floor(seconds / 86400)
+    if days > 0 then
+        return string.format('%d d %d h', days, math.floor(seconds % 86400 / 3600))
+    end
+    return formatWait(seconds)
+end
+
+local function renderDifficulty(panel, boss)
+    local info = state and state.difficulty
+    panel.picks:destroyChildren()
+    panel.rows:destroyChildren()
+    if not info or not info.levels then
+        panel.note:setText(tr('Dificuldades indisponíveis neste servidor.'))
+        return
+    end
+    local index, level = 1, info.levels[1]
+    for i, entry in ipairs(info.levels) do
+        local pick = g_ui.createWidget('BossTab', panel.picks)
+        pick:setText(entry.name)
+        pick:setOn(entry.key == info.current)
+        pick.onClick = function()
+            if entry.key == info.current then
+                return
+            end
+            info.current = entry.key
+            send({ action = 'difficulty', key = entry.key })
+            addEvent(function() renderDetail() end)
+        end
+        if entry.key == info.current then
+            index, level = i, entry
+        end
+    end
+    local function row(name, text, color)
+        local widget = g_ui.createWidget('BossPartyRow', panel.rows)
+        widget.name:setText(tr(name))
+        widget.text:setText(text)
+        widget.dot:setImageColor(color or '#6b5631')
+    end
+    local mine = state.level or 0
+    if index == 1 then
+        local gate = boss.level or 0
+        row('Level', gate > 0 and tr('%d ou mais', gate) or tr('livre'), mine >= gate and '#9fd99a' or '#ff9c8a')
+        row('Boss', tr('como ele é; pode vir raro pela roleta'))
+        row('Espera', formatWait(boss.wait or 0))
+    else
+        local gate = boss.dgate and boss.dgate[index - 1] or 0
+        local wait = boss.dwait and boss.dwait[index - 1] or 0
+        wait = math.max(0, wait - (os.time() - receivedAt))
+        local price = math.floor((boss.power or 0) * (level.goldPerLevel or 0))
+        row('Level', tr('%d ou mais', gate), mine >= gate and '#9fd99a' or '#ff9c8a')
+        row('Entrada', tr('%s gold por jogador', formatNumber(price)))
+        row('Boss', tr('vida %s, dano %s e magias de tier', multiplier(level.health or 1), multiplier(level.damage or 1)))
+        local items = level.items or 0
+        row('Recompensa', items > 100 and tr('1 item raro por bag, %d%% de um segundo', items - 100) or items == 100 and tr('1 item raro por bag') or tr('%d%% de um item raro por bag', items))
+        if wait > 0 then
+            row('Espera', tr('falta %s', longWait(wait)), '#e8c77a')
+        else
+            row('Espera', tr('%d dias depois de enfrentar', level.lockDays or 7), '#9fd99a')
+        end
+    end
+    panel.note:setText(tr('Vale quando VOCÊ puxa a alavanca. Em qualquer dificuldade, o boss ganha %d%% de vida por jogador a mais.', math.floor((info.teamHealth or 0) * 100 + 0.5)))
+end
+
 renderDetail = function()
     if not window then
         return
@@ -815,7 +882,7 @@ renderDetail = function()
         tile.value:setText(stat[2])
     end
     d.subtabs:destroyChildren()
-    for _, entry in ipairs({ { 'loot', 'Loot' }, { 'party', 'Sua party' } }) do
+    for _, entry in ipairs({ { 'loot', 'Loot' }, { 'party', 'Sua party' }, { 'diff', 'Dificuldade' } }) do
         local tab = g_ui.createWidget('BossTab', d.subtabs)
         tab:setText(tr(entry[2]))
         tab:setOn(subtab == entry[1])
@@ -823,6 +890,8 @@ renderDetail = function()
     end
     d.loot:setVisible(subtab == 'loot')
     d.party:setVisible(subtab == 'party')
+    d.diff:setVisible(subtab == 'diff')
+    renderDifficulty(d.diff, boss)
 
     -- the loot: asked once per boss
     local loot = bossLoot(boss)

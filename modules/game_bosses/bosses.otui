@@ -1032,6 +1032,49 @@ MythosWindow
             text-wrap: true
             font: verdana-11px-antialised
 
+        // the difficulty of the pulls this player makes (Normal, Heroico, Mitico)
+        UIWidget
+          id: diff
+          anchors.top: line.bottom
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: go.top
+          margin-top: 6
+          margin-bottom: 6
+          visible: false
+
+          UIWidget
+            id: picks
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 26
+            layout:
+              type: horizontalBox
+              spacing: 4
+
+          UIWidget
+            id: rows
+            anchors.top: picks.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            margin-top: 6
+            height: 146
+            layout:
+              type: verticalBox
+              spacing: 4
+
+          Label
+            id: note
+            anchors.top: rows.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            margin-top: 6
+            anchors.bottom: parent.bottom
+            text-wrap: true
+            font: verdana-11px-antialised
+            color: #a59d92
+
         MythosButton
           id: wiki
           anchors.left: parent.left
