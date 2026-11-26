@@ -840,6 +840,11 @@ local function fillRoll(entry)
     bar.costGold:setColor(gold >= lockGold and '#e2c46a' or '#ff7a6a')
     col.skipButton:setVisible(roll ~= nil and roll.phase == 'show')
     col.rollButton:setVisible(not (roll and roll.phase == 'show'))
+    -- dismantling: the item for Rarity XP (the server's RarityConfig.dismantle)
+    local scrap = tonumber(entry.dismantleXp) or 0
+    col.dismantleButton:setVisible(scrap > 0 and not (roll and roll.phase == 'show'))
+    col.dismantleButton:setEnabled(roll == nil and not busy())
+    col.dismantleButton:setTooltip(tr('Destroy this item for %d Rarity XP', scrap))
     if roll then
         col.rollButton:setText(tr('Rolling...'))
         col.rollButton:setEnabled(false)
@@ -1287,7 +1292,7 @@ local function upResult(answer)
     local r = { slot = asc.slot, win = win, shader = entry.shader }
     if win then
         r.grade = res.rarity or asc.offer.to
-        r.text = tr('%s is now %s. Its bonuses were rolled again:', titleCase(res.name or entry.name), grade(r.grade).label)
+        r.text = tr('%s is now %s. It kept its bonuses and gained one:', titleCase(res.name or entry.name), grade(r.grade).label)
         r.lines = {}
         for _, line in ipairs(res.rolled or {}) do
             local look = quality(tonumber(line.quality), line.perfect)
@@ -1417,11 +1422,31 @@ function forgeUpgrade()
         stopTick()
         upTick()
     end
-    local text = tr('Upgrade %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid whatever happens.\nSuccess: %d%%. The item breaks: %s%%.\n\nOn success the item becomes %s and rolls its bonuses again at that grade. When nothing happens it stays exactly as it is.', titleCase(entry.name), up.label or '', formatGold(needGold), needXp, tonumber(up.chance) or 0, percentText(breaks), up.label or '')
+    local text = tr('Upgrade %s to %s?\n\nPrice: %s gold and %d Rarity XP, paid whatever happens.\nSuccess: %d%%. The item breaks: %s%%.\n\nOn success the item becomes %s, keeps its bonuses and gains one new bonus. When nothing happens it stays exactly as it is.', titleCase(entry.name), up.label or '', formatGold(needGold), needXp, tonumber(up.chance) or 0, percentText(breaks), up.label or '')
     if breaks > 0 then
         text = text .. '\n\n' .. tr('If it breaks, the item is destroyed and does not come back.')
     end
     Forge.confirm(tr('Upgrade'), text, go)
+end
+
+-- Dismantle: the picked item is destroyed for Rarity XP
+function forgeDismantle()
+    local entry = bySlot[selected]
+    local scrap = entry and tonumber(entry.dismantleXp) or 0
+    if not entry or scrap <= 0 or busy() then
+        return
+    end
+    local slot, itemId = entry.slotId, entry.itemId
+    local function go()
+        local now = bySlot[slot]
+        if not now or now.itemId ~= itemId then
+            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6a')
+            return
+        end
+        Forge.send({ action = 'dismantle', slot = now.bag and nil or slot, fid = now.fid })
+        Forge.expectAnswer()
+    end
+    Forge.confirm(tr('Dismantle'), tr('Dismantle %s?\n\nThe item is destroyed and you get %d Rarity XP. This cannot be undone.', titleCase(entry.name), scrap), go)
 end
 
 function forgeCloseResult()
@@ -1451,6 +1476,8 @@ local function messageOf(d)
             text = text .. '. ' .. tr('Perfect roll!')
         end
         return text
+    elseif code == 'dismantled' then
+        return tr('%s was dismantled: +%d Rarity XP', titleCase(res.name), tonumber(res.xp) or 0)
     elseif code == 'upgradeBroken' then
         return tr('%s broke in the forge and is gone. (-%s gold, -%d Rarity XP)', titleCase(res.name), formatGold(res.gold), tonumber(res.xp) or 0)
     elseif code == 'upgradeFailed' then

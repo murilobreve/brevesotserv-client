@@ -490,8 +490,19 @@ MythosWindow
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
+            margin-right: 110
             height: 30
             @onClick: modules.game_raritybonus.forgeRoll()
+
+          // destroys the item for Rarity XP
+          ForgeButton
+            id: dismantleButton
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width: 104
+            height: 30
+            !text: tr('Dismantle')
+            @onClick: modules.game_raritybonus.forgeDismantle()
 
           ForgeButton
             id: skipButton
