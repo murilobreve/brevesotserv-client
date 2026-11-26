@@ -240,8 +240,9 @@ local function setRarityShown(card, shown)
 end
 
 local function renderRarity(card, quest)
-    local rarity = state and state.rarity
-    local shown = rarity ~= nil and not quest.prize and hasRareReward(quest) and RarityOdds ~= nil
+    -- the quest's own odds (a harder version), else the server's for all
+    local rarity = quest.rarity or (state and state.rarity)
+    local shown = rarity ~= nil and hasRareReward(quest) and RarityOdds ~= nil
     setRarityShown(card, shown)
     if not shown then
         return
@@ -295,9 +296,23 @@ local function renderCard()
     card.rewards:destroyChildren()
     local cells = 0
     local extras = {}
+    -- a harder version: one item to pick, and the prize on top
+    local picks = quest.prize and rewardsFor(quest) or {}
     if quest.prize then
-        -- a challenge: the same prize for every vocation, all of it
-        card.rewardsTitle:setText(tr('Reward: all of this, for every vocation'))
+        if #picks > 0 then
+            card.rewardsTitle:setText(tr('Reward: pick one item at the chest, plus the rest'))
+            for _, reward in ipairs(picks) do
+                local cell = g_ui.createWidget('QuestReward', card.rewards)
+                cell.item:setItemId(reward.id)
+                cell.count:setText('')
+                local name = reward.name:gsub('^%l', string.upper)
+                cell:setTooltip(tr('Pick one: %s', reward.level > 0 and tr('%s (level %d)', name, reward.level) or name))
+                cells = cells + 1
+            end
+        else
+            -- a challenge: the same prize for every vocation, all of it
+            card.rewardsTitle:setText(tr('Reward: all of this, for every vocation'))
+        end
         for _, item in ipairs(quest.prize.items or {}) do
             local cell = g_ui.createWidget('QuestReward', card.rewards)
             cell.item:setItemId(item.id)
