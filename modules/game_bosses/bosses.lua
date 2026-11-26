@@ -841,8 +841,11 @@ local function renderDifficulty(panel, boss)
         row('Level', tr('%d ou mais', gate), mine >= gate and '#9fd99a' or '#ff9c8a')
         row('Entrada', tr('%s gold por jogador', formatNumber(price)))
         row('Boss', tr('vida %s, dano %s e magias de tier', multiplier(level.health or 1), multiplier(level.damage or 1)))
+        if (level.time or 1) > 1 then
+            row('Tempo', tr('%s o tempo da luta', multiplier(level.time)))
+        end
         local items = level.items or 0
-        row('Recompensa', items > 100 and tr('1 item raro por bag, %d%% de um segundo', items - 100) or items == 100 and tr('1 item raro por bag') or tr('%d%% de um item raro por bag', items))
+        row('Recompensa', items > 100 and tr('1 raro por bag, %d%% de outro', items - 100) or items == 100 and tr('1 item raro por bag') or tr('%d%% de um item raro por bag', items))
         if wait > 0 then
             row('Espera', tr('falta %s', longWait(wait)), '#e8c77a')
         else
