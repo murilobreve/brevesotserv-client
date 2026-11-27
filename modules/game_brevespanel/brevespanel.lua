@@ -39,8 +39,8 @@ local FEATURES = {
     { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses', inside = 'rates',
       news = 'The bosses of the official quests, each in its own lever room: pick one, go there with your team and pull the lever. The list shows your wait for each.' },
     { id = 'quests', group = 'hunt', label = 'Quests', icon = 'quests', inside = 'rates',
-      tip = 'Caves with a reward chest at the end.',
-      news = 'Quests of level 50 to 1000: caves of the official map with their own monsters and a chest at the far end, once per character. Up to level 250, an item of your vocation; from level 150, challenges with guards at the chest and a prize for every vocation.' },
+      tip = 'The quests of the map and their harder versions.',
+      news = 'The quests of the teleport room, each with what it gives and a teleport to its start, and the harder versions of the Pits of Inferno and the Inquisition (Infernal and Abissal).' },
     { id = 'rarity', group = 'rarity', label = 'Rarity Market', short = 'Market', icon = 'market',
       news = 'Buy and sell the rarity items that drop from monsters, paid with the gold in your bank.' },
     { id = 'bonus', group = 'rarity', label = 'Roulette', icon = 'bonus',
@@ -541,7 +541,7 @@ local HUB_ICON = { rates = 'teleport', bosses = 'bosses', quests = 'quests', boa
 local HUB_TIP = {
     rates = 'Every hunt, with a free TP.',
     bosses = 'The bosses and their lever rooms.',
-    quests = 'Caves with a reward chest at the end.',
+    quests = 'The quests of the map and their harder versions.',
     board = 'Top hunters of the hour, day and month',
 }
 local HUB_COUNT = { bosses = '%s bosses ready for you', quests = '%s quests to do' }

@@ -1,8 +1,10 @@
 -- Quests: the quests of the server (data-otservbr-global/scripts/quests/
--- mythos_quests/quests_window.lua). Those of the Mythos are caves of the
--- official map with their own monsters and a chest at the far end that gives
--- one reward of the player's choice, once per character; those of the
--- teleport room are the quests of the map, with what their scripts give.
+-- mythos_quests/quests_window.lua): the harder versions of the map's quests
+-- (Pits of Inferno and Inquisition, Infernal and Abissal: a chest that gives
+-- one reward of the player's choice and a prize, once per character) and the
+-- quests of the teleport room, with what their scripts give. (Until
+-- 2026-11-27 the list also had 24 caves with a chest at the far end; they
+-- are hunts of the Hunts tab now.)
 -- The list shows each quest's picture, level and whether the player did it;
 -- the chosen one stands at the right as a boss does in the Bosses window: on
 -- a pedestal, with its numbers in tiles, its reward and its monsters in
@@ -596,7 +598,9 @@ local function updateStatuses()
         end
     end
     if window then
-        ui.summary:setText(tr('%d quests', #state.quests) .. DOT .. tr('%d for you to do', open))
+        -- how many versions wait for the player, when any does (nothing
+        -- tells which quests of the teleport room he did)
+        ui.summary:setText(tr('%d quests', #state.quests) .. (open > 0 and (DOT .. tr('%d for you to do', open)) or ''))
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
@@ -653,15 +657,22 @@ local function addRow(list, quest)
 end
 
 function refreshList()
-    if not window or not state then
+    if not window then
+        return
+    end
+    -- the list did not come yet (the window asks for it when it opens)
+    if not state then
+        ui.empty:setText(tr('Loading the quests...'))
+        ui.empty:setVisible(true)
+        ui.listScroll:setVisible(false)
         return
     end
     local list = ui.list
     list:destroyChildren()
     rows = {}
-    -- the Mythos quests, then those of the teleport room, each group under
-    -- its title
-    local groups = { { title = tr('Mythos quests') }, { title = tr('Quests of the teleport room') } }
+    -- the harder versions of the map's quests (POI, Inquisition), then the
+    -- quests of the teleport room, each group under its title
+    local groups = { { title = tr('Harder versions') }, { title = tr('Quests of the teleport room') } }
     for _, quest in ipairs(state.quests) do
         if shown(quest) then
             local group = groups[quest.wall and 2 or 1]
