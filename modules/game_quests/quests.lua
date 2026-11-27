@@ -1,10 +1,13 @@
 -- Quests: the quests of the server (data-otservbr-global/scripts/quests/
--- mythos_quests/quests_window.lua), each a cave of the official map with its
--- own monsters and a chest at the far end that gives one reward of the
--- player's choice, once per character. The list shows each quest's level and
--- whether the player did it; the card shows the cave's monsters, the rewards
--- of the player's vocation and a button that takes him to the entrance (from
--- a protection zone or out of combat, at the quest's level). Opened from the
+-- mythos_quests/quests_window.lua). Those of the Mythos are caves of the
+-- official map with their own monsters and a chest at the far end that gives
+-- one reward of the player's choice, once per character; those of the
+-- teleport room are the quests of the map, with what their scripts give.
+-- The list shows each quest's picture, level and whether the player did it;
+-- the chosen one stands at the right as a boss does in the Bosses window: on
+-- a pedestal, with its numbers in tiles, its reward and its monsters in
+-- cells, and a button that takes the player to the entrance (from a
+-- protection zone or out of combat, at the quest's level). Opened from the
 -- Mythos bar (Hunts section).
 -- At the chest, the rewards to pick from come as cards with their pictures
 -- (chest.otui).
@@ -19,6 +22,7 @@ local state -- last "state" from the server
 local selectedKey
 local filter = 'open' -- the window opens on what there is to do
 local rows = {} -- quest key -> row of the list
+local ui = {} -- the window's widgets, by id
 local messageEvent
 
 -- ---------------------------------------------------------------- helpers
@@ -114,21 +118,38 @@ local function readiness(quest)
     return level >= recommended(quest) and READY or RISKY
 end
 
--- only what is not the normal case: a quest already done, or one the
--- player's level does not open yet
+-- the list's word at the right of a quest: only what is not the normal case
+-- (done, a level too low, a challenge)
 local function statusOf(quest)
     -- a quest of the teleport room has no level and nothing to mark
     if quest.wall then
-        return '', '#b296f5'
+        return '', '#a59d92'
     end
     if quest.done then
         return tr('Done'), '#7fd35a'
     end
     if not canGo(quest) then
-        return tr('Opens at level %d', quest.level), LOCKED
+        return tr('Level %d', quest.level), LOCKED
     end
-    -- a challenge quest says so here, where "to do" used to be
-    return quest.prize and tr('Challenge') or '', '#b296f5'
+    return quest.prize and tr('Challenge') or '', '#e8c77a'
+end
+
+-- the chosen quest's state, as the pill of the Bosses window: text, colour,
+-- background, border
+local function pillOf(quest)
+    if quest.wall then
+        return tr('Teleport room'), '#e8c77a', '#2a2219', '#5c4a2c'
+    end
+    if quest.done then
+        return tr('Done'), '#9fd99a', '#152015', '#2f4a2f'
+    end
+    if not canGo(quest) then
+        return tr('Opens at level %d', quest.level), '#ff9c8a', '#2a1515', '#5a2a2a'
+    end
+    if readiness(quest) == RISKY then
+        return tr('Below recommended'), '#ffb36b', '#2a1d10', '#5a3d1e'
+    end
+    return tr('To do'), '#9fd99a', '#152015', '#2f4a2f'
 end
 
 -- the monsters of a quest, the strongest first
@@ -166,6 +187,33 @@ local function rewardsFor(quest)
     return list
 end
 
+-- A sign of the teleport room may name several quests ("A / B / C"): the
+-- first is the quest's name, the others go under it.
+local function wallNames(quest)
+    local parts = {}
+    for part in (nameOf(quest) .. '/'):gmatch('([^/]+)/') do
+        part = part:gsub('^%s+', ''):gsub('%s+$', '')
+        if part ~= '' then
+            parts[#parts + 1] = part
+        end
+    end
+    local first = table.remove(parts, 1) or nameOf(quest)
+    return first, parts
+end
+
+-- the picture of a quest of the teleport room: what it gives, or a closed
+-- chest when the scripts do not tell
+local UNKNOWN_REWARD = 2472
+
+local function wallItem(quest)
+    local reward = quest.rewards and quest.rewards[1]
+    return reward and reward.id or UNKNOWN_REWARD
+end
+
+local function noteOf(quest)
+    return (isPortuguese() and quest.text or quest.textEn) or ''
+end
+
 local function shown(quest)
     if filter == 'open' and not isOpen(quest) then
         return false
@@ -173,7 +221,7 @@ local function shown(quest)
     if filter == 'done' and not quest.done then
         return false
     end
-    local query = window.search:getText():lower()
+    local query = ui.search:getText():lower()
     if query ~= '' then
         local text = (nameOf(quest) .. ' ' .. table.concat((function()
             local names = {}
@@ -202,22 +250,58 @@ local function showMessage(text, ok)
     if messageEvent then
         removeEvent(messageEvent)
     end
-    window.message:setText(text or '')
-    window.message:setColor(ok and '#7fd35a' or '#ff7a6b')
+    ui.message:setText(text or '')
+    ui.message:setColor(ok and '#7fd35a' or '#ff7a6b')
     messageEvent = scheduleEvent(function()
         messageEvent = nil
         if window then
-            window.message:setText('')
+            ui.message:setText('')
         end
     end, 8000)
 end
 
 -- ---------------------------------------------------------------- rendering
 
-local function setStat(stat, key, value, color)
-    stat.key:setText(key)
-    stat.value:setText(value)
-    stat.value:setColor(color or '#e6e0f2')
+local DOT = ' \183 '
+
+local function titleCase(name)
+    return (tostring(name or ''):gsub('^%l', string.upper))
+end
+
+-- a name that fits its place: the whole of it is in the tooltip
+local function fitted(text, most)
+    if #text > most then
+        return text:sub(1, most - 2):gsub('[%s,]+$', '') .. '...'
+    end
+    return text
+end
+
+-- a widget of a vertical box, there or not (a hidden one takes no room)
+local function setShown(widget, value)
+    widget:setVisible(value)
+end
+
+local function setHead(head, title, extra, color)
+    head.title:setText(title or '')
+    head.extra:setText(extra or '')
+    head.extra:setColor(color or '#8f877c')
+end
+
+-- as tall as its cells: two a line, 44 px each and 4 between
+local function fitGrid(grid)
+    local lines = math.max(1, math.ceil(grid:getChildCount() / 2))
+    grid:setHeight(lines * 48 - 4)
+end
+
+-- a cell of a grid of the chosen quest: an item, its name and one fact
+local function addItemCell(grid, id, name, sub, color, tip)
+    local cell = g_ui.createWidget('QuestCell', grid)
+    cell.frame.item:setItemId(id)
+    cell.name:setText(fitted(name, 18))
+    cell.sub:setText(sub or '')
+    cell.sub:setColor(color or '#a59d92')
+    cell:setTooltip(tip or name)
+    return cell
 end
 
 -- the odds that the reward comes out a rarity item (the server's
@@ -231,182 +315,259 @@ local function hasRareReward(quest)
     return false
 end
 
-local function setRarityShown(card, shown)
-    card.rarityTitle:setHeight(shown and 16 or 0)
-    card.rarityTitle:setMarginTop(shown and 6 or 0)
-    card.rarityBar:setHeight(shown and 8 or 0)
-    card.rarityBar:setMarginTop(shown and 2 or 0)
-    card.rarityText:setHeight(0)
-    card.rarityText:setMarginTop(0)
-    card.rarityTitle:setVisible(shown)
-    card.rarityBar:setVisible(shown)
-    card.rarityText:setVisible(false)
-end
-
-local function renderRarity(card, quest)
+local function renderRarity(body, quest)
     -- the quest's own odds (a harder version), else the server's for all
     local rarity = quest.rarity or (state and state.rarity)
-    local shown = rarity ~= nil and hasRareReward(quest) and RarityOdds ~= nil
-    setRarityShown(card, shown)
-    if not shown then
+    local has = rarity ~= nil and hasRareReward(quest) and RarityOdds ~= nil
+    setShown(body.rarityHead, has)
+    setShown(body.rarityBar, has)
+    if not has then
         return
     end
     local parts = RarityOdds.parts(rarity.grades, rarity.chance)
-    card.rarityTitle:setText(tr('Chance to come out a rarity item: %s', RarityOdds.percent(rarity.chance)))
-    card.rarityBar:setOdds(parts)
-    -- the bar says it; each grade's chance is in its tooltip (2026-11-19:
-    -- two lines of numbers stood under it)
+    setHead(body.rarityHead, tr('Chance to come out a rarity item'), RarityOdds.percent(rarity.chance), '#e8c77a')
+    body.rarityBar:setOdds(parts)
+    -- the bar says it; each grade's chance is in its tooltip
     local lines = {}
     for _, part in ipairs(parts) do
         if part.chance > 0 then
             lines[#lines + 1] = part.label .. ' ' .. RarityOdds.percent(part.chance)
         end
     end
-    card.rarityBar:setTooltip(table.concat(lines, '\n'))
-    card.rarityTitle:setTooltip(table.concat(lines, '\n'))
+    body.rarityBar:setTooltip(table.concat(lines, '\n'))
+    body.rarityHead:setTooltip(table.concat(lines, '\n'))
+end
+
+-- the reward a pick of the chest asks a level for: green when the player
+-- has it, red when not
+local function addPick(grid, reward)
+    local name = titleCase(reward.name)
+    local level = reward.level or 0
+    if level > 0 then
+        local has = (state and state.level or 0) >= level
+        return addItemCell(grid, reward.id, name, tr('Level %d', level), has and '#9fd99a' or '#ff9c8a',
+            tr('%s (level %d)', name, level))
+    end
+    -- no level to say: the name alone, in the middle of the cell
+    local cell = addItemCell(grid, reward.id, name, '', nil, name)
+    cell.name:setMarginTop(15)
+    return cell
+end
+
+-- the numbers of a Mythos quest, up to three tiles
+local function renderTiles(stats, quest)
+    stats:destroyChildren()
+    local function tile(key, value, color, tip)
+        if stats:getChildCount() >= 3 then
+            return
+        end
+        local widget = g_ui.createWidget('QuestTile', stats)
+        widget.key:setText(key)
+        widget.value:setText(value)
+        widget.value:setColor(color or '#ece6dc')
+        if tip then
+            widget:setTooltip(tip)
+        end
+    end
+    local total = 0
+    for _, monster in ipairs(quest.monsters or {}) do
+        total = total + (monster.count or 0)
+    end
+    if total > 0 then
+        tile(tr('MONSTERS'), formatNumber(total))
+    end
+    if (quest.steps or 0) > 0 then
+        tile(tr('TO THE CHEST'), tr('%d steps', quest.steps))
+    end
+    -- a quest that asks for its bosses before the chest opens
+    if quest.bosses and (quest.bosses.total or 0) > 0 then
+        local left = quest.bosses.left or 0
+        tile(tr('BOSSES'), string.format('%d / %d', quest.bosses.total - left, quest.bosses.total),
+            left > 0 and '#ffb36b' or '#9fd99a', tr('The chest opens when every boss of the quest is defeated.'))
+    end
+    -- more of the strongest monster around the chest (challenge quests)
+    if quest.guards and (quest.guards.count or 0) > 0 then
+        tile(tr('AT THE CHEST'), tr('%d guards', quest.guards.count), '#ffb36b',
+            string.format('%dx %s', quest.guards.count, quest.guards.name))
+    end
+    local picks = #rewardsFor(quest)
+    if picks > 1 then
+        tile(tr('CHEST'), tr('Pick 1 of %d', picks))
+    end
 end
 
 local function renderCard()
-    local card = window.card
+    local detail = ui.detail
     local quest = findQuest(selectedKey)
-    card:setVisible(quest ~= nil)
+    detail:setVisible(quest ~= nil)
     if not quest then
         return
     end
-    card:setText(tr('Quest'))
-    card.name:setText(nameOf(quest))
-    -- the level the cave really asks for; the entry level only when lower
-    local levelText = tr('Recommended level: %d', recommended(quest))
-    if recommended(quest) > (quest.level or 0) then
-        levelText = levelText .. '  -  ' .. tr('opens at %d', quest.level)
-    end
-    card.level:setText(levelText)
-    -- a quest of the teleport room: its sign's note, no monsters to list.
-    -- A sign may name several quests ("A / B / C"): the first is the title,
-    -- the others go on the lines under it
-    card.level:setHeight(14)
+    local body = detail.body
+
+    -- the head: the pedestal, the state, the name and one line under it
+    local text, color, back, border = pillOf(quest)
+    detail.status:setText(text)
+    detail.status:setColor(color)
+    detail.status:setBackgroundColor(back)
+    detail.status:setBorderColor(border)
+    detail.pedestal.aura:setImageColor(color)
+    local challenge = quest.prize ~= nil and not quest.wall
+    detail.kind:setVisible(challenge)
+    detail.kind:setText(challenge and tr('Challenge') or '')
+
+    local main = strongestFirst(quest)[1]
+    detail.pedestal.creature:setVisible(not quest.wall and main ~= nil)
+    detail.pedestal.item:setVisible(quest.wall == true)
     if quest.wall then
-        local parts = {}
-        for part in (nameOf(quest) .. '/'):gmatch('([^/]+)/') do
-            parts[#parts + 1] = part:gsub('^%s+', ''):gsub('%s+$', '')
+        detail.pedestal.item:setItemId(wallItem(quest))
+    elseif main then
+        detail.pedestal.creature:setOutfit(outfitOf(main.outfit))
+    end
+
+    local title, lines = nameOf(quest), {}
+    if quest.wall then
+        local others
+        title, others = wallNames(quest)
+        if #others > 0 then
+            lines[#lines + 1] = tr('Also: %s', table.concat(others, DOT))
         end
-        card.name:setText(parts[1] or nameOf(quest))
-        local lines = {}
-        for index = 2, #parts do
-            lines[#lines + 1] = parts[index]
-        end
-        local note = isPortuguese() and quest.text or quest.textEn or ''
-        if note ~= '' then
-            lines[#lines + 1] = note
+        if noteOf(quest) ~= '' then
+            lines[#lines + 1] = noteOf(quest)
         end
         if #lines == 0 then
             lines[1] = tr('A quest of the map: the teleport takes you to its start.')
         end
-        card.level:setText(table.concat(lines, '\n'))
-        card.level:setHeight(14 * #lines)
+    else
+        -- the level the cave really asks for; the entry level when lower
+        lines[1] = tr('Recommended level: %d', recommended(quest))
+        if recommended(quest) > (quest.level or 0) then
+            lines[2] = tr('Opens at level %d', quest.level)
+        end
     end
-    card.monstersTitle:setVisible(not quest.wall)
-    card.monstersTitle:setHeight(quest.wall and 0 or 16)
-
-    card.monsters:destroyChildren()
-    local count = 0
-    for index, monster in ipairs(strongestFirst(quest)) do
-        if index > 3 then
+    -- a long name in smaller letters, so that it fits its line; the longest
+    -- lose their end (the whole name is in the tooltip)
+    local room = detail.name:getWidth()
+    detail.name:setText(title)
+    for _, size in ipairs({ 16, 14, 12 }) do
+        detail.name:setTTFFont('cinzel-bold', size, 0, '#000000')
+        if room <= 0 or detail.name:getTextSize().width <= room then
             break
         end
-        local line = g_ui.createWidget('QuestMonster', card.monsters)
-        line.creature:setOutfit(outfitOf(monster.outfit))
-        line.name:setText(monster.name)
-        line.info:setText(tr('%d in the cave  -  %s XP each', monster.count, formatNumber(monster.experience)))
-        count = index
     end
-    -- as tall as its lines (34 each, 4 between), so the note below has room
-    card.monsters:setHeight(quest.wall and 1 or (math.max(1, count) * 38 - 4))
+    local short = title
+    while room > 0 and #short > 8 and detail.name:getTextSize().width > room do
+        short = short:sub(1, #short - 1)
+        detail.name:setText(short:gsub('%s+$', '') .. '...')
+    end
+    detail.name:setTooltip(nameOf(quest))
+    detail.sub:setText(table.concat(lines, '\n'))
 
-    card.rewards:destroyChildren()
-    local cells = 0
-    local extras = {}
-    -- a harder version: one item to pick, and the prize on top
-    local picks = quest.prize and rewardsFor(quest) or {}
+    -- the numbers: a Mythos quest only
+    if quest.wall then
+        detail.stats:destroyChildren()
+    else
+        renderTiles(detail.stats, quest)
+    end
+    local tiles = detail.stats:getChildCount() > 0
+    detail.stats:setVisible(tiles)
+    detail.stats:setHeight(tiles and 40 or 0)
+    detail.stats:setMarginTop(tiles and 6 or 0)
+
+    -- the reward: what the player picks at the chest, then what comes with it
+    body.picks:destroyChildren()
+    body.prize:destroyChildren()
+    local picks = rewardsFor(quest)
+    for _, reward in ipairs(picks) do
+        addPick(body.picks, reward)
+    end
     if quest.prize then
-        if #picks > 0 then
-            card.rewardsTitle:setText(tr('Reward: pick one item at the chest, plus the rest'))
-            -- a quest that asks for its bosses: how many are left for the chest
-            if quest.bosses and (quest.bosses.total or 0) > 0 then
-                local left = quest.bosses.left or 0
-                card.rewardsTitle:setText(left > 0 and tr('Reward (defeat the %d bosses first: %d left)', quest.bosses.total, left)
-                    or tr('Reward: pick one item at the chest (bosses defeated)'))
-            end
-            for _, reward in ipairs(picks) do
-                local cell = g_ui.createWidget('QuestReward', card.rewards)
-                cell.item:setItemId(reward.id)
-                cell.count:setText('')
-                local name = reward.name:gsub('^%l', string.upper)
-                cell:setTooltip(tr('Pick one: %s', reward.level > 0 and tr('%s (level %d)', name, reward.level) or name))
-                cells = cells + 1
-            end
-        else
-            -- a challenge: the same prize for every vocation, all of it
-            card.rewardsTitle:setText(tr('Reward: all of this, for every vocation'))
-        end
         for _, item in ipairs(quest.prize.items or {}) do
-            local cell = g_ui.createWidget('QuestReward', card.rewards)
-            cell.item:setItemId(item.id)
-            cell.count:setText(item.count > 1 and tostring(item.count) or '')
-            cell:setTooltip(string.format('%dx %s', item.count, (item.name:gsub('^%l', string.upper))))
-            cells = cells + 1
+            local name = titleCase(item.name)
+            addItemCell(body.prize, item.id, name, string.format('%dx', item.count or 1), '#e8c77a',
+                string.format('%dx %s', item.count or 1, name))
         end
         if (quest.prize.gold or 0) > 0 then
-            extras[#extras + 1] = tr('+ %s gold in the bank', formatNumber(quest.prize.gold))
+            addItemCell(body.prize, 3043, tr('Gold in the bank'), '+' .. formatNumber(quest.prize.gold), '#e8c77a',
+                tr('+ %s gold in the bank', formatNumber(quest.prize.gold)))
         end
         if (quest.prize.rarityXp or 0) > 0 then
-            extras[#extras + 1] = tr('+ %d Rarity XP', quest.prize.rarityXp)
-        end
-    else
-        card.rewardsTitle:setText(quest.wall and (#(quest.rewards or {}) > 0 and tr('Reward of the quest') or '') or tr('Reward: pick one at the chest'))
-        for _, reward in ipairs(rewardsFor(quest)) do
-            local cell = g_ui.createWidget('QuestReward', card.rewards)
-            cell.item:setItemId(reward.id)
-            cell.count:setText('')
-            local name = reward.name:gsub('^%l', string.upper)
-            cell:setTooltip(reward.level > 0 and tr('%s (level %d)', name, reward.level) or name)
-            cells = cells + 1
+            local cell = addItemCell(body.prize, 0, 'Rarity XP', '+' .. formatNumber(quest.prize.rarityXp), '#e8c77a',
+                tr('+ %d Rarity XP', quest.prize.rarityXp))
+            cell.frame.item:setVisible(false)
+            cell.frame.icon:setImageSource('/game_bosses/images/star_on')
+            cell.frame.icon:setImageColor('#e8c77a')
+            cell.frame.icon:setVisible(true)
         end
     end
-    -- as many lines of 38 px cells (4 between) as the rewards need
-    local perLine = math.max(1, math.floor((card.rewards:getWidth() + 4) / 42))
-    local lines = math.max(1, math.ceil(cells / perLine))
-    card.rewards:setHeight(lines * 42 - 4)
-    -- the gold and the Rarity XP of a prize, under its items
-    card.prizeText:setText(table.concat(extras, '   '))
-    card.prizeText:setHeight(#extras > 0 and 14 or 0)
-    card.prizeText:setMarginTop(#extras > 0 and 3 or 0)
-
-    renderRarity(card, quest)
-
-    if quest.guards and (quest.guards.count or 0) > 0 then
-        setStat(card.guards, tr('Guarding the chest'), string.format('%d x %s', quest.guards.count, quest.guards.name), '#ffb36b')
-        card.guards:setVisible(true)
-        card.guards:setHeight(20)
+    local hasPicks, hasPrize = #picks > 0, body.prize:getChildCount() > 0
+    setShown(body.pickHead, hasPicks)
+    setShown(body.picks, hasPicks)
+    setShown(body.prizeHead, hasPrize)
+    setShown(body.prize, hasPrize)
+    body.prizeHead:setMarginTop(hasPicks and 10 or 0)
+    if quest.wall then
+        setHead(body.pickHead, tr('Reward of the quest'), #picks == 1 and tr('1 item') or tr('%d items', #picks))
+    elseif hasPrize then
+        -- a harder version: one item to pick, and the prize on top
+        local left = quest.bosses and (quest.bosses.total or 0) > 0 and (quest.bosses.left or 0) or 0
+        setHead(body.pickHead, #picks > 1 and tr('Pick one at the chest') or tr('From the chest'),
+            left > 0 and tr('%d bosses left', left) or '', '#ffb36b')
+        setHead(body.prizeHead, hasPicks and tr('And you also get') or tr('Reward'),
+            hasPicks and '' or tr('the same for every vocation'))
     else
-        card.guards:setVisible(false)
-        card.guards:setHeight(0)
+        setHead(body.pickHead, tr('Reward'), #picks > 1 and tr('pick 1 at the chest') or '')
     end
+    fitGrid(body.picks)
+    fitGrid(body.prize)
 
-    -- the card says only what changes for the player; how the button works
-    -- is in its tooltip
-    if quest.done then
-        card.note:setText(tr('Reward taken'))
-        card.note:setColor('#7fd35a')
-    elseif not canGo(quest) then
-        card.note:setText(tr('This quest asks for level %d.', quest.level))
-        card.note:setColor('#ff7a6b')
-    else
-        card.note:setText('')
+    renderRarity(body, quest)
+    body.rarityHead:setMarginTop((hasPicks or hasPrize) and 10 or 0)
+
+    -- the monsters of the cave: the four strongest
+    body.monsters:destroyChildren()
+    local monsters = strongestFirst(quest)
+    for index, monster in ipairs(monsters) do
+        if index > 4 then
+            break
+        end
+        local cell = g_ui.createWidget('QuestCell', body.monsters)
+        cell.frame.item:setVisible(false)
+        cell.frame.creature:setVisible(true)
+        cell.frame.creature:setOutfit(outfitOf(monster.outfit))
+        cell.name:setText(fitted(monster.name, 18))
+        cell.sub:setText(string.format('%dx', monster.count) .. DOT .. formatNumber(monster.experience) .. ' XP')
+        cell:setTooltip(tr('%s: %d in the cave, %s XP each', monster.name, monster.count, formatNumber(monster.experience)))
     end
-    card.level:setColor(quest.wall and '#b9b0a3' or readiness(quest))
-    card.go:setEnabled(canGo(quest))
-    card.go:setTooltip(tr('From a protection zone or out of combat. The Voltar portals in the cave take you back to the temple.'))
+    local hasMonsters = #monsters > 0
+    setShown(body.monstersHead, hasMonsters)
+    setShown(body.monsters, hasMonsters)
+    setHead(body.monstersHead, tr('Monsters of the cave'), #monsters > 4 and tr('the %d strongest of %d', 4, #monsters) or '')
+    fitGrid(body.monsters)
+
+    -- a quest of the teleport room with no reward to show
+    local nothing = quest.wall and not hasPicks
+    setShown(body.nothing, nothing)
+    body.nothing:setText(nothing and tr('The reward of this quest is not listed.') or '')
+
+    -- back to the top, and the scroll bar only when there is more than fits
+    ui.bodyScroll:setValue(0)
+    addEvent(function()
+        if not window or selectedKey ~= quest.key then
+            return
+        end
+        local last
+        for _, child in ipairs(body:getChildren()) do
+            if child:isVisible() then
+                last = child
+            end
+        end
+        local needed = last and (last:getY() + last:getHeight() - body:getY()) or 0
+        ui.bodyScroll:setVisible(needed > body:getHeight())
+    end)
+
+    detail.go:setEnabled(canGo(quest))
+    detail.go:setTooltip(tr('From a protection zone or out of combat. The Voltar portals in the cave take you back to the temple.'))
 end
 
 local function selectQuest(key)
@@ -422,8 +583,10 @@ local function updateStatuses()
     for _, quest in ipairs(state.quests) do
         -- the quests of the teleport room are not counted: nothing says
         -- which of them the character did
-        if isOpen(quest) and not quest.wall then
-            open = open + 1
+        if not quest.wall then
+            if isOpen(quest) then
+                open = open + 1
+            end
         end
         local row = rows[quest.key]
         if row then
@@ -433,7 +596,7 @@ local function updateStatuses()
         end
     end
     if window then
-        window.summary:setText(tr('%d quests, %d for you to do', #state.quests, open))
+        ui.summary:setText(tr('%d quests', #state.quests) .. DOT .. tr('%d for you to do', open))
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
@@ -441,76 +604,92 @@ local function updateStatuses()
     end
 end
 
+-- one row of the list
+local function addRow(list, quest)
+    local row = g_ui.createWidget('QuestRow', list)
+    if quest.wall then
+        -- the item the quest gives, in the monster's place
+        row.frame.creature:setVisible(false)
+        row.frame.item:setItemId(wallItem(quest))
+        row.frame.item:setVisible(true)
+        local title, others = wallNames(quest)
+        row.name:setText(title)
+        -- under the name: the other quests of the sign, its note, or what
+        -- the quest gives
+        local info = #others > 0 and ('+ ' .. table.concat(others, ', ')) or noteOf(quest)
+        if info == '' then
+            local names = {}
+            for _, item in ipairs(quest.rewards or {}) do
+                names[#names + 1] = titleCase(item.name)
+            end
+            info = table.concat(names, ', ')
+        end
+        row.info:setText(fitted(info, 46))
+        if info == '' then
+            row.name:setMarginTop(17)
+        end
+    else
+        local main = strongestFirst(quest)[1]
+        if main then
+            row.frame.creature:setOutfit(outfitOf(main.outfit))
+        end
+        row.name:setText(nameOf(quest))
+        -- the level the cave really asks for, in the readiness colour
+        row.info:setText(tr('Level %d', recommended(quest)))
+        row.info:setColor(readiness(quest))
+    end
+    row.onFocusChange = function(widget, focused)
+        if focused then
+            selectQuest(quest.key)
+        end
+    end
+    row.onDoubleClick = function()
+        selectQuest(quest.key)
+        goSelected()
+        return true
+    end
+    rows[quest.key] = row
+    return row
+end
+
 function refreshList()
     if not window or not state then
         return
     end
-    local list = window.list
+    local list = ui.list
     list:destroyChildren()
     rows = {}
-    local first, firstKey, keep
-    local index = 0
-    local wallTitle = false
+    -- the Mythos quests, then those of the teleport room, each group under
+    -- its title
+    local groups = { { title = tr('Mythos quests') }, { title = tr('Quests of the teleport room') } }
     for _, quest in ipairs(state.quests) do
         if shown(quest) then
-            -- the quests of the teleport room come after the Mythos ones,
-            -- under a line of their own
-            if quest.wall and not wallTitle then
-                wallTitle = true
-                local section = g_ui.createWidget('QuestSection', list)
-                section.title:setText(tr('Quests of the teleport room'))
-            end
-            index = index + 1
-            local row = g_ui.createWidget(index % 2 == 0 and 'QuestRowEven' or 'QuestRow', list)
-            local main = strongestFirst(quest)[1]
-            if main then
-                row.creature:setOutfit(outfitOf(main.outfit))
-            end
-            row.name:setText(nameOf(quest))
-            if quest.wall then
-                -- the item the quest is named after, in the monster's place
-                local reward = quest.rewards and quest.rewards[1]
-                row.creature:setVisible(false)
-                if reward then
-                    row.item:setItemId(reward.id)
-                    row.item:setVisible(true)
+            local group = groups[quest.wall and 2 or 1]
+            group[#group + 1] = quest
+        end
+    end
+    local first, firstKey, keep
+    for _, group in ipairs(groups) do
+        if #group > 0 then
+            local section = g_ui.createWidget('QuestSection', list)
+            section.title:setText(group.title)
+            section.count:setText(tostring(#group))
+            for _, quest in ipairs(group) do
+                local row = addRow(list, quest)
+                if not first then
+                    first, firstKey = row, quest.key
                 end
-                -- no status on the right: the name takes the whole row (a
-                -- sign may name three quests); alone in the middle of it
-                -- when the sign has no note
-                row.status:setWidth(0)
-                local note = isPortuguese() and quest.text or quest.textEn or ''
-                row.info:setText(note)
-                row.info:setColor('#9789b3')
-                if note == '' then
-                    row.name:setMarginTop(13)
+                if quest.key == selectedKey then
+                    keep = row
                 end
-            else
-                -- only the level the cave really asks for, in the readiness
-                -- colour (2026-11-19): the monsters are on the right
-                row.info:setText(tr('Level %d', recommended(quest)))
-                row.info:setColor(readiness(quest))
-            end
-            row.onFocusChange = function(widget, focused)
-                if focused then
-                    selectQuest(quest.key)
-                end
-            end
-            row.onDoubleClick = function()
-                selectQuest(quest.key)
-                goSelected()
-                return true
-            end
-            rows[quest.key] = row
-            if not first then
-                first, firstKey = row, quest.key
-            end
-            if quest.key == selectedKey then
-                keep = row
             end
         end
     end
     updateStatuses()
+    ui.empty:setVisible(first == nil)
+    ui.listScroll:setVisible(first ~= nil)
+    ui.empty:setText(filter == 'done' and ui.search:getText() == '' and tr('You have not finished a quest yet.')
+        or tr('No quest found.'))
     local focus = keep or first
     if focus then
         list:focusChild(focus, KeyboardFocusReason)
@@ -523,9 +702,9 @@ end
 
 function setFilter(which)
     filter = which
-    window.allTab:setChecked(which == 'all')
-    window.openTab:setChecked(which == 'open')
-    window.doneTab:setChecked(which == 'done')
+    ui.allTab:setChecked(which == 'all')
+    ui.openTab:setChecked(which == 'open')
+    ui.doneTab:setChecked(which == 'done')
     refreshList()
 end
 
@@ -835,7 +1014,8 @@ local function onGameEnd()
     selectedKey = nil
     rows = {}
     if window then
-        window.list:destroyChildren()
+        ui.list:destroyChildren()
+        ui.detail:setVisible(false)
     end
 end
 
@@ -855,8 +1035,17 @@ function init()
     window = g_ui.displayUI('quests')
     window:hide()
     window:setText(tr('Quests'))
-    window.openTab:setChecked(true)
-    window.card:setVisible(false)
+    for _, id in ipairs({ 'search', 'summary', 'message', 'openTab', 'allTab', 'doneTab', 'list', 'listScroll', 'empty', 'detail',
+        'bodyScroll' }) do
+        ui[id] = window:recursiveGetChildById(id)
+    end
+    -- each choice as wide as its word
+    for _, id in ipairs({ 'openTab', 'allTab', 'doneTab' }) do
+        ui[id]:setWidth(ui[id]:getTextSize().width + 26)
+    end
+    ui.openTab:setChecked(true)
+    ui.detail:setVisible(false)
+    ui.bodyScroll:setVisible(false)
 
     ProtocolGame.registerExtendedJSONOpcode(QUEST_OPCODE, onQuestOpcode)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
@@ -886,5 +1075,6 @@ function terminate()
     if window then
         window:destroy()
         window = nil
+        ui = {}
     end
 end
