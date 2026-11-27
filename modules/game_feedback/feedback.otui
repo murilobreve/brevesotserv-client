@@ -18,8 +18,8 @@ FeedbackTab < UIWidget
     size: 104 24
     anchors.centerIn: parent
     rotation: -90
-    image-source: /images/mythos/notice
-    image-border: 4
+    image-source: /images/ui/window_headless
+    image-border: 5
     font: Verdana Bold-11px
     color: #dfdfdf
     text-align: center

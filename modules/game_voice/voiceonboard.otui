@@ -72,8 +72,8 @@ VoiceOnboardWindow < MythosWindow
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 6
     size: 160 24
-    image-source: /images/mythos/input
-    image-border: 3
+    image-source: /images/ui/textedit
+    image-border: 1
     font: Verdana Bold-11px
     color: #dfdfdf
     text-align: center
@@ -82,7 +82,8 @@ VoiceOnboardWindow < MythosWindow
     cursor: pointer
 
     $focus:
-      image-source: /images/mythos/input_focus
+      image-source: /images/ui/textedit
+      image-border: 1
 
   // the suggested key, until the player picks one
   Label

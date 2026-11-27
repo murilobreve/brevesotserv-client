@@ -9,33 +9,22 @@
 // Colours of the Mythos kit (data/styles/50-breves.otui). Pictures:
 // images/forge (tools/gerar-roleta-forja.py).
 
-ForgeTab < UIButton
-  size: 108 24
-  font: verdana-11px-antialised
-  color: #c0c0c0
-  text-offset: 0 -1
-  image-source: /images/mythos/tab
-  image-border: 2
-  change-cursor-image: true
-  cursor: pointer
-
-  $hover !on:
-    image-source: /images/mythos/tab_hover
-    color: #dfdfdf
+// a page of the window: Tibia's button, pressed while its page shows
+ForgeTab < MythosTab
+  size: 108 22
 
   $on:
-    image-source: /images/mythos/tab_on
     color: #ffffff
 
 // a dark well: the items, the wheel
 ForgeInset < UIWidget
-  image-source: /images/mythos/well
-  image-border: 3
+  image-source: /images/ui/textedit
+  image-border: 1
 
 // a raised box
 ForgePanel < UIWidget
-  image-source: /images/mythos/panel
-  image-border: 4
+  image-source: /images/ui/panel_flat
+  image-border: 1
 
 ForgeDim < Label
   font: verdana-11px-antialised

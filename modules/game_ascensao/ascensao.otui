@@ -213,8 +213,8 @@ AscensaoRelic < UIWidget
 // the spell in action (the designer's preview), floating under the seal
 AscensaoPreview < UIWidget
   size: 304 190
-  image-source: /images/mythos/panel
-  image-border: 4
+  image-source: /images/ui/panel_flat
+  image-border: 1
   padding: 8
   phantom: true
   focusable: false

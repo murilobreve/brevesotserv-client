@@ -45,15 +45,16 @@ VoiceKeyRow < UIWidget
     margin-left: 6
     margin-right: 4
     height: 20
-    image-source: /images/mythos/input
-    image-border: 3
+    image-source: /images/ui/textedit
+    image-border: 1
     font: verdana-11px-antialised
     color: #dfdfdf
     text-align: center
     focusable: true
 
     $focus:
-      image-source: /images/mythos/input_focus
+      image-source: /images/ui/textedit
+      image-border: 1
 
   VoiceSmallButton
     id: change

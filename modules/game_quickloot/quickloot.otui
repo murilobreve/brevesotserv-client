@@ -212,8 +212,8 @@ MythosWindow
   Panel
     id: filters
     size: 140 115
-    image-source: /images/mythos/panel
-    image-border: 4
+    image-source: /images/ui/panel_flat
+    image-border: 1
     anchors.top: fallbackPanel.top
     anchors.left: list.right
     margin-left: 5
@@ -266,8 +266,8 @@ MythosWindow
   Panel
     id: information
     size: 140 115
-    image-source: /images/mythos/panel
-    image-border: 4
+    image-source: /images/ui/panel_flat
+    image-border: 1
     text-wrap: true
     color: #c0c0c0
     text-align: left

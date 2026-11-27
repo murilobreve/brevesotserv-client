@@ -5,8 +5,8 @@
 
 ItemCard < UIWidget
   width: 252
-  image-source: /images/mythos/notice
-  image-border: 4
+  image-source: /images/ui/window_headless
+  image-border: 5
   padding: 3 10 9 10
   phantom: true
   focusable: false

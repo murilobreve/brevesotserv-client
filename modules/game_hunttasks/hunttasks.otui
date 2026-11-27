@@ -255,12 +255,12 @@ TrailRow < BrevesRow
 // task shop, drawn like the Store: offer rows on the left, the chosen
 // offer on the right (images from game_store)
 ShopPanelDark < UIWidget
-  image-source: /images/mythos/well
-  image-border: 3
+  image-source: /images/ui/textedit
+  image-border: 1
 
 ShopPanelLight < UIWidget
-  image-source: /images/mythos/panel
-  image-border: 4
+  image-source: /images/ui/panel_flat
+  image-border: 1
 
 ShopImageBox < UIWidget
   border-width: 1
@@ -306,9 +306,11 @@ ShopOffer < ShopPanelLight
   height: 78
   focusable: true
   $hover !focus:
-    image-source: /images/mythos/button_hover
+    image-source: /images/ui/2pixel_up_frame_borderimage
+    image-border: 3
   $focus:
-    image-source: /images/mythos/panel_on
+    image-source: /images/ui/2pixel_up_frame_borderimage
+    image-border: 3
 
   ShopImageBox
     id: image

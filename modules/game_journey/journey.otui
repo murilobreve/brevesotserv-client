@@ -2,24 +2,16 @@
 // in a mini window on the left, the recommended hunt card over the map and
 // the celebration of the first rarity item.
 
-// the theme's gold button at 24px (the art of the VIP button)
-JourneyGoldButton < UIButton
-  height: 24
+// the button of a step ("go hunt"): Tibia's button, its words in white
+JourneyGoldButton < Button
+  padding: 0
+  height: 22
   font: Verdana Bold-11px
-  color: #dfdfdf
-  text-offset: 0 1
-  image-source: /images/mythos/kit_gold_24
-  image-border-left: 18
-  image-border-right: 18
+  color: #ffffff
+  text-offset: 0 0
   change-cursor-image: true
   cursor: pointer
-  $hover !disabled:
-    image-source: /images/mythos/kit_gold_24_hover
-    color: #ffffff
-  $pressed:
-    image-source: /images/mythos/kit_gold_24_pressed
   $disabled:
-    image-source: /images/mythos/kit_gold_24_disabled
     color: #909090
 
 // the close of a card or a window: a framed x, easy to find
@@ -56,8 +48,8 @@ JourneyStep < UIWidget
   padding: 6
   focusable: false
   $on:
-    background-color: #363636f5
-    border-color: #f7a55f
+    background-color: #484848f5
+    border-color: #c0c0c0
 
   UIWidget
     id: icon

@@ -1,14 +1,16 @@
 // one vocation to pick: its look in front, the name and the role below
 CreateCharacterCard < UIButton
   size: 104 172
-  image-source: /images/mythos/panel
-  image-border: 4
+  image-source: /images/ui/panel_flat
+  image-border: 1
   change-cursor-image: true
   cursor: pointer
   $hover !checked:
-    image-source: /images/mythos/button_hover
+    image-source: /images/ui/2pixel_up_frame_borderimage
+    image-border: 3
   $checked:
-    image-source: /images/mythos/panel_on
+    image-source: /images/ui/2pixel_up_frame_borderimage
+    image-border: 3
 
   // the 64px frame of the outfit, scaled up and centred
   UICreature
@@ -28,7 +30,7 @@ CreateCharacterCard < UIButton
     margin-top: 0
     text-align: center
     font: Verdana Bold-11px
-    color: #e8dfce
+    color: #dfdfdf
     phantom: true
     $on:
       color: #ffffff
@@ -43,12 +45,12 @@ CreateCharacterCard < UIButton
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #9789b3
+    color: #909090
     phantom: true
 
 CreateCharacterCaption < Label
   font: Verdana Bold-11px
-  color: #e8dfce
+  color: #dfdfdf
   text-auto-resize: true
 
 MythosWindow
@@ -81,7 +83,7 @@ MythosWindow
     anchors.centerIn: cards
     !text: tr('Loading...')
     font: verdana-11px-antialised
-    color: #b4afc3
+    color: #c0c0c0
     text-auto-resize: true
 
   BrevesNote
@@ -90,7 +92,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 10
-    color: #d1ccd9
+    color: #c0c0c0
 
   MythosSeparator
     id: separator
@@ -146,7 +148,7 @@ MythosWindow
     anchors.left: townCaption.right
     margin-left: 10
     font: verdana-11px-antialised
-    color: #d1ccd9
+    color: #c0c0c0
     text-auto-resize: true
 
   CreateCharacterCaption
@@ -182,7 +184,7 @@ MythosWindow
     margin-top: 10
     margin-left: 70
     font: verdana-11px-antialised
-    color: #ff7b6b
+    color: #f75f5f
     text-wrap: true
     text-auto-resize: true
 
@@ -191,7 +193,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.verticalCenter: createButton.verticalCenter
     font: verdana-11px-antialised
-    color: #9789b3
+    color: #909090
     text-auto-resize: true
 
   MythosKitGoldButton28

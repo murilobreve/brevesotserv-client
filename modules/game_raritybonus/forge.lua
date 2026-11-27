@@ -576,7 +576,7 @@ local function setSteps(box, stage, entry)
     steps.a1:setText('>')
     steps.a2:setText('>')
     for i = 1, 3 do
-        steps['s' .. i]:setColor(i == at and '#eee6d4' or '#707070')
+        steps['s' .. i]:setColor(i == at and '#dfdfdf' or '#707070')
     end
     local odds = {}
     for i, pct in ipairs((entry and entry.counts) or {}) do
@@ -594,7 +594,7 @@ local function setDisc(box, big, small, color)
     holder.hub:setVisible(big == nil)
     if big then
         holder.disc.big:setText(big)
-        holder.disc.big:setColor(color or '#eee6d4')
+        holder.disc.big:setColor(color or '#dfdfdf')
         holder.disc.small:setText(small or '')
     end
 end
@@ -663,9 +663,9 @@ local function fillRows(entry)
             if now then
                 local typeKnown = roll.stage == 'value' or roll.t >= 1
                 row.text:setText(typeKnown and tr('%s: drawing the value...', bonusName(bonus)) or tr('Bonus %d: spinning the wheel...', i))
-                row.text:setColor('#e2c46a')
-                row:setBackgroundColor('#c9a24a26')
-                row:setBorderColor('#8a6f33')
+                row.text:setColor('#dfdfdf')
+                row:setBackgroundColor('#ffffff26')
+                row:setBorderColor('#c0c0c0')
             elseif wait then
                 row.text:setText(tr('Bonus %d: waiting', i))
                 row.text:setColor('#707070')
@@ -673,8 +673,8 @@ local function fillRows(entry)
                 row.text:setText(bonusText(bonus))
                 row.text:setColor(look[3])
                 if isSealed then
-                    row:setBackgroundColor('#c9a24a26')
-                    row:setBorderColor('#8a6f33')
+                    row:setBackgroundColor('#ffffff26')
+                    row:setBorderColor('#c0c0c0')
                 elseif roll and pos == roll.k and done then
                     row:setBackgroundColor('#ffffff18')
                 end
@@ -700,7 +700,7 @@ local function fillRows(entry)
             -- through a roll says so instead
             if isSealed and roll then
                 row.quality:setText(tr('kept'))
-                row.quality:setColor('#e2c46a')
+                row.quality:setColor('#dfdfdf')
             elseif hidden or q == nil then
                 row.quality:setText('')
             else
@@ -710,10 +710,10 @@ local function fillRows(entry)
             local d = (not roll and deltaSlot == entry.slotId) and deltas[i] or nil
             if d == 'new' then
                 row.delta:setText(tr('new'))
-                row.delta:setColor('#c9a4ff')
+                row.delta:setColor('#c0c0c0')
             elseif d then
                 row.delta:setText(math.abs(d) < 0.05 and '=' or ((d > 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10))))
-                row.delta:setColor(d > 0.05 and '#7fd36a' or d < -0.05 and '#ff7a6a' or '#909090')
+                row.delta:setColor(d > 0.05 and '#60f860' or d < -0.05 and '#f75f5f' or '#909090')
             else
                 row.delta:setText('')
             end
@@ -766,7 +766,7 @@ local function fillWheelBox(entry)
     box.caption:setTooltip(nil)
     if not showing then
         box.caption:setText(tr('Rolling...'))
-        box.caption:setColor('#e2c46a')
+        box.caption:setColor('#dfdfdf')
         setDisc(box, nil)
         setSteps(box, nil, entry)
         return
@@ -777,8 +777,8 @@ local function fillWheelBox(entry)
         local max = math.max(1, tonumber(roll.max) or #roll.after)
         local shown = spinning and (math.floor((g_clock.millis() - roll.startedAt) / 90) % max + 1) or #roll.after
         box.caption:setText(spinning and tr('How many bonuses?') or tr('%d of %d bonuses came out!', #roll.after, max))
-        box.caption:setColor(spinning and '#e2c46a' or '#ffd75f')
-        setDisc(box, tostring(shown), tr('of %d bonuses', max), spinning and '#eee6d4' or '#ffd75f')
+        box.caption:setColor(spinning and '#dfdfdf' or '#ffffff')
+        setDisc(box, tostring(shown), tr('of %d bonuses', max), spinning and '#dfdfdf' or '#ffffff')
         lightSlice(nil)
         return
     end
@@ -786,7 +786,7 @@ local function fillWheelBox(entry)
     local which = tr('bonus %d of %d', roll.k, #roll.order)
     if roll.stage == 'type' then
         box.caption:setText(spinning and tr('Bonus %d: spinning the wheel...', roll.order[roll.k]) or tr('Type: %s!', bonusName(cur)))
-        box.caption:setColor('#e2c46a')
+        box.caption:setColor('#dfdfdf')
         setDisc(box, '?', which)
         lightSlice(not spinning and cur.key or nil)
         return
@@ -809,7 +809,7 @@ local function fillWheelBox(entry)
     setDisc(box, number(shown) .. (cur.unit or ''), tr(look[2]), look[3])
     if spinning then
         box.caption:setText(tr('%s: how much?', bonusName(cur)))
-        box.caption:setColor('#e2c46a')
+        box.caption:setColor('#dfdfdf')
     else
         box.caption:setText(tr('Rolled: %s (%s)!', bonusText(cur), tr(look[2])))
         box.caption:setColor(look[3])
@@ -828,16 +828,16 @@ local function fillRoll(entry)
     -- the wallet follows the roll's price as soon as it is paid
     window.bottomBar.xpLabel:setText(tr('Rarity XP: %d', rarityXp))
     bar.costXp:setText(tr('%d Rarity XP', cost))
-    bar.costXp:setColor(short and '#ff7a6a' or '#c9a4ff')
+    bar.costXp:setColor(short and '#f75f5f' or '#c0c0c0')
     bar.haveXp:setText(tr('you have %d', rarityXp))
-    bar.haveXp:setColor(short and '#ff7a6a' or '#909090')
+    bar.haveXp:setColor(short and '#f75f5f' or '#909090')
     local width = bar.xpBar:getWidth()
     bar.xpBar.fill:setWidth(math.floor((width > 0 and width or 300) * math.min(1, cost > 0 and rarityXp / cost or 1)))
     -- the gold only when a bonus is kept
     bar.costGoldIcon:setVisible(lockGold > 0)
     bar.costGold:setVisible(lockGold > 0)
     bar.costGold:setText(tr('%s gold (keep)', formatGold(lockGold)))
-    bar.costGold:setColor(gold >= lockGold and '#e2c46a' or '#ff7a6a')
+    bar.costGold:setColor(gold >= lockGold and '#dfdfdf' or '#f75f5f')
     col.skipButton:setVisible(roll ~= nil and roll.phase == 'show')
     col.rollButton:setVisible(not (roll and roll.phase == 'show'))
     -- dismantling: the item for Rarity XP (the server's RarityConfig.dismantle)
@@ -891,7 +891,7 @@ local function fillUp(entry)
     if res:isVisible() then
         local g = grade(result.grade)
         res.title:setText(result.win and tr('Success!') or (result.broken and tr('The item broke!') or tr('Failed')))
-        res.title:setColor(result.win and '#7fd36a' or '#ff7a6a')
+        res.title:setColor(result.win and '#60f860' or '#f75f5f')
         res.box:setOpacity(result.broken and 0.35 or 1)
         setItem(res.box.item, entry, result.grade)
         hoverCard(res.box, entry)
@@ -950,7 +950,7 @@ local function fillUp(entry)
     up.chance:setText(tr('Success: %d%%', chance))
     up.nothingChance:setText(tr('Nothing happens: %s%%', percentText(math.max(0, 100 - chance - breaks))))
     up.breakChance:setText(tr('Breaks: %s%%', percentText(breaks)))
-    up.breakChance:setColor(breaks > 0 and '#ff7a6a' or '#7fd36a')
+    up.breakChance:setColor(breaks > 0 and '#f75f5f' or '#60f860')
     -- the protection slider (nothing to protect when the item cannot break)
     local box = up.protectBox
     box:setVisible(fullBreak > 0)
@@ -978,9 +978,9 @@ local function fillUp(entry)
     end
     local bar = up.upCostBar
     bar.upGold:setText(formatGold(needGold))
-    bar.upGold:setColor(gold >= needGold and '#e2c46a' or '#ff7a6a')
+    bar.upGold:setColor(gold >= needGold and '#dfdfdf' or '#f75f5f')
     bar.upXp:setText(tr('%d Rarity XP', needXp))
-    bar.upXp:setColor(rarityXp >= needXp and '#c9a4ff' or '#ff7a6a')
+    bar.upXp:setColor(rarityXp >= needXp and '#c0c0c0' or '#f75f5f')
     bar.upButton:setText(forging and tr('Forging...') or tr('Upgrade'))
     bar.upButton:setEnabled(not busy() and gold >= needGold and rarityXp >= needXp)
 end
@@ -1031,9 +1031,9 @@ local function fillTotals()
             local sum = tonumber(t.total) or 0
             local full = cap and (t.capped or sum >= cap)
             row.name:setText(bonusName(t))
-            row.name:setColor(full and '#e2c46a' or '#c0c0c0')
+            row.name:setColor(full and '#dfdfdf' or '#c0c0c0')
             row.total:setText(plus(sum, unit) .. (cap and (' / ' .. number(cap) .. unit) or ''))
-            row.total:setColor(full and '#e2c46a' or '#eee6d4')
+            row.total:setColor(full and '#dfdfdf' or '#dfdfdf')
             -- the items that give it, under the mouse
             local lines = { bonusName(t) }
             for _, src in ipairs(t.sources or {}) do
@@ -1238,14 +1238,14 @@ function forgeRoll()
     local function go()
         local now = bySlot[slot]
         if not now or now.itemId ~= itemId then
-            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6a')
+            setStatus(tr('The item changed: pick it and try again.'), '#f75f5f')
             return
         end
         selected = slot
         deltas, deltaSlot = {}, nil
         roll = { phase = 'wait', slot = slot, before = now.bonuses or {}, lock = lock, pool = now.pool or {},
             max = now.maxBonuses, counts = now.counts }
-        setStatus(tr('Rolling...'), '#e2c46a')
+        setStatus(tr('Rolling...'), '#dfdfdf')
         Forge.send({ action = 'rerollItem', slot = now.bag and nil or slot, fid = now.fid, lock = lock })
         Forge.expectAnswer()
         Forge.refresh()
@@ -1408,14 +1408,14 @@ function forgeUpgrade()
     local function go()
         local now = bySlot[slot]
         if not now or now.itemId ~= itemId or not now.upgrade then
-            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6a')
+            setStatus(tr('The item changed: pick it and try again.'), '#f75f5f')
             return
         end
         selected = slot
         result = nil
         asc = { phase = 'forging', slot = slot, offer = up, fromKey = now.rarity, entry = now, pos = 0, startedAt = g_clock.millis(),
             protect = pct, gold = needGold, xp = needXp, breakChance = breaks }
-        setStatus(tr('Forging...'), '#e2c46a')
+        setStatus(tr('Forging...'), '#dfdfdf')
         Forge.send({ action = 'upgradeItem', slot = now.bag and nil or slot, fid = now.fid, protect = pct })
         Forge.expectAnswer()
         Forge.refresh()
@@ -1440,7 +1440,7 @@ function forgeDismantle()
     local function go()
         local now = bySlot[slot]
         if not now or now.itemId ~= itemId then
-            setStatus(tr('The item changed: pick it and try again.'), '#ff7a6a')
+            setStatus(tr('The item changed: pick it and try again.'), '#f75f5f')
             return
         end
         Forge.send({ action = 'dismantle', slot = now.bag and nil or slot, fid = now.fid })
@@ -1553,7 +1553,7 @@ function Forge.onBonuses(d)
         answerEvent = nil
     end
     local message = messageOf(d)
-    local color = d.ok == false and '#ff6464' or '#60f860'
+    local color = d.ok == false and '#f75f5f' or '#60f860'
     rarityXp = tonumber(d.rarityXp) or rarityXp
     gold = tonumber(d.gold) or gold
     if res and roll and roll.phase == 'wait' then
@@ -1639,7 +1639,7 @@ function Forge.expectAnswer()
         end
         stopTick()
         roll, asc = nil, nil
-        setStatus(tr('No answer from the server. Try again.'), '#ff6464')
+        setStatus(tr('No answer from the server. Try again.'), '#f75f5f')
         Forge.send({ action = 'open' })
     end, ANSWER_TIMEOUT)
 end

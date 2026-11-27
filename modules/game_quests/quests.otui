@@ -265,16 +265,19 @@ MythosWindow
       !placeholder: tr('Type to search')
       @onTextChange: modules.game_quests.refreshList()
 
-    // empties the search, as the X of Tibia's search boxes
-    MythosButton
+    // empties the search: the X of Tibia's search boxes
+    UIButton
       id: clear
       anchors.right: parent.right
       anchors.bottom: showDone.top
       margin-bottom: 6
       size: 20 20
-      text: X
+      image-source: /images/ui/button-clear-18x18-up
       !tooltip: tr('Clear the search')
       @onClick: modules.game_quests.clearSearch()
+
+      $pressed:
+        image-source: /images/ui/button-clear-18x18-down
 
     CheckBox
       id: showDone

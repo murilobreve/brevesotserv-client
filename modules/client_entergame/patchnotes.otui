@@ -1,18 +1,18 @@
 PatchNoteTitle < Label
   font: verdana-11px-rounded
-  color: #eee6d4
+  color: #dfdfdf
   height: 16
   margin-top: 10
 
 PatchNoteDate < Label
   font: verdana-11px-monochrome
-  color: #9789b3
+  color: #909090
   height: 14
   margin-bottom: 4
 
 PatchNoteLine < Label
   font: verdana-11px-monochrome
-  color: #cbc0e0
+  color: #c0c0c0
   text-wrap: true
   text-auto-resize: true
   margin-top: 3
@@ -52,7 +52,7 @@ MythosWindow
     anchors.verticalCenter: closeButton.verticalCenter
     margin-right: 10
     font: verdana-11px-monochrome
-    color: #9789b3
+    color: #909090
     !text: tr('Every patch is also on the site, under Patch notes.')
     height: 28
     text-wrap: true

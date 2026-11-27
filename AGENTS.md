@@ -58,6 +58,15 @@ Reference: `docs/client-assets-auto-install.md`
 - Validate: `tools/voz-native-test` (ASan and release builds, `run-tests.sh`, own relay on 127.0.0.1:7391), `luajit tools/voz-luatest/game_voice_test.lua`, and the Windows checklist in `docs/voz-windows.md`.
 - Validate: in `browser/voice/test/`, `node lint.mjs --browser`, `node worklet.mjs`, `node bridge.mjs`, `node e2e.mjs` (local relay), and `luajit tools/voz-luatest/game_voice_test.lua`.
 
+## Our Windows Look Like Tibia's
+
+- The owner, 2026-11-27: every window of ours looks as if it were Tibia's own. The kit is `data/styles/50-breves.otui` (`MythosWindow`, `MythosButton`, `MythosTab`, `MythosTextEdit`, `MythosComboBox`, `MythosScrollBar`, `BrevesSection`, `BrevesList`, `BrevesRow`...): the names are ours, what they draw is Tibia's (stone window, grey buttons, captioned panels, sunken lists). The references are the client's copies of Tibia's windows: `game_questlog`, `game_highscore`, `game_cyclopedia`, `game_prey`. Look at one of them before laying out a window.
+- A window brings no palette of its own: text `#c0c0c0`, captions and secondary text `#909090`, the chosen thing `#ffffff`, a sunken list `#404040` with contiguous rows and the chosen row `#585858`, a dark picture box `#1b1b1b`. Colour says a state only: green `#60f860`, orange `#f7a55f`, red `#f75f5f`. Rarity grades, elements and tiers keep their own colours. No title fonts (`ttf-font`), no gold or violet trim, no badge with a coloured background.
+- Layout idioms: a list and its choice side by side, each in a `BrevesSection` (the right one captioned with the chosen thing: the Quest Log); what filters a list goes under it or in a box (a combo box, `Type to search`, a check box), never as header rows inside the list; facts as `name: value` lines; a `MythosSeparator` and the `Close` button at the bottom right, no X in the title bar.
+- Hunts, Bosses and Quests are the pages of the teleports: `modules.game_brevespanel.attachHub(window, id, hide)` puts the strip of pages under the title bar and grows the window by its height. The Ranking is not one of them: it shows with no strip, opened from the Tools section of the bar.
+- The login form (`client_entergame/entergame.otui`, art in `/images/brevesui`) keeps the server's own art until the owner says otherwise.
+- Two widgets anchored to each other (`a.right: b.left` and `b.top: a.top`) hang the client with "recursively anchored": anchor a scroll bar to the panel, not to the list that is anchored to it.
+
 ## Narrow Rules (recurring defects)
 
 - `AttachedEffect` reads its duration only when it is attached: `setDuration` after `tile:attachEffect` does nothing. To end a skillshot layer early, schedule `detachArt` (`game_skillshot`).

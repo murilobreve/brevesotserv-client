@@ -159,8 +159,8 @@ VoiceDirRow < UIWidget
 // and the wheel move 10% (voice_ui.lua), the buttons go to 0% and 100%
 VoiceVolumePopup < UIWidget
   size: 170 66
-  image-source: /images/mythos/popup
-  image-border: 2
+  image-source: /images/ui/window_headless
+  image-border: 5
   padding: 6
 
   Label

@@ -30,8 +30,8 @@ UpdaterWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 12
     height: 10
-    image-source: /images/mythos/input
-    image-border: 3
+    image-source: /images/ui/textedit
+    image-border: 1
     phantom: true
 
     UIWidget

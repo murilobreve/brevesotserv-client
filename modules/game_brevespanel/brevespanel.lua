@@ -32,8 +32,6 @@ local FEATURES = {
     { id = 'rates', group = 'hunt', label = 'Teleports', icon = 'teleport', primary = true,
       tip = 'Hunts, bosses and quests, each with a free TP.',
       news = 'Every hunt in one list: the XP and loot rate of each monster, which change every 2 hours, and a TP to its hunt every 30 seconds.' },
-    { id = 'board', group = 'hunt', label = 'Leaderboard', icon = 'board',
-      news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
     { id = 'loot', group = 'hunt', label = 'Auto Loot', short = 'Loot', icon = 'loot', inside = 'healbot',
       news = 'Choose what the auto loot picks up without opening a corpse: your recent drops and a search by name, each with a Take box.' },
     { id = 'bosses', group = 'hunt', label = 'Bosses', icon = 'bosses', inside = 'rates',
@@ -50,6 +48,9 @@ local FEATURES = {
       news = 'Ascens\227o: from level 50 you earn 1 point every 10 levels for three paths of your vocation. The first circle of each path teaches one of the new aimed spells, and every circle makes it stronger, up to level 1500.' },
     { id = 'healbot', group = 'tools', label = 'Heal Bot', short = 'Bot', icon = 'healbot',
       news = 'Heals you with spells and potions, heals your friends and keeps your buffs up. You choose the rules.' },
+    -- (among the tools, not beside the teleports: the owner, 2026-11-27)
+    { id = 'board', group = 'tools', label = 'Leaderboard', icon = 'board',
+      news = 'Who kills the most monsters and who makes the most XP in the hour, the day and the month. The top hunters win Mythos Coins.' },
     { id = 'messages', group = 'tools', label = 'Interface', icon = 'messages',
       news = 'Interface settings, such as where the look, loot and warning messages show on the game screen.' },
     { id = 'wiki', group = 'tools', label = 'Wiki', icon = 'wiki',

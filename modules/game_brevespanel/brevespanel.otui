@@ -97,23 +97,14 @@ BrevesFeatureButton < Button
     visible: false
 
 // the row the bar wants seen first (Teleports: hunts, bosses and quests):
-// gold text in a gold frame, at the rows' own height
+// the same button, its words in bold white
 BrevesPrimaryButton < BrevesFeatureButton
   font: Verdana Bold-11px
-  color: #dfdfdf
-  background-color: #585858
-  border-width: 1
-  border-color: #c0c0c0
+  color: #ffffff
   $hover !on:
-    background-color: #585858
     color: #ffffff
-    border-color: #c0c0c0
-  $pressed:
-    background-color: #585858
   $on:
-    background-color: #585858
     color: #ffffff
-    border-color: #c0c0c0
 
 // The pages of the teleports (Hunts, Bosses, Quests) under the title bar of
 // each of their windows: the strip of pages of Tibia's Cyclopedia. A page is
@@ -179,42 +170,38 @@ BrevesGainLabel < Label
   phantom: true
   focusable: false
 
-// the VIP button: the site's gold button, at the right end of the bar
+// the VIP button, at the right end of the bar: Tibia's gold button
 BrevesVipButton < BrevesFeatureButton
-  height: 24
+  height: 22
   anchors.left: parent.left
   anchors.verticalCenter: parent.verticalCenter
   font: Verdana Bold-11px
-  color: #dfdfdf
+  color: #2b2209
   text-align: center
-  text-offset: 8 1
-  // the site's gold button scaled evenly to 24px (see MythosKitGoldButton28)
-  image-source: /images/mythos/kit_gold_24
-  image-border-left: 18
-  image-border-right: 18
+  text-offset: 8 0
+  image-source: /images/ui/buttons-gold
+  image-clip: 0 0 43 20
+  image-border: 2
   $hover !on:
-    image-source: /images/mythos/kit_gold_24_hover
-    background-color: #00000000
-    color: #ffffff
+    color: #000000
   $pressed:
-    image-source: /images/mythos/kit_gold_24_pressed
-    background-color: #00000000
+    image-clip: 0 20 43 20
   $on:
-    image-source: /images/mythos/kit_gold_24_pressed
-    background-color: #00000000
-    color: #ffffff
+    image-clip: 0 20 43 20
+    color: #000000
 
 // holds the VIP button at its own 24px height: the bar's line layout would
 // stretch it to the sections' height and repeat the gold art
 BrevesVipHolder < UIWidget
   phantom: true
 
-// one of the four sections (Tasks, Hunts, Rarity, Tools): a framed block with
-// a gold-trimmed title and its buttons in a line under it
+// one of the four sections (Tasks, Hunts, Rarity, Tools): Tibia's panel with
+// its caption in the strip on top, and its buttons in a line under it
 BrevesSector < UIWidget
   height: 47
-  image-source: /images/mythos/sector
-  image-border: 4
+  image-source: /images/ui/outfits/minipanel
+  image-border: 3
+  image-border-top: 22
   phantom: true
 
   UIWidget
@@ -223,11 +210,6 @@ BrevesSector < UIWidget
     anchors.left: parent.left
     anchors.right: parent.right
     height: 22
-    // the site's dark gold button scaled evenly to 22px, so the trim above
-    // and below stays the same; only the middle stretches sideways
-    image-source: /images/mythos/sector_header
-    image-border-left: 20
-    image-border-right: 20
     phantom: true
 
   UIWidget
@@ -243,10 +225,9 @@ BrevesSector < UIWidget
     anchors.left: icon.right
     anchors.verticalCenter: header.verticalCenter
     margin-left: 6
-    margin-top: 1
     text-auto-resize: true
-    color: #dfdfdf
-    font: Verdana Bold-11px
+    color: #929292
+    font: verdana-11px-antialised
     phantom: true
 
   UIWidget
@@ -516,7 +497,7 @@ BrevesCallout < UIButton
     id: box
     anchors.fill: parent
     margin-bottom: 8
-    image-source: /images/mythos/notice
+    image-source: /images/ui/window_headless
     image-border: 4
     phantom: true
 

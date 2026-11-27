@@ -547,8 +547,8 @@ MythosWindow
     width: 128
     margin-bottom: 8
     padding: 4 4 4 4
-    image-source: /images/mythos/panel
-    image-border: 4
+    image-source: /images/ui/panel_flat
+    image-border: 1
     layout: verticalBox
 
     HealBotCategory

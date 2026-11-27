@@ -533,7 +533,7 @@ BossRoulette < UIWidget
 MythosWindow
   id: bossesWindow
   // the detail column's grids (3 stats, 2 loot cells) are 330 px wide
-  size: 778 670
+  size: 778 626
   @onEscape: modules.game_bosses.hide()
 
   // the one filter (the owner, 2026-11-27: "talvez so um filtro de search,
