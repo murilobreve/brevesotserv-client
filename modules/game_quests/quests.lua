@@ -301,6 +301,12 @@ local function renderCard()
     if quest.prize then
         if #picks > 0 then
             card.rewardsTitle:setText(tr('Reward: pick one item at the chest, plus the rest'))
+            -- a quest that asks for its bosses: how many are left for the chest
+            if quest.bosses and (quest.bosses.total or 0) > 0 then
+                local left = quest.bosses.left or 0
+                card.rewardsTitle:setText(left > 0 and tr('Reward (defeat the %d bosses first: %d left)', quest.bosses.total, left)
+                    or tr('Reward: pick one item at the chest (bosses defeated)'))
+            end
             for _, reward in ipairs(picks) do
                 local cell = g_ui.createWidget('QuestReward', card.rewards)
                 cell.item:setItemId(reward.id)

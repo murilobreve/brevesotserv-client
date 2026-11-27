@@ -852,7 +852,7 @@ local function renderDifficulty(panel, boss)
             row('Espera', tr('%d dias depois de enfrentar', level.lockDays or 7), '#9fd99a')
         end
     end
-    panel.note:setText(tr('Vale quando VOCÊ puxa a alavanca. Em qualquer dificuldade, o boss ganha %d%% de vida por jogador a mais.', math.floor((info.teamHealth or 0) * 100 + 0.5)))
+    panel.note:setText(tr('Heroico e Mítico: todos do time precisam escolher a mesma dificuldade. Em qualquer uma, o boss ganha %d%% de vida por jogador a mais.', math.floor((info.teamHealth or 0) * 100 + 0.5)))
 end
 
 renderDetail = function()
