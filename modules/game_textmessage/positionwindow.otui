@@ -8,7 +8,7 @@ ScreenMessagesWindow < MythosWindow
     !text: tr('Screen Messages')
     anchors.top: parent.top
     anchors.left: parent.left
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-auto-resize: true
 
@@ -63,7 +63,7 @@ ScreenMessagesWindow < MythosWindow
     anchors.top: prev.bottom
     anchors.left: parent.left
     margin-top: 14
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-auto-resize: true
 
@@ -82,7 +82,7 @@ ScreenMessagesWindow < MythosWindow
     anchors.top: prev.bottom
     anchors.left: parent.left
     margin-top: 14
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-auto-resize: true
 

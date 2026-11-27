@@ -702,7 +702,8 @@ local function showDetail(monster)
         card:setChecked(lname == selectedName)
     end
     detail.pedestal.creature:setOutfit(outfitOf(monster))
-    detail.name:setText(monster.name)
+    -- the monster's name is the panel's caption
+    detail.name:setText('')
     detail:setText(monster.name)
     local color, fit = fitOf(monster.lvl)
     detail.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')

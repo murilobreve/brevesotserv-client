@@ -62,7 +62,7 @@ FeedbackWindow < MythosWindow
     anchors.top: help.bottom
     anchors.left: parent.left
     margin-top: 10
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-auto-resize: true
 

@@ -24,7 +24,7 @@ TaskBar < UIWidget
     id: value
     anchors.fill: parent
     text-align: center
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #ffffff
     phantom: true
 
@@ -386,7 +386,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.verticalCenter: tasksTab.verticalCenter
     text-auto-resize: true
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     visible: false
 

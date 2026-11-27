@@ -38,14 +38,16 @@ ForgeButton < MythosButton
   height: 22
 
 // one rare item as a slot: its grade is the frame's colour
-ForgeSlot < Button
-  padding: 0
-  text-offset: 0 0
-  font: verdana-11px-antialised
+ForgeSlot < UIButton
   size: 36 36
+  background-color: #363636
+  border-width: 1
+  border-color: #272727
   change-cursor-image: true
   cursor: pointer
 
+  $hover:
+    border-color: #c0c0c0
 
   UIItem
     id: item

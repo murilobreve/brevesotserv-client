@@ -247,7 +247,7 @@ UnshieldRule < BrevesPanelBox
 // up or down and take it out.
 CasterButton < MythosButton
   size: 20 20
-  font: verdana-11px-rounded
+  font: verdana-11px-antialised
   text-offset: 0 0
 
 CasterRow < BrevesPanelBox
@@ -259,7 +259,7 @@ CasterRow < BrevesPanelBox
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 2
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-align: center
 
@@ -379,7 +379,7 @@ CasterRuneRow < CasterRow
 // a heading of the list ("Spells", "Runes")
 CasterHeading < Label
   height: 16
-  font: verdana-11px-rounded
+  font: verdana-11px-antialised
   color: #dfdfdf
 
 CasterPage < UIWidget

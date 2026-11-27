@@ -16,9 +16,14 @@
 
 MythosWindow < MainWindow
 
+// (the window's own Verdana on every button of ours, in the middle of it:
+// the small button font of the base style reads too small on our taller
+// buttons and sits 2 px low in them)
 MythosButton < Button
   size: 86 20
   padding: 0
+  font: verdana-11px-antialised
+  text-offset: 0 0
   change-cursor-image: true
   cursor: pointer
 

@@ -1,24 +1,28 @@
 // Mythos Voz panel: a mini window on the right side, Discord-like. The rooms
 // and their member rows are built by voice_ui.lua from the styles below.
 
-VoiceIconButton < Button
-  padding: 0
-  text-offset: 0 0
-  font: verdana-11px-antialised
+VoiceIconButton < UIButton
   size: 18 18
   image-size: 16 16
   image-offset: 1 1
+  border-width: 1
+  border-color: #747474
+  background-color: #363636
   change-cursor-image: true
   cursor: pointer
 
+  $hover:
+    border-color: #c0c0c0
 
+  $on:
+    background-color: #3a1c22
+    border-color: #f75f5f
 
 VoiceSmallButton < Button
-  height: 16
   font: verdana-11px-antialised
   color: #dfdfdf
   text-offset: 0 0
-  padding: 0 6 0 6
+  padding: 1 6 1 6
   text-auto-resize: true
   change-cursor-image: true
   cursor: pointer

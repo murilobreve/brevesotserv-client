@@ -34,7 +34,7 @@ AdvStepRow < Panel
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
     width: 18
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #f7a55f
 
   MythosComboBox
@@ -198,7 +198,7 @@ MythosWindow
     anchors.left: savedBox.right
     anchors.verticalCenter: presetLabel.verticalCenter
     margin-left: 4
-    size: 52 22
+    size: 70 22
     !text: tr('Load')
 
   MythosButton
@@ -206,7 +206,7 @@ MythosWindow
     anchors.left: savedUse.right
     anchors.verticalCenter: presetLabel.verticalCenter
     margin-left: 4
-    size: 60 22
+    size: 64 22
     !text: tr('Delete')
 
   MythosSeparator

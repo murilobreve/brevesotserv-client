@@ -60,7 +60,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 14
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     text-wrap: true
     text-auto-resize: true

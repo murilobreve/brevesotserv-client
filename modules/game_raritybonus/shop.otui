@@ -30,7 +30,7 @@ RarityXpPack < BrevesRow
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 8
     text-auto-resize: true
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #60f860
     phantom: true
 

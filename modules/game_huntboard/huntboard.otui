@@ -492,7 +492,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.verticalCenter: ratesTab.verticalCenter
     text-auto-resize: true
-    font: verdana-11px-rounded
+    font: verdana-11px-antialised
     color: #dfdfdf
     visible: false
 

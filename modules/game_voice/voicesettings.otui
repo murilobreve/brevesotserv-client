@@ -7,7 +7,7 @@ VoiceSettingLabel < Label
   text-auto-resize: true
 
 VoiceSettingSection < Label
-  font: verdana-11px-rounded
+  font: verdana-11px-antialised
   color: #dfdfdf
   text-auto-resize: true
 

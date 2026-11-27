@@ -3,21 +3,28 @@
 // rare boss roulette, over the map, when the lever is pulled (server:
 // boss_tiers.lua, "rareRoll").
 
+// a page of the chosen boss (Loot, Sua party, Dificuldade). As wide as its
+// word; the padding gives it its 24 px (text-auto-resize takes the height
+// from the text too), and the text keeps its place when the tab is pressed,
+// or the tab would grow a pixel
 BossTab < Button
   text-offset: 0 0
-  height: 26
   text-auto-resize: true
-  padding: 0 14
+  padding: 5 14
   font: verdana-11px-antialised
-  color: #909090
+  color: #c0c0c0
   change-cursor-image: true
   cursor: pointer
 
   $hover !on:
-    color: #dfdfdf
+    color: #ffffff
+
+  $pressed:
+    text-offset: 0 0
 
   $on:
-    color: #dfdfdf
+    color: #ffffff
+    text-offset: 0 0
 
 BossBox < UIWidget
   background-color: #363636
@@ -35,19 +42,22 @@ BossDim < Label
 
 BossChip < Button
   text-offset: 0 0
-  height: 22
   text-auto-resize: true
-  padding: 0 9
+  padding: 4 9
   font: verdana-11px-antialised
-  color: #909090
+  color: #c0c0c0
   change-cursor-image: true
   cursor: pointer
 
   $hover !on:
-    color: #dfdfdf
+    color: #ffffff
+
+  $pressed:
+    text-offset: 0 0
 
   $on:
-    color: #dfdfdf
+    color: #ffffff
+    text-offset: 0 0
 
 BossChips < UIWidget
   height: 48
