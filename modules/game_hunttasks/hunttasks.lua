@@ -961,9 +961,9 @@ local function updateBadge()
         return
     end
     panel.setFeatureLabel('tasks', dailyText, '#e0c060', dailyShort)
-    panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#60f860')
+    panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#7fd35a')
     panel.setFeatureLabel('trail', trailText, '#b7a2ff', trailShort)
-    panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#f7a55f')
+    panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#e2a443')
     updateBarTeleports()
 end
 

@@ -131,7 +131,7 @@ local function labelColor(id)
         return labelColors[id]
     end
     local feature = featureOf(id)
-    return id == 'vip' and '#fff4d8' or (feature and feature.primary and '#ffe7b0') or '#dfdfdf'
+    return id == 'vip' and '#fff4d8' or (feature and feature.primary and '#ffe7b0') or '#e6e0f2'
 end
 
 local function iconPath(name)

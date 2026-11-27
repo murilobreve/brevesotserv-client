@@ -1,24 +1,31 @@
+// The Mythos bar keeps its own look (the owner, 2026-11-27: "so deixe a barra
+// antiga"): gold-trimmed sections and its dark buttons, not the Tibia kit of
+// our windows. The strip of pages below (BrevesHubStrip) is of the windows.
+
 // one button per server feature, in a line under its section's title; its
 // width follows the text (brevespanel.lua), or only the icon on a narrow screen
-BrevesFeatureButton < Button
-  padding: 0
+BrevesFeatureButton < UIButton
   height: 20
   font: verdana-11px-rounded
-  color: #dfdfdf
+  color: #e6e0f2
   text-align: left
   text-offset: 23 0
   change-cursor-image: true
   cursor: pointer
   $hover !on:
-    color: #dfdfdf
+    background-color: #f1d39916
+    color: #ffe7b0
+  $pressed:
+    background-color: #f1d39926
   $on:
-    color: #dfdfdf
+    background-color: #f1d39922
+    color: #f3dcae
 
   // the gold light that pulses over the row when its number goes up
   UIWidget
     id: glow
     anchors.fill: parent
-    background-color: #909090
+    background-color: #f1d399
     phantom: true
     visible: false
 
@@ -41,11 +48,11 @@ BrevesFeatureButton < Button
     text-align: center
     padding: 1 4 0 4
     font: verdana-9px-bold
-    border-color: #747474
+    border-color: #6a5226
     phantom: true
     visible: false
     $hover:
-      border-color: #c0c0c0
+      border-color: #f1d399
 
   // a pill over the row's top right corner (setFeatureFlag): the best hunt
   // rate over Teleports, the spins the Roulette has
@@ -67,8 +74,7 @@ BrevesFeatureButton < Button
     visible: false
 
   // a quick action on the row, e.g. the hunt teleport of the Trail row
-  Button
-    text-offset: 0 0
+  UIButton
     id: action
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
@@ -77,13 +83,20 @@ BrevesFeatureButton < Button
     text-auto-resize: true
     padding: 1 5 0 5
     font: verdana-9px-bold
-    color: #dfdfdf
+    color: #f3dcae
+    background-color: #f1d39926
+    border-width: 1
+    border-color: #a7843f
     cursor: pointer
     visible: false
     $hover !disabled:
+      background-color: #f1d39950
       color: #ffffff
+      border-color: #f1d399
     $disabled:
-      color: #707070
+      color: #8d8270
+      background-color: #00000060
+      border-color: #4a3d28
 
   // what the quick action does, drawn over its left end (setFeatureAction):
   // the portal of a teleport. The action's text leaves it the room
@@ -97,14 +110,23 @@ BrevesFeatureButton < Button
     visible: false
 
 // the row the bar wants seen first (Teleports: hunts, bosses and quests):
-// the same button, its words in bold white
+// gold text in a gold frame, at the rows' own height
 BrevesPrimaryButton < BrevesFeatureButton
   font: Verdana Bold-11px
-  color: #ffffff
+  color: #ffe7b0
+  background-color: #d9a43a30
+  border-width: 1
+  border-color: #d9b45a
   $hover !on:
+    background-color: #f1d39948
     color: #ffffff
+    border-color: #ffe7b0
+  $pressed:
+    background-color: #f1d39960
   $on:
+    background-color: #f1d39955
     color: #ffffff
+    border-color: #ffe7b0
 
 // The pages of the teleports (Hunts, Bosses, Quests) under the title bar of
 // each of their windows: the strip of pages of Tibia's Cyclopedia. A page is
@@ -162,46 +184,51 @@ BrevesHubTab < Button
 // sized from its text in brevespanel.lua (auto resize misreads the TTF font)
 BrevesGainLabel < Label
   text-align: center
-  font: Verdana Bold-11px
-  color: #dfdfdf
-  background-color: #363636e6
+  ttf-font: cinzel-bold
+  ttf-font-size: 18
+  color: #ffe7b0
+  background-color: #120c1ee6
   border-width: 1
-  border-color: #c0c0c0
+  border-color: #f1d399
   phantom: true
   focusable: false
 
-// the VIP button, at the right end of the bar: Tibia's gold button
+// the VIP button: the site's gold button, at the right end of the bar
 BrevesVipButton < BrevesFeatureButton
-  height: 22
+  height: 24
   anchors.left: parent.left
   anchors.verticalCenter: parent.verticalCenter
   font: Verdana Bold-11px
-  color: #2b2209
+  color: #fff4d8
   text-align: center
-  text-offset: 8 0
-  image-source: /images/ui/buttons-gold
-  image-clip: 0 0 43 20
-  image-border: 2
+  text-offset: 8 1
+  // the site's gold button scaled evenly to 24px (see MythosKitGoldButton28)
+  image-source: /images/mythos/kit_gold_24
+  image-border-left: 18
+  image-border-right: 18
   $hover !on:
-    color: #000000
+    image-source: /images/mythos/kit_gold_24_hover
+    background-color: #00000000
+    color: #ffffff
   $pressed:
-    image-clip: 0 20 43 20
+    image-source: /images/mythos/kit_gold_24_pressed
+    background-color: #00000000
   $on:
-    image-clip: 0 20 43 20
-    color: #000000
+    image-source: /images/mythos/kit_gold_24_pressed
+    background-color: #00000000
+    color: #ffffff
 
 // holds the VIP button at its own 24px height: the bar's line layout would
 // stretch it to the sections' height and repeat the gold art
 BrevesVipHolder < UIWidget
   phantom: true
 
-// one of the four sections (Tasks, Hunts, Rarity, Tools): Tibia's panel with
-// its caption in the strip on top, and its buttons in a line under it
+// one of the four sections (Tasks, Hunts, Rarity, Tools): a framed block with
+// a gold-trimmed title and its buttons in a line under it
 BrevesSector < UIWidget
   height: 47
-  image-source: /images/ui/outfits/minipanel
-  image-border: 3
-  image-border-top: 22
+  image-source: /images/mythos/sector
+  image-border: 4
   phantom: true
 
   UIWidget
@@ -210,6 +237,11 @@ BrevesSector < UIWidget
     anchors.left: parent.left
     anchors.right: parent.right
     height: 22
+    // the site's dark gold button scaled evenly to 22px, so the trim above
+    // and below stays the same; only the middle stretches sideways
+    image-source: /images/mythos/sector_header
+    image-border-left: 20
+    image-border-right: 20
     phantom: true
 
   UIWidget
@@ -225,9 +257,11 @@ BrevesSector < UIWidget
     anchors.left: icon.right
     anchors.verticalCenter: header.verticalCenter
     margin-left: 6
+    margin-top: 1
     text-auto-resize: true
-    color: #929292
-    font: verdana-11px-antialised
+    color: #f1d399
+    ttf-font: cinzel-bold
+    ttf-font-size: 12
     phantom: true
 
   UIWidget
@@ -281,10 +315,7 @@ BrevesBar < UIWidget
 
   // starts the Mythos tour again (game_tutorial)
   // folds the bar to a thin line (open again on every login)
-  Button
-    padding: 0
-    text-offset: 0 0
-    font: verdana-11px-antialised
+  UIButton
     id: collapseButton
     anchors.left: parent.left
     anchors.top: parent.top
@@ -297,6 +328,8 @@ BrevesBar < UIWidget
     cursor: pointer
     !tooltip: tr('Hide the Mythos bar')
     @onClick: modules.game_brevespanel.toggleCollapsed()
+    $hover:
+      background-color: #f1d39922
     $on:
       icon-source: /images/mythos/fold_closed
 
@@ -310,13 +343,13 @@ BrevesBar < UIWidget
     height: 14
     text-align: left
     font: verdana-11px-rounded
-    color: #dfdfdf
+    color: #c9a96a
     cursor: pointer
     visible: false
     !text: tr('Mythos: Tasks, Hunts, Rarity, Tools and VIP. Click to open.')
     @onClick: modules.game_brevespanel.toggleCollapsed()
     $hover:
-      color: #dfdfdf
+      color: #ffe7b0
 
   // on the left corner, under the fold button, clear of the VIP button
   UIButton
@@ -328,12 +361,12 @@ BrevesBar < UIWidget
     size: 12 14
     text: ?
     font: verdana-11px-rounded
-    color: #707070
+    color: #8a7650
     cursor: pointer
     !tooltip: tr('Tutorial: a quick tour of Mythos')
     @onClick: if modules.game_tutorial then modules.game_tutorial.start() end
     $hover:
-      color: #dfdfdf
+      color: #ffe7b0
 
 // ---------------------------------------------------------------- news window
 

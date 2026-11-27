@@ -559,7 +559,7 @@ local function updateStatuses()
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
-        panel.setFeatureState('quests', open > 0 and tostring(open) or nil, READY)
+        panel.setFeatureState('quests', open > 0 and tostring(open) or nil, '#7fd35a')
     end
 end
 

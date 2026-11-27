@@ -957,7 +957,7 @@ local function updateStatuses()
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
-        panel.setFeatureState('bosses', ready > 0 and tostring(ready) or nil, '#60f860')
+        panel.setFeatureState('bosses', ready > 0 and tostring(ready) or nil, '#7fd35a')
     end
 end
 

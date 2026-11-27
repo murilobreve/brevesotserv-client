@@ -615,7 +615,7 @@ local newsEvent
 
 local function showNews()
     if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
-        modules.game_brevespanel.setFeatureState('rarity', newListings > 0 and tr('%d new', newListings) or nil, '#60f860')
+        modules.game_brevespanel.setFeatureState('rarity', newListings > 0 and tr('%d new', newListings) or nil, '#7fd35a')
     end
 end
 
