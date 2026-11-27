@@ -117,6 +117,10 @@ end
 -- only what is not the normal case: a quest already done, or one the
 -- player's level does not open yet
 local function statusOf(quest)
+    -- a quest of the teleport room has no level and nothing to mark
+    if quest.wall then
+        return '', '#b296f5'
+    end
     if quest.done then
         return tr('Done'), '#7fd35a'
     end
@@ -277,6 +281,32 @@ local function renderCard()
         levelText = levelText .. '  -  ' .. tr('opens at %d', quest.level)
     end
     card.level:setText(levelText)
+    -- a quest of the teleport room: its sign's note, no monsters to list.
+    -- A sign may name several quests ("A / B / C"): the first is the title,
+    -- the others go on the lines under it
+    card.level:setHeight(14)
+    if quest.wall then
+        local parts = {}
+        for part in (nameOf(quest) .. '/'):gmatch('([^/]+)/') do
+            parts[#parts + 1] = part:gsub('^%s+', ''):gsub('%s+$', '')
+        end
+        card.name:setText(parts[1] or nameOf(quest))
+        local lines = {}
+        for index = 2, #parts do
+            lines[#lines + 1] = parts[index]
+        end
+        local note = isPortuguese() and quest.text or quest.textEn or ''
+        if note ~= '' then
+            lines[#lines + 1] = note
+        end
+        if #lines == 0 then
+            lines[1] = tr('A quest of the map: the teleport takes you to its start.')
+        end
+        card.level:setText(table.concat(lines, '\n'))
+        card.level:setHeight(14 * #lines)
+    end
+    card.monstersTitle:setVisible(not quest.wall)
+    card.monstersTitle:setHeight(quest.wall and 0 or 16)
 
     card.monsters:destroyChildren()
     local count = 0
@@ -291,7 +321,7 @@ local function renderCard()
         count = index
     end
     -- as tall as its lines (34 each, 4 between), so the note below has room
-    card.monsters:setHeight(math.max(1, count) * 38 - 4)
+    card.monsters:setHeight(quest.wall and 1 or (math.max(1, count) * 38 - 4))
 
     card.rewards:destroyChildren()
     local cells = 0
@@ -333,7 +363,7 @@ local function renderCard()
             extras[#extras + 1] = tr('+ %d Rarity XP', quest.prize.rarityXp)
         end
     else
-        card.rewardsTitle:setText(tr('Reward: pick one at the chest'))
+        card.rewardsTitle:setText(quest.wall and (#(quest.rewards or {}) > 0 and tr('Reward of the quest') or '') or tr('Reward: pick one at the chest'))
         for _, reward in ipairs(rewardsFor(quest)) do
             local cell = g_ui.createWidget('QuestReward', card.rewards)
             cell.item:setItemId(reward.id)
@@ -374,7 +404,7 @@ local function renderCard()
     else
         card.note:setText('')
     end
-    card.level:setColor(readiness(quest))
+    card.level:setColor(quest.wall and '#b9b0a3' or readiness(quest))
     card.go:setEnabled(canGo(quest))
     card.go:setTooltip(tr('From a protection zone or out of combat. The Voltar portals in the cave take you back to the temple.'))
 end
@@ -390,7 +420,9 @@ local function updateStatuses()
     end
     local open = 0
     for _, quest in ipairs(state.quests) do
-        if isOpen(quest) then
+        -- the quests of the teleport room are not counted: nothing says
+        -- which of them the character did
+        if isOpen(quest) and not quest.wall then
             open = open + 1
         end
         local row = rows[quest.key]
@@ -418,8 +450,16 @@ function refreshList()
     rows = {}
     local first, firstKey, keep
     local index = 0
+    local wallTitle = false
     for _, quest in ipairs(state.quests) do
         if shown(quest) then
+            -- the quests of the teleport room come after the Mythos ones,
+            -- under a line of their own
+            if quest.wall and not wallTitle then
+                wallTitle = true
+                local section = g_ui.createWidget('QuestSection', list)
+                section.title:setText(tr('Quests of the teleport room'))
+            end
             index = index + 1
             local row = g_ui.createWidget(index % 2 == 0 and 'QuestRowEven' or 'QuestRow', list)
             local main = strongestFirst(quest)[1]
@@ -427,10 +467,30 @@ function refreshList()
                 row.creature:setOutfit(outfitOf(main.outfit))
             end
             row.name:setText(nameOf(quest))
-            -- only the level the cave really asks for, in the readiness
-            -- colour (2026-11-19): the monsters are on the right
-            row.info:setText(tr('Level %d', recommended(quest)))
-            row.info:setColor(readiness(quest))
+            if quest.wall then
+                -- the item the quest is named after, in the monster's place
+                local reward = quest.rewards and quest.rewards[1]
+                row.creature:setVisible(false)
+                if reward then
+                    row.item:setItemId(reward.id)
+                    row.item:setVisible(true)
+                end
+                -- no status on the right: the name takes the whole row (a
+                -- sign may name three quests); alone in the middle of it
+                -- when the sign has no note
+                row.status:setWidth(0)
+                local note = isPortuguese() and quest.text or quest.textEn or ''
+                row.info:setText(note)
+                row.info:setColor('#9789b3')
+                if note == '' then
+                    row.name:setMarginTop(13)
+                end
+            else
+                -- only the level the cave really asks for, in the readiness
+                -- colour (2026-11-19): the monsters are on the right
+                row.info:setText(tr('Level %d', recommended(quest)))
+                row.info:setColor(readiness(quest))
+            end
             row.onFocusChange = function(widget, focused)
                 if focused then
                     selectQuest(quest.key)

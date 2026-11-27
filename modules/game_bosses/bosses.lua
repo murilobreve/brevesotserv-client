@@ -21,7 +21,7 @@ local state -- last "state" from the server
 local receivedAt = 0 -- os.time() when it came: the waits count down from there
 local selectedName
 local subtab = 'loot'
-local filters = { states = {}, cats = {}, xpMin = 0, mine = false, party = false, fav = false }
+local filters = { mine = false, fav = false }
 local sortDesc = true
 local favorites = {}
 local lootCache = {} -- boss name -> its loot (server "loot")
@@ -434,37 +434,19 @@ local function bossLoot(boss)
     return lootCache[boss.name]
 end
 
+-- One search for everything (the owner, 2026-11-27): the text is looked for
+-- in the boss's name and quest here, and in the loot by the server (from 3
+-- letters: `itemFound`). A boss passes with either.
 local function passes(boss)
-    local query = window.pages.hall.filters.search:getText():lower()
-    if query ~= '' and not (boss.name .. ' ' .. (boss.quest or '')):lower():find(query, 1, true) then
-        return false
-    end
-    if itemQuery ~= '' and itemFound and not itemFound[boss.name] then
-        return false
-    end
-    if next(filters.states) and not filters.states[(statusOf(boss))] then
-        return false
-    end
-    if next(filters.cats) then
-        local cats, any = catsOf(boss), false
-        for key in pairs(filters.cats) do
-            any = any or cats[key]
-        end
-        if not any then
+    local query = window.quickSearch:getText():lower():gsub('^%s+', ''):gsub('%s+$', '')
+    if query ~= '' then
+        local named = (boss.name .. ' ' .. (boss.quest or '')):lower():find(query, 1, true)
+        local drops = itemQuery == query and itemFound and itemFound[boss.name]
+        if not named and not drops then
             return false
         end
     end
-    if (boss.experience or 0) < filters.xpMin then
-        return false
-    end
-    local option = window.pages.hall.filters.quest:getCurrentOption()
-    if option and option.data and option.data ~= '' and boss.quest ~= option.data then
-        return false
-    end
     if filters.mine and not canFight(boss) then
-        return false
-    end
-    if filters.party and #teamOf(boss) > 0 then
         return false
     end
     if filters.fav and not favorites[boss.name] then
@@ -515,129 +497,8 @@ end
 
 local renderDetail
 
-local function chipStyle(widget, on)
-    widget:setOn(on and true or false)
-end
-
--- the chips are made once; a click only flips their state (a chip must never
--- be destroyed inside its own click)
-local chipSets = nil
-
-local function buildChips()
-    local f = window.pages.hall.filters
-    chipSets = {}
-    local function add(parent, text, autoSize, isOn, onClick)
-        local chip = g_ui.createWidget('BossChip', parent)
-        chip:setText(tr(text))
-        if not autoSize then
-            chip:setTextAutoResize(false)
-        else
-            -- the three states in one line of the column's 194 px
-            chip:setPaddingLeft(6)
-            chip:setPaddingRight(6)
-        end
-        chip.activeFn = isOn
-        chip.onClick = function()
-            onClick()
-            refreshList()
-        end
-        chipSets[#chipSets + 1] = chip
-    end
-    f.states:destroyChildren()
-    for _, entry in ipairs({ { 'ready', 'Pronto' }, { 'wait', 'Esperando' }, { 'busy', 'Em luta' } }) do
-        add(f.states, entry[2], true, function() return filters.states[entry[1]] end, function()
-            filters.states[entry[1]] = not filters.states[entry[1]] or nil
-        end)
-    end
-    f.cats:destroyChildren()
-    for _, entry in ipairs(CATS) do
-        add(f.cats, entry[2], false, function() return filters.cats[entry[1]] end, function()
-            filters.cats[entry[1]] = not filters.cats[entry[1]] or nil
-        end)
-    end
-    f.xps:destroyChildren()
-    for _, entry in ipairs({ { 0, 'Qualquer' }, { 50000, '50 mil' }, { 70000, '70 mil' }, { 1000000, '1 milhão' } }) do
-        add(f.xps, entry[2], false, function() return filters.xpMin == entry[1] end, function()
-            filters.xpMin = entry[1]
-        end)
-    end
-    f.toggles:destroyChildren()
-    for _, entry in ipairs({ { 'mine', 'Só o que meu level alcança' }, { 'party', 'Minha party toda pode entrar' }, { 'fav', 'Só favoritos' } }) do
-        add(f.toggles, entry[2], true, function() return filters[entry[1]] end, function()
-            filters[entry[1]] = not filters[entry[1]]
-        end)
-    end
-end
-
-local baseWidth = 1002 -- the window with the filters open (init reads it)
-
 local function fillFilters()
-    local f = window.pages.hall.filters
-    if not chipSets then
-        buildChips()
-    end
-    for _, chip in ipairs(chipSets) do
-        chipStyle(chip, chip.activeFn())
-    end
-    local active = (f.search:getText() ~= '' and 1 or 0) + (itemQuery ~= '' and 1 or 0) + (filters.xpMin > 0 and 1 or 0)
-        + (filters.mine and 1 or 0) + (filters.party and 1 or 0) + (filters.fav and 1 or 0)
-    for _ in pairs(filters.states) do active = active + 1 end
-    for _ in pairs(filters.cats) do active = active + 1 end
-    local option = f.quest:getCurrentOption()
-    if option and option.data and option.data ~= '' then
-        active = active + 1
-    end
-    f.clear:setText(tr('Limpar (%d)', active))
-    -- the button that opens the filters says how many are on
-    local toggle = window.pages.hall.middle.filtersToggle
-    toggle:setText(active > 0 and tr('Filtros (%d)', active) or tr('Filtros'))
-    toggle:setColor(active > 0 and '#e8c77a' or '#b9b0a3')
-end
-
--- The filters are a column of their own, closed until the player wants
--- them: the window is as wide as the list and the boss, and grows for them.
-local FILTERS_WIDTH, HALL_GAP = 214, 10
-local filtersOpen = false
-
-local function layoutFilters()
-    local hall = window.pages.hall
-    hall.filters:setVisible(filtersOpen)
-    hall.filters:setWidth(filtersOpen and FILTERS_WIDTH or 0)
-    hall.middle:setMarginLeft(filtersOpen and HALL_GAP or 0)
-    window:setWidth(baseWidth - (filtersOpen and 0 or (FILTERS_WIDTH + HALL_GAP)))
-end
-
-function toggleFilters()
-    filtersOpen = not filtersOpen
-    g_settings.set('bossFiltersOpen', filtersOpen)
-    layoutFilters()
-end
-
-local function fillQuests()
-    local combo = window.pages.hall.filters.quest
-    local names, seen = {}, {}
-    for _, boss in ipairs(state and state.bosses or {}) do
-        if boss.quest and boss.quest ~= '' and not seen[boss.quest] then
-            seen[boss.quest] = true
-            names[#names + 1] = boss.quest
-        end
-    end
-    table.sort(names)
-    if combo.questCount == #names then
-        return
-    end
-    local current = combo:getCurrentOption()
-    quietCombo = true
-    combo:clearOptions()
-    combo:addOption(tr('Todas as quests'), '')
-    for _, name in ipairs(names) do
-        combo:addOption(name, name)
-    end
-    combo.questCount = #names
-    if current and current.data and current.data ~= '' then
-        combo:setCurrentOption(current.text, true)
-    end
-    quietCombo = false
+    window.favChip:setOn(filters.fav and true or false)
 end
 
 local function fillRow(row, boss)
@@ -722,7 +583,7 @@ function refreshList()
     -- the quick choice over the list: the bosses the player's level reaches, or all
     middle.mineChip:setChecked(filters.mine and true or false)
     middle.allChip:setChecked(not filters.mine)
-    middle.empty:setText(tr('Nenhum boss com esses filtros.'))
+    middle.empty:setText(tr('Nenhum boss encontrado.'))
     middle.empty:setVisible(#bosses == 0)
     local focus = keep or (bosses[1] and rows[bosses[1].name])
     if focus then
@@ -745,14 +606,15 @@ function setMine(mine)
     refreshList()
 end
 
-function clearFilters()
-    filters = { states = {}, cats = {}, xpMin = 0, mine = false, party = false, fav = false }
-    local f = window.pages.hall.filters
-    f.search:setText('')
-    f.itemSearch:setText('')
-    itemQuery, itemFound = '', nil
-    f.quest:setCurrentIndex(1, true)
+function toggleFavorites()
+    filters.fav = not filters.fav
     refreshList()
+end
+
+-- the search box: the name and the quest at once, the loot when the server answers
+function onSearch(text)
+    refreshList()
+    searchItem(text)
 end
 
 function flipSort()
@@ -1126,7 +988,6 @@ function handlers.state(data)
     state = data
     receivedAt = os.time()
     if window and window:isVisible() then
-        fillQuests()
         -- the rows are kept: only their state and the order change
         refreshList()
     end
@@ -1209,7 +1070,6 @@ function show()
     if not tickEvent then
         tickEvent = cycleEvent(tick, 1000)
     end
-    fillQuests()
     refreshList()
     send({ action = 'open' })
 end
@@ -1269,8 +1129,7 @@ local function onGameEnd()
     end
     if window then
         -- (with no state, the change of text redraws nothing)
-        window.pages.hall.filters.search:setText('')
-        window.pages.hall.filters.itemSearch:setText('')
+        window.quickSearch:setText('')
     end
     rouletteQueue = {}
     if roulette then
@@ -1286,19 +1145,10 @@ function init()
     window:hide()
     window:setText(tr('Salão dos Bosses'))
     window.closeX:setTooltip(tr('Fechar'))
-    local f = window.pages.hall.filters
-    f.filtersTitle:setText(tr('FILTROS'))
-    f.searchLabel:setText(tr('Boss ou quest'))
-    f.itemLabel:setText(tr('Deixa cair o item'))
-    f.stateLabel:setText(tr('Estado para você'))
-    f.catLabel:setText(tr('Equipamento que dá'))
-    f.xpLabel:setText(tr('Experiência mínima'))
-    f.questLabel:setText(tr('Quest'))
-    f.quest:addOption(tr('Todas as quests'), '')
+    if window.quickSearch.setPlaceholder then window.quickSearch:setPlaceholder(tr('Buscar boss, quest ou item do loot')) end
+    window.favChip:setText(tr('Favoritos'))
+    window.favChip:setTooltip(tr('Só os bosses que você marcou com a estrela'))
     local m = window.pages.hall.middle
-    baseWidth = window:getWidth()
-    filtersOpen = g_settings.getBoolean('bossFiltersOpen', false)
-    layoutFilters()
     m.sortLabel:setText('')
     for _, entry in ipairs(SORTS) do
         m.sort:addOption(tr(entry[2]), entry[1])

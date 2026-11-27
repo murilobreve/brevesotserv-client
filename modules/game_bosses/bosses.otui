@@ -557,7 +557,7 @@ BossRoulette < UIWidget
 MythosWindow
   id: bossesWindow
   // the detail column's grids (3 stats, 2 loot cells) are 330 px wide
-  size: 1002 640
+  size: 778 640
   @onEscape: modules.game_bosses.hide()
 
   UIButton
@@ -582,9 +582,43 @@ MythosWindow
       background-color: #3d2f20
       border-color: #a8884a
 
+  // the one filter (the owner, 2026-11-27: "talvez so um filtro de search,
+  // na barra de cima"): a boss, a quest or an item of the loot
+  MythosTextEdit
+    id: quickSearch
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 250
+    placeholder: Buscar boss, quest ou item do loot
+    placeholder-color: #75688f
+    @onTextChange: modules.game_bosses.onSearch(self:getText())
+
+  UIButton
+    id: favChip
+    anchors.verticalCenter: quickSearch.verticalCenter
+    anchors.left: quickSearch.right
+    margin-left: 6
+    size: 92 22
+    font: verdana-11px-antialised
+    color: #b9b0a3
+    background-color: #19151c
+    border-width: 1
+    border-color: #3a3140
+    change-cursor-image: true
+    cursor: pointer
+    @onClick: modules.game_bosses.toggleFavorites()
+
+    $hover:
+      border-color: #e8c77a
+
+    $on:
+      color: #e8c77a
+      border-color: #a8884a
+      background-color: #2a2219
+
   Label
     id: summary
-    anchors.top: parent.top
+    anchors.verticalCenter: quickSearch.verticalCenter
     anchors.right: parent.right
     text-auto-resize: true
     font: verdana-11px-antialised
@@ -592,10 +626,10 @@ MythosWindow
 
   Label
     id: message
-    anchors.top: summary.bottom
+    anchors.top: quickSearch.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    margin-top: 5
+    margin-top: 4
     height: 15
     font: verdana-11px-antialised
 
@@ -612,158 +646,11 @@ MythosWindow
       id: hall
       anchors.fill: parent
 
-      BossBox
-        id: filters
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        width: 214
-        padding: 10
-
-        BossTitle
-          id: filtersTitle
-          anchors.top: parent.top
-          anchors.left: parent.left
-
-        UIButton
-          id: clear
-          anchors.top: parent.top
-          anchors.right: parent.right
-          height: 14
-          text-auto-resize: true
-          font: verdana-11px-antialised
-          color: #e8c77a
-          change-cursor-image: true
-          cursor: pointer
-          @onClick: modules.game_bosses.clearFilters()
-
-        BossDim
-          id: searchLabel
-          anchors.top: filtersTitle.bottom
-          anchors.left: parent.left
-          margin-top: 9
-          text-auto-resize: true
-
-        MythosTextEdit
-          id: search
-          placeholder: ex.: Forgotten Knowledge
-          placeholder-color: #75688f
-          anchors.top: searchLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 3
-          @onTextChange: modules.game_bosses.refreshList()
-
-        BossDim
-          id: itemLabel
-          anchors.top: search.bottom
-          anchors.left: parent.left
-          margin-top: 7
-          text-auto-resize: true
-
-        MythosTextEdit
-          id: itemSearch
-          placeholder: ex.: falcon, eldritch
-          placeholder-color: #75688f
-          anchors.top: itemLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 3
-          @onTextChange: modules.game_bosses.searchItem(self:getText())
-
-        BossDim
-          id: stateLabel
-          anchors.top: itemSearch.bottom
-          anchors.left: parent.left
-          margin-top: 8
-          text-auto-resize: true
-
-        UIWidget
-          id: states
-          anchors.top: stateLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 4
-          height: 22
-          layout:
-            type: horizontalBox
-            spacing: 4
-
-        BossDim
-          id: catLabel
-          anchors.top: states.bottom
-          anchors.left: parent.left
-          margin-top: 8
-          text-auto-resize: true
-
-        UIWidget
-          id: cats
-          anchors.top: catLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 4
-          height: 74
-          layout:
-            type: grid
-            cell-size: 62 22
-            cell-spacing: 4
-            num-columns: 3
-
-        BossDim
-          id: xpLabel
-          anchors.top: cats.bottom
-          anchors.left: parent.left
-          margin-top: 6
-          text-auto-resize: true
-
-        UIWidget
-          id: xps
-          anchors.top: xpLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 4
-          height: 48
-          layout:
-            type: grid
-            cell-size: 94 22
-            cell-spacing: 4
-            num-columns: 2
-
-        BossDim
-          id: questLabel
-          anchors.top: xps.bottom
-          anchors.left: parent.left
-          margin-top: 6
-          text-auto-resize: true
-
-        MythosComboBox
-          id: quest
-          anchors.top: questLabel.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          margin-top: 3
-          menu-scroll: true
-          menu-height: 300
-          menu-scroll-step: 20
-          @onOptionChange: modules.game_bosses.refreshList()
-
-        UIWidget
-          id: toggles
-          anchors.top: quest.bottom
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          margin-top: 8
-          layout:
-            type: verticalBox
-            spacing: 4
-
       UIWidget
         id: middle
         anchors.top: parent.top
-        anchors.left: filters.right
+        anchors.left: parent.left
         anchors.bottom: parent.bottom
-        margin-left: 10
         width: 386
 
         // the quick choice, always there: the bosses the player's level
@@ -784,35 +671,6 @@ MythosWindow
           width: 60
           !text: tr('Todos')
           @onClick: modules.game_bosses.setMine(false)
-
-        // opens and closes the filters' column (bosses.lua: toggleFilters)
-        UIButton
-          id: filtersToggle
-          anchors.top: parent.top
-          anchors.left: allChip.right
-          margin-left: 8
-          size: 66 24
-          font: verdana-11px-antialised
-          color: #b9b0a3
-          background-color: #19151c
-          border-width: 1
-          border-color: #3a3140
-          change-cursor-image: true
-          cursor: pointer
-          @onClick: modules.game_bosses.toggleFilters()
-
-          $hover:
-            border-color: #e8c77a
-
-        Label
-          id: count
-          anchors.verticalCenter: filtersToggle.verticalCenter
-          anchors.left: filtersToggle.right
-          margin-left: 8
-          visible: false
-          text-auto-resize: true
-          font: verdana-11px-antialised
-          color: #b9b0a3
 
         UIButton
           id: dir

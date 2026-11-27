@@ -73,7 +73,6 @@ local FIELDS = {
     end, desc = true },
     { key = 'damage', label = 'Its damage (x)', value = function(m) return m.dmgMult or 1 end, desc = false },
     { key = 'exp', label = 'Base experience', value = function(m) return m.exp end, desc = true },
-    { key = 'spawns', label = 'Spawns', value = function(m) return m.spawns end, desc = true },
     { key = 'tp', label = 'Hunt teleports', value = tpCount, desc = true },
     { key = 'boss', label = 'Boss (1 yes, 0 no)', value = function(m) return m.boss == 1 and 1 or 0 end, desc = false },
 }

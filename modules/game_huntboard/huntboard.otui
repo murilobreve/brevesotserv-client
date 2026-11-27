@@ -220,7 +220,7 @@ RateRow < BrevesRow
     id: rank
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    width: 34
+    width: 6
     text-align: center
     color: #9789b3
     phantom: true
@@ -332,7 +332,7 @@ RateRow < BrevesRow
     anchors.top: parent.top
     anchors.left: creature.right
     anchors.right: elements.left
-    margin-top: 6
+    margin-top: 14
     margin-left: 8
     margin-right: 8
     height: 14
@@ -447,54 +447,6 @@ HuntList < BrevesList
   focusable: false
 
 // a teleport of the quests' wall (huntboard.lua, quests)
-QuestTpRow < UIWidget
-  height: 40
-  margin-top: 2
-  background-color: #141117
-  border-width: 1
-  border-color: #221e26
-
-  UIWidget
-    id: icon
-    size: 24 24
-    anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
-    image-source: /game_brevespanel/images/quests
-    image-smooth: true
-    phantom: true
-
-  Label
-    id: name
-    anchors.left: icon.right
-    anchors.right: tp.left
-    anchors.top: parent.top
-    margin-left: 10
-    margin-right: 8
-    margin-top: 5
-    font: verdana-11px-rounded
-    color: #ffe7b0
-    phantom: true
-
-  Label
-    id: note
-    anchors.left: name.left
-    anchors.right: tp.left
-    anchors.bottom: parent.bottom
-    margin-right: 8
-    margin-bottom: 5
-    font: verdana-11px-antialised
-    color: #8f86a3
-    phantom: true
-
-  MythosButton
-    id: tp
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-right: 8
-    size: 96 24
-
-// the section strip carries the title; the lua sets it through title
 BoardColumn < BrevesSection
   padding: 22 4 4 4
 
@@ -555,16 +507,6 @@ MythosWindow
     font: verdana-11px-rounded
     color: #e6e0f2
     visible: false
-
-  // the quests' wall of the teleport room instead of the hunts (huntboard.lua)
-  HuntChip
-    id: questChip
-    anchors.left: sectionIntro.right
-    anchors.verticalCenter: sectionIntro.verticalCenter
-    margin-left: 16
-    width: 150
-    !text: tr('Quests of the TP room')
-    @onClick: modules.game_huntboard.toggleQuests()
 
   // online reward progress (top right)
   UIWidget
@@ -707,46 +649,6 @@ MythosWindow
 
     // the quests' wall: every quest teleport of the teleport room, with its
     // TP (huntboard.lua, quests)
-    Panel
-      id: questPanel
-      anchors.top: quickBar.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.bottom: prevPage.top
-      margin-top: 8
-      margin-bottom: 6
-      visible: false
-
-      HuntList
-        id: questList
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: questScroll.left
-        margin-right: 4
-        vertical-scrollbar: questScroll
-        layout:
-          type: grid
-          cell-size: 448 42
-          cell-spacing: 4
-          flow: true
-
-      MythosScrollBar
-        id: questScroll
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        step: 46
-        pixel-scroll: true
-
-      Label
-        id: questEmpty
-        anchors.centerIn: parent
-        font: verdana-11px-antialised
-        color: #8f86a3
-        text-auto-resize: true
-        visible: false
-
     // the simple view: the hunts of the page on the left, the chosen one on
     // the right with what matters and one button (huntboard.lua, showDetail)
     Panel
