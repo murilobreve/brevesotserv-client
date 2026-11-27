@@ -16,7 +16,7 @@ local MAX_LENGTH = 1000
 
 local GOOD = '#78d04c'
 local BAD = '#e0604a'
-local DIM = '#a39cbc'
+local DIM = '#909090'
 
 local tab, window, closeEvent, waitEvent
 local kind = 'bug'
@@ -62,7 +62,7 @@ local function refreshCounter()
     if window then
         local length = #window.message:getText()
         window.counter:setText(string.format('%d / %d', length, MAX_LENGTH))
-        window.counter:setColor(length >= MAX_LENGTH and BAD or '#6f688a')
+        window.counter:setColor(length >= MAX_LENGTH and BAD or '#707070')
     end
 end
 

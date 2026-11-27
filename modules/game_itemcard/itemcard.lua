@@ -25,14 +25,14 @@ local GRADES = {
     uncommon = '#63c08a',
     rare = '#4f8fe8',
     epic = '#a679e6',
-    legendary = '#e2a443',
+    legendary = '#f7a55f',
     mythic = '#e8e4ff',
 }
 
 local INK = '#f3ead9'
-local DIM = '#a39cbc'
-local STONE = '#655036'
-local PLAIN_BAR = '#6f688a'
+local DIM = '#909090'
+local STONE = '#707070'
+local PLAIN_BAR = '#707070'
 local GOOD = '#78d04c'
 local BAD = '#d2442f'
 

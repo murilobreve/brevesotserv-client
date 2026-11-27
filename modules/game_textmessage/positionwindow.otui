@@ -9,7 +9,7 @@ ScreenMessagesWindow < MythosWindow
     anchors.top: parent.top
     anchors.left: parent.left
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     text-auto-resize: true
 
   Label
@@ -64,7 +64,7 @@ ScreenMessagesWindow < MythosWindow
     anchors.left: parent.left
     margin-top: 14
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     text-auto-resize: true
 
   MythosComboBox
@@ -83,7 +83,7 @@ ScreenMessagesWindow < MythosWindow
     anchors.left: parent.left
     margin-top: 14
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     text-auto-resize: true
 
   MythosComboBox

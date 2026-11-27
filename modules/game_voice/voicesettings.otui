@@ -3,17 +3,17 @@
 
 VoiceSettingLabel < Label
   font: verdana-11px-antialised
-  color: #c9c0cf
+  color: #c0c0c0
   text-auto-resize: true
 
 VoiceSettingSection < Label
   font: verdana-11px-rounded
-  color: #f3dcae
+  color: #dfdfdf
   text-auto-resize: true
 
 VoiceSettingCheck < QtCheckBox
   font: verdana-11px-antialised
-  color: #d1ccd9
+  color: #c0c0c0
   margin-top: 6
   anchors.left: parent.left
   anchors.right: parent.right
@@ -35,7 +35,7 @@ VoiceKeyRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     width: 92
     font: verdana-11px-antialised
-    color: #c9c0cf
+    color: #c0c0c0
 
   UIWidget
     id: value
@@ -48,7 +48,7 @@ VoiceKeyRow < UIWidget
     image-source: /images/mythos/input
     image-border: 3
     font: verdana-11px-antialised
-    color: #e6e2ee
+    color: #dfdfdf
     text-align: center
     focusable: true
 
@@ -81,7 +81,7 @@ VoiceSettingsWindow < MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
       font: verdana-11px-antialised
-      color: #f3dcae
+      color: #dfdfdf
       !text: tr('Voice on')
 
     VoiceSettingLabel
@@ -131,7 +131,7 @@ VoiceSettingsWindow < MythosWindow
       anchors.right: parent.right
       margin-top: 3
       height: 4
-      background-color: #24212e
+      background-color: #484848
 
       UIWidget
         id: fill
@@ -249,7 +249,7 @@ VoiceSettingsWindow < MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 2
-      color: #e0604a
+      color: #f75f5f
       text-wrap: true
 
     VoiceSettingLabel
@@ -303,7 +303,7 @@ VoiceSettingsWindow < MythosWindow
       anchors.left: parent.left
       anchors.right: parent.right
       margin-top: 10
-      color: #8f88a3
+      color: #909090
       text-wrap: true
 
   MythosButton

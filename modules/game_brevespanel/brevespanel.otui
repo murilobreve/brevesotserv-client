@@ -1,27 +1,24 @@
 // one button per server feature, in a line under its section's title; its
 // width follows the text (brevespanel.lua), or only the icon on a narrow screen
-BrevesFeatureButton < UIButton
+BrevesFeatureButton < Button
+  padding: 0
   height: 20
   font: verdana-11px-rounded
-  color: #e6e0f2
+  color: #dfdfdf
   text-align: left
   text-offset: 23 0
   change-cursor-image: true
   cursor: pointer
   $hover !on:
-    background-color: #f1d39916
-    color: #ffe7b0
-  $pressed:
-    background-color: #f1d39926
+    color: #dfdfdf
   $on:
-    background-color: #f1d39922
-    color: #f3dcae
+    color: #dfdfdf
 
   // the gold light that pulses over the row when its number goes up
   UIWidget
     id: glow
     anchors.fill: parent
-    background-color: #f1d399
+    background-color: #909090
     phantom: true
     visible: false
 
@@ -44,11 +41,11 @@ BrevesFeatureButton < UIButton
     text-align: center
     padding: 1 4 0 4
     font: verdana-9px-bold
-    border-color: #6a5226
+    border-color: #747474
     phantom: true
     visible: false
     $hover:
-      border-color: #f1d399
+      border-color: #c0c0c0
 
   // a pill over the row's top right corner (setFeatureFlag): the best hunt
   // rate over Teleports, the spins the Roulette has
@@ -70,7 +67,8 @@ BrevesFeatureButton < UIButton
     visible: false
 
   // a quick action on the row, e.g. the hunt teleport of the Trail row
-  UIButton
+  Button
+    text-offset: 0 0
     id: action
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
@@ -79,20 +77,13 @@ BrevesFeatureButton < UIButton
     text-auto-resize: true
     padding: 1 5 0 5
     font: verdana-9px-bold
-    color: #f3dcae
-    background-color: #f1d39926
-    border-width: 1
-    border-color: #a7843f
+    color: #dfdfdf
     cursor: pointer
     visible: false
     $hover !disabled:
-      background-color: #f1d39950
       color: #ffffff
-      border-color: #f1d399
     $disabled:
-      color: #8d8270
-      background-color: #00000060
-      border-color: #4a3d28
+      color: #707070
 
   // what the quick action does, drawn over its left end (setFeatureAction):
   // the portal of a teleport. The action's text leaves it the room
@@ -109,66 +100,70 @@ BrevesFeatureButton < UIButton
 // gold text in a gold frame, at the rows' own height
 BrevesPrimaryButton < BrevesFeatureButton
   font: Verdana Bold-11px
-  color: #ffe7b0
-  background-color: #d9a43a30
+  color: #dfdfdf
+  background-color: #585858
   border-width: 1
-  border-color: #d9b45a
+  border-color: #c0c0c0
   $hover !on:
-    background-color: #f1d39948
+    background-color: #585858
     color: #ffffff
-    border-color: #ffe7b0
+    border-color: #c0c0c0
   $pressed:
-    background-color: #f1d39960
+    background-color: #585858
   $on:
-    background-color: #f1d39955
+    background-color: #585858
     color: #ffffff
-    border-color: #ffe7b0
+    border-color: #c0c0c0
 
-// Hunts, Bosses, Quests and Ranking across the title bar of each of their
-// windows: an icon, the name and, for bosses and quests, how many wait
-BrevesHubTab < UIButton
-  size: 150 26
+// The pages of the teleports (Hunts, Bosses, Quests) under the title bar of
+// each of their windows: the strip of pages of Tibia's Cyclopedia. A page is
+// a button with its icon and name and, for bosses and quests, how many wait;
+// the page that shows stays pressed (brevespanel.lua: attachHub).
+BrevesHubStrip < UIWidget
+  height: 36
+  background-color: #404040
+  border-width-top: 1
+  border-color-top: black
+  border-width-left: 1
+  border-color-left: black
+  border-width-bottom: 1
+  border-color-bottom: #747474
+  border-width-right: 1
+  border-color-right: #747474
+
+BrevesHubTab < Button
+  size: 150 28
+  padding: 0
   font: verdana-11px-antialised
-  color: #b4afc3
-  text-align: left
-  text-offset: 30 0
-  background-color: #171221
-  border-width: 1
-  border-color: #3e2d5e
+  color: #c0c0c0
+  text-offset: 8 0
   change-cursor-image: true
   cursor: pointer
+
   $hover !checked:
-    background-color: #221a33
-    border-color: #8a76b0
-    color: #f3f0fa
+    color: #ffffff
+
   $checked:
-    font: Verdana Bold-11px
-    background-color: #d9a43a38
-    border-color: #d9b45a
-    color: #ffe7b0
+    color: #ffffff
 
   UIWidget
     id: icon
     size: 16 16
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
+    margin-left: 10
     phantom: true
 
   Label
     id: count
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 7
+    margin-right: 8
     height: 14
     text-auto-resize: true
     text-align: center
-    padding: 1 5 0 5
-    font: verdana-9px-bold
-    color: #7fd35a
-    background-color: #00000080
-    border-width: 1
-    border-color: #2f5a2a
+    font: verdana-11px-antialised
+    color: #60f860
     phantom: true
     visible: false
 
@@ -176,12 +171,11 @@ BrevesHubTab < UIButton
 // sized from its text in brevespanel.lua (auto resize misreads the TTF font)
 BrevesGainLabel < Label
   text-align: center
-  ttf-font: cinzel-bold
-  ttf-font-size: 18
-  color: #ffe7b0
-  background-color: #120c1ee6
+  font: Verdana Bold-11px
+  color: #dfdfdf
+  background-color: #363636e6
   border-width: 1
-  border-color: #f1d399
+  border-color: #c0c0c0
   phantom: true
   focusable: false
 
@@ -191,7 +185,7 @@ BrevesVipButton < BrevesFeatureButton
   anchors.left: parent.left
   anchors.verticalCenter: parent.verticalCenter
   font: Verdana Bold-11px
-  color: #fff4d8
+  color: #dfdfdf
   text-align: center
   text-offset: 8 1
   // the site's gold button scaled evenly to 24px (see MythosKitGoldButton28)
@@ -251,9 +245,8 @@ BrevesSector < UIWidget
     margin-left: 6
     margin-top: 1
     text-auto-resize: true
-    color: #f1d399
-    ttf-font: cinzel-bold
-    ttf-font-size: 12
+    color: #dfdfdf
+    font: Verdana Bold-11px
     phantom: true
 
   UIWidget
@@ -307,7 +300,10 @@ BrevesBar < UIWidget
 
   // starts the Mythos tour again (game_tutorial)
   // folds the bar to a thin line (open again on every login)
-  UIButton
+  Button
+    padding: 0
+    text-offset: 0 0
+    font: verdana-11px-antialised
     id: collapseButton
     anchors.left: parent.left
     anchors.top: parent.top
@@ -320,8 +316,6 @@ BrevesBar < UIWidget
     cursor: pointer
     !tooltip: tr('Hide the Mythos bar')
     @onClick: modules.game_brevespanel.toggleCollapsed()
-    $hover:
-      background-color: #f1d39922
     $on:
       icon-source: /images/mythos/fold_closed
 
@@ -335,13 +329,13 @@ BrevesBar < UIWidget
     height: 14
     text-align: left
     font: verdana-11px-rounded
-    color: #c9a96a
+    color: #dfdfdf
     cursor: pointer
     visible: false
     !text: tr('Mythos: Tasks, Hunts, Rarity, Tools and VIP. Click to open.')
     @onClick: modules.game_brevespanel.toggleCollapsed()
     $hover:
-      color: #ffe7b0
+      color: #dfdfdf
 
   // on the left corner, under the fold button, clear of the VIP button
   UIButton
@@ -353,12 +347,12 @@ BrevesBar < UIWidget
     size: 12 14
     text: ?
     font: verdana-11px-rounded
-    color: #8a7650
+    color: #707070
     cursor: pointer
     !tooltip: tr('Tutorial: a quick tour of Mythos')
     @onClick: if modules.game_tutorial then modules.game_tutorial.start() end
     $hover:
-      color: #ffe7b0
+      color: #dfdfdf
 
 // ---------------------------------------------------------------- news window
 
@@ -380,7 +374,7 @@ BrevesNewsRow < UIWidget
     margin-left: 10
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
 
   Label
     id: text
@@ -392,7 +386,7 @@ BrevesNewsRow < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #cbc0e0
+    color: #c0c0c0
 
   MythosButton
     id: open
@@ -416,7 +410,7 @@ BrevesNewsWindow < MythosWindow
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-monochrome
-    color: #e6e0f2
+    color: #dfdfdf
     !text: tr('Everything is in the Mythos bar, under the game screen.')
 
   MythosSeparator
@@ -467,7 +461,7 @@ BrevesNotice < MythosBox
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e9e6f0
+    color: #dfdfdf
     phantom: true
 
   MythosPrimaryButton
@@ -494,9 +488,9 @@ BrevesNotice < MythosBox
 // the gold rim runs down to a point over the row
 BrevesCalloutTip < UIWidget
   size: 12 12
-  background-color: #21202b
+  background-color: #484848
   border-width: 1
-  border-color: #b69a60
+  border-color: #c0c0c0
   rotation: 45
   phantom: true
   focusable: false
@@ -534,7 +528,7 @@ BrevesCallout < UIButton
     anchors.right: box.right
     margin: 3 3 0 3
     height: 2
-    background-color: #b296f5
+    background-color: #c0c0c0
     phantom: true
 
   Label
@@ -545,12 +539,13 @@ BrevesCallout < UIButton
     margin-top: 8
     margin-left: 12
     height: 18
-    ttf-font: cinzel-bold
-    ttf-font-size: 14
-    color: #f1d399
+    font: Verdana Bold-11px
+    color: #dfdfdf
     phantom: true
 
-  UIButton
+  Button
+    padding: 0
+    text-offset: 0 0
     id: closeButton
     anchors.top: box.top
     anchors.right: box.right
@@ -559,12 +554,11 @@ BrevesCallout < UIButton
     size: 16 16
     text: x
     font: verdana-11px-rounded
-    color: #c9a96a
+    color: #dfdfdf
     cursor: pointer
     !tooltip: tr('Close')
     $hover:
-      color: #ffe7b0
-      background-color: #f1d39922
+      color: #dfdfdf
 
   // the site's divider: a gold rod with the violet crystal in the middle
   UIWidget
@@ -585,7 +579,7 @@ BrevesCallout < UIButton
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e9e6f0
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -597,5 +591,5 @@ BrevesCallout < UIButton
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #b296f5
+    color: #ffffff
     phantom: true

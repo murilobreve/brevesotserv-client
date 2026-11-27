@@ -16,7 +16,7 @@ local asked = {}
 local npcFilter = ''
 local shopFilters = {} -- "<npc>|sells" -> text
 
-local DIM, WARM, GOLD = '#9789b3', '#f3dcae', '#e2c35a'
+local DIM, WARM, GOLD = '#909090', '#f3dcae', '#e2c35a'
 
 local function T(text, ...)
     return WIKI_TEXT.T(text, ...)

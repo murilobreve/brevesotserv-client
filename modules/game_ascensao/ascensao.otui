@@ -7,7 +7,7 @@
 AscensaoCircle < UIWidget
   height: 66
   border-width: 1
-  border-color: #3a3346
+  border-color: #272727
   background-color: #0000002a
   padding: 4 6 4 6
   phantom: true
@@ -38,9 +38,9 @@ AscensaoCircle < UIWidget
     size: 18 18
     text-align: center
     font: verdana-11px-rounded
-    color: #8a7d5c
+    color: #707070
     border-width: 1
-    border-color: #514553
+    border-color: #272727
     background-color: #00000060
     phantom: true
 
@@ -52,7 +52,7 @@ AscensaoCircle < UIWidget
     margin-left: 6
     height: 16
     font: verdana-11px-rounded
-    color: #cbc0e0
+    color: #c0c0c0
     phantom: true
 
   Label
@@ -63,7 +63,7 @@ AscensaoCircle < UIWidget
     height: 16
     text-align: right
     font: verdana-11px-monochrome
-    color: #9789b3
+    color: #909090
     phantom: true
 
   Label
@@ -74,7 +74,7 @@ AscensaoCircle < UIWidget
     anchors.bottom: parent.bottom
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #9d93b0
+    color: #909090
     phantom: true
 
 // one path: the skillshot it teaches in its seal (a segment lit per
@@ -118,7 +118,7 @@ AscensaoPath < BrevesSection
     margin-left: 6
     height: 16
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
 
   Label
     id: words
@@ -127,7 +127,7 @@ AscensaoPath < BrevesSection
     anchors.right: emblem.left
     height: 15
     font: verdana-11px-monochrome
-    color: #cbc0e0
+    color: #c0c0c0
 
   Label
     id: power
@@ -136,7 +136,7 @@ AscensaoPath < BrevesSection
     anchors.right: emblem.left
     height: 16
     font: verdana-11px-monochrome
-    color: #9789b3
+    color: #909090
 
   // over the seal and the spell's name: the mouse on it shows the preview
   UIWidget
@@ -172,7 +172,7 @@ AscensaoRelic < UIWidget
   width: 282
   height: 82
   border-width: 1
-  border-color: #3a3346
+  border-color: #272727
   background-color: #0000002a
   padding: 5 8 5 8
 
@@ -190,7 +190,7 @@ AscensaoRelic < UIWidget
     margin-left: 6
     height: 16
     font: verdana-11px-rounded
-    color: #cbc0e0
+    color: #c0c0c0
 
   Label
     id: desc
@@ -201,7 +201,7 @@ AscensaoRelic < UIWidget
     margin-bottom: 3
     text-wrap: true
     font: verdana-11px-monochrome
-    color: #9d93b0
+    color: #909090
 
   MythosButton
     id: action
@@ -226,7 +226,7 @@ AscensaoPreview < UIWidget
     anchors.right: parent.right
     height: 14
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -244,7 +244,7 @@ AscensaoPreview < UIWidget
     anchors.top: movie.bottom
     anchors.left: parent.left
     margin-top: 6
-    color: #d8c89a
+    color: #dfdfdf
     height: 0
     phantom: true
 
@@ -260,7 +260,7 @@ MythosWindow
     anchors.right: resetButton.left
     height: 18
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
 
   Label
     id: points
@@ -269,7 +269,7 @@ MythosWindow
     anchors.right: resetButton.left
     height: 16
     font: verdana-11px-antialised
-    color: #d1ccd9
+    color: #c0c0c0
 
   MythosButton
     id: resetButton
@@ -322,4 +322,4 @@ MythosWindow
     anchors.bottom: parent.bottom
     height: 16
     font: verdana-11px-antialised
-    color: #b4afc3
+    color: #c0c0c0

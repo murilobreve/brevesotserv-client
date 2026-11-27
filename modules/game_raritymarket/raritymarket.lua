@@ -12,7 +12,7 @@ local RARITIES = {
     uncommon  = { label = 'Communis',  color = '#63c08a', badge = '#c4ead3', frame = 1 },
     rare      = { label = 'Rarus',     color = '#4f8fe8', badge = '#c3d6f6', frame = 2 },
     epic      = { label = 'Praeclarus',color = '#a679e6', badge = '#ded0f7', frame = 3 },
-    legendary = { label = 'Legendarius',color = '#e2a443', badge = '#f3dcae', frame = 4 },
+    legendary = { label = 'Legendarius',color = '#f7a55f', badge = '#f3dcae', frame = 4 },
     mythic    = { label = 'Mythicus',  color = '#e8e4ff', badge = '#f6f4ff', frame = 5 },
 }
 
@@ -102,7 +102,7 @@ local function setStatus(text, ok)
         return
     end
     window.status:setText(text or '')
-    window.status:setColor(ok == false and '#ff6464' or '#7fd35a')
+    window.status:setColor(ok == false and '#ff6464' or '#60f860')
 end
 
 local function applyFrame(frame, entry, size)
@@ -379,7 +379,7 @@ local function fillList(list, entries, kind, emptyLabel, emptyText)
                 row.auctionEntry = entry
                 local tag = entry.myBid and tr('your bid') or (entry.bids and tr('bids') or tr('no bids'))
                 row.seller:setText(timeText(secondsLeft(entry)) .. ' - ' .. tag)
-                row.seller:setColor(entry.myBid and '#7fd35a' or '#e2a443')
+                row.seller:setColor(entry.myBid and '#60f860' or '#f7a55f')
             else
                 row.seller:setText(kind == 'offer' and (entry.seller or '') or '')
             end
@@ -615,7 +615,7 @@ local newsEvent
 
 local function showNews()
     if modules.game_brevespanel and modules.game_brevespanel.setFeatureState then
-        modules.game_brevespanel.setFeatureState('rarity', newListings > 0 and tr('%d new', newListings) or nil, '#7fd35a')
+        modules.game_brevespanel.setFeatureState('rarity', newListings > 0 and tr('%d new', newListings) or nil, '#60f860')
     end
 end
 

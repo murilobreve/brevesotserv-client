@@ -22,7 +22,7 @@ local rerollBox
 
 -- The same colours in every Mythos window for "can I hunt this?": green at
 -- or above the recommended level, orange not far below it, red well below.
-local READY, RISKY, LOCKED = '#7fd35a', '#e2a443', '#ff7a6b'
+local READY, RISKY, LOCKED = '#60f860', '#f7a55f', '#f75f5f'
 
 local function readiness(level)
     local player = g_game.getLocalPlayer()
@@ -187,7 +187,7 @@ local function showMessage(text, ok)
         removeEvent(messageEvent)
     end
     window.message:setText(text or '')
-    window.message:setColor(ok and '#7fd35a' or '#ff7a6b')
+    window.message:setColor(ok and '#60f860' or '#f75f5f')
     messageEvent = scheduleEvent(function()
         messageEvent = nil
         if window then
@@ -290,7 +290,7 @@ local function renderDaily()
     card.bar:setVisible(true)
 
     if daily.done then
-        setBar(card.bar, daily.need, daily.need, '#e2a443')
+        setBar(card.bar, daily.need, daily.need, '#f7a55f')
         card.bar.value:setText(tr('Completa!'))
         card.reward:setText(tr('Você já completou a task de hoje.'))
         card.extra:setText('')
@@ -343,7 +343,7 @@ local function renderTrailCard()
         card.info:setText(tr('Você venceu os %d monstros da trilha.', #steps))
         card.badge:setText('')
         card.bar:setVisible(true)
-        setBar(card.bar, #steps, #steps, '#e2a443')
+        setBar(card.bar, #steps, #steps, '#f7a55f')
         card.reward:setText(tr('Respeito, caçador.'))
         card.extra:setText('')
     else
@@ -413,7 +413,7 @@ local function renderStreak()
         dot:setText(string.format('+%d', (day - 1) * bonus))
         dot:setTooltip(tr('Dia %d seguido: +%d pontos', day, (day - 1) * bonus))
         if day <= streak then
-            dot:setBackgroundColor('#e2a44390')
+            dot:setBackgroundColor('#f7a55f90')
             dot:setBorderColor('#ffe066')
             dot:setColor('#ffffff')
         end
@@ -537,14 +537,14 @@ local function renderTrailList()
             row.status:setMarginRight(6)
             if i <= done then
                 row.status:setText(tr('Completa'))
-                row.status:setColor('#7fd35a')
-                row.name:setColor('#7fd35a')
-                row:setBackgroundColor('#7fd35a14')
+                row.status:setColor('#60f860')
+                row.name:setColor('#60f860')
+                row:setBackgroundColor('#60f86014')
             elseif i == trail.index then
                 row.status:setText(tr('Em andamento: %d / %d', trail.kills or 0, steps[i].need))
                 row.status:setColor('#ffe066')
                 row.name:setColor('#ffe066')
-                row:setBackgroundColor('#e2a44330')
+                row:setBackgroundColor('#f7a55f30')
             else
                 row.status:setText(tr('Bloqueada'))
                 row.status:setColor('#8a8a8a')
@@ -668,7 +668,7 @@ local function refreshQuantity(offer, keepText)
     local total = offer.price * quantity
     local affordable = (state.points or 0) >= total
     details.price:setText(formatNumber(total))
-    details.price:setColor(affordable and '#dfdfdf' or '#ff7a6b')
+    details.price:setColor(affordable and '#dfdfdf' or '#f75f5f')
     details.buy:setText(quantity > 1 and tr('Comprar %dx', quantity) or tr('Comprar'))
     return affordable
 end
@@ -719,7 +719,7 @@ local function showOfferDetails(offer)
     end
     if not affordable then
         local label = g_ui.createWidget('ShopDescLine', details.descBox)
-        label:setColor('#ff7a6b')
+        label:setColor('#f75f5f')
         label:setText(tr('Faltam %s Hunt Points.', formatNumber(offer.price - (state.points or 0))))
     end
 
@@ -801,7 +801,7 @@ local function renderShop()
         row.name:setText(info.name and tr(info.name) or offer.label)
         row.count:setText(info.count or '1x')
         row.price:setText(formatNumber(offer.price))
-        row.price:setColor((state.points or 0) >= offer.price and '#dfdfdf' or '#ff7a6b')
+        row.price:setColor((state.points or 0) >= offer.price and '#dfdfdf' or '#f75f5f')
         setOfferImage(row.image, offer, offer.key == 'montaria' and state.mounts and state.mounts[1] and state.mounts[1][2])
         row.onFocusChange = function(widget, focused)
             if focused then
@@ -961,9 +961,9 @@ local function updateBadge()
         return
     end
     panel.setFeatureLabel('tasks', dailyText, '#e0c060', dailyShort)
-    panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#7fd35a')
+    panel.setFeatureState('tasks', (daily and daily.done) and tr('feita') or nil, '#60f860')
     panel.setFeatureLabel('trail', trailText, '#b7a2ff', trailShort)
-    panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#e2a443')
+    panel.setFeatureState('taskshop', state and (formatNumber(state.points or 0) .. ' pts') or nil, '#f7a55f')
     updateBarTeleports()
 end
 

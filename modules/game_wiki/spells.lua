@@ -18,7 +18,7 @@ local VOCATION_IDS = { [1] = 'S', [5] = 'S', [2] = 'D', [6] = 'D', [3] = 'P', [7
 local GROUPS = { [1] = 'Ataque', [2] = 'Cura', [3] = 'Suporte', [4] = 'Especial' }
 local KINDS = { { 'all', 'Todas' }, { 'attack', 'Ataque' }, { 'healing', 'Cura' }, { 'support', 'Suporte' }, { 'rune', 'Runas' } }
 
-local DIM, WARM, PURPLE = '#9789b3', '#f3dcae', '#a679e6'
+local DIM, WARM, PURPLE = '#909090', '#f3dcae', '#a679e6'
 
 local list -- { row from the server + words, label }
 local byName = {}

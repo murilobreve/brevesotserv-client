@@ -6,7 +6,7 @@
 JourneyGoldButton < UIButton
   height: 24
   font: Verdana Bold-11px
-  color: #fff4d8
+  color: #dfdfdf
   text-offset: 0 1
   image-source: /images/mythos/kit_gold_24
   image-border-left: 18
@@ -20,48 +20,44 @@ JourneyGoldButton < UIButton
     image-source: /images/mythos/kit_gold_24_pressed
   $disabled:
     image-source: /images/mythos/kit_gold_24_disabled
-    color: #9a8f7a
+    color: #909090
 
 // the close of a card or a window: a framed x, easy to find
-JourneyCloseButton < UIButton
+JourneyCloseButton < Button
+  padding: 0
   size: 18 18
   text: x
   text-offset: 0 -1
   font: Verdana Bold-11px
-  color: #e6c98a
-  background-color: #0c0914
-  border-width: 1
-  border-color: #a7843f
+  color: #dfdfdf
   change-cursor-image: true
   cursor: pointer
   !tooltip: tr('Close')
   $hover:
     color: #ffffff
-    border-color: #ffd682
-    background-color: #2a1d44
 
 // a quiet text button ("see all", "later")
 JourneyLinkButton < UIButton
   height: 18
   text-auto-resize: true
   font: verdana-11px-rounded
-  color: #ab9fc6
+  color: #c0c0c0
   change-cursor-image: true
   cursor: pointer
   $hover:
-    color: #ffe7b0
+    color: #dfdfdf
 
 // one step of the journey: icon, title and mark, a line of text, a progress
 // bar (the task) and the button that does it
 JourneyStep < UIWidget
-  background-color: #1b1329f2
+  background-color: #363636f2
   border-width: 1
-  border-color: #4a3670
+  border-color: #272727
   padding: 6
   focusable: false
   $on:
-    background-color: #2a1d44f5
-    border-color: #e2a443
+    background-color: #363636f5
+    border-color: #f7a55f
 
   UIWidget
     id: icon
@@ -82,7 +78,7 @@ JourneyStep < UIWidget
     id: number
     anchors.centerIn: mark
     font: verdana-9px-bold
-    color: #e6e0f2
+    color: #dfdfdf
     text-auto-resize: true
     phantom: true
 
@@ -94,7 +90,7 @@ JourneyStep < UIWidget
     margin-left: 5
     margin-right: 2
     font: Verdana Bold-11px
-    color: #ffd682
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -106,7 +102,7 @@ JourneyStep < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e6e0f2
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -116,7 +112,7 @@ JourneyStep < UIWidget
     anchors.right: parent.right
     margin-top: 4
     height: 6
-    background-color: #3a2c56
+    background-color: #585858
     phantom: true
     visible: false
 
@@ -126,7 +122,7 @@ JourneyStep < UIWidget
       anchors.bottom: parent.bottom
       anchors.left: parent.left
       width: 0
-      background-color: #e2a443
+      background-color: #f7a55f
       phantom: true
 
   JourneyGoldButton
@@ -174,7 +170,7 @@ JourneyWindow < MiniWindow
     margin-right: 1
     vertical-scrollbar: miniwindowScrollBar
     padding: 5
-    background-color: #0f0a19
+    background-color: #363636
     layout:
       type: verticalBox
       spacing: 5
@@ -184,7 +180,7 @@ JourneyWindow < MiniWindow
       text-wrap: true
       text-auto-resize: true
       font: verdana-11px-rounded
-      color: #ab9fc6
+      color: #c0c0c0
 
     JourneyStep
       id: step1
@@ -201,7 +197,7 @@ JourneyWindow < MiniWindow
       text-wrap: true
       text-auto-resize: true
       font: verdana-11px-rounded
-      color: #e2a443
+      color: #f7a55f
 
     JourneyGoldButton
       id: doneButton
@@ -210,9 +206,9 @@ JourneyWindow < MiniWindow
 // the best hunt for the player's level now, over the bottom left of the map
 JourneyHuntCard < UIWidget
   size: 350 130
-  background-color: #150f22f2
+  background-color: #363636f2
   border-width: 2
-  border-color: #e2a443
+  border-color: #f7a55f
   padding: 8
   focusable: false
 
@@ -221,9 +217,8 @@ JourneyHuntCard < UIWidget
     anchors.top: parent.top
     anchors.left: parent.left
     text-auto-resize: true
-    ttf-font: cinzel-bold
-    ttf-font-size: 14
-    color: #ffd682
+    font: Verdana Bold-11px
+    color: #dfdfdf
 
   JourneyCloseButton
     id: closeButton
@@ -237,7 +232,7 @@ JourneyHuntCard < UIWidget
     margin-right: 8
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #ab9fc6
+    color: #c0c0c0
 
   UIWidget
     id: frame
@@ -245,9 +240,9 @@ JourneyHuntCard < UIWidget
     anchors.left: parent.left
     margin-top: 7
     size: 64 64
-    background-color: #0c0914
+    background-color: #363636
     border-width: 2
-    border-color: #a7843f
+    border-color: #747474
     phantom: true
 
     UICreature
@@ -265,7 +260,7 @@ JourneyHuntCard < UIWidget
     margin-top: 2
     height: 17
     font: Verdana Bold-13px
-    color: #eee6d4
+    color: #dfdfdf
 
   Label
     id: rates
@@ -274,7 +269,7 @@ JourneyHuntCard < UIWidget
     anchors.right: parent.right
     margin-top: 5
     font: Verdana Bold-11px
-    color: #b88cff
+    color: #c0c0c0
 
   Label
     id: task
@@ -283,7 +278,7 @@ JourneyHuntCard < UIWidget
     anchors.right: parent.right
     margin-top: 5
     font: verdana-11px-rounded
-    color: #7fd35a
+    color: #60f860
 
   JourneyGoldButton
     id: goButton
@@ -316,7 +311,7 @@ JourneyRareWindow < UIWidget
     anchors.centerIn: rays
     margin-top: -40
     size: 80 80
-    background-color: #0c0914
+    background-color: #363636
     border-width: 3
     phantom: true
 
@@ -333,9 +328,9 @@ JourneyRareWindow < UIWidget
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     height: 170
-    background-color: #150f22f5
+    background-color: #363636f5
     border-width: 2
-    border-color: #e2a443
+    border-color: #f7a55f
     padding: 12
 
     JourneyCloseButton
@@ -350,9 +345,8 @@ JourneyRareWindow < UIWidget
       anchors.top: parent.top
       anchors.horizontalCenter: parent.horizontalCenter
       text-auto-resize: true
-      ttf-font: cinzel-bold
-      ttf-font-size: 18
-      color: #ffd682
+      font: Verdana Bold-11px
+      color: #dfdfdf
 
     Label
       id: name
@@ -372,7 +366,7 @@ JourneyRareWindow < UIWidget
       text-auto-resize: true
       text-align: center
       font: verdana-11px-rounded
-      color: #e6e0f2
+      color: #dfdfdf
 
     JourneyGoldButton
       id: spinButton

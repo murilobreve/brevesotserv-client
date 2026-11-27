@@ -3,61 +3,51 @@
 // rare boss roulette, over the map, when the lever is pulled (server:
 // boss_tiers.lua, "rareRoll").
 
-BossTab < UIButton
+BossTab < Button
+  text-offset: 0 0
   height: 26
   text-auto-resize: true
   padding: 0 14
   font: verdana-11px-antialised
-  color: #b9b0a3
-  background-color: alpha
-  border-width: 1
-  border-color: #00000000
+  color: #909090
   change-cursor-image: true
   cursor: pointer
 
   $hover !on:
-    color: #ece6dc
-    border-color: #3a3140
+    color: #dfdfdf
 
   $on:
-    color: #f3d38a
-    background-color: #2a2219
-    border-color: #6b5631
+    color: #dfdfdf
 
 BossBox < UIWidget
-  background-color: #141117
+  background-color: #363636
   border-width: 1
-  border-color: #2e2833
+  border-color: #272727
 
 BossTitle < Label
   font: verdana-11px-antialised
-  color: #a59d92
+  color: #909090
   text-auto-resize: true
 
 BossDim < Label
   font: verdana-11px-antialised
-  color: #8f877c
+  color: #909090
 
-BossChip < UIButton
+BossChip < Button
+  text-offset: 0 0
   height: 22
   text-auto-resize: true
   padding: 0 9
   font: verdana-11px-antialised
-  color: #b9b0a3
-  background-color: alpha
-  border-width: 1
-  border-color: #3a3140
+  color: #909090
   change-cursor-image: true
   cursor: pointer
 
   $hover !on:
-    color: #ece6dc
-    border-color: #6b5631
+    color: #dfdfdf
 
   $on:
-    color: #f3d38a
-    background-color: #2a2219
-    border-color: #8a6d36
+    color: #dfdfdf
 
 BossChips < UIWidget
   height: 48
@@ -68,68 +58,56 @@ BossChips < UIWidget
     flow: true
     fit-children: true
 
-BossGoButton < UIButton
+BossGoButton < Button
+  padding: 0
+  text-offset: 0 0
   height: 36
   font: Verdana Bold-11px
-  color: #f3d38a
-  background-color: #2a2219
-  border-width: 1
-  border-color: #8a6d36
+  color: #dfdfdf
   change-cursor-image: true
   cursor: pointer
 
   $hover !disabled:
-    background-color: #3a2e1f
-    border-color: #b08a42
-    color: #ffe9b5
+    color: #dfdfdf
 
   $disabled:
-    color: #7d7466
-    background-color: #1b1816
-    border-color: #3a3330
+    color: #707070
     change-cursor-image: false
 
+// the boss's state in words, in its colour (no badge: Tibia writes it)
 BossPill < Label
   height: 16
   text-auto-resize: true
-  text-align: center
-  padding: 0 6
   font: verdana-11px-antialised
-  border-width: 1
   phantom: true
 
 // a quick choice over the list: one of two, the one in use in gold
-BossQuick < UIButton
+BossQuick < Button
+  padding: 0
+  text-offset: 0 0
   height: 24
   font: verdana-11px-antialised
-  color: #b4afc3
-  background-color: #171221
-  border-width: 1
-  border-color: #3e2d5e
+  color: #c0c0c0
   change-cursor-image: true
   cursor: pointer
   $hover !checked:
-    border-color: #8a76b0
-    color: #f3f0fa
+    color: #ffffff
   $checked:
-    background-color: #d9a43a38
-    border-color: #d9b45a
-    color: #ffe7b0
+    color: #dfdfdf
 
 // one boss of the list
 BossRow < UIWidget
-  height: 48
-  background-color: #141117
-  border-width: 1
-  border-color: #221e26
+  height: 46
+  background-color: alpha
+  border-width-bottom: 1
+  border-color-bottom: #00000040
   focusable: true
 
   $hover !focus:
-    background-color: #1d1922
+    background-color: #ffffff12
 
   $focus:
-    background-color: #1e1a24
-    border-color: #6b5631
+    background-color: #585858
 
   UIWidget
     id: frame
@@ -137,9 +115,9 @@ BossRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 5
     size: 40 40
-    background-color: #17131a
+    background-color: #404040
     border-width: 1
-    border-color: #2a2430
+    border-color: #272727
     phantom: true
 
     UICreature
@@ -183,7 +161,7 @@ BossRow < UIWidget
     margin-top: 8
     height: 14
     font: Verdana Bold-11px
-    color: #ece6dc
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -195,12 +173,12 @@ BossRow < UIWidget
     margin-right: 6
     height: 14
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
     phantom: true
 
 BossLootIcon < UIWidget
   size: 20 20
-  background-color: #17131a
+  background-color: #404040
   border-width: 1
 
   UIItem
@@ -211,9 +189,9 @@ BossLootIcon < UIWidget
 
 BossStatTile < UIWidget
   height: 40
-  background-color: #17141a
+  background-color: #404040
   border-width: 1
-  border-color: #2a2430
+  border-color: #272727
 
   Label
     id: key
@@ -223,7 +201,7 @@ BossStatTile < UIWidget
     margin-top: 5
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
 
   Label
     id: value
@@ -232,14 +210,14 @@ BossStatTile < UIWidget
     margin-top: 2
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #ece6dc
+    color: #dfdfdf
 
 // a rare, strong piece of the loot
 BossStrongItem < UIWidget
   height: 44
-  background-color: #17141a
+  background-color: #404040
   border-width: 1
-  border-color: #2a2430
+  border-color: #272727
 
   UIWidget
     id: frame
@@ -247,7 +225,7 @@ BossStrongItem < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 5
     size: 36 36
-    background-color: #17131a
+    background-color: #404040
     border-width: 1
     phantom: true
 
@@ -268,7 +246,7 @@ BossStrongItem < UIWidget
     margin-top: 6
     height: 14
     font: verdana-11px-antialised
-    color: #ece6dc
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -299,7 +277,7 @@ BossFreqItem < UIWidget
     width: 46
     text-align: right
     font: Verdana Bold-11px
-    color: #ece6dc
+    color: #dfdfdf
 
   UIWidget
     id: track
@@ -307,7 +285,7 @@ BossFreqItem < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 6
     size: 90 6
-    background-color: #241f28
+    background-color: #484848
     phantom: true
 
     UIWidget
@@ -316,7 +294,7 @@ BossFreqItem < UIWidget
       anchors.top: parent.top
       anchors.bottom: parent.bottom
       width: 0
-      background-color: #a59d92
+      background-color: #909090
       phantom: true
 
   Label
@@ -327,13 +305,13 @@ BossFreqItem < UIWidget
     margin-left: 6
     margin-right: 6
     font: verdana-11px-antialised
-    color: #d6cfc2
+    color: #c0c0c0
 
 BossPartyRow < UIWidget
   height: 26
-  background-color: #17141a
+  background-color: #404040
   border-width: 1
-  border-color: #2a2430
+  border-color: #272727
 
   UIWidget
     id: dot
@@ -351,7 +329,7 @@ BossPartyRow < UIWidget
     margin-left: 7
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #ece6dc
+    color: #dfdfdf
 
   Label
     id: text
@@ -360,14 +338,14 @@ BossPartyRow < UIWidget
     margin-right: 8
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #b9b0a3
+    color: #909090
 
 // one boss of Your waits: the ring fills up to the moment it frees
 BossWaitTile < UIWidget
   size: 142 146
-  background-color: #17141a
+  background-color: #404040
   border-width: 1
-  border-color: #2a2430
+  border-color: #272727
 
   UIWidget
     id: track
@@ -377,7 +355,7 @@ BossWaitTile < UIWidget
     size: 76 76
     image-source: /game_bosses/images/ring
     image-clip: 1520 0 76 76
-    image-color: #2a2430
+    image-color: #585858
     phantom: true
 
     UIWidget
@@ -406,7 +384,7 @@ BossWaitTile < UIWidget
     text-align: center
     text-wrap: true
     font: verdana-11px-antialised
-    color: #ece6dc
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -449,7 +427,7 @@ BossLegendRow < UIWidget
     margin-left: 8
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #d6cfc2
+    color: #c0c0c0
 
   Label
     id: chance
@@ -457,7 +435,7 @@ BossLegendRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #ece6dc
+    color: #dfdfdf
 
 // the wheel of the rare boss: 100 ticks around, the needle, the boss inside
 BossWheel < UIWidget
@@ -469,7 +447,7 @@ BossWheel < UIWidget
     anchors.centerIn: parent
     size: 150 150
     image-source: /game_bosses/images/disc
-    image-color: #0f0d10
+    image-color: #363636
     phantom: true
 
   UICreature
@@ -499,9 +477,9 @@ BossWheel < UIWidget
 // the roulette over the map, between the pull of the lever and the arena
 BossRoulette < UIWidget
   size: 340 410
-  background-color: #0f0d10ee
+  background-color: #363636ee
   border-width: 1
-  border-color: #6b5631
+  border-color: #747474
   phantom: true
   focusable: false
 
@@ -512,7 +490,7 @@ BossRoulette < UIWidget
     margin-top: 12
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
 
   Label
     id: boss
@@ -520,9 +498,8 @@ BossRoulette < UIWidget
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 4
     text-auto-resize: true
-    ttf-font: cinzel-bold
-    ttf-font-size: 17
-    color: #ece6dc
+    font: Verdana Bold-11px
+    color: #dfdfdf
 
   BossWheel
     id: wheel
@@ -536,9 +513,8 @@ BossRoulette < UIWidget
     anchors.horizontalCenter: parent.horizontalCenter
     margin-top: 6
     text-auto-resize: true
-    ttf-font: cinzel-bold
-    ttf-font-size: 22
-    color: #ece6dc
+    font: Verdana Bold-11px
+    color: #dfdfdf
 
   Label
     id: effects
@@ -552,35 +528,13 @@ BossRoulette < UIWidget
     text-align: center
     text-wrap: true
     font: verdana-11px-antialised
-    color: #c9c1b4
+    color: #c0c0c0
 
 MythosWindow
   id: bossesWindow
   // the detail column's grids (3 stats, 2 loot cells) are 330 px wide
-  size: 778 640
+  size: 778 670
   @onEscape: modules.game_bosses.hide()
-
-  UIButton
-    id: closeX
-    anchors.top: parent.top
-    anchors.right: parent.right
-    margin-top: -34
-    margin-right: -8
-    size: 22 22
-    text: X
-    font: Verdana Bold-11px
-    color: #d6cfc2
-    background-color: #2a2219
-    border-width: 1
-    border-color: #6b5631
-    change-cursor-image: true
-    cursor: pointer
-    @onClick: modules.game_bosses.hide()
-
-    $hover:
-      color: #ffffff
-      background-color: #3d2f20
-      border-color: #a8884a
 
   // the one filter (the owner, 2026-11-27: "talvez so um filtro de search,
   // na barra de cima"): a boss, a quest or an item of the loot
@@ -590,31 +544,26 @@ MythosWindow
     anchors.left: parent.left
     width: 250
     placeholder: Buscar boss, quest ou item do loot
-    placeholder-color: #75688f
+    placeholder-color: #707070
     @onTextChange: modules.game_bosses.onSearch(self:getText())
 
-  UIButton
+  Button
+    padding: 0
+    text-offset: 0 0
     id: favChip
     anchors.verticalCenter: quickSearch.verticalCenter
     anchors.left: quickSearch.right
     margin-left: 6
     size: 92 22
     font: verdana-11px-antialised
-    color: #b9b0a3
-    background-color: #19151c
-    border-width: 1
-    border-color: #3a3140
+    color: #909090
     change-cursor-image: true
     cursor: pointer
     @onClick: modules.game_bosses.toggleFavorites()
 
-    $hover:
-      border-color: #e8c77a
 
     $on:
-      color: #e8c77a
-      border-color: #a8884a
-      background-color: #2a2219
+      color: #dfdfdf
 
   Label
     id: summary
@@ -622,7 +571,7 @@ MythosWindow
     anchors.right: parent.right
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #9fd99a
+    color: #60f860
 
   Label
     id: message
@@ -638,8 +587,9 @@ MythosWindow
     anchors.top: message.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.bottom: parent.bottom
+    anchors.bottom: bottomSep.top
     margin-top: 3
+    margin-bottom: 8
 
     // ------------------------------------------------------------- Hall
     UIWidget
@@ -672,16 +622,15 @@ MythosWindow
           !text: tr('Todos')
           @onClick: modules.game_bosses.setMine(false)
 
-        UIButton
+        Button
+          padding: 0
+          text-offset: 0 0
           id: dir
           anchors.top: parent.top
           anchors.right: parent.right
           size: 26 24
           font: Verdana Bold-11px
-          color: #e8c77a
-          background-color: #19151c
-          border-width: 1
-          border-color: #3a3140
+          color: #dfdfdf
           change-cursor-image: true
           cursor: pointer
           @onClick: modules.game_bosses.flipSort()
@@ -709,11 +658,13 @@ MythosWindow
           anchors.right: listScroll.left
           anchors.bottom: parent.bottom
           margin-top: 4
-          margin-right: 3
+          background-color: #404040
+          border-width: 1
+          border-color: #00000077
+          padding: 1
           vertical-scrollbar: listScroll
           layout:
             type: verticalBox
-            spacing: 4
 
         VerticalScrollBar
           id: listScroll
@@ -730,35 +681,33 @@ MythosWindow
           text-auto-resize: true
           visible: false
 
-      BossBox
+      // the chosen boss, in a panel captioned with its name (the Quest Log's
+      // right panel)
+      BrevesSection
         id: detail
         anchors.top: parent.top
         anchors.left: middle.right
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         margin-left: 10
-        padding: 10
+        padding: 28 10 10 10
 
+        // the boss in a dark box, as a creature of the Bestiary
         UIWidget
           id: pedestal
           anchors.top: parent.top
           anchors.left: parent.left
-          size: 96 96
+          size: 80 80
+          background-color: #1b1b1b
+          border-width-top: 1
+          border-color-top: #000000
+          border-width-left: 1
+          border-color-left: #000000
+          border-width-bottom: 1
+          border-color-bottom: #747474
+          border-width-right: 1
+          border-color-right: #747474
           phantom: true
-
-          UIWidget
-            id: aura
-            anchors.fill: parent
-            image-source: /game_bosses/images/aura
-            phantom: true
-
-          UIWidget
-            id: disc
-            anchors.centerIn: parent
-            size: 80 80
-            image-source: /game_bosses/images/disc
-            image-color: #151118
-            phantom: true
 
           UICreature
             id: creature
@@ -767,34 +716,33 @@ MythosWindow
             creature-size: 72
             phantom: true
 
-        BossPill
-          id: status
-          anchors.top: pedestal.top
-          anchors.left: pedestal.right
-          margin-left: 10
-          margin-top: 10
-
+        // (the name is the panel's caption; this keeps its place in the
+        // layout and is not drawn)
         Label
           id: name
-          anchors.top: status.bottom
-          anchors.left: status.left
+          anchors.top: pedestal.top
+          anchors.left: pedestal.right
           anchors.right: parent.right
-          margin-top: 5
-          height: 22
-          ttf-font: cinzel-bold
-          ttf-font-size: 16
-          color: #ece6dc
+          margin-left: 10
+          height: 0
+          visible: false
+
+        BossPill
+          id: status
+          anchors.top: name.bottom
+          anchors.left: name.left
+          margin-top: 3
 
         Label
           id: quest
-          anchors.top: name.bottom
-          anchors.left: status.left
+          anchors.top: status.bottom
+          anchors.left: name.left
           anchors.right: parent.right
           margin-top: 2
           height: 28
           text-wrap: true
           font: verdana-11px-antialised
-          color: #a59d92
+          color: #909090
 
         UIWidget
           id: stats
@@ -825,7 +773,7 @@ MythosWindow
           anchors.left: parent.left
           anchors.right: parent.right
           height: 1
-          background-color: #2e2833
+          background-color: #585858
 
         UIWidget
           id: loot
@@ -931,7 +879,7 @@ MythosWindow
             anchors.bottom: parent.bottom
             text-wrap: true
             font: verdana-11px-antialised
-            color: #a59d92
+            color: #909090
 
         MythosButton
           id: wiki
@@ -958,3 +906,18 @@ MythosWindow
           size: 16 16
           image-source: /game_brevespanel/images/teleport
           phantom: true
+
+  MythosSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: 60
+    !text: tr('Close')
+    @onClick: modules.game_bosses.hide()

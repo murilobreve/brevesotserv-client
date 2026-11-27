@@ -30,7 +30,7 @@ local STEPS = {
 }
 
 local GRADE_COLORS = {
-    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#e2a443', mythic = '#e8e4ff',
+    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#f7a55f', mythic = '#e8e4ff',
 }
 
 local window, card, rareWindow
@@ -137,10 +137,10 @@ local function fillStep(widget, index, done, active)
     widget:setOpacity(done and 0.7 or 1)
     widget.icon:setImageSource(def.icon)
     widget.title:setText(tr(def.title))
-    widget.title:setColor(done and '#ab9fc6' or '#ffd682')
+    widget.title:setColor(done and '#c0c0c0' or '#ffd682')
     widget.mark:setImageSource(done and '/game_journey/images/step_done' or (active and '/game_journey/images/step_active' or '/game_journey/images/step_next'))
     widget.number:setText(done and '' or tostring(index))
-    widget.number:setColor(active and '#1d1206' or '#e6e0f2')
+    widget.number:setColor(active and '#363636' or '#dfdfdf')
     widget.bar:hide()
     local text, button, onClick
     if def.key == 'hunt' then
@@ -423,7 +423,7 @@ local function showRare(data)
     if not root then
         return
     end
-    local color = GRADE_COLORS[info.grade] or '#e2a443'
+    local color = GRADE_COLORS[info.grade] or '#f7a55f'
     rareWindow = g_ui.createWidget('JourneyRareWindow', root)
     rareWindow:addAnchor(AnchorHorizontalCenter, 'gameMapPanel', AnchorHorizontalCenter)
     rareWindow:addAnchor(AnchorVerticalCenter, 'gameMapPanel', AnchorVerticalCenter)

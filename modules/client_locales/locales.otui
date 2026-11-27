@@ -1,7 +1,6 @@
 LocalesMainLabel < Label
-  ttf-font: cinzel-bold
-  ttf-font-size: 22
-  color: #f3ead9
+  font: Verdana Bold-11px
+  color: #dfdfdf
 
 LocalesButton < UIWidget
   size: 96 96

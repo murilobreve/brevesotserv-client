@@ -210,16 +210,16 @@ local function fillElementChips(holder, list)
             local name = tr(ELEMENTS[entry.key][1])
             if weak then
                 -- a big weakness stands out
-                chip:setBorderColor(entry.taken >= 115 and '#7fd35a' or '#3f8a36')
-                chip:setBackgroundColor('#16301a')
+                chip:setBorderColor(entry.taken >= 115 and '#60f860' or '#3f8a36')
+                chip:setBackgroundColor('#484848')
                 chip:setTooltip(tr('%s: it takes %d%% more damage', name, entry.taken - 100))
             elseif immune then
-                chip:setBorderColor('#4a4458')
+                chip:setBorderColor('#272727')
                 chip.icon:setOpacity(0.35)
                 chip:setTooltip(tr('%s: immune', name))
             else
                 chip:setBorderColor(entry.taken <= 60 and '#d9772e' or '#8a6a2a')
-                chip:setBackgroundColor('#30220f')
+                chip:setBackgroundColor('#484848')
                 chip.icon:setOpacity(0.75)
                 chip:setTooltip(tr('%s: it takes %d%% less damage', name, 100 - entry.taken))
             end
@@ -287,17 +287,17 @@ local function ramp(t, from, to)
 end
 
 local function xpTone(tenths)
-    return ramp(math.max(0, math.min(1, (tenths - 10) / 90)), { 120, 108, 140 }, { 196, 170, 255 })
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 90)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
 -- loot goes from 1x to 3x (its own roll since 2026-10-31)
 local function lootTone(tenths)
-    return ramp(math.max(0, math.min(1, (tenths - 10) / 20)), { 138, 122, 85 }, { 235, 205, 130 })
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 20)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
 -- rare monsters go from 1x to 4x: pale grey to the rare monsters' violet
 local function rareTone(tenths)
-    return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 120, 128, 150 }, { 120, 220, 255 })
+    return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
 local function multText(tenths)
@@ -401,7 +401,7 @@ local function parseAmount(text)
     return value and math.floor(value * multiplier + 0.5) or false
 end
 
-local INPUT_COLOR, BAD_INPUT_COLOR = '#e6e2ee', '#ff7a6b'
+local INPUT_COLOR, BAD_INPUT_COLOR = '#dfdfdf', '#f75f5f'
 
 -- the two boxes of a range; a box that is not a number turns red and is
 -- left out
@@ -546,7 +546,7 @@ local function updateSortHeads()
         if widget then
             local active = entry[2] == currentSort
             widget:setText(tr(entry[3]) .. (active and (sortDesc and ' v' or ' ^') or ''))
-            widget:setColor(active and '#f3dcae' or '#9789b3')
+            widget:setColor(active and '#f3dcae' or '#909090')
         end
     end
 end
@@ -612,12 +612,12 @@ local function showTpMessage(text)
         removeEvent(tpMessageEvent)
     end
     label:setText(text)
-    label:setColor('#ff7a6b')
+    label:setColor('#f75f5f')
     tpMessageEvent = scheduleEvent(function()
         tpMessageEvent = nil
         if window then
             label:setText(label.pageText or '')
-            label:setColor('#cbc0e0')
+            label:setColor('#c0c0c0')
         end
     end, 6000)
 end
@@ -676,19 +676,19 @@ local function fitOf(lvl)
     local mine = g_game.getLocalPlayer() and g_game.getLocalPlayer():getLevel() or 0
     lvl = tonumber(lvl) or 0
     if lvl == 0 then
-        return '#cbc0e0', ''
+        return '#c0c0c0', ''
     elseif mine >= lvl then
-        return '#7fd35a', tr('Good for your level')
+        return '#60f860', tr('Good for your level')
     elseif mine >= lvl * 0.75 then
-        return '#e2a443', tr('A little above your level')
+        return '#f7a55f', tr('A little above your level')
     end
-    return '#ff7a6b', tr('Far above your level')
+    return '#f75f5f', tr('Far above your level')
 end
 
 local function tile(widget, key, value, color)
     widget.key:setText(key)
     widget.value:setText(value)
-    widget.value:setColor(color or '#ece6dc')
+    widget.value:setColor(color or '#dfdfdf')
 end
 
 local function showDetail(monster)
@@ -703,6 +703,7 @@ local function showDetail(monster)
     end
     detail.pedestal.creature:setOutfit(outfitOf(monster))
     detail.name:setText(monster.name)
+    detail:setText(monster.name)
     local color, fit = fitOf(monster.lvl)
     detail.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')
     detail.level:setColor(color)
@@ -711,7 +712,7 @@ local function showDetail(monster)
     tile(detail.lootTile, tr('Loot rate'), multText(monster.loot), lootTone(monster.loot))
     tile(detail.rareTile, tr('Rare monsters'), multText(monster.rare), rareTone(monster.rare))
     tile(detail.killTile, tr('XP per kill'), formatNumber(monster.perKill))
-    tile(detail.goldTile, tr('Gold per kill'), monster.goldPerKill and formatNumber(monster.goldPerKill) or '-', '#e2a443')
+    tile(detail.goldTile, tr('Gold per kill'), monster.goldPerKill and formatNumber(monster.goldPerKill) or '-', '#f7a55f')
     tile(detail.spawnTile, tr('Health'), formatShort(monster.hpNow))
     -- up to four lines: tougher at this rate, weak to, resists, immune to
     local lines = {}
@@ -719,9 +720,9 @@ local function showDetail(monster)
         -- the health only when the rate raises it (the server's
         -- strength.hp: 0 since 2026-11-19, the rate raises the damage only)
         if monster.hpMult > 1 then
-            lines[#lines + 1] = { tr('Stronger at this rate: health x%.1f, damage x%.1f', monster.hpMult, monster.dmgMult), '#ef9a62' }
+            lines[#lines + 1] = { tr('Stronger at this rate: health x%.1f, damage x%.1f', monster.hpMult, monster.dmgMult), '#f7a55f' }
         else
-            lines[#lines + 1] = { tr('Hits harder at this rate: damage x%.1f', monster.dmgMult), '#ef9a62' }
+            lines[#lines + 1] = { tr('Hits harder at this rate: damage x%.1f', monster.dmgMult), '#f7a55f' }
         end
     end
     local weak, resists, immune = {}, {}, {}
@@ -738,18 +739,18 @@ local function showDetail(monster)
         end
     end
     if #weak > 0 then
-        lines[#lines + 1] = { tr('Weak to: %s', table.concat(weak, ', ')), '#7fd35a' }
+        lines[#lines + 1] = { tr('Weak to: %s', table.concat(weak, ', ')), '#60f860' }
     end
     if #resists > 0 then
-        lines[#lines + 1] = { tr('Resists: %s', table.concat(resists, ', ')), '#e2a443' }
+        lines[#lines + 1] = { tr('Resists: %s', table.concat(resists, ', ')), '#f7a55f' }
     end
     if #immune > 0 then
-        lines[#lines + 1] = { tr('Immune to: %s', table.concat(immune, ', ')), '#a3abb5' }
+        lines[#lines + 1] = { tr('Immune to: %s', table.concat(immune, ', ')), '#909090' }
     end
     for i = 1, 4 do
         local label = detail['line' .. i]
         label:setText(lines[i] and lines[i][1] or '')
-        label:setColor(lines[i] and lines[i][2] or '#a59d92')
+        label:setColor(lines[i] and lines[i][2] or '#909090')
     end
     -- the one action
     local go = detail.go
@@ -790,7 +791,7 @@ local function renderCards(first, last)
         card.frame.creature:setOutfit(outfitOf(monster))
         card.name:setText(monster.name)
         if monster.xp >= 25 or monster.loot >= 25 then
-            card.name:setColor('#ffb020')
+            card.name:setColor('#f7a55f')
         end
         card.level:setText(monster.lvl and tr('Level %d', monster.lvl) or '')
         card.level:setColor((fitOf(monster.lvl)))
@@ -834,7 +835,7 @@ local function renderPage()
         row.creature:setOutfit(outfitOf(monster))
         row.name:setText(monster.boss == 1 and (monster.name .. '  [boss]') or monster.name)
         if monster.xp >= 25 or monster.loot >= 25 then
-            row.name:setColor('#ffb020')
+            row.name:setColor('#f7a55f')
         elseif monster.boss == 1 then
             row.name:setColor('#e07bff')
         end
@@ -846,9 +847,9 @@ local function renderPage()
         -- above the recommended level, orange not far below it, red below
         local mine = g_game.getLocalPlayer() and g_game.getLocalPlayer():getLevel() or 0
         local lvl = tonumber(monster.lvl) or 0
-        row.level:setColor(lvl == 0 and '#cbc0e0' or mine >= lvl and '#7fd35a' or mine >= lvl * 0.75 and '#e2a443' or '#ff7a6b')
+        row.level:setColor(lvl == 0 and '#c0c0c0' or mine >= lvl and '#60f860' or mine >= lvl * 0.75 and '#f7a55f' or '#f75f5f')
         row.health:setText(formatShort(monster.hpNow))
-        row.health:setColor(monster.hpMult > 1 and '#ef9a62' or '#cbc0e0')
+        row.health:setColor(monster.hpMult > 1 and '#f7a55f' or '#c0c0c0')
         row.perKill:setText(formatShort(monster.perKill))
         row.perKill:setColor(xpTone(monster.xp))
         row.goldKill:setText(monster.goldPerKill and formatShort(monster.goldPerKill) or '-')
@@ -1000,7 +1001,7 @@ local function applyFilters()
     if button then
         local count = advancedActiveCount and advancedActiveCount() or 0
         button:setText(count > 0 and tr('Advanced (%d)', count) or tr('Advanced'))
-        button:setColor(count > 0 and '#7fd35a' or '#e6e2ee')
+        button:setColor(count > 0 and '#60f860' or '#dfdfdf')
     end
     page = 1
     updateSortHeads()
@@ -1123,17 +1124,17 @@ local function fillColumn(column, category, entries, mine)
         row.info:setText(tr('Level %d %s', entry.level or 0, entry.vocation or ''))
         row.value:setText(valueText(category, entry.value))
         if entry.me then
-            row:setBackgroundColor('#7fd35a22')
-            row.name:setColor('#7fd35a')
+            row:setBackgroundColor('#60f86022')
+            row.name:setColor('#60f860')
         end
     end
     column.empty:setVisible(#(entries or {}) == 0)
     if mine and (mine[category] or 0) > 0 then
         column.mine:setText(tr('You: #%d with %s', mine[category .. 'Rank'] or 0, valueText(category, mine[category])))
-        column.mine:setColor('#7fd35a')
+        column.mine:setColor('#60f860')
     else
         column.mine:setText(tr('You have not scored in this period yet.'))
-        column.mine:setColor('#7a7a7a')
+        column.mine:setColor('#909090')
     end
 end
 
@@ -1171,7 +1172,7 @@ local function renderBoard()
             entry.name or '?', entry.position or 1, entry.category == 'kills' and tr('kills') or tr('experience'),
             valueText(entry.category, entry.value), formatNumber(entry.coins)))
         if entry.period == 'month' then
-            line:setColor('#ffb020')
+            line:setColor('#f7a55f')
         elseif entry.period == 'day' then
             line:setColor('#3d9bff')
         end
@@ -1179,7 +1180,7 @@ local function renderBoard()
     if #(board.recent or {}) == 0 then
         local line = g_ui.createWidget('HistoryLine', panel.history)
         line:setText(tr('No period has closed yet.'))
-        line:setColor('#7a7a7a')
+        line:setColor('#909090')
     end
 end
 

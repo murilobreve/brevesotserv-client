@@ -12,7 +12,7 @@
 ForgeTab < UIButton
   size: 108 24
   font: verdana-11px-antialised
-  color: #b4afc3
+  color: #c0c0c0
   text-offset: 0 -1
   image-source: /images/mythos/tab
   image-border: 2
@@ -21,11 +21,11 @@ ForgeTab < UIButton
 
   $hover !on:
     image-source: /images/mythos/tab_hover
-    color: #e0dbea
+    color: #dfdfdf
 
   $on:
     image-source: /images/mythos/tab_on
-    color: #f3f0fa
+    color: #ffffff
 
 // a dark well: the items, the wheel
 ForgeInset < UIWidget
@@ -39,26 +39,24 @@ ForgePanel < UIWidget
 
 ForgeDim < Label
   font: verdana-11px-antialised
-  color: #898293
+  color: #909090
 
 ForgeText < Label
   font: verdana-11px-antialised
-  color: #d1ccd9
+  color: #c0c0c0
 
 ForgeButton < MythosButton
   height: 22
 
 // one rare item as a slot: its grade is the frame's colour
-ForgeSlot < UIButton
+ForgeSlot < Button
+  padding: 0
+  text-offset: 0 0
+  font: verdana-11px-antialised
   size: 36 36
-  background-color: #0f0a19
-  border-width: 1
-  border-color: #3a3148
   change-cursor-image: true
   cursor: pointer
 
-  $hover:
-    border-color: #6f5f96
 
   UIItem
     id: item
@@ -91,7 +89,7 @@ ForgeRow < UIWidget
   height: 28
   background-color: #ffffff09
   border-width: 1
-  border-color: #2a2438
+  border-color: #272727
 
   ForgeLock
     id: seal
@@ -139,7 +137,7 @@ ForgeStep < UIWidget
   height: 18
   text-auto-resize: true
   font: verdana-11px-antialised
-  color: #6f6880
+  color: #707070
 
 // one total of My bonuses
 ForgeTotalRow < UIWidget
@@ -152,7 +150,7 @@ ForgeTotalRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
     font: verdana-11px-antialised
-    color: #d1ccd9
+    color: #c0c0c0
 
   Label
     id: total
@@ -162,7 +160,7 @@ ForgeTotalRow < UIWidget
     width: 130
     text-align: right
     font: Verdana Bold-11px
-    color: #eee6d4
+    color: #dfdfdf
 
   UIWidget
     anchors.left: parent.left
@@ -170,7 +168,7 @@ ForgeTotalRow < UIWidget
     anchors.bottom: parent.bottom
     margin-right: 8
     height: 1
-    background-color: #2a2438
+    background-color: #585858
     phantom: true
 
 // a line of the upgrade's result
@@ -185,7 +183,9 @@ MythosWindow
   size: 860 512
   @onEscape: modules.game_raritybonus.hide()
 
-  UIButton
+  Button
+    padding: 0
+    text-offset: 0 0
     id: closeX
     anchors.top: parent.top
     anchors.right: parent.right
@@ -194,10 +194,7 @@ MythosWindow
     size: 22 22
     text: X
     font: Verdana Bold-11px
-    color: #d6cfc2
-    background-color: #2a2219
-    border-width: 1
-    border-color: #6b5631
+    color: #c0c0c0
     change-cursor-image: true
     cursor: pointer
     !tooltip: tr('Close')
@@ -205,8 +202,6 @@ MythosWindow
 
     $hover:
       color: #ffffff
-      background-color: #3d2f20
-      border-color: #a8884a
 
   UIWidget
     id: tabs
@@ -256,7 +251,7 @@ MythosWindow
       margin-left: 5
       text-auto-resize: true
       font: Verdana Bold-11px
-      color: #c9a4ff
+      color: #c0c0c0
 
     ForgeButton
       id: buyXpButton
@@ -284,7 +279,7 @@ MythosWindow
       margin-right: 10
       text-auto-resize: true
       font: Verdana Bold-11px
-      color: #e2c46a
+      color: #dfdfdf
 
     Label
       id: status
@@ -297,7 +292,7 @@ MythosWindow
       height: 14
       text-align: center
       font: verdana-11px-antialised
-      color: #7fd35a
+      color: #60f860
 
   UIWidget
     id: body
@@ -322,7 +317,7 @@ MythosWindow
         anchors.top: parent.top
         anchors.left: parent.left
         text-auto-resize: true
-        color: #b4afc3
+        color: #c0c0c0
         !text: tr('Equipped items')
 
       UIWidget
@@ -351,7 +346,7 @@ MythosWindow
         anchors.left: parent.left
         margin-top: 6
         text-auto-resize: true
-        color: #b4afc3
+        color: #c0c0c0
         !text: tr('In the backpack')
 
       ForgeDim
@@ -416,7 +411,7 @@ MythosWindow
           margin-top: 3
           height: 15
           font: Verdana Bold-11px
-          color: #eee6d4
+          color: #dfdfdf
 
         Label
           id: info
@@ -464,7 +459,7 @@ MythosWindow
             anchors.left: parent.left
             text-auto-resize: true
             font: Verdana-10px-antialiased
-            color: #b4afc3
+            color: #c0c0c0
             !text: tr('Bonuses')
 
           ForgeDim
@@ -568,7 +563,7 @@ MythosWindow
               anchors.top: costKey.bottom
               margin-top: 5
               height: 4
-              background-color: #0f0a19
+              background-color: #363636
 
               UIWidget
                 id: fill
@@ -576,7 +571,7 @@ MythosWindow
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 width: 0
-                background-color: #b296f5
+                background-color: #c0c0c0
 
             UIWidget
               id: costGoldIcon
@@ -593,7 +588,7 @@ MythosWindow
               margin-left: 4
               text-auto-resize: true
               font: Verdana Bold-11px
-              color: #e2c46a
+              color: #dfdfdf
 
         // the wheel: which bonus; the disc at its centre: how many, how much
         ForgeInset
@@ -614,7 +609,7 @@ MythosWindow
             height: 18
             text-align: center
             font: Verdana Bold-11px
-            color: #d1ccd9
+            color: #c0c0c0
 
           UIWidget
             id: wheelHolder
@@ -664,9 +659,8 @@ MythosWindow
                 margin-top: 26
                 height: 28
                 text-align: center
-                ttf-font: cinzel-bold
-                ttf-font-size: 22
-                color: #eee6d4
+                font: Verdana Bold-11px
+                color: #dfdfdf
                 phantom: true
 
               Label
@@ -678,7 +672,7 @@ MythosWindow
                 height: 12
                 text-align: center
                 font: Verdana-10px-antialiased
-                color: #b4afc3
+                color: #c0c0c0
 
             UIWidget
               id: pointer
@@ -742,7 +736,7 @@ MythosWindow
             anchors.centerIn: parent
             size: 24 24
             image-source: /game_raritybonus/images/forge/arrow
-            image-color: #b4afc3
+            image-color: #c0c0c0
             phantom: true
 
           ForgeSlot
@@ -799,7 +793,7 @@ MythosWindow
             anchors.bottom: parent.bottom
             margin-left: 1
             width: 3
-            background-color: #fff3c4
+            background-color: #dfdfdf
             border-width: 1
             border-color: #000000
             phantom: true
@@ -812,7 +806,7 @@ MythosWindow
           margin-top: 5
           text-auto-resize: true
           font: Verdana Bold-11px
-          color: #7fd36a
+          color: #60f860
 
         Label
           id: breakChance
@@ -821,7 +815,7 @@ MythosWindow
           margin-top: 5
           text-auto-resize: true
           font: Verdana Bold-11px
-          color: #ff7a6a
+          color: #f75f5f
 
         ForgeDim
           id: nothingChance
@@ -846,7 +840,7 @@ MythosWindow
             margin: 8 0 0 10
             text-auto-resize: true
             font: Verdana Bold-11px
-            color: #eee6d4
+            color: #dfdfdf
 
           ForgeText
             id: extra
@@ -854,7 +848,7 @@ MythosWindow
             anchors.right: parent.right
             margin: 8 10 0 0
             text-auto-resize: true
-            color: #e2c46a
+            color: #dfdfdf
 
           HorizontalScrollBar
             id: scroll
@@ -884,7 +878,7 @@ MythosWindow
           margin: 16 10 0 10
           height: 60
           text-wrap: true
-          color: #b4afc3
+          color: #c0c0c0
 
         ForgeDim
           id: maxText
@@ -924,7 +918,7 @@ MythosWindow
             anchors.verticalCenter: parent.verticalCenter
             margin-left: 4
             text-auto-resize: true
-            color: #e2c46a
+            color: #dfdfdf
 
           UIWidget
             id: upXpIcon

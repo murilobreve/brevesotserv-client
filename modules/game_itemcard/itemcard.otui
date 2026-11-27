@@ -44,9 +44,8 @@ ItemCardHeader < UIWidget
     margin-left: 9
     margin-top: 1
     height: 18
-    ttf-font: cinzel-bold
-    ttf-font-size: 14
-    color: #f3ead9
+    font: Verdana Bold-11px
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -78,13 +77,13 @@ ItemCardGem < UIWidget
 
 ItemCardTag < Label
   font: verdana-11px-antialised
-  color: #c9c0cf
+  color: #c0c0c0
   text-auto-resize: true
   phantom: true
 
 ItemCardSubText < Label
   font: verdana-11px-antialised
-  color: #a39cbc
+  color: #909090
   text-auto-resize: true
   phantom: true
 
@@ -115,7 +114,7 @@ ItemCardSection < UIWidget
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     font: Verdana Bold-10px
-    color: #dfb564
+    color: #dfdfdf
     text-auto-resize: true
     phantom: true
 
@@ -126,7 +125,7 @@ ItemCardSection < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
     height: 1
-    background-color: #655036
+    background-color: #909090
     phantom: true
 
 ItemCardStat < UIWidget
@@ -139,7 +138,7 @@ ItemCardStat < UIWidget
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     font: verdana-11px-antialised
-    color: #a39cbc
+    color: #909090
     text-auto-resize: true
     phantom: true
 
@@ -150,7 +149,7 @@ ItemCardStat < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 8
     font: verdana-11px-antialised
-    color: #f3ead9
+    color: #dfdfdf
     text-align: right
     phantom: true
 
@@ -166,7 +165,7 @@ ItemCardStatLong < UIWidget
   Label
     id: label
     font: verdana-11px-antialised
-    color: #a39cbc
+    color: #909090
     text-auto-resize: true
     phantom: true
 
@@ -174,7 +173,7 @@ ItemCardStatLong < UIWidget
     id: value
     margin-left: 10
     font: verdana-11px-antialised
-    color: #f3ead9
+    color: #dfdfdf
     text-wrap: true
     text-auto-resize: true
     phantom: true
@@ -201,7 +200,7 @@ ItemCardBonus < UIWidget
     margin-left: 6
     margin-right: 6
     font: verdana-11px-antialised
-    color: #f3ead9
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -210,7 +209,7 @@ ItemCardBonus < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     width: 30
     font: verdana-11px-antialised
-    color: #a39cbc
+    color: #909090
     text-align: right
     phantom: true
 
@@ -220,9 +219,9 @@ ItemCardBonus < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 5
     size: 52 5
-    background-color: #0b0914
+    background-color: #363636
     border-width: 1
-    border-color: #2f2656
+    border-color: #272727
     phantom: true
 
     UIWidget
@@ -258,7 +257,7 @@ ItemCardBonusLong < UIWidget
     anchors.top: parent.top
     margin-left: 6
     font: verdana-11px-antialised
-    color: #f3ead9
+    color: #dfdfdf
     text-wrap: true
     phantom: true
 
@@ -268,7 +267,7 @@ ItemCardBonusLong < UIWidget
     anchors.bottom: parent.bottom
     width: 30
     font: verdana-11px-antialised
-    color: #a39cbc
+    color: #909090
     text-align: right
     phantom: true
 
@@ -278,9 +277,9 @@ ItemCardBonusLong < UIWidget
     anchors.verticalCenter: percent.verticalCenter
     margin-right: 5
     size: 52 5
-    background-color: #0b0914
+    background-color: #363636
     border-width: 1
-    border-color: #2f2656
+    border-color: #272727
     phantom: true
 
     UIWidget
@@ -296,7 +295,7 @@ ItemCardBonusLong < UIWidget
 ItemCardPerfect < Label
   font: Verdana Bold-10px
   color: #0a0812
-  background-color: #ffe7a6
+  background-color: #dfdfdf
   text-align: center
   text-auto-resize: true
   padding: 1 5 1 5
@@ -304,7 +303,7 @@ ItemCardPerfect < Label
 
 ItemCardLine < Label
   font: verdana-11px-antialised
-  color: #c9c0cf
+  color: #c0c0c0
   text-wrap: true
   text-auto-resize: true
   phantom: true
@@ -312,4 +311,4 @@ ItemCardLine < Label
 // "Found by NAME · DATE" under everything else
 ItemCardFinder < ItemCardLine
   margin-top: 7
-  color: #a39cbc
+  color: #909090

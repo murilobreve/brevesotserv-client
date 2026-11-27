@@ -3,19 +3,19 @@
 QuestChestCard < UIWidget
   size: 150 196
   focusable: true
-  background-color: #0f0a19
+  background-color: #363636
   border-width: 1
-  border-color: #514553
+  border-color: #272727
   change-cursor-image: true
   cursor: pointer
 
   $hover !focus:
-    background-color: #1b1428
-    border-color: #8a7aa8
+    background-color: #484848
+    border-color: #909090
 
   $focus:
-    background-color: #2a1f45
-    border-color: #b296f5
+    background-color: #585858
+    border-color: #c0c0c0
 
   // the item on a lit plate
   UIWidget
@@ -48,7 +48,7 @@ QuestChestCard < UIWidget
     text-align: top
     text-wrap: true
     font: Verdana Bold-11px
-    color: #f3f0fa
+    color: #ffffff
     phantom: true
 
   Label
@@ -60,7 +60,7 @@ QuestChestCard < UIWidget
     height: 14
     text-align: center
     font: verdana-11px-antialised
-    color: #b296f5
+    color: #ffffff
     phantom: true
 
   Label
@@ -73,7 +73,7 @@ QuestChestCard < UIWidget
     text-align: top
     text-wrap: true
     font: verdana-11px-antialised
-    color: #cbc0e0
+    color: #c0c0c0
     phantom: true
 
 MythosWindow
@@ -89,7 +89,7 @@ MythosWindow
     height: 16
     text-align: center
     font: verdana-11px-antialised
-    color: #cbc0e0
+    color: #c0c0c0
 
   // no card chosen until the player clicks one
   UIWidget
@@ -115,7 +115,7 @@ MythosWindow
     height: 14
     text-align: center
     font: verdana-11px-antialised
-    color: #8f86a3
+    color: #909090
 
   // the odds that the reward comes out a rarity item (quests.lua: showChest)
   Label
@@ -127,7 +127,7 @@ MythosWindow
     height: 14
     text-align: center
     font: verdana-11px-antialised
-    color: #cbc0e0
+    color: #c0c0c0
 
   UIRarityBar
     id: rarityBar
@@ -137,9 +137,9 @@ MythosWindow
     margin-top: 3
     height: 8
     padding: 1
-    background-color: #3b3449
+    background-color: #585858
     border-width: 1
-    border-color: #514553
+    border-color: #272727
 
   Label
     id: rarityText
@@ -150,7 +150,7 @@ MythosWindow
     height: 28
     text-align: center
     font: verdana-11px-antialised
-    color: #b4afc3
+    color: #c0c0c0
 
   Label
     id: result
@@ -160,7 +160,7 @@ MythosWindow
     margin-right: 8
     height: 16
     font: verdana-11px-antialised
-    color: #ff7a6b
+    color: #f75f5f
 
   MythosButton
     id: closeButton

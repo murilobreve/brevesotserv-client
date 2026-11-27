@@ -5,18 +5,18 @@
 
 AdvLabel < Label
   font: verdana-11px-antialised
-  color: #cbc0e0
+  color: #c0c0c0
   text-auto-resize: true
 
 AdvPreviewRow < Label
   height: 17
   font: verdana-11px-monochrome
-  color: #cbc0e0
+  color: #c0c0c0
   text-auto-resize: false
 
 AdvEdit < MythosTextEdit
   size: 64 22
-  placeholder-color: #75688f
+  placeholder-color: #707070
   @onTextChange: modules.game_huntboard.onAdvancedEdited()
 
 // one step: its number, what it does, then the boxes of that kind
@@ -24,9 +24,9 @@ AdvEdit < MythosTextEdit
 AdvStepRow < Panel
   height: 30
   margin-bottom: 2
-  background-color: #1a1326
+  background-color: #484848
   border-width: 1
-  border-color: #33264d
+  border-color: #272727
 
   Label
     id: number
@@ -35,7 +35,7 @@ AdvStepRow < Panel
     margin-left: 6
     width: 18
     font: verdana-11px-rounded
-    color: #e2a443
+    color: #f7a55f
 
   MythosComboBox
 
@@ -110,7 +110,7 @@ AdvStepRow < Panel
     anchors.left: value1.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
-    color: #9789b3
+    color: #909090
 
   MythosButton
     id: up
@@ -150,7 +150,7 @@ MythosWindow
     text-auto-resize: false
     text-wrap: true
     height: 0
-    color: #9789b3
+    color: #909090
     text:
 
   AdvLabel
@@ -241,7 +241,7 @@ MythosWindow
   AdvLabel
     id: emptySteps
     anchors.centerIn: steps
-    color: #75688f
+    color: #707070
     !text: tr('No steps yet')
 
   MythosButton
@@ -274,7 +274,7 @@ MythosWindow
     id: result
     anchors.right: parent.right
     anchors.verticalCenter: addFilter.verticalCenter
-    color: #7fd35a
+    color: #60f860
 
   // the first monsters of the result, as the Hunts TP list shows them
   AdvLabel
@@ -282,7 +282,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.bottom: preview.top
     margin-bottom: 4
-    color: #e2a443
+    color: #f7a55f
     !text: tr('Result (first monsters of the list):')
 
   MythosButton
@@ -300,9 +300,9 @@ MythosWindow
     anchors.bottom: sep2.top
     margin-bottom: 8
     height: 162
-    background-color: #120d1c
+    background-color: #363636
     border-width: 1
-    border-color: #33264d
+    border-color: #272727
     padding: 3 6 3 6
     layout:
       type: verticalBox
@@ -319,7 +319,7 @@ MythosWindow
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     size: 170 24
-    placeholder-color: #75688f
+    placeholder-color: #707070
     !placeholder: tr('Name to save...')
 
   MythosButton

@@ -80,7 +80,7 @@ local highlights = {} -- row id -> true: the row's gold light breathes
 local sectors = {} -- section id -> section widget
 local vipHolder -- the VIP button's box in the bar
 local stash -- holds, out of sight, the buttons of the features with no row (inside)
-local hubs = {} -- window -> { current, tabs }: the Hunts, Bosses and Quests tabs (attachHub)
+local hubs = {} -- window -> { current, tabs, strip, shown }: the Hunts, Bosses and Quests pages (attachHub)
 local refreshHubs
 
 local BUTTON_SPACING = 2 -- between the buttons of a section (otui)
@@ -130,7 +130,7 @@ local function labelColor(id)
         return labelColors[id]
     end
     local feature = featureOf(id)
-    return id == 'vip' and '#fff4d8' or (feature and feature.primary and '#ffe7b0') or '#e6e0f2'
+    return id == 'vip' and '#fff4d8' or (feature and feature.primary and '#ffe7b0') or '#dfdfdf'
 end
 
 local function iconPath(name)
@@ -530,26 +530,42 @@ end
 
 -- ---------------------------------------------------------------- hub
 
--- Hunts, Bosses, Quests and the Ranking are one place: each of their
--- windows carries the same four tabs across its title bar, in place of its
--- title (the lit tab says which window this is), with how many bosses are
--- ready and how many quests are open (their rows' states). The Hunt Board
--- window is two of them: Hunts and Ranking (setHubCurrent).
-local HUB = { 'rates', 'bosses', 'quests', 'board' }
-local HUB_LABEL = { rates = 'Hunts', bosses = 'Bosses', quests = 'Quests', board = 'Ranking' }
-local HUB_ICON = { rates = 'teleport', bosses = 'bosses', quests = 'quests', board = 'board' }
+-- Hunts, Bosses and Quests are one place, the teleports: each of their
+-- windows carries the same strip of pages under its title bar, as the
+-- Cyclopedia does (the pressed page says which window this is, and the
+-- title bar names it), with how many bosses are ready and how many quests
+-- are open (their rows' states). The Ranking is not one of them (the owner,
+-- 2026-11-27: "tira o ranking da parte de teleportes"): the Hunt Board
+-- window shows it with no strip, under its own title (setHubCurrent).
+local HUB = { 'rates', 'bosses', 'quests' }
+local HUB_LABEL = { rates = 'Hunts', bosses = 'Bosses', quests = 'Quests' }
+local HUB_ICON = { rates = 'teleport', bosses = 'bosses', quests = 'quests' }
 local HUB_TIP = {
     rates = 'Every hunt, with a free TP.',
     bosses = 'The bosses and their lever rooms.',
     quests = 'The quests of the map and their harder versions.',
-    board = 'Top hunters of the hour, day and month',
 }
 local HUB_COUNT = { bosses = '%s bosses ready for you', quests = '%s quests to do' }
+-- the strip and the gap under it: the window grows by this much, so that
+-- what it holds keeps its room
+local HUB_ROOM = 44
+
+-- the strip there or not: the window's top padding and its height follow
+local function setHubShown(window, hub, shown)
+    if hub.shown == shown then
+        return
+    end
+    hub.shown = shown
+    local room = shown and HUB_ROOM or -HUB_ROOM
+    window:setPaddingTop(window:getPaddingTop() + room)
+    window:setHeight(window:getHeight() + room)
+    hub.strip:setVisible(shown)
+end
 
 refreshHubs = function()
     for window, hub in pairs(hubs) do
         if hub.shown then
-            window:setText('')
+            window:setText(tr(HUB_LABEL[hub.current] or ''))
         end
         for _, id in ipairs(HUB) do
             local tab = hub.tabs[id]
@@ -557,7 +573,7 @@ refreshHubs = function()
             local tooltip = tr(HUB_TIP[id])
             tab:setText(tr(HUB_LABEL[id]))
             tab:setChecked(id == hub.current)
-            tab:setVisible(hub.shown and (callbacks[id] ~= nil or id == hub.current))
+            tab:setVisible(callbacks[id] ~= nil or id == hub.current)
             tab.count:setVisible(state ~= nil and state.text ~= nil)
             if state and state.text then
                 tab.count:setText(state.text)
@@ -573,20 +589,26 @@ function attachHub(window, current, hideWindow)
     if not window or hubs[window] then
         return
     end
+    local strip = g_ui.createWidget('BrevesHubStrip', window)
+    strip:setId('hubStrip')
+    strip:addAnchor(AnchorTop, 'parent', AnchorTop)
+    strip:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    strip:addAnchor(AnchorRight, 'parent', AnchorRight)
+    strip:setMarginTop(-HUB_ROOM)
+    strip:setVisible(false)
     local tabs, previous = {}, nil
     for _, id in ipairs(HUB) do
-        local tab = g_ui.createWidget('BrevesHubTab', window)
+        local tab = g_ui.createWidget('BrevesHubTab', strip)
         tab:setId('hubTab_' .. id)
         tab.icon:setImageSource(iconPath(HUB_ICON[id]))
-        tab:addAnchor(AnchorTop, 'parent', AnchorTop)
+        tab:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
         if previous then
             tab:addAnchor(AnchorLeft, previous:getId(), AnchorRight)
-            tab:setMarginLeft(4)
+            tab:setMarginLeft(2)
         else
             tab:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-            tab:setMarginLeft(-6)
+            tab:setMarginLeft(4)
         end
-        tab:setMarginTop(-36)
         tab.onClick = function()
             local hub = hubs[window]
             if hub and id ~= hub.current and callbacks[id] then
@@ -597,16 +619,21 @@ function attachHub(window, current, hideWindow)
         tabs[id] = tab
         previous = tab
     end
-    hubs[window] = { current = current, tabs = tabs, shown = true }
+    local hub = { current = current, tabs = tabs, strip = strip, shown = false }
+    hubs[window] = hub
     connect(window, { onDestroy = function() hubs[window] = nil end })
+    setHubShown(window, hub, HUB_LABEL[current] ~= nil)
     refreshHubs()
 end
 
--- which of the hub's tabs a window is showing now (the Hunt Board window
--- is the Hunts and the Ranking)
+-- which page of the hub a window is showing now. A page that is not of the
+-- hub (the Hunt Board window's Ranking) takes the strip off: the window is
+-- on its own then, and its module names it.
 function setHubCurrent(window, current)
-    if hubs[window] then
-        hubs[window].current = current
+    local hub = hubs[window]
+    if hub then
+        hub.current = current
+        setHubShown(window, hub, HUB_LABEL[current] ~= nil)
         refreshHubs()
     end
 end

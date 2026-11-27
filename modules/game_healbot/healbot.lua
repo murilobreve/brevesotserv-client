@@ -954,7 +954,7 @@ local function updateButton()
     end
     if modules.game_brevespanel then
         modules.game_brevespanel.setFeatureState('healbot', HealEngine.isRunning() and 'ON' or 'OFF',
-            HealEngine.isRunning() and '#7fd35a' or '#909090')
+            HealEngine.isRunning() and '#60f860' or '#909090')
     end
 end
 

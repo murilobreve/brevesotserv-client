@@ -10,7 +10,7 @@ MythosTourShade < UIWidget
 // the gold ring around the hole
 MythosTourRing < UIWidget
   border-width: 2
-  border-color: #e2a443
+  border-color: #f7a55f
   phantom: true
   focusable: false
 
@@ -18,10 +18,10 @@ MythosTourRing < UIWidget
 MythosTourDot < UIWidget
   size: 7 7
   margin-left: 4
-  background-color: #4a3670
+  background-color: #909090
   phantom: true
   $on:
-    background-color: #e2a443
+    background-color: #f7a55f
 
 MythosTourArrow < UIWidget
   size: 20 11
@@ -32,15 +32,16 @@ MythosTourBubble < UIWidget
   id: mythosTourBubble
   width: 280
   height: 110
-  background-color: #150f22f5
+  background-color: #363636f5
   border-width: 2
-  border-color: #e2a443
+  border-color: #f7a55f
   padding: 10
   focusable: true
   @onEscape: modules.game_tutorial.stop()
 
   // ends the tour, like Skip
-  UIButton
+  Button
+    padding: 0
     id: closeButton
     anchors.top: parent.top
     anchors.right: parent.right
@@ -50,18 +51,13 @@ MythosTourBubble < UIWidget
     text: x
     text-offset: 0 -1
     font: Verdana Bold-11px
-    color: #e6c98a
-    background-color: #0c0914
-    border-width: 1
-    border-color: #a7843f
+    color: #dfdfdf
     change-cursor-image: true
     cursor: pointer
     !tooltip: tr('Close')
     @onClick: modules.game_tutorial.stop()
     $hover:
       color: #ffffff
-      border-color: #ffd682
-      background-color: #2a1d44
 
   Label
     id: counter
@@ -69,7 +65,7 @@ MythosTourBubble < UIWidget
     anchors.right: closeButton.left
     margin-right: 8
     font: verdana-11px-rounded
-    color: #9789b3
+    color: #909090
     text-auto-resize: true
 
   Label
@@ -78,9 +74,8 @@ MythosTourBubble < UIWidget
     anchors.left: parent.left
     anchors.right: counter.left
     margin-right: 6
-    ttf-font: cinzel-bold
-    ttf-font-size: 14
-    color: #ffd682
+    font: Verdana Bold-11px
+    color: #dfdfdf
     height: 18
 
   Label
@@ -92,7 +87,7 @@ MythosTourBubble < UIWidget
     text-wrap: true
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #e6e0f2
+    color: #dfdfdf
 
   UIWidget
     id: dots
@@ -111,13 +106,13 @@ MythosTourBubble < UIWidget
     margin-left: 10
     !text: tr('Skip the tour')
     font: verdana-11px-rounded
-    color: #9789b3
+    color: #909090
     text-auto-resize: true
     change-cursor-image: true
     cursor: pointer
     @onClick: modules.game_tutorial.stop()
     $hover:
-      color: #e6e0f2
+      color: #dfdfdf
 
   MythosKitGoldButton28
     id: nextButton

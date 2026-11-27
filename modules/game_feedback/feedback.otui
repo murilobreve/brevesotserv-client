@@ -21,7 +21,7 @@ FeedbackTab < UIWidget
     image-source: /images/mythos/notice
     image-border: 4
     font: Verdana Bold-11px
-    color: #f1d399
+    color: #dfdfdf
     text-align: center
     text-offset: 0 1
     phantom: true
@@ -52,7 +52,7 @@ FeedbackWindow < MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     font: verdana-11px-antialised
-    color: #c9c0cf
+    color: #c0c0c0
     text-wrap: true
     text-auto-resize: true
 
@@ -63,7 +63,7 @@ FeedbackWindow < MythosWindow
     anchors.left: parent.left
     margin-top: 10
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     text-auto-resize: true
 
   FeedbackKind
@@ -121,7 +121,7 @@ FeedbackWindow < MythosWindow
     anchors.bottom: status.top
     margin-bottom: 4
     font: verdana-11px-antialised
-    color: #6f688a
+    color: #707070
     text-auto-resize: true
 
   Label
@@ -132,7 +132,7 @@ FeedbackWindow < MythosWindow
     margin-bottom: 8
     height: 14
     font: verdana-11px-antialised
-    color: #a39cbc
+    color: #909090
 
   MythosPrimaryButton
     id: sendButton

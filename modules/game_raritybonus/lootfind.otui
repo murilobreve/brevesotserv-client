@@ -3,7 +3,7 @@
 
 LootFindText < Label
   font: verdana-11px-antialised
-  color: #d0ceca
+  color: #c0c0c0
   text-auto-resize: true
   phantom: true
 
@@ -20,9 +20,9 @@ LootFindCard < UIWidget
     margin-top: 17
     margin-left: 16
     size: 44 44
-    background-color: #1a1822
+    background-color: #484848
     border-width: 1
-    border-color: #34303f
+    border-color: #272727
     phantom: true
     focusable: false
 
@@ -53,9 +53,8 @@ LootFindCard < UIWidget
     margin-left: 78
     margin-right: 16
     height: 24
-    ttf-font: cinzel-bold
-    ttf-font-size: 17
-    color: #f3ead9
+    font: Verdana Bold-11px
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -67,7 +66,7 @@ LootFindCard < UIWidget
     margin-left: 16
     margin-right: 16
     height: 1
-    background-color: #2c2838
+    background-color: #585858
     phantom: true
     focusable: false
 
@@ -99,7 +98,7 @@ LootFindCard < UIWidget
     anchors.left: dot.right
     margin-left: 6
     font: verdana-11px-antialised
-    color: #a39fab
+    color: #909090
     text-auto-resize: true
     phantom: true
 
@@ -127,7 +126,7 @@ LootFindBanner < UIWidget
     margin-top: 17
     margin-left: 82
     font: Verdana Bold-10px
-    color: #e8e4ff
+    color: #dfdfdf
     text-auto-resize: true
     phantom: true
 
@@ -140,9 +139,8 @@ LootFindBanner < UIWidget
     margin-left: 82
     margin-right: 16
     height: 22
-    ttf-font: cinzel-bold
-    ttf-font-size: 15
-    color: #f3ead9
+    font: Verdana Bold-11px
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -152,6 +150,6 @@ LootFindBanner < UIWidget
     margin-top: 56
     margin-left: 82
     font: verdana-11px-antialised
-    color: #a39fab
+    color: #909090
     text-auto-resize: true
     phantom: true

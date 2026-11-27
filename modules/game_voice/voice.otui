@@ -1,39 +1,30 @@
 // Mythos Voz panel: a mini window on the right side, Discord-like. The rooms
 // and their member rows are built by voice_ui.lua from the styles below.
 
-VoiceIconButton < UIButton
+VoiceIconButton < Button
+  padding: 0
+  text-offset: 0 0
+  font: verdana-11px-antialised
   size: 18 18
   image-size: 16 16
   image-offset: 1 1
-  border-width: 1
-  border-color: #514553
-  background-color: #1a1626
   change-cursor-image: true
   cursor: pointer
 
-  $hover:
-    border-color: #b296f5
 
-  $on:
-    background-color: #3a1c22
-    border-color: #e0604a
 
-VoiceSmallButton < UIButton
+VoiceSmallButton < Button
   height: 16
   font: verdana-11px-antialised
-  color: #f1d399
+  color: #dfdfdf
   text-offset: 0 0
   padding: 0 6 0 6
   text-auto-resize: true
-  border-width: 1
-  border-color: #6f5a3a
-  background-color: #241d16
   change-cursor-image: true
   cursor: pointer
 
   $hover:
-    color: #ffe7b0
-    border-color: #c99c53
+    color: #dfdfdf
 
 // the hint ("Hold Insert") ends at the button when it shows (voice_ui.lua
 // anchors it there; when it does not fit only the key shows, "Insert" beside
@@ -48,7 +39,7 @@ VoiceSectionHeader < UIWidget
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     font: Verdana Bold-11px
-    color: #f3dcae
+    color: #dfdfdf
     text-auto-resize: true
 
   Label
@@ -59,7 +50,7 @@ VoiceSectionHeader < UIWidget
     height: 14
     margin-left: 4
     font: verdana-11px-antialised
-    color: #8f88a3
+    color: #909090
     text-align: left
     text-auto-resize: false
 
@@ -101,7 +92,7 @@ VoiceMemberRow < UIWidget
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
     font: verdana-11px-antialised
-    color: #d1ccd9
+    color: #c0c0c0
     text-auto-resize: false
     phantom: true
 
@@ -142,7 +133,7 @@ VoiceMembers < UIWidget
 
 VoiceNote < Label
   font: verdana-11px-antialised
-  color: #8f88a3
+  color: #909090
   text-wrap: true
   text-auto-resize: true
   margin-left: 4
@@ -151,7 +142,7 @@ VoiceDirRow < UIWidget
   height: 16
   padding-left: 4
   font: verdana-11px-antialised
-  color: #c9c0cf
+  color: #c0c0c0
   text-align: left
   text-offset: 4 0
   change-cursor-image: true
@@ -159,10 +150,10 @@ VoiceDirRow < UIWidget
 
   $hover:
     color: #ffffff
-    background-color: #b296f520
+    background-color: #ffffff20
 
   $on:
-    color: #78d04c
+    color: #60f860
 
 // the per-player volume popup (right-click > Volume): the track, the arrows
 // and the wheel move 10% (voice_ui.lua), the buttons go to 0% and 100%
@@ -179,7 +170,7 @@ VoiceVolumePopup < UIWidget
     anchors.right: parent.right
     height: 14
     font: verdana-11px-antialised
-    color: #e7e2ef
+    color: #dfdfdf
     text-align: center
 
   MythosHSlider
@@ -218,7 +209,7 @@ VoiceReportWindow < MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     font: verdana-11px-antialised
-    color: #c9c0cf
+    color: #c0c0c0
     text-wrap: true
     text-auto-resize: true
 
@@ -257,7 +248,7 @@ VoiceReportWindow < MythosWindow
     margin-bottom: 6
     height: 14
     font: verdana-11px-antialised
-    color: #e0604a
+    color: #f75f5f
 
   MythosPrimaryButton
     id: sendButton
@@ -319,7 +310,7 @@ MiniWindow
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         margin-left: 2
-        background-color: #6f688a
+        background-color: #909090
 
       Label
         id: statusText
@@ -328,7 +319,7 @@ MiniWindow
         anchors.verticalCenter: parent.verticalCenter
         margin-left: 6
         font: verdana-11px-antialised
-        color: #e6e0f2
+        color: #dfdfdf
         text-auto-resize: false
 
     UIWidget

@@ -8,7 +8,7 @@ local answers = {} -- action -> the server's answer
 local askedAt = {}
 local ascensaoVocation = 1
 
-local WARM, DIM, PURPLE, GOLD = '#f3dcae', '#9789b3', '#a679e6', '#e2c35a'
+local WARM, DIM, PURPLE, GOLD = '#f3dcae', '#909090', '#a679e6', '#e2c35a'
 
 local function T(text, ...)
     return WIKI_TEXT.T(text, ...)

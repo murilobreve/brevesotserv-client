@@ -1,76 +1,37 @@
-// Quests: the list of the quests (those of the Mythos, then those of the
-// teleport room) and the chosen one with its reward and its monsters. The
-// same look as the Bosses window (game_bosses/bosses.otui): dark boxes, a
-// framed portrait per row, the chosen one on a pedestal, tiles and cells.
+// Quests: the window of the quests, laid out as Tibia's Quest Log. On the
+// left a captioned panel with the list and, under it, what the Quest Log has
+// there: a box to choose which quests show, the search and "show completed".
+// On the right a panel captioned with the chosen quest: its picture, its
+// facts as "name: value" lines, then its reward and its monsters. The styles
+// are the kit's (data/styles/50-breves.otui); nothing here has a look of its
+// own.
 
-// a choice over the list: one of three, the one in use in gold
-QuestChip < UIButton
-  size: 80 24
-  font: verdana-11px-antialised
-  color: #b4afc3
-  background-color: #171221
-  border-width: 1
-  border-color: #3e2d5e
-  change-cursor-image: true
-  cursor: pointer
-  $hover !checked:
-    border-color: #8a76b0
-    color: #f3f0fa
-  $checked:
-    background-color: #d9a43a38
-    border-color: #d9b45a
-    color: #ffe7b0
-
-QuestBox < UIWidget
-  background-color: #141117
-  border-width: 1
-  border-color: #2e2833
-
-QuestDim < Label
-  font: verdana-11px-antialised
-  color: #8f877c
-
-QuestPill < Label
-  height: 16
-  text-auto-resize: true
-  text-align: center
-  padding: 0 6
-  font: verdana-11px-antialised
-  border-width: 1
-  phantom: true
-
-// a quest of the list: its strongest monster (or its reward, for a quest of
-// the teleport room), name, level and what is not the normal case at right
+// a quest of the list: its picture in a slot, its name and one line under it
 QuestRow < UIWidget
-  height: 48
-  background-color: #141117
-  border-width: 1
-  border-color: #221e26
+  height: 38
+  background-color: alpha
   focusable: true
 
   $hover !focus:
-    background-color: #1d1922
+    background-color: #ffffff12
 
   $focus:
-    background-color: #1e1a24
-    border-color: #6b5631
+    background-color: #585858
 
   UIWidget
     id: frame
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 5
-    size: 40 40
-    background-color: #17131a
-    border-width: 1
-    border-color: #2a2430
+    margin-left: 2
+    size: 34 34
+    image-source: /images/ui/item
     phantom: true
 
     UICreature
       id: creature
       anchors.centerIn: parent
-      size: 38 38
-      creature-size: 38
+      size: 32 32
+      creature-size: 32
       phantom: true
 
     UIItem
@@ -85,7 +46,7 @@ QuestRow < UIWidget
     id: status
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
-    margin-right: 10
+    margin-right: 6
     height: 14
     text-auto-resize: true
     text-align: right
@@ -97,12 +58,12 @@ QuestRow < UIWidget
     anchors.left: frame.right
     anchors.right: status.left
     anchors.top: parent.top
-    margin-left: 8
+    margin-left: 6
     margin-right: 6
-    margin-top: 8
+    margin-top: 4
     height: 14
-    font: Verdana Bold-11px
-    color: #ece6dc
+    font: verdana-11px-antialised
+    color: #c0c0c0
     phantom: true
 
   Label
@@ -110,113 +71,79 @@ QuestRow < UIWidget
     anchors.left: name.left
     anchors.right: status.left
     anchors.top: name.bottom
-    margin-top: 3
+    margin-top: 2
     margin-right: 6
     height: 14
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
     phantom: true
 
-// the title of a group of the list, with how many it has
-QuestSection < UIWidget
-  height: 22
-  focusable: false
+// every other row a shade lighter, as Tibia's lists
+QuestRowEven < QuestRow
+  background-color: #ffffff0a
+
+// a fact of the chosen quest: what on the left, how much after it
+QuestFact < UIWidget
+  height: 15
   phantom: true
-
-  Label
-    id: title
-    anchors.left: parent.left
-    anchors.bottom: parent.bottom
-    margin-left: 2
-    margin-bottom: 3
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #e8c77a
-
-  Label
-    id: count
-    anchors.right: parent.right
-    anchors.verticalCenter: title.verticalCenter
-    margin-right: 2
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #8f877c
-
-  UIWidget
-    anchors.left: title.right
-    anchors.right: count.left
-    anchors.verticalCenter: title.verticalCenter
-    margin-left: 8
-    margin-right: 8
-    height: 1
-    background-color: #2e2833
-
-// a number of the quest: what on top, how much under it
-QuestTile < UIWidget
-  height: 40
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
 
   Label
     id: key
     anchors.left: parent.left
-    anchors.top: parent.top
-    margin-left: 8
-    margin-top: 5
+    anchors.verticalCenter: parent.verticalCenter
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
     phantom: true
 
   Label
     id: value
-    anchors.left: key.left
-    anchors.top: key.bottom
-    margin-top: 2
-    text-auto-resize: true
-    font: Verdana Bold-11px
-    color: #ece6dc
+    anchors.left: key.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 5
+    font: verdana-11px-antialised
+    color: #c0c0c0
     phantom: true
 
-// the title of a part of the chosen quest, with a word at right
+// the title of a part of the chosen quest: its words, a word at right and
+// Tibia's line under them
 QuestHead < UIWidget
-  height: 16
+  height: 20
 
   Label
     id: title
     anchors.left: parent.left
-    anchors.verticalCenter: parent.verticalCenter
+    anchors.top: parent.top
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #c0c0c0
     phantom: true
 
   Label
     id: extra
     anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
+    anchors.top: parent.top
     text-auto-resize: true
     font: verdana-11px-antialised
-    color: #8f877c
+    color: #909090
     phantom: true
 
-// a reward or a monster: its picture in a frame, its name and one fact
+  HorizontalSeparator
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+
+// a reward or a monster: its picture in a slot, its name and one fact
 QuestCell < UIWidget
-  height: 44
-  background-color: #17141a
-  border-width: 1
-  border-color: #2a2430
+  height: 36
 
   UIWidget
     id: frame
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 4
-    size: 36 36
-    background-color: #17131a
-    border-width: 1
-    border-color: #2a2430
+    size: 34 34
+    image-source: /images/ui/item
     phantom: true
 
     UIItem
@@ -229,8 +156,8 @@ QuestCell < UIWidget
     UICreature
       id: creature
       anchors.centerIn: parent
-      size: 34 34
-      creature-size: 34
+      size: 32 32
+      creature-size: 32
       phantom: true
       visible: false
 
@@ -248,11 +175,11 @@ QuestCell < UIWidget
     anchors.right: parent.right
     anchors.top: parent.top
     margin-left: 6
-    margin-right: 4
-    margin-top: 7
+    margin-right: 2
+    margin-top: 3
     height: 14
     font: verdana-11px-antialised
-    color: #ece6dc
+    color: #c0c0c0
     phantom: true
 
   Label
@@ -261,201 +188,144 @@ QuestCell < UIWidget
     anchors.right: parent.right
     anchors.top: name.bottom
     margin-top: 2
-    margin-right: 4
+    margin-right: 2
     height: 14
     font: verdana-11px-antialised
-    color: #a59d92
+    color: #909090
     phantom: true
 
-// two cells a line, as the loot of a boss
+// two cells a line
 QuestGrid < UIWidget
-  height: 44
+  height: 36
   layout:
     type: grid
-    cell-size: 163 44
+    cell-size: 160 36
     cell-spacing: 4
     num-columns: 2
 
-// the one action of the window: go to the quest (the gold button of the
-// Hunts and Bosses windows)
-QuestGoButton < UIButton
-  height: 36
-  font: Verdana Bold-11px
-  color: #f3d38a
-  background-color: #2a2219
-  border-width: 1
-  border-color: #8a6d36
-  change-cursor-image: true
-  cursor: pointer
-
-  $hover !disabled:
-    background-color: #3a2e1f
-    border-color: #b08a42
-    color: #ffe9b5
-
-  $pressed !disabled:
-    background-color: #1f1912
-
-  $disabled:
-    color: #7d7466
-    background-color: #1b1816
-    border-color: #3a3330
-    change-cursor-image: false
-
 MythosWindow
   id: questsWindow
-  // as wide as the Bosses window: the cells of the chosen quest are 330 px
-  size: 778 640
+  size: 778 600
+  !text: tr('Quests')
   @onEscape: modules.game_quests.hide()
 
-  UIButton
-    id: closeX
-    anchors.top: parent.top
-    anchors.right: parent.right
-    margin-top: -34
-    margin-right: -8
-    size: 22 22
-    text: X
-    font: Verdana Bold-11px
-    color: #d6cfc2
-    background-color: #2a2219
-    border-width: 1
-    border-color: #6b5631
-    change-cursor-image: true
-    cursor: pointer
-    @onClick: modules.game_quests.hide()
-
-    $hover:
-      color: #ffffff
-      background-color: #3d2f20
-      border-color: #a8884a
-
-  MythosTextEdit
-    id: search
+  BrevesSection
+    id: listPanel
     anchors.top: parent.top
     anchors.left: parent.left
-    width: 250
-    !placeholder: tr('Search quest, monster or item')
-    placeholder-color: #75688f
-    @onTextChange: modules.game_quests.refreshList()
+    anchors.bottom: bottomSep.top
+    margin-bottom: 8
+    width: 380
+    padding: 24 5 6 5
+    !text: tr('Quests')
 
-  Label
-    id: summary
-    anchors.verticalCenter: search.verticalCenter
-    anchors.right: parent.right
-    text-auto-resize: true
-    font: verdana-11px-antialised
-    color: #9fd99a
-
-  // what the server answers to a teleport (quests.lua: showMessage)
-  Label
-    id: message
-    anchors.top: search.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    margin-top: 4
-    height: 15
-    font: verdana-11px-antialised
-
-  UIWidget
-    id: middle
-    anchors.top: message.bottom
-    anchors.left: parent.left
-    anchors.bottom: parent.bottom
-    margin-top: 3
-    width: 386
-
-    QuestChip
-      id: openTab
-      anchors.top: parent.top
-      anchors.left: parent.left
-      !text: tr('To do')
-      @onClick: modules.game_quests.setFilter('open')
-
-    QuestChip
-      id: allTab
-      anchors.top: parent.top
-      anchors.left: prev.right
-      margin-left: 4
-      !text: tr('All quests')
-      @onClick: modules.game_quests.setFilter('all')
-
-    QuestChip
-      id: doneTab
-      anchors.top: parent.top
-      anchors.left: prev.right
-      margin-left: 4
-      !text: tr('Completed')
-      @onClick: modules.game_quests.setFilter('done')
-
-    ScrollablePanel
+    BrevesList
       id: list
-      anchors.top: openTab.bottom
+      anchors.top: parent.top
       anchors.left: parent.left
       anchors.right: listScroll.left
-      anchors.bottom: parent.bottom
-      margin-top: 4
-      margin-right: 3
+      anchors.bottom: group.top
+      margin-bottom: 5
       vertical-scrollbar: listScroll
-      layout:
-        type: verticalBox
-        spacing: 4
 
-    // (anchored to the chips, not to the list: the list is anchored to it)
+    // (anchored to the panel, not to the list: the list is anchored to it)
     MythosScrollBar
       id: listScroll
-      anchors.top: openTab.bottom
+      anchors.top: parent.top
       anchors.right: parent.right
-      anchors.bottom: parent.bottom
-      margin-top: 4
-      step: 52
+      anchors.bottom: group.top
+      margin-bottom: 5
+      step: 38
       pixels-scroll: true
 
-    // no quest for the search or the choice (quests.lua: refreshList)
-    QuestDim
+    // no quest for the search or the choice, or the list did not come yet
+    BrevesNote
       id: empty
       anchors.centerIn: list
       text-auto-resize: true
+      text-wrap: false
       visible: false
 
-  QuestBox
-    id: detail
-    anchors.top: middle.top
-    anchors.left: middle.right
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    margin-left: 10
-    padding: 10
+    // which quests show: all of them, the harder versions or the quests of
+    // the teleport room (quests.lua: GROUPS)
+    MythosComboBox
+      id: group
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: search.top
+      margin-bottom: 4
+      @onOptionChange: modules.game_quests.refreshList()
 
+    MythosTextEdit
+      id: search
+      anchors.left: parent.left
+      anchors.right: clear.left
+      anchors.bottom: showDone.top
+      margin-bottom: 6
+      !placeholder: tr('Type to search')
+      @onTextChange: modules.game_quests.refreshList()
+
+    // empties the search, as the X of Tibia's search boxes
+    MythosButton
+      id: clear
+      anchors.right: parent.right
+      anchors.bottom: showDone.top
+      margin-bottom: 6
+      size: 20 20
+      text: X
+      !tooltip: tr('Clear the search')
+      @onClick: modules.game_quests.clearSearch()
+
+    CheckBox
+      id: showDone
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      width: 180
+      !text: tr('Show completed')
+      checked: true
+      @onCheckChange: modules.game_quests.refreshList()
+
+    BrevesLabel
+      id: summary
+      anchors.right: parent.right
+      anchors.verticalCenter: showDone.verticalCenter
+      text-auto-resize: true
+      color: #909090
+
+  BrevesSection
+    id: detail
+    anchors.top: listPanel.top
+    anchors.left: listPanel.right
+    anchors.right: parent.right
+    anchors.bottom: listPanel.bottom
+    margin-left: 8
+    padding: 28 10 8 10
+
+    // the strongest monster of the quest, or what it gives (a quest of the
+    // teleport room), twice the size, in a dark box as the Bestiary's
     UIWidget
-      id: pedestal
+      id: picture
       anchors.top: parent.top
       anchors.left: parent.left
-      size: 96 96
+      size: 70 70
+      background-color: #1b1b1b
+      border-width-top: 1
+      border-color-top: #000000
+      border-width-left: 1
+      border-color-left: #000000
+      border-width-bottom: 1
+      border-color-bottom: #747474
+      border-width-right: 1
+      border-color-right: #747474
       phantom: true
-
-      UIWidget
-        id: aura
-        anchors.fill: parent
-        image-source: /game_bosses/images/aura
-        phantom: true
-
-      UIWidget
-        id: disc
-        anchors.centerIn: parent
-        size: 80 80
-        image-source: /game_bosses/images/disc
-        image-color: #151118
-        phantom: true
 
       UICreature
         id: creature
         anchors.centerIn: parent
-        size: 72 72
-        creature-size: 72
+        size: 64 64
+        creature-size: 64
         phantom: true
 
-      // a quest of the teleport room: its reward, twice the size
       UIItem
         id: item
         anchors.centerIn: parent
@@ -464,77 +334,39 @@ MythosWindow
         phantom: true
         visible: false
 
-    QuestPill
-      id: status
-      anchors.top: pedestal.top
-      anchors.left: pedestal.right
+    // "State: Done", "Recommended level: 875"... (quests.lua: renderFacts)
+    UIWidget
+      id: facts
+      anchors.top: picture.top
+      anchors.left: picture.right
+      anchors.right: parent.right
       margin-left: 10
-      margin-top: 6
-
-    // a challenge quest says so beside its state
-    QuestPill
-      id: kind
-      anchors.verticalCenter: status.verticalCenter
-      anchors.left: status.right
-      margin-left: 4
-      color: #e8c77a
-      background-color: #2a2219
-      border-color: #5c4a2c
-
-    Label
-      id: name
-      anchors.top: status.bottom
-      anchors.left: status.left
-      anchors.right: parent.right
-      margin-top: 5
-      height: 22
-      ttf-font: cinzel-bold
-      ttf-font-size: 16
-      color: #ece6dc
-
-    Label
-      id: sub
-      anchors.top: name.bottom
-      anchors.left: status.left
-      anchors.right: parent.right
-      margin-top: 2
-      height: 28
-      text-wrap: true
-      font: verdana-11px-antialised
-      color: #a59d92
-
-    UIWidget
-      id: stats
-      anchors.top: pedestal.bottom
-      anchors.left: parent.left
-      anchors.right: parent.right
-      margin-top: 6
-      height: 40
+      height: 75
+      phantom: true
       layout:
-        type: grid
-        cell-size: 106 40
-        cell-spacing: 5
-        num-columns: 3
+        type: verticalBox
 
-    UIWidget
-      id: line
-      anchors.top: stats.bottom
+    // the note of a sign of the teleport room, when it has one
+    BrevesNote
+      id: note
+      anchors.top: picture.bottom
       anchors.left: parent.left
       anchors.right: parent.right
-      margin-top: 8
-      height: 1
-      background-color: #2e2833
+      margin-top: 6
+      text-auto-resize: false
+      height: 0
 
     // the reward and the monsters; it scrolls when a quest has many
     // (quests.lua: renderCard)
     ScrollablePanel
       id: body
-      anchors.top: line.bottom
+      anchors.top: note.bottom
       anchors.left: parent.left
-      anchors.right: parent.right
+      anchors.right: bodyScroll.left
       anchors.bottom: go.top
       margin-top: 8
       margin-bottom: 8
+      margin-right: 4
       vertical-scrollbar: bodyScroll
       layout:
         type: verticalBox
@@ -563,11 +395,11 @@ MythosWindow
       UIRarityBar
         id: rarityBar
         margin-top: 4
-        height: 8
+        height: 10
         padding: 1
-        background-color: #241f28
+        background-color: #1b1b1b
         border-width: 1
-        border-color: #2a2430
+        border-color: #000000
 
       QuestHead
         id: monstersHead
@@ -578,36 +410,51 @@ MythosWindow
         margin-top: 4
 
       // a quest of the teleport room whose reward the scripts do not tell
-      QuestDim
+      BrevesNote
         id: nothing
         height: 30
-        text-wrap: true
+        text-auto-resize: false
 
-    // in the box's own padding, and only when the quest has more than fits
     MythosScrollBar
       id: bodyScroll
-      anchors.top: body.top
-      anchors.bottom: body.bottom
+      anchors.top: note.bottom
+      anchors.bottom: go.top
       anchors.right: parent.right
-      margin-right: -10
-      width: 8
-      step: 48
+      margin-top: 8
+      margin-bottom: 8
+      step: 40
       pixels-scroll: true
 
-    QuestGoButton
+    // the one action of the window: go to the quest
+    MythosButton
       id: go
       anchors.bottom: parent.bottom
-      anchors.left: parent.left
       anchors.right: parent.right
+      width: 190
       !text: tr('Teleport to the quest')
       @onClick: modules.game_quests.goSelected()
 
-    // a teleport: the portal of the Teleports row of the bar
-    UIWidget
-      id: goIcon
-      anchors.left: go.left
-      anchors.verticalCenter: go.verticalCenter
-      margin-left: 12
-      size: 16 16
-      image-source: /game_brevespanel/images/teleport
-      phantom: true
+  MythosSeparator
+    id: bottomSep
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: closeButton.top
+    margin-bottom: 8
+
+  // what the server answers to a teleport (quests.lua: showMessage)
+  Label
+    id: message
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.verticalCenter: closeButton.verticalCenter
+    margin-right: 8
+    height: 15
+    font: verdana-11px-antialised
+
+  MythosButton
+    id: closeButton
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: 60
+    !text: tr('Close')
+    @onClick: modules.game_quests.hide()

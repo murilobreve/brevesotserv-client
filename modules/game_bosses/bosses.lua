@@ -39,7 +39,7 @@ local REFRESH_SECONDS = 15 -- the open window asks for the arenas again
 
 local TIER_COLORS = { pale = '#c9d6e3', ashen = '#a7adb5', obsidian = '#a98bff', deathlord = '#ff6b6b', normal = '#3a3342',
     -- the rarity grades (a quest reward's roulette)
-    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#e2a443', mythic = '#e8e4ff' }
+    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#f7a55f', mythic = '#e8e4ff' }
 local CATS = {
     { 'weapon', 'Arma' }, { 'armor', 'Armadura' }, { 'helmet', 'Elmo' }, { 'legs', 'Calça' },
     { 'boots', 'Botas' }, { 'shield', 'Escudo' }, { 'jewel', 'Joia' },
@@ -118,13 +118,13 @@ local function rareColor(chance)
     if chance < 0.1 then
         return '#e8e4ff'
     elseif chance < 0.5 then
-        return '#e2a443'
+        return '#f7a55f'
     elseif chance < 2 then
         return '#af78ea'
     elseif chance < 10 then
         return '#4f8fe8'
     end
-    return '#a59d92'
+    return '#909090'
 end
 
 local function titleCase(text)
@@ -195,7 +195,7 @@ end
 -- The same colours in every Mythos window for "can I do this?": green at or
 -- above the recommended level, orange between the lever's level and it, red
 -- below the lever's level.
-local READY, RISKY, LOCKED = '#7fd35a', '#e2a443', '#ff7a6b'
+local READY, RISKY, LOCKED = '#60f860', '#f7a55f', '#f75f5f'
 
 local function recommended(boss)
     return math.max(tonumber(boss.suggested) or 0, boss.level or 0)
@@ -212,16 +212,16 @@ end
 -- the boss's state for the player: key, text, colour, background, border
 local function statusOf(boss)
     if not canFight(boss) then
-        return 'level', tr('Level %d', boss.level), '#ff9c8a', '#2a1515', '#5a2a2a'
+        return 'level', tr('Level %d', boss.level), '#f75f5f', '#484848', '#5a2a2a'
     end
     local left = waitLeft(boss)
     if left > 0 then
-        return 'wait', formatWait(left), '#e8c77a', '#2a2219', '#5c4a2c'
+        return 'wait', formatWait(left), '#e8c77a', '#484848', '#5c4a2c'
     end
     if busy(boss) > 0 then
-        return 'busy', tr('Em luta'), '#ffb36b', '#2a1d10', '#5a3d1e'
+        return 'busy', tr('Em luta'), '#f7a55f', '#484848', '#5a3d1e'
     end
-    return 'ready', tr('Pronto'), '#9fd99a', '#152015', '#2f4a2f'
+    return 'ready', tr('Pronto'), '#60f860', '#404040', '#2f4a2f'
 end
 
 local function isReady(boss)
@@ -232,8 +232,6 @@ local function paintPill(pill, boss)
     local _, text, color, back, border = statusOf(boss)
     pill:setText(text)
     pill:setColor(color)
-    pill:setBackgroundColor(back)
-    pill:setBorderColor(border)
 end
 
 -- the list's state, in words and in its colour: Pronto, the wait left, Em
@@ -273,7 +271,7 @@ local function teamOf(boss)
         if memberWait > 0 then
             list[#list + 1] = { member[1], tr('espera %s', formatWait(memberWait)), '#e8c77a' }
         elseif member[3] == 1 then
-            list[#list + 1] = { member[1], tr('não tem o level %d', boss.level), '#ff9c8a' }
+            list[#list + 1] = { member[1], tr('não tem o level %d', boss.level), '#f75f5f' }
         end
     end
     return list
@@ -295,7 +293,7 @@ local function showMessage(text, ok)
         removeEvent(messageEvent)
     end
     window.message:setText(text or '')
-    window.message:setColor(ok and '#9fd99a' or '#ff9c8a')
+    window.message:setColor(ok and '#60f860' or '#f75f5f')
     messageEvent = scheduleEvent(function()
         messageEvent = nil
         if window then
@@ -525,7 +523,7 @@ local function fillRow(row, boss)
         end
     end
     paintDot(row.status, boss)
-    row.info:setColor(recommended(boss) > 0 and readiness(boss) or '#a59d92')
+    row.info:setColor(recommended(boss) > 0 and readiness(boss) or '#909090')
     local fav = favorites[boss.name] and true or false
     if row.fav ~= fav then
         row.fav = fav
@@ -692,7 +690,7 @@ local function renderDifficulty(panel, boss)
     local mine = state.level or 0
     if index == 1 then
         local gate = boss.level or 0
-        row('Level', gate > 0 and tr('%d ou mais', gate) or tr('livre'), mine >= gate and '#9fd99a' or '#ff9c8a')
+        row('Level', gate > 0 and tr('%d ou mais', gate) or tr('livre'), mine >= gate and '#60f860' or '#f75f5f')
         row('Boss', tr('como ele é; pode vir raro pela roleta'))
         row('Espera', formatWait(boss.wait or 0))
     else
@@ -700,7 +698,7 @@ local function renderDifficulty(panel, boss)
         local wait = boss.dwait and boss.dwait[index - 1] or 0
         wait = math.max(0, wait - (os.time() - receivedAt))
         local price = math.floor((boss.power or 0) * (level.goldPerLevel or 0))
-        row('Level', tr('%d ou mais', gate), mine >= gate and '#9fd99a' or '#ff9c8a')
+        row('Level', tr('%d ou mais', gate), mine >= gate and '#60f860' or '#f75f5f')
         row('Entrada', tr('%s gold por jogador', formatNumber(price)))
         row('Boss', tr('vida %s, dano %s e magias de tier', multiplier(level.health or 1), multiplier(level.damage or 1)))
         if (level.time or 1) > 1 then
@@ -711,7 +709,7 @@ local function renderDifficulty(panel, boss)
         if wait > 0 then
             row('Espera', tr('falta %s', longWait(wait)), '#e8c77a')
         else
-            row('Espera', tr('%d dias depois de enfrentar', level.lockDays or 7), '#9fd99a')
+            row('Espera', tr('%d dias depois de enfrentar', level.lockDays or 7), '#60f860')
         end
     end
     panel.note:setText(tr('Heroico e Mítico: todos do time precisam escolher a mesma dificuldade. Em qualquer uma, o boss ganha %d%% de vida por jogador a mais.', math.floor((info.teamHealth or 0) * 100 + 0.5)))
@@ -730,15 +728,14 @@ renderDetail = function()
         return
     end
     local key = statusOf(boss)
-    local aura = key == 'ready' and '#9fd99a' or key == 'busy' and '#ffb36b' or key == 'wait' and '#e8c77a' or '#ff9c8a'
-    d.pedestal.aura:setImageColor(aura)
     d.pedestal.creature:setOutfit(outfitOf(boss.outfit))
     paintPill(d.status, boss)
     d.name:setText(boss.name)
+    d:setText(boss.name)
     local levelText = recommended(boss) > 0 and tr('level %d', recommended(boss)) or tr('level livre')
     d.quest:setText(tr('%s · %s · espera %s', boss.quest or '', levelText, formatWait(boss.wait or 0)))
     d.quest:setTooltip((boss.level or 0) > 0 and tr('Level recomendado: %d. A alavanca abre no level %d.', recommended(boss), boss.level) or '')
-    d.quest:setColor(recommended(boss) > 0 and readiness(boss) or '#a59d92')
+    d.quest:setColor(recommended(boss) > 0 and readiness(boss) or '#909090')
     d.stats:destroyChildren()
     for _, stat in ipairs({ { 'EXPERIÊNCIA', shortNumber(boss.experience) }, { 'VIDA', shortNumber(boss.health) },
         { 'JOGADORES', boss.players > 1 and tr('%d ou mais', boss.players) or tr('1 a 5') } }) do
@@ -828,10 +825,10 @@ renderDetail = function()
     end
     if #warnings > 0 then
         p.note:setText(table.concat(warnings, '\n'))
-        p.note:setColor('#ffb36b')
+        p.note:setColor('#f7a55f')
     else
         p.note:setText(tr('Ninguém da sua party está impedido.'))
-        p.note:setColor('#9fd99a')
+        p.note:setColor('#60f860')
     end
 
     d.wiki:setText(tr('Ver na Wiki'))
@@ -896,7 +893,7 @@ local function showRoulette(data)
         end
         if key == 'normal' then
             roulette.result:setText(reward and tr('Sem raridade') or tr('Normal'))
-            roulette.result:setColor('#d6cfc2')
+            roulette.result:setColor('#c0c0c0')
             roulette.effects:setText(reward and tr('Um item comum, sem bônus de raridade.') or tr('Um boss comum, com o loot de sempre.'))
         else
             local color = TIER_COLORS[key] or '#ece6dc'
@@ -960,7 +957,7 @@ local function updateStatuses()
     end
     local panel = modules.game_brevespanel
     if panel and panel.setFeatureState then
-        panel.setFeatureState('bosses', ready > 0 and tostring(ready) or nil, '#7fd35a')
+        panel.setFeatureState('bosses', ready > 0 and tostring(ready) or nil, '#60f860')
     end
 end
 
@@ -1144,7 +1141,6 @@ function init()
     window = g_ui.displayUI('bosses')
     window:hide()
     window:setText(tr('Salão dos Bosses'))
-    window.closeX:setTooltip(tr('Fechar'))
     if window.quickSearch.setPlaceholder then window.quickSearch:setPlaceholder(tr('Buscar boss, quest ou item do loot')) end
     window.favChip:setText(tr('Favoritos'))
     window.favChip:setTooltip(tr('Só os bosses que você marcou com a estrela'))

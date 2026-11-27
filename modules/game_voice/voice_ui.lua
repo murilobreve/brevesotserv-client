@@ -15,8 +15,8 @@ local UI = VoiceUI
 local S = VoiceState
 local ST = S.ST
 
-local COLOR_OFF, COLOR_WAIT, COLOR_ON, COLOR_BAD = '#6f688a', '#e0c050', '#78d04c', '#e0604a'
-local NAME_COLOR, SELF_COLOR = '#d1ccd9', '#f3dcae'
+local COLOR_OFF, COLOR_WAIT, COLOR_ON, COLOR_BAD = '#707070', '#e0c050', '#78d04c', '#e0604a'
+local NAME_COLOR, SELF_COLOR = '#c0c0c0', '#f3dcae'
 local DIR_REFRESH_MS = 15000
 local REFILL_MS = 1000 -- a big room's churn redraws the panel at most this often
 local MAX_HEADS = 8
@@ -1428,7 +1428,7 @@ function UI.reportWindowFor(roomId, sid)
             return
         end
         w.sendButton:setEnabled(false)
-        w.status:setColor('#a39cbc')
+        w.status:setColor('#909090')
         w.status:setText(tr('Sending...'))
         removeEvent(reportWait)
         reportWait = scheduleEvent(function()

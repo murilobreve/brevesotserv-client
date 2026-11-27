@@ -43,7 +43,7 @@ local HANDS = { ['Two-handed'] = 'Duas mãos', ['One-handed'] = 'Uma mão' }
 
 local VOCATIONS = { K = 'Knight', P = 'Paladin', S = 'Sorcerer', D = 'Druid', M = 'Monk' }
 
-local GOOD, DIM, WARM, GOLD = '#8fdc5e', '#9789b3', '#f3dcae', '#e2c35a'
+local GOOD, DIM, WARM, GOLD = '#8fdc5e', '#909090', '#f3dcae', '#e2c35a'
 
 local list -- { { id, name, cat, level, voc, flags, sum, value, words }, ... }
 local byId = {}
@@ -217,7 +217,7 @@ local function fillList(box, page)
         end
         local sources = sourcesText(row)
         line.source:setText(sources ~= '' and sources or T('não se consegue aqui'))
-        line.source:setColor(sources ~= '' and DIM or '#6c6380')
+        line.source:setColor(sources ~= '' and DIM or '#707070')
         line.onClick = function() show('i:' .. row.id) end
     end
     local count = #found == 1 and T('1 item') or T('%s itens', num(#found))

@@ -21,7 +21,7 @@ RarityXpPack < BrevesRow
     margin-left: 8
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #e6e0f2
+    color: #dfdfdf
     phantom: true
 
   Label
@@ -31,7 +31,7 @@ RarityXpPack < BrevesRow
     margin-left: 8
     text-auto-resize: true
     font: verdana-11px-rounded
-    color: #7fd35a
+    color: #60f860
     phantom: true
 
   MythosButton
@@ -55,7 +55,7 @@ RarityXpShop < MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     height: 16
-    color: #e2a443
+    color: #f7a55f
 
   Label
     id: coinsTitle
@@ -64,7 +64,7 @@ RarityXpShop < MythosWindow
     margin-top: 10
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #f1d399
+    color: #dfdfdf
     !text: tr('With Mythos Coins')
 
   Label
@@ -72,7 +72,7 @@ RarityXpShop < MythosWindow
     anchors.right: parent.right
     anchors.verticalCenter: coinsTitle.verticalCenter
     text-auto-resize: true
-    color: #ab9fc6
+    color: #c0c0c0
 
   BrevesList
     id: coinsList
@@ -89,7 +89,7 @@ RarityXpShop < MythosWindow
     margin-top: 10
     text-auto-resize: true
     font: Verdana Bold-11px
-    color: #f1d399
+    color: #dfdfdf
     !text: tr('With Hunt Points')
 
   Label
@@ -97,7 +97,7 @@ RarityXpShop < MythosWindow
     anchors.right: parent.right
     anchors.verticalCenter: pointsTitle.verticalCenter
     text-auto-resize: true
-    color: #ab9fc6
+    color: #c0c0c0
 
   BrevesList
     id: pointsList
@@ -115,7 +115,7 @@ RarityXpShop < MythosWindow
     margin-top: 8
     height: 16
     text-align: center
-    color: #7fd35a
+    color: #60f860
 
   // no coins: the site sells them
   MythosButton

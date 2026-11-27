@@ -37,7 +37,7 @@ RareSellRow < BrevesRow
     margin-right: 6
     width: 90
     text-align: right
-    color: #e2a443
+    color: #f7a55f
     phantom: true
 
   Label
@@ -58,7 +58,7 @@ RareSellRow < BrevesRow
     margin-top: 2
     height: 14
     font: verdana-11px-monochrome
-    color: #ab9fc6
+    color: #c0c0c0
     phantom: true
 
 RareSellRowEven < RareSellRow
@@ -147,7 +147,7 @@ MythosWindow
     margin-bottom: 6
     height: 28
     text-wrap: true
-    color: #7fd35a
+    color: #60f860
 
   MythosSeparator
     id: bottomSep
@@ -162,7 +162,7 @@ MythosWindow
     anchors.right: sellButton.left
     anchors.verticalCenter: closeButton.verticalCenter
     margin-right: 8
-    color: #e2a443
+    color: #f7a55f
 
   MythosPrimaryButton
     id: sellButton

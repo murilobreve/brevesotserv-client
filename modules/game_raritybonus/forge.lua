@@ -62,7 +62,7 @@ end
 -- element in its own colour. A slice at an even place takes a darker shade,
 -- so two neighbours of one colour still read as two slices
 local SLICE_COLORS = {
-    attack = '#8f3524', magic = '#5a45a0', defense = '#3f5a78', life = '#8c2f58', mana = '#2a4f9a', utility = '#8a6a26',
+    attack = '#8f3524', magic = '#707070', defense = '#3f5a78', life = '#8c2f58', mana = '#2a4f9a', utility = '#8a6a26',
     fire = '#a8451c', earth = '#2f7038', energy = '#7a2f96', ice = '#1f7a94', holy = '#978628', death = '#3d3a47',
     phys = '#5b6470',
 }
@@ -334,7 +334,7 @@ local function setStatus(text, color)
         text = text or ''
         status:setText(#text > STATUS_MAX and (text:sub(1, STATUS_MAX - 3) .. '...') or text)
         status:setTooltip(#text > STATUS_MAX and Forge.wrapTip(text) or nil)
-        status:setColor(color or '#7fd35a')
+        status:setColor(color or '#60f860')
     end
 end
 
@@ -399,8 +399,8 @@ local function fillGrid(grid, list)
         local w = g_ui.createWidget('ForgeSlot', grid)
         setItem(w.item, entry)
         if entry.slotId == selected then
-            w:setBackgroundColor('#b296f530')
-            w:setBorderColor('#b296f5')
+            w:setBackgroundColor('#585858')
+            w:setBorderColor('#c0c0c0')
         end
         if type(entry.card) == 'table' then
             hoverCard(w, entry)
@@ -576,7 +576,7 @@ local function setSteps(box, stage, entry)
     steps.a1:setText('>')
     steps.a2:setText('>')
     for i = 1, 3 do
-        steps['s' .. i]:setColor(i == at and '#eee6d4' or '#6f6880')
+        steps['s' .. i]:setColor(i == at and '#eee6d4' or '#707070')
     end
     local odds = {}
     for i, pct in ipairs((entry and entry.counts) or {}) do
@@ -627,7 +627,7 @@ local function fillRows(entry)
             -- an empty slot: a roll may fill it
             row.seal:setVisible(false)
             row.text:setText(tr('Empty'))
-            row.text:setColor('#5f5870')
+            row.text:setColor('#707070')
             row:setBackgroundColor('#00000000')
             row.delta:setText('')
             row.quality:setText('')
@@ -668,7 +668,7 @@ local function fillRows(entry)
                 row:setBorderColor('#8a6f33')
             elseif wait then
                 row.text:setText(tr('Bonus %d: waiting', i))
-                row.text:setColor('#6f6880')
+                row.text:setColor('#707070')
             else
                 row.text:setText(bonusText(bonus))
                 row.text:setColor(look[3])
@@ -713,7 +713,7 @@ local function fillRows(entry)
                 row.delta:setColor('#c9a4ff')
             elseif d then
                 row.delta:setText(math.abs(d) < 0.05 and '=' or ((d > 0 and '+' or '-') .. number(math.abs(math.floor(d * 10 + 0.5) / 10))))
-                row.delta:setColor(d > 0.05 and '#7fd36a' or d < -0.05 and '#ff7a6a' or '#898293')
+                row.delta:setColor(d > 0.05 and '#7fd36a' or d < -0.05 and '#ff7a6a' or '#909090')
             else
                 row.delta:setText('')
             end
@@ -756,7 +756,7 @@ local function fillWheelBox(entry)
             table.insert(names, bonusName(p))
         end
         box.caption:setText(tr('%d bonuses can come out', #pool))
-        box.caption:setColor('#d1ccd9')
+        box.caption:setColor('#c0c0c0')
         box.caption:setTooltip(Forge.wrapTip(table.concat(names, ', ')))
         setDisc(box, nil)
         setSteps(box, nil, entry)
@@ -830,7 +830,7 @@ local function fillRoll(entry)
     bar.costXp:setText(tr('%d Rarity XP', cost))
     bar.costXp:setColor(short and '#ff7a6a' or '#c9a4ff')
     bar.haveXp:setText(tr('you have %d', rarityXp))
-    bar.haveXp:setColor(short and '#ff7a6a' or '#898293')
+    bar.haveXp:setColor(short and '#ff7a6a' or '#909090')
     local width = bar.xpBar:getWidth()
     bar.xpBar.fill:setWidth(math.floor((width > 0 and width or 300) * math.min(1, cost > 0 and rarityXp / cost or 1)))
     -- the gold only when a bonus is kept
@@ -1031,7 +1031,7 @@ local function fillTotals()
             local sum = tonumber(t.total) or 0
             local full = cap and (t.capped or sum >= cap)
             row.name:setText(bonusName(t))
-            row.name:setColor(full and '#e2c46a' or '#d1ccd9')
+            row.name:setColor(full and '#e2c46a' or '#c0c0c0')
             row.total:setText(plus(sum, unit) .. (cap and (' / ' .. number(cap) .. unit) or ''))
             row.total:setColor(full and '#e2c46a' or '#eee6d4')
             -- the items that give it, under the mouse
@@ -1553,7 +1553,7 @@ function Forge.onBonuses(d)
         answerEvent = nil
     end
     local message = messageOf(d)
-    local color = d.ok == false and '#ff6464' or '#7fd35a'
+    local color = d.ok == false and '#ff6464' or '#60f860'
     rarityXp = tonumber(d.rarityXp) or rarityXp
     gold = tonumber(d.gold) or gold
     if res and roll and roll.phase == 'wait' then

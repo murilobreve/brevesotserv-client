@@ -568,5 +568,5 @@ function VS.onLevel(db)
     local meter = window.audio.meter
     db = S.num(db, -60, 0, -60) -- NaN would reach setWidth as a huge negative
     meter.fill:setWidth(math.floor(meter:getWidth() * (db + 60) / 60))
-    meter.fill:setBackgroundColor(db >= getPrefs().vadDb and '#78d04c' or '#6f688a')
+    meter.fill:setBackgroundColor(db >= getPrefs().vadDb and '#78d04c' or '#707070')
 end

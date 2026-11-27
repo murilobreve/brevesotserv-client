@@ -29,7 +29,7 @@ MarketRow < BrevesRow
     width: 110
     height: 14
     text-align: right
-    color: #e9e6f0
+    color: #dfdfdf
     phantom: true
 
   UIWidget
@@ -51,7 +51,7 @@ MarketRow < BrevesRow
     height: 14
     text-align: right
     font: verdana-11px-monochrome
-    color: #9789b3
+    color: #909090
     phantom: true
 
   Label
@@ -72,7 +72,7 @@ MarketRow < BrevesRow
     margin-top: 4
     height: 14
     font: verdana-11px-monochrome
-    color: #ab9fc6
+    color: #c0c0c0
     phantom: true
 
 MarketRowEven < MarketRow
@@ -84,7 +84,7 @@ MarketTab < BrevesTab
 
 AffixLine < Label
   height: 15
-  color: #7fd35a
+  color: #60f860
   text-align: left
 
 MarketList < BrevesList
@@ -129,7 +129,7 @@ MythosWindow
     anchors.verticalCenter: browseTab.verticalCenter
     margin-right: 5
     text-auto-resize: true
-    color: #e9e6f0
+    color: #dfdfdf
 
   MythosSeparator
     id: topSep
@@ -156,7 +156,7 @@ MythosWindow
       margin-right: 5
       height: 22
       !placeholder: tr('Search by name...')
-      placeholder-color: #75688f
+      placeholder-color: #707070
       @onTextChange: modules.game_raritymarket.onSearchChanged()
 
     // all offers, Buy Now only, auctions only
@@ -212,7 +212,7 @@ MythosWindow
       id: offersEmpty
       anchors.centerIn: offersList
       font: verdana-11px-monochrome
-      color: #9789b3
+      color: #909090
       text-auto-resize: true
       visible: false
 
@@ -239,7 +239,7 @@ MythosWindow
       anchors.verticalCenter: prevPage.verticalCenter
       text-align: center
       font: verdana-11px-monochrome
-      color: #cbc0e0
+      color: #c0c0c0
 
   // ---------------------------------------------------------------- sell
   Panel
@@ -254,7 +254,7 @@ MythosWindow
       anchors.right: parent.right
       height: 22
       font: verdana-11px-monochrome
-      color: #cbc0e0
+      color: #c0c0c0
       !text: tr('Rarity items you are carrying (hands and backpack):')
 
     MarketList
@@ -279,7 +279,7 @@ MythosWindow
       id: sellEmpty
       anchors.centerIn: sellList
       font: verdana-11px-monochrome
-      color: #9789b3
+      color: #909090
       text-auto-resize: true
       visible: false
       !text: tr('You are not carrying any rarity items.')
@@ -297,7 +297,7 @@ MythosWindow
       anchors.right: parent.right
       height: 18
       font: verdana-11px-monochrome
-      color: #cbc0e0
+      color: #c0c0c0
       !text: tr('Your active listings')
 
     MarketList
@@ -320,7 +320,7 @@ MythosWindow
       id: activeEmpty
       anchors.centerIn: activeList
       font: verdana-11px-monochrome
-      color: #9789b3
+      color: #909090
       text-auto-resize: true
       visible: false
       !text: tr('You have no active listings.')
@@ -333,7 +333,7 @@ MythosWindow
       margin-top: 10
       height: 18
       font: verdana-11px-monochrome
-      color: #cbc0e0
+      color: #c0c0c0
       !text: tr('Recently sold')
 
     MarketList
@@ -356,7 +356,7 @@ MythosWindow
       id: soldEmpty
       anchors.centerIn: soldList
       font: verdana-11px-monochrome
-      color: #9789b3
+      color: #909090
       text-auto-resize: true
       visible: false
       !text: tr('Nothing sold yet.')
@@ -378,7 +378,7 @@ MythosWindow
       id: placeholder
       anchors.centerIn: parent
       font: verdana-11px-monochrome
-      color: #9789b3
+      color: #909090
       text-auto-resize: true
       !text: tr('Select an item to see its details.')
 
@@ -423,7 +423,7 @@ MythosWindow
         anchors.right: parent.right
         margin-top: 4
         text-align: center
-        color: #9789b3
+        color: #909090
 
       MythosSeparator
         id: sep1
@@ -438,7 +438,7 @@ MythosWindow
         anchors.left: parent.left
         anchors.right: parent.right
         margin-top: 8
-        color: #d3cee0
+        color: #c0c0c0
 
       Panel
         id: lines
@@ -468,7 +468,7 @@ MythosWindow
         margin-top: 8
         text-wrap: true
         text-auto-resize: true
-        color: #9789b3
+        color: #909090
 
       MythosPrimaryButton
         id: actionButton
@@ -496,7 +496,7 @@ MythosWindow
         id: priceCaption
         anchors.left: parent.left
         anchors.verticalCenter: priceEdit.verticalCenter
-        color: #d3cee0
+        color: #c0c0c0
         text-auto-resize: true
         !text: tr('Your price (gold):')
 
@@ -515,14 +515,14 @@ MythosWindow
         margin-right: 5
         text-auto-resize: true
         font: verdana-11px-rounded
-        color: #e2a443
+        color: #f7a55f
 
       Label
         id: priceTitle
         anchors.left: parent.left
         anchors.verticalCenter: priceGold.verticalCenter
         text-auto-resize: true
-        color: #d3cee0
+        color: #c0c0c0
         !text: tr('Price:')
 
       Label
@@ -531,7 +531,7 @@ MythosWindow
         anchors.right: parent.right
         anchors.bottom: priceGold.top
         margin-bottom: 8
-        color: #9789b3
+        color: #909090
         text-wrap: true
         text-auto-resize: true
 
@@ -545,7 +545,7 @@ MythosWindow
         size: 150 22
         max-length: 9
         !placeholder: tr('optional')
-        placeholder-color: #75688f
+        placeholder-color: #707070
         visible: false
         @onTextChange: modules.game_raritymarket.onPriceChanged()
 
@@ -553,7 +553,7 @@ MythosWindow
         id: buyNowCaption
         anchors.left: parent.left
         anchors.verticalCenter: buyNowEdit.verticalCenter
-        color: #d3cee0
+        color: #c0c0c0
         text-auto-resize: true
         visible: false
         !text: tr('Buy Now (gold):')
@@ -570,7 +570,7 @@ MythosWindow
         id: hoursCaption
         anchors.left: parent.left
         anchors.verticalCenter: hoursBox.verticalCenter
-        color: #d3cee0
+        color: #c0c0c0
         text-auto-resize: true
         visible: false
         !text: tr('Duration:')

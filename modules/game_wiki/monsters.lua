@@ -37,7 +37,7 @@ local ELEMENTS = {
     agony = { '#c43b8f', 'Agonia' },
     healing = { '#7ee08a', 'Cura' },
     speed = { '#e6d28a', 'Velocidade' },
-    other = { '#a39a8b', 'Outros' },
+    other = { '#909090', 'Outros' },
 }
 local ABILITY_ORDER = { 'physical', 'earth', 'fire', 'energy', 'ice', 'holy', 'death', 'lifedrain', 'manadrain', 'drown', 'agony', 'healing', 'speed', 'other' }
 -- the element grid: the eight of the bestiary always, these two when not 100%
@@ -70,7 +70,7 @@ local BANDS = {
     { 'Semi-raro', 1000 }, { 'Raro', 501 }, { 'Muito raro', 0 },
 }
 
-local GOOD, BAD, DIM, WARM = '#8fdc5e', '#ef7a62', '#9789b3', '#f3dcae'
+local GOOD, BAD, DIM, WARM = '#8fdc5e', '#ef7a62', '#909090', '#f3dcae'
 
 local function T(text, ...)
     return WIKI_TEXT.T(text, ...)
@@ -279,7 +279,7 @@ local function fillList(box)
         if cell.sort then
             local active = cell.sort == filter.sort
             cell:setText(cell.label .. (active and (filter.desc and ' v' or ' ^') or ''))
-            cell:setColor(active and '#f3dcae' or '#b4afc3')
+            cell:setColor(active and '#f3dcae' or '#c0c0c0')
         end
     end
     box.head.chance:setVisible(WIKI_TEXT.plain(filter.loot:trim()):len() >= 2)
@@ -861,12 +861,12 @@ function WIKI_BUILDERS.elements(parent, block)
             widget:setTooltip(T('Imune'))
         elseif cell.value < 100 then
             widget.value:setColor('#f1c84b')
-            widget:setBackgroundColor('#2c261080')
+            widget:setBackgroundColor('#36363680')
             widget:setBorderColor('#5b4d17')
             widget:setTooltip(T('Resiste: toma %d%% do dano', cell.value))
         elseif cell.value > 100 then
             widget.value:setColor(GOOD)
-            widget:setBackgroundColor('#1b2b1580')
+            widget:setBackgroundColor('#36363680')
             widget:setBorderColor('#3a5a2a')
             widget:setTooltip(T('Fraco: toma %d%% do dano', cell.value))
         end

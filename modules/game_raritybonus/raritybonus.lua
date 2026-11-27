@@ -305,7 +305,7 @@ local function onOpcode(protocol, opcode, data)
             local code = type(result) == 'table' and result.code
             if code == 'bought' or code == 'coins' or code == 'points' or code == 'pack' then
                 shopWindow.status:setText(window.bottomBar.status:getText())
-                shopWindow.status:setColor(data.ok == false and '#ff6464' or '#7fd35a')
+                shopWindow.status:setColor(data.ok == false and '#ff6464' or '#60f860')
             end
         end
         if not window:isVisible() then

@@ -489,7 +489,7 @@ local function bindRow(row, index)
             return
         end
         local value = readNumber(text)
-        row.value1:setColor((text == '' or value) and '#e6e2ee' or '#ff7a6b')
+        row.value1:setColor((text == '' or value) and '#dfdfdf' or '#f75f5f')
         if step.kind == 'top' then
             step.n = value and math.floor(value) or nil
         else
@@ -502,7 +502,7 @@ local function bindRow(row, index)
             return
         end
         local value = readNumber(text)
-        row.value2:setColor((text == '' or value) and '#e6e2ee' or '#ff7a6b')
+        row.value2:setColor((text == '' or value) and '#dfdfdf' or '#f75f5f')
         step.v2 = value
         onAdvancedEdited()
     end
@@ -599,7 +599,7 @@ function advancedShowResult(total, counts, final, list)
     for i, row in ipairs(advWindow.steps:getChildren()) do
         local count = counts and counts[i]
         row.number:setTooltip(count and tr('%d monsters left after this step', count) or tr('This step does nothing yet'))
-        row.number:setColor(count and '#e2a443' or '#75688f')
+        row.number:setColor(count and '#f7a55f' or '#707070')
     end
     -- the fields the steps use that the base columns do not show
     local extra, seen = {}, {}
@@ -616,7 +616,7 @@ function advancedShowResult(total, counts, final, list)
     list = list or {}
     if #list == 0 then
         local row = g_ui.createWidget('AdvPreviewRow', panel)
-        row:setColor('#75688f')
+        row:setColor('#707070')
         row:setText(tr('No monster passes these steps.'))
         return
     end
@@ -636,11 +636,11 @@ function advancedShowResult(total, counts, final, list)
         end
         local row = g_ui.createWidget('AdvPreviewRow', panel)
         row:setText(table.concat(parts, '   '))
-        row:setColor(i == 1 and '#ffe066' or (i == 2 and '#f0f0f0' or (i == 3 and '#ffc08a' or '#cbc0e0')))
+        row:setColor(i == 1 and '#ffe066' or (i == 2 and '#f0f0f0' or (i == 3 and '#ffc08a' or '#c0c0c0')))
     end
     if #list > PREVIEW_ROWS then
         local row = g_ui.createWidget('AdvPreviewRow', panel)
-        row:setColor('#75688f')
+        row:setColor('#707070')
         row:setText(tr('... and %d more in the list.', #list - PREVIEW_ROWS))
     end
 end

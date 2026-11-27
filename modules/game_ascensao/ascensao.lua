@@ -12,9 +12,9 @@ local confirmBox
 local panelButton
 
 local COLORS = {
-    owned = { name = '#f3dcae', desc = '#d8cfbf', border = '#8a7d5c', number = '#170f24', numberBg = '#f3dcae' },
-    next = { name = '#ffffff', desc = '#cbc0e0', border = '#b296f5', number = '#ffffff', numberBg = '#b296f560' },
-    locked = { name = '#7d7590', desc = '#6f6782', border = '#3a3346', number = '#6f6782', numberBg = '#00000060' },
+    owned = { name = '#f3dcae', desc = '#c0c0c0', border = '#909090', number = '#272727', numberBg = '#f3dcae' },
+    next = { name = '#ffffff', desc = '#c0c0c0', border = '#c0c0c0', number = '#ffffff', numberBg = '#ffffff60' },
+    locked = { name = '#707070', desc = '#707070', border = '#272727', number = '#909090', numberBg = '#00000060' },
 }
 
 local function send(data)
@@ -138,7 +138,7 @@ end
 
 -- what is not bought yet goes grey: the art has no grey version of its own
 local function setLocked(widget, locked)
-    widget:setImageColor(locked and '#6a6478' or '#ffffff')
+    widget:setImageColor(locked and '#707070' or '#ffffff')
     widget:setOpacity(locked and 0.75 or 1)
 end
 

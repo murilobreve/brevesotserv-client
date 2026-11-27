@@ -16,7 +16,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.left: parent.left
     anchors.right: parent.right
     font: verdana-11px-antialised
-    color: #e6e0f2
+    color: #dfdfdf
     text-wrap: true
     text-auto-resize: true
     !text: tr('Talk while you play: the microphone opens by itself when you speak. Not to be heard, mute the microphone or leave the room.')
@@ -28,7 +28,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 8
     font: verdana-11px-antialised
-    color: #c9c0cf
+    color: #c0c0c0
     text-wrap: true
     text-auto-resize: true
     !text: tr('Use headphones: speakers make an echo for the others.')
@@ -41,7 +41,7 @@ VoiceOnboardWindow < MythosWindow
     margin-top: 8
     margin-right: 6
     font: verdana-11px-antialised
-    color: #c9c0cf
+    color: #c0c0c0
     text-wrap: true
     text-auto-resize: true
     !text: tr('Be respectful: insults, harassment and noise are punished.')
@@ -61,7 +61,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 14
     font: verdana-11px-rounded
-    color: #f3dcae
+    color: #dfdfdf
     text-wrap: true
     text-auto-resize: true
     !text: tr('If you would rather hold a key to talk, click the box and press it:')
@@ -75,7 +75,7 @@ VoiceOnboardWindow < MythosWindow
     image-source: /images/mythos/input
     image-border: 3
     font: Verdana Bold-11px
-    color: #e6e2ee
+    color: #dfdfdf
     text-align: center
     focusable: true
     change-cursor-image: true
@@ -92,7 +92,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 4
     font: verdana-11px-antialised
-    color: #8f88a3
+    color: #909090
     text-align: center
     text-wrap: true
     text-auto-resize: true
@@ -104,7 +104,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 2
     font: verdana-11px-antialised
-    color: #e0604a
+    color: #f75f5f
     text-align: center
     text-wrap: true
     text-auto-resize: true
@@ -117,7 +117,7 @@ VoiceOnboardWindow < MythosWindow
     anchors.right: parent.right
     margin-top: 8
     font: verdana-11px-antialised
-    color: #d1ccd9
+    color: #c0c0c0
     visible: false
     !text: tr('Also talk with the mouse side button (Mouse 4)')
 
