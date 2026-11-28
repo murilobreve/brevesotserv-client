@@ -5,10 +5,18 @@
 local window, toolbarButton, countEvent
 local cfg
 local CONFIG_VERSION = 4
-local SPELL_RULES, POTION_RULES, FRIEND_RULES = 4, 3, 2
+-- (6, 5 and 4 since 2026-11-28: a rule saved before keeps its place, the new
+-- ones come off and empty)
+local SPELL_RULES, POTION_RULES, FRIEND_RULES = 6, 5, 4
 local FRIEND_PARTY, FRIEND_ANYONE = HealData.FRIEND_PARTY, HealData.FRIEND_ANYONE
 local PAGES = { 'healing', 'potions', 'friends', 'support', 'caster', 'loot' }
-local CASTER_SPELLS, CASTER_RUNES, CASTER_COUNT, CASTER_PRESETS = 6, 3, 10, 5
+local CASTER_SPELLS, CASTER_RUNES, CASTER_COUNT, CASTER_PRESETS = 8, 4, 10, 5
+-- which monster the auto attack takes (engine.lua, autoAttack)
+local CASTER_PICKS = { 'near', 'weak', 'strong' }
+local CASTER_PICK_NAMES = { near = 'Nearest', weak = 'Least health', strong = 'Most health' }
+-- the bot's own keys (Options, Hotkeys): none until the player sets them
+local KEY_CATEGORY = 'Heal Bot'
+local KEY_BOT, KEY_CASTER, KEY_PRESET = 'Ligar/desligar o bot', 'Ligar/desligar o Caster', 'Trocar o preset do Caster'
 local PAGE_ICONS = {
     healing = '/images/icons/icon-healing',
     potions = '/images/icons/icon_health',
@@ -133,6 +141,8 @@ local function defaults(player)
         antiIdle = true,
         -- "Using one of 37 great health potions..." when a potion is used
         usingMsg = true,
+        -- a red line on the screen when a rule wants a potion and none is left
+        potionAlert = true,
         -- `below` is the mana it trains from (the slider is shared)
         train = { on = false, spell = bestTrainSpell(HealData.trainSpells(vocation)), below = 90 },
     }
@@ -140,15 +150,21 @@ local function defaults(player)
     -- spells tried from the top, each with the mana it needs left (`below`)
     -- and the monsters it waits for, and a list of runes. The player keeps
     -- CASTER_PRESETS of them (one per hunt, say) and picks which is in use.
-    -- Off until the player turns it on
-    config.caster = { on = false, noPlayers = true, runesFirst = false, autoAttack = false, current = 1, presets = {} }
+    -- A rule's `hp` is the health the target must still have (0: any).
+    -- `safeOn`/`safeHp`: no attack spell or rune with the character's own
+    -- health under it. `pick`: which monster the auto attack takes
+    -- (CASTER_PICKS). Off until the player turns it on
+    config.caster = {
+        on = false, noPlayers = true, runesFirst = false, autoAttack = false, pick = 'near',
+        safeOn = false, safeHp = 40, current = 1, presets = {},
+    }
     for p = 1, CASTER_PRESETS do
         local preset = { name = 'Preset ' .. p, spells = {}, runes = {} }
         for i = 1, CASTER_SPELLS do
-            preset.spells[i] = { on = false, spell = 0, below = 10, count = 1 }
+            preset.spells[i] = { on = false, spell = 0, below = 10, hp = 0, count = 1 }
         end
         for i = 1, CASTER_RUNES do
-            preset.runes[i] = { on = false, item = 0, count = 1 }
+            preset.runes[i] = { on = false, item = 0, hp = 0, count = 1 }
         end
         config.caster.presets[p] = preset
     end
@@ -219,14 +235,41 @@ local function sanitize(config, vocation)
     check(config.support.shield, 'spell', HealData.shieldSpells(vocation))
     check(config.support.haste, 'spell', HealData.hasteSpells(vocation))
     check(config.support.train, 'spell', HealData.trainSpells(vocation))
+    -- a number out of its range (a file edited by hand, or cut short by a
+    -- crash) goes back into it: the engine compares with these every tick
+    local function clamp(rule, field, low, high, fallback)
+        local value = math.floor(tonumber(rule[field]) or fallback)
+        rule[field] = math.max(low, math.min(high, value))
+    end
+    for _, list in ipairs({ config.spells, config.potions, config.friends }) do
+        for _, rule in ipairs(list) do
+            clamp(rule, 'below', 1, 99, 50)
+        end
+    end
+    for _, list in ipairs({ config.spells, config.potions }) do
+        for _, rule in ipairs(list) do
+            if rule.stat ~= 'mp' then
+                rule.stat = 'hp'
+            end
+        end
+    end
     local attack = HealData.attackSpells(vocation)
     for _, preset in ipairs(config.caster.presets) do
         for _, rule in ipairs(preset.spells) do
             check(rule, 'spell', attack)
+            clamp(rule, 'below', 0, 99, 10)
+            clamp(rule, 'hp', 0, 99, 0)
+            clamp(rule, 'count', 1, CASTER_COUNT, 1)
         end
         for _, rule in ipairs(preset.runes) do
             check(rule, 'item', HealData.runes)
+            clamp(rule, 'hp', 0, 99, 0)
+            clamp(rule, 'count', 1, CASTER_COUNT, 1)
         end
+    end
+    clamp(config.caster, 'safeHp', 1, 99, 40)
+    if not table.contains(CASTER_PICKS, config.caster.pick) then
+        config.caster.pick = CASTER_PICKS[1]
     end
     config.caster.current = math.max(1, math.min(#config.caster.presets, math.floor(tonumber(config.caster.current) or 1)))
 end
@@ -667,13 +710,15 @@ local function compact(rules, field)
     return #used
 end
 
--- the percentage typed in a rule's box (mana it needs left)
-local function bindPercent(edit, rule, field, low, high)
+-- a percentage typed in a box: the mana a rule needs left, the health its
+-- target must still have, the health the caster stops at
+local function bindPercent(edit, rule, field, low, high, tooltip)
     local function show()
         edit:setText(tostring(rule[field]))
     end
+    edit.onTextChange = nil
     show()
-    edit:setTooltip(tr('Cast only with this much mana or more.'))
+    edit:setTooltip(tooltip)
     edit.onTextChange = function(_, text)
         local digits = text:gsub('[^%d]', '')
         if digits ~= text then
@@ -740,7 +785,7 @@ end
 local function addCasterSpell(list, rules, index, used, spells)
     local rule = rules[index]
     local widget = g_ui.createWidget('CasterSpellRow', list)
-    bindRow(widget, rules, index, used, 'spell', { on = false, spell = 0, below = 10, count = 1 })
+    bindRow(widget, rules, index, used, 'spell', { on = false, spell = 0, below = 10, hp = 0, count = 1 })
     -- a wave or a beam says so: the character is turned for it
     local function showSpell(id)
         local spell = HealData.spell(id)
@@ -759,14 +804,15 @@ local function addCasterSpell(list, rules, index, used, spells)
         HealEngine.forget(id)
         showSpell(id)
     end)
-    bindPercent(widget.below, rule, 'below', 0, 99)
+    bindPercent(widget.below, rule, 'below', 0, 99, tr('Cast only with this much mana or more.'))
+    bindPercent(widget.hp, rule, 'hp', 0, 99, tr('Used only on a target with this much health or more. 0: on any.'))
     bindCount(widget.count, rule)
 end
 
 local function addCasterRune(list, rules, index, used)
     local rule = rules[index]
     local widget = g_ui.createWidget('CasterRuneRow', list)
-    bindRow(widget, rules, index, used, 'item', { on = false, item = 0, count = 1 })
+    bindRow(widget, rules, index, used, 'item', { on = false, item = 0, hp = 0, count = 1 })
     widget.item:setItemId(rule.item)
     fillCombo(widget.choice, HealData.runes, rule.item, function(rune)
         return rune.name
@@ -776,14 +822,21 @@ local function addCasterRune(list, rules, index, used)
         widget.enabled:setChecked(rule.on)
         widget.item:setItemId(id)
     end)
+    bindPercent(widget.hp, rule, 'hp', 0, 99, tr('Used only on a target with this much health or more. 0: on any.'))
     bindCount(widget.count, rule)
 end
 
 -- one part of the list: its heading, the rules in use and the button that
 -- opens the next one
 local function addCasterPart(list, title, rules, field, addText, add)
-    g_ui.createWidget('CasterHeading', list):setText(title)
     local used = compact(rules, field)
+    local heading = g_ui.createWidget('CasterHeading', list)
+    heading.title:setText(title)
+    -- the names of the columns, over the boxes of the rules (none to name
+    -- while the part is empty; runes have no mana box)
+    heading.mana:setVisible(used > 0 and field == 'spell')
+    heading.hp:setVisible(used > 0)
+    heading.count:setVisible(used > 0)
     for index = 1, used do
         add(index, used)
     end
@@ -808,7 +861,21 @@ fillCaster = function()
     bindCheck(page.noPlayers, caster, 'noPlayers')
     bindCheck(page.runesFirst, caster, 'runesFirst')
     bindCheck(page.autoAttack, caster, 'autoAttack')
-    page.autoAttack:setTooltip(tr('With no monster being attacked, attack the nearest one on screen that can be reached'))
+    page.autoAttack:setTooltip(tr('With no monster being attacked, attack one on screen that can be reached'))
+    page.pick.onOptionChange = nil
+    page.pick:clearOptions()
+    for _, pick in ipairs(CASTER_PICKS) do
+        page.pick:addOption(tr(CASTER_PICK_NAMES[pick]), pick)
+    end
+    page.pick:setCurrentOptionByData(caster.pick, true)
+    page.pick.onOptionChange = function(_, _, data)
+        caster.pick = data
+        save()
+    end
+    page.pick:setTooltip(tr('Which monster the auto attack takes. Of two as good, the nearer.'))
+    bindCheck(page.safe, caster, 'safeOn')
+    page.safe:setTooltip(tr('With your health under this, no attack spell and no rune: the mana stays for the heals.'))
+    bindPercent(page.safeHp, caster, 'safeHp', 1, 99, tr('Type the percentage, from %d to %d.', 1, 99))
     page.noPlayers:setTooltip(tr('Wait while a player who is not of my party is on screen'))
 
     -- the presets by number and name; the box beside it renames the one in use
@@ -843,7 +910,7 @@ fillCaster = function()
     local list = page.list
     list:destroyChildren()
     local spells = HealData.attackSpells(HealData.vocation(player))
-    addCasterPart(list, tr('Spells: the first that fits, from the top'), preset.spells, 'spell', tr('+ Add spell'), function(index, used)
+    addCasterPart(list, tr('Spells, tried from the top'), preset.spells, 'spell', tr('+ Add spell'), function(index, used)
         addCasterSpell(list, preset.spells, index, used, spells)
     end)
     addCasterPart(list, tr('Runes on the target'), preset.runes, 'item', tr('+ Add rune'), function(index, used)
@@ -874,6 +941,9 @@ fill = function()
     local using = g_ui.createWidget('CureRule', page)
     bindCheck(using.enabled, cfg.support, 'usingMsg')
     using.note:setText(tr('Show the "Using one of ... potions" message'))
+    local alert = g_ui.createWidget('CureRule', page)
+    bindCheck(alert.enabled, cfg.support, 'potionAlert')
+    alert.note:setText(tr('Warn me when a potion of a rule runs out'))
 
     page = window.content.friendsPage
     clearRules(page)
@@ -964,6 +1034,23 @@ local function onAction(message)
     end
 end
 
+-- what must not go unseen (a potion that ran out): the red line in the
+-- middle of the screen, and the window's own line
+local function onAlert(message)
+    onAction(message)
+    if modules.game_textmessage then
+        modules.game_textmessage.displayBroadcastMessage(message)
+    end
+end
+
+-- a key changed something with the window closed: the status line says what
+local function say(message)
+    onAction(message)
+    if modules.game_textmessage then
+        modules.game_textmessage.displayStatusMessage(message)
+    end
+end
+
 function setRunning(value, keep)
     HealEngine.setRunning(value)
     if cfg and not keep and cfg.running ~= HealEngine.isRunning() then
@@ -974,6 +1061,90 @@ function setRunning(value, keep)
         window.master:setChecked(HealEngine.isRunning())
     end
     updateButton()
+end
+
+-- the keys (Options, Hotkeys, "Heal Bot"): the bot on and off, the caster on
+-- and off, the next caster preset that has a rule
+function toggleBot()
+    if not cfg or not g_game.isOnline() then
+        return
+    end
+    setRunning(not HealEngine.isRunning())
+    say(HealEngine.isRunning() and tr('Heal Bot on') or tr('Heal Bot off'))
+end
+
+function toggleCaster()
+    if not cfg or not g_game.isOnline() then
+        return
+    end
+    cfg.caster.on = not cfg.caster.on
+    save()
+    if window and window:isVisible() then
+        window.content.casterPage.on:setChecked(cfg.caster.on)
+    end
+    say(cfg.caster.on and tr('Caster on') or tr('Caster off'))
+end
+
+local function presetInUse(preset)
+    for _, rule in ipairs(preset.spells) do
+        if (tonumber(rule.spell) or 0) ~= 0 then
+            return true
+        end
+    end
+    for _, rule in ipairs(preset.runes) do
+        if (tonumber(rule.item) or 0) ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
+function nextPreset()
+    if not cfg or not g_game.isOnline() then
+        return
+    end
+    local caster = cfg.caster
+    local count = #caster.presets
+    for step = 1, count do
+        local index = (caster.current - 1 + step) % count + 1
+        if index == caster.current or presetInUse(caster.presets[index]) then
+            caster.current = index
+            break
+        end
+    end
+    save()
+    if window and window:isVisible() then
+        fillCaster()
+    end
+    say(tr('Caster preset: %s', caster.presets[caster.current].name))
+end
+
+local keysOn = false
+
+local function registerKeys()
+    if keysOn or not Keybind then
+        return
+    end
+    keysOn = true
+    -- a failure here never stops the bot
+    pcall(function()
+        for action, callback in pairs({ [KEY_BOT] = toggleBot, [KEY_CASTER] = toggleCaster, [KEY_PRESET] = nextPreset }) do
+            Keybind.new(KEY_CATEGORY, action, '', '')
+            Keybind.bind(KEY_CATEGORY, action, { { type = KEY_DOWN, callback = callback } })
+        end
+    end)
+end
+
+local function unregisterKeys()
+    if not keysOn then
+        return
+    end
+    keysOn = false
+    pcall(function()
+        for _, action in ipairs({ KEY_BOT, KEY_CASTER, KEY_PRESET }) do
+            Keybind.delete(KEY_CATEGORY, action)
+        end
+    end)
 end
 
 -- a new level can open a spell or a potion: the lists follow (only when the
@@ -1122,7 +1293,8 @@ function init()
 
     HealEngine.init(function()
         return cfg
-    end, onAction)
+    end, onAction, onAlert)
+    registerKeys()
     countEvent = cycleEvent(refreshCounts, 1000)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     connect(LocalPlayer, { onVocationChange = onVocationChange, onLevelChange = onLevelChange })
@@ -1147,6 +1319,7 @@ function terminate()
         diskEvent = nil
     end
     HealEngine.terminate()
+    unregisterKeys()
     if countEvent then
         removeEvent(countEvent)
         countEvent = nil

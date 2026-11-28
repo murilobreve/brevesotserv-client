@@ -21,7 +21,7 @@ local FULL_MESSAGE = 'You are full.'
 
 local tickEvent
 local running = false
-local getConfig, onAction
+local getConfig, onAction, onAlert
 local spellUntil, groupUntil, potionUntil = {}, {}, 0
 -- spell id -> until when it is skipped as not learned (the server said so)
 local unlearned = {}
@@ -40,6 +40,27 @@ local NOT_LEARNED = 'You need to learn this spell first.'
 
 local function now()
     return g_clock.millis()
+end
+
+-- A part of the tick that fails (a creature that left the map between two
+-- calls, a field a saved config does not have) must not take the rest with
+-- it: each part runs on its own, so a fault in the caster never stops a heal
+-- or a potion. The fault goes to the log once every ten seconds, not ten
+-- times a second.
+local ERROR_EVERY = 10 * 1000
+local errorAt = {}
+
+local function guarded(part, fn, ...)
+    local ok, result = pcall(fn, ...)
+    if ok then
+        return result
+    end
+    local t = now()
+    if t - (errorAt[part] or -ERROR_EVERY) >= ERROR_EVERY then
+        errorAt[part] = t
+        g_logger.error(string.format('[healbot] %s: %s', part, tostring(result)))
+    end
+    return nil
 end
 
 local function percent(value, max)
@@ -176,10 +197,13 @@ end
 
 local function woundedFriend(player, rule)
     local pos = player:getPosition()
+    if not pos then
+        return nil
+    end
     local best
-    for _, creature in ipairs(g_map.getSpectators(pos, false)) do
-        if creature:isPlayer() and not creature:isLocalPlayer() then
-            local cpos = creature:getPosition()
+    for _, creature in ipairs(g_map.getSpectators(pos, false) or {}) do
+        local cpos = creature:isPlayer() and not creature:isLocalPlayer() and creature:getPosition()
+        if cpos then
             local hp = creature:getHealthPercent()
             if math.abs(cpos.x - pos.x) <= 7 and math.abs(cpos.y - pos.y) <= 5 and hp > 0 and hp < rule.below
                 and isTarget(rule, creature) and (not best or hp < best:getHealthPercent()) then
@@ -225,14 +249,26 @@ local function monstersAround(centre, radius)
     return count
 end
 
--- another player in sight who is not of the party: an area spell could hit him
+-- another player in sight who is not of the party: an area spell could hit
+-- him. The caster and the auto attack both ask, ten times a second: the
+-- screen is looked at once every STRANGER_EVERY
+local STRANGER_EVERY = 200
+local strangerAt, strangerSeen = -STRANGER_EVERY, false
+
 local function strangerInSight(player)
-    for _, creature in ipairs(g_map.getSpectators(player:getPosition(), false) or {}) do
+    local t = now()
+    if t - strangerAt < STRANGER_EVERY then
+        return strangerSeen
+    end
+    strangerAt, strangerSeen = t, false
+    local pos = player:getPosition()
+    for _, creature in ipairs(pos and g_map.getSpectators(pos, false) or {}) do
         if creature:isPlayer() and not creature:isLocalPlayer() and not isPartyMember(creature) then
-            return true
+            strangerSeen = true
+            break
         end
     end
-    return false
+    return strangerSeen
 end
 
 local function distance(a, b)
@@ -244,9 +280,11 @@ local function castRunes(player, preset, target, here, there, t)
         return false
     end
     local around
+    local targetHp = target:getHealthPercent()
     for _, rule in ipairs(preset.runes) do
         local rune = rule.on and HealData.rune(rule.item)
-        if rune and player:getLevel() >= rune.level and itemCount(player, rune.id) > 0 then
+        if rune and targetHp >= (tonumber(rule.hp) or 0) and player:getLevel() >= rune.level
+            and itemCount(player, rune.id) > 0 then
             around = around or monstersAround(there, AROUND_TARGET)
             if around >= (tonumber(rule.count) or 1) then
                 g_game.useInventoryItemWith(rune.id, target)
@@ -346,10 +384,13 @@ end
 
 local function castSpells(player, preset, target, here, there, mp, t)
     local aroundSelf, aroundTarget
+    local targetHp = target:getHealthPercent()
     for _, rule in ipairs(preset.spells) do
         local spell = rule.on and HealData.spell(rule.spell)
         local need = tonumber(rule.count) or 1
-        if spell and mp >= (tonumber(rule.below) or 0) then
+        -- `hp`: not on a monster that is almost dead (a long cooldown or a
+        -- costly spell kept for the next one)
+        if spell and mp >= (tonumber(rule.below) or 0) and targetHp >= (tonumber(rule.hp) or 0) then
             local aim = HealData.aimed(spell)
             local wave = not aim and HealData.directional(spell)
             if aim then
@@ -396,10 +437,14 @@ end
 -- the character for a spell cast on itself, around the target for a spell
 -- with a range and for a rune, inside the wave for one cast the way the
 -- character faces) and its cooldown over. Only with a monster
--- being attacked; with another player in sight it waits, if asked to.
-local function pickAttack(player, cfg, mp, t)
+-- being attacked; with another player in sight it waits, if asked to, and
+-- with the character's health under `safeHp` too (the mana is the heals').
+local function pickAttack(player, cfg, hp, mp, t)
     local caster = cfg.caster
     if not caster or not caster.on then
+        return false
+    end
+    if caster.safeOn and hp < (tonumber(caster.safeHp) or 0) then
         return false
     end
     local target = g_game.getAttackingCreature()
@@ -425,9 +470,10 @@ local function pickAttack(player, cfg, mp, t)
 end
 
 -- the caster's auto attack (caster.autoAttack): with no monster being
--- attacked, the nearest wild one on screen that can be reached and seen;
--- never in a protection zone, never with a stranger on screen if the caster
--- waits for them
+-- attacked, a wild one on screen that can be reached and seen: the nearest
+-- (caster.pick 'near'), the one with the least health ('weak': it dies
+-- first) or the one with the most ('strong'); never in a protection zone,
+-- never with a stranger on screen if the caster waits for them
 local AUTO_ATTACK_EVERY = 400
 
 -- a monster can be walked up to: a path to one of the tiles around it (the
@@ -467,18 +513,40 @@ local function autoAttack(player, cfg, t)
     if not here then
         return
     end
-    local best, bestDistance
+    local found = {}
     for _, creature in ipairs(g_map.getSpectators(here, false) or {}) do
         local there = isWildMonster(creature) and creature:getPosition()
         if there and there.z == here.z then
-            local d = math.max(math.abs(there.x - here.x), math.abs(there.y - here.y))
-            if (not best or d < bestDistance) and g_map.isSightClear(here, there) and (d <= 1 or reachable(here, there)) then
-                best, bestDistance = creature, d
-            end
+            found[#found + 1] = {
+                creature = creature,
+                pos = there,
+                distance = distance(here, there),
+                health = creature:getHealthPercent(),
+                id = creature:getId(),
+            }
         end
     end
-    if best then
-        g_game.attack(best)
+    -- the best first; of two as good, the nearer (and always the same one:
+    -- the id settles what is left)
+    local pick = caster.pick
+    table.sort(found, function(a, b)
+        if pick == 'weak' and a.health ~= b.health then
+            return a.health < b.health
+        elseif pick == 'strong' and a.health ~= b.health then
+            return a.health > b.health
+        end
+        if a.distance ~= b.distance then
+            return a.distance < b.distance
+        end
+        return a.id < b.id
+    end)
+    -- the first that can be seen and walked up to: the path is only looked
+    -- for until one is found
+    for _, entry in ipairs(found) do
+        if g_map.isSightClear(here, entry.pos) and (entry.distance <= 1 or reachable(here, entry.pos)) then
+            g_game.attack(entry.creature)
+            return
+        end
     end
 end
 
@@ -550,7 +618,7 @@ local function pickSpell(player, cfg, hp, mp, t)
     end
 
     -- the caster, once nobody needs healing or a support spell
-    if pickAttack(player, cfg, mp, t) then
+    if guarded('caster', pickAttack, player, cfg, hp, mp, t) then
         return
     end
 
@@ -558,11 +626,25 @@ local function pickSpell(player, cfg, hp, mp, t)
     return training()
 end
 
+-- A rule whose potion is over does nothing, and nothing said so: the player
+-- found out dead. Now the first time a rule wants its potion and there is
+-- none left, the screen says it (and again every POTION_ALERT_EVERY while it
+-- goes on). Off in the Potions page.
+local POTION_ALERT_EVERY = 30 * 1000
+local potionAlertAt = {}
+
 local function pickPotion(player, cfg, hp, mp, t)
     for _, rule in ipairs(cfg.potions) do
         local potion = rule.on and HealData.potion(rule.item)
-        if potion and (rule.stat == 'mp' and mp or hp) < rule.below and potionReady(player, potion, t) then
-            return drink(player, potion, t)
+        if potion and (rule.stat == 'mp' and mp or hp) < rule.below then
+            if potionReady(player, potion, t) then
+                return drink(player, potion, t)
+            end
+            if cfg.support.potionAlert and onAlert and itemCount(player, potion.id) <= 0
+                and t - (potionAlertAt[potion.id] or -POTION_ALERT_EVERY) >= POTION_ALERT_EVERY then
+                potionAlertAt[potion.id] = t
+                onAlert(tr('Heal Bot: you have no %s left!', potion.name))
+            end
         end
     end
 end
@@ -631,20 +713,20 @@ local function tick()
     local t = now()
     -- ticked, it keeps the character online with the bot itself off too
     if cfg.support.antiIdle then
-        antiIdle(player, t)
+        guarded('anti idle', antiIdle, player, t)
     end
     if not running then
         return
     end
     local hp = percent(player:getHealth(), player:getMaxHealth())
     local mp = percent(player:getMana(), player:getMaxMana())
-    autoAttack(player, cfg, t)
+    guarded('auto attack', autoAttack, player, cfg, t)
     -- spells and potions are separate exhausts in Tibia, so both can go off
-    pickSpell(player, cfg, hp, mp, t)
-    local drank = pickPotion(player, cfg, hp, mp, t)
+    guarded('spells', pickSpell, player, cfg, hp, mp, t)
+    local drank = guarded('potions', pickPotion, player, cfg, hp, mp, t)
     -- a meal waits for a tick with no potion
     if cfg.support.food and not drank then
-        feed(player, t)
+        guarded('food', feed, player, t)
     end
 end
 
@@ -669,14 +751,16 @@ function HealEngine.reset()
     local player = g_game.getLocalPlayer()
     regen, regenAt = player and player:getRegenerationTime() or 0, now()
     filling, ateAt, fullUntil, mealCheckAt = false, nil, 0, 0
+    potionAlertAt, errorAt = {}, {}
+    strangerAt = -STRANGER_EVERY
 end
 
 function HealEngine.forget(spellId)
     unlearned[spellId] = nil
 end
 
-function HealEngine.init(configGetter, actionCallback)
-    getConfig, onAction = configGetter, actionCallback
+function HealEngine.init(configGetter, actionCallback, alertCallback)
+    getConfig, onAction, onAlert = configGetter, actionCallback, alertCallback
     connect(g_game, {
         onSpellCooldown = onSpellCooldown,
         onSpellGroupCooldown = onSpellGroupCooldown,
@@ -684,7 +768,9 @@ function HealEngine.init(configGetter, actionCallback)
         onTextMessage = onTextMessage,
     })
     connect(LocalPlayer, { onRegenerationChange = onRegenerationChange })
-    tickEvent = cycleEvent(tick, TICK)
+    tickEvent = cycleEvent(function()
+        guarded('tick', tick)
+    end, TICK)
 end
 
 function HealEngine.terminate()

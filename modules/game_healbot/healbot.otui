@@ -241,10 +241,12 @@ UnshieldRule < BrevesPanelBox
     text: %
 
 // The caster page (healbot.lua, fillCaster): its switch, the preset and its
-// name, two options, and the list of rules that scrolls. A rule is one
+// name, the options, and the list of rules that scrolls. A rule is one
 // line: its place in the order, on or off, the spell (or rune), the mana it
-// needs left, how many monsters it waits for, and the buttons that move it
-// up or down and take it out.
+// needs left, the health its target must still have, how many monsters it
+// waits for, and the buttons that move it up or down and take it out. The
+// boxes are anchored from the right, so the names of the columns
+// (CasterHeading) stand over them whatever the width.
 CasterButton < MythosButton
   size: 20 20
   font: verdana-11px-antialised
@@ -290,6 +292,19 @@ CasterRow < BrevesPanelBox
     margin-right: 2
     text: ^
 
+  MythosComboBox
+    id: count
+    width: 50
+    anchors.right: up.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 8
+
+  HealBotPercent
+    id: hp
+    anchors.right: count.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 22
+
 CasterSpellRow < CasterRow
   UIWidget
     id: icon
@@ -300,46 +315,21 @@ CasterSpellRow < CasterRow
     border-width: 1
     border-color: #272727
 
-  MythosComboBox
-    id: choice
-    width: 190
-    anchors.left: icon.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
-    text-align: left
-    text-offset: 6 0
-
-  Label
-    id: label
-    anchors.left: choice.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
-    font: verdana-11px-monochrome
-    color: #909090
-    !text: tr('mana from')
-    text-auto-resize: true
-
   HealBotPercent
     id: below
-    anchors.left: label.right
+    anchors.right: hp.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 4
-
-  Label
-    id: percent
-    width: 10
-    anchors.left: below.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 2
-    color: #dfdfdf
-    text: %
+    margin-right: 22
 
   MythosComboBox
-    id: count
-    width: 50
-    anchors.left: percent.right
+    id: choice
+    anchors.left: icon.right
+    anchors.right: below.left
     anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
+    margin-left: 6
+    margin-right: 10
+    text-align: left
+    text-offset: 6 0
 
 CasterRuneRow < CasterRow
   Item
@@ -352,35 +342,57 @@ CasterRuneRow < CasterRow
 
   MythosComboBox
     id: choice
-    width: 190
     anchors.left: item.right
+    anchors.right: hp.left
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 6
+    margin-right: 66
     text-align: left
     text-offset: 6 0
 
-  Label
-    id: label
-    anchors.left: choice.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 8
-    font: verdana-11px-monochrome
-    color: #909090
-    !text: tr('monsters')
-    text-auto-resize: true
-
-  MythosComboBox
-    id: count
-    width: 50
-    anchors.left: label.right
-    anchors.verticalCenter: parent.verticalCenter
-    margin-left: 6
-
-// a heading of the list ("Spells", "Runes")
-CasterHeading < Label
-  height: 16
+// the name of a column, in the middle over its box
+CasterColumn < Label
+  width: 56
+  anchors.bottom: parent.bottom
   font: verdana-11px-antialised
-  color: #dfdfdf
+  color: #909090
+  text-align: center
+
+// the heading of a part of the list ("Spells", "Runes") and, at the right,
+// the names of the columns of its rules. The margins are those of a rule's
+// boxes plus the 8 of the rule's own padding.
+CasterHeading < UIWidget
+  height: 18
+
+  CasterColumn
+    id: count
+    width: 58
+    anchors.right: parent.right
+    margin-right: 78
+    !text: tr('monsters')
+
+  CasterColumn
+    id: hp
+    anchors.right: parent.right
+    margin-right: 143
+    !text: tr('target %')
+    !tooltip: tr('Used only on a target with this much health or more. 0: on any.')
+
+  CasterColumn
+    id: mana
+    anchors.right: parent.right
+    margin-right: 199
+    !text: tr('mana %')
+    !tooltip: tr('Cast only with this much mana or more.')
+
+  Label
+    id: title
+    anchors.left: parent.left
+    anchors.right: mana.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    font: verdana-11px-antialised
+    color: #dfdfdf
 
 CasterPage < UIWidget
   anchors.fill: parent
@@ -418,7 +430,7 @@ CasterPage < UIWidget
     anchors.verticalCenter: on.verticalCenter
     anchors.right: preset.left
     margin-right: 6
-    font: verdana-11px-monochrome
+    font: verdana-11px-antialised
     color: #909090
     !text: tr('Preset')
     text-auto-resize: true
@@ -444,19 +456,54 @@ CasterPage < UIWidget
     id: autoAttack
     anchors.top: noPlayers.bottom
     anchors.left: parent.left
-    margin-top: 6
+    margin-top: 8
     margin-left: 4
     width: 300
     !text: tr('Attack the next monster by itself')
 
+  // which monster the auto attack takes
+  MythosComboBox
+    id: pick
+    anchors.verticalCenter: autoAttack.verticalCenter
+    anchors.left: autoAttack.right
+    margin-left: 8
+    width: 130
+    text-align: left
+    text-offset: 6 0
+
+  // no attack with the character's own health under this
+  QtCheckBox
+    id: safe
+    anchors.top: autoAttack.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    margin-left: 4
+    width: 300
+    !text: tr('Stop attacking with my health under')
+
+  HealBotPercent
+    id: safeHp
+    anchors.verticalCenter: safe.verticalCenter
+    anchors.left: safe.right
+    margin-left: 8
+
+  Label
+    id: safePercent
+    width: 12
+    anchors.left: safeHp.right
+    anchors.verticalCenter: safeHp.verticalCenter
+    margin-left: 3
+    color: #dfdfdf
+    text: %
+
   MythosSeparator
     id: rule
-    anchors.top: autoAttack.bottom
+    anchors.top: safe.bottom
     anchors.left: parent.left
     anchors.right: parent.right
     margin-top: 8
 
-  VerticalScrollBar
+  MythosScrollBar
     id: scroll
     anchors.top: rule.bottom
     anchors.right: parent.right
@@ -478,7 +525,6 @@ CasterPage < UIWidget
       type: verticalBox
       spacing: 4
 
-// train magic level: the spell and the mana it is cast from
 TrainRule < HealBotRule
   Label
     id: label
@@ -536,7 +582,7 @@ CureRule < BrevesPanelBox
 MythosWindow
   id: healBotWindow
   !text: tr('Heal Bot')
-  size: 720 520
+  size: 760 560
   @onEscape: modules.game_healbot.hide()
 
   UIWidget
