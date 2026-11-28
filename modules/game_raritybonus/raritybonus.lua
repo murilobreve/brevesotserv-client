@@ -381,7 +381,7 @@ fillShop = function()
         else
             row.buy:setEnabled(enough)
             row.buy:setTooltip(enough and tr('Buy %d Rarity XP for %d Hunt Points.', pack.xp, pack.price)
-                or tr('You have %d Hunt Points, %d short. The daily task and the Hunter\'s Trail give more.', have, pack.price - have))
+                or tr('You have %d Hunt Points, %d short. The Linked Tasks and the free task give more.', have, pack.price - have))
             row.buy.onClick = function()
                 confirm(tr('Buy Rarity XP'), tr('Buy %d Rarity XP for %d Hunt Points?', pack.xp, pack.price), function()
                     send({ action = 'buyXp', pack = pack.id })

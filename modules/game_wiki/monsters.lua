@@ -976,7 +976,7 @@ function WIKI_BUILDERS.huntlist(parent)
         fillHunts(box)
     end
     box.tools.near:setText(T('Perto do meu level'))
-    box.tools.near:setTooltip(T('Só as hunts de 55%% a 110%% do seu level, a mesma faixa da tarefa diária.'))
+    box.tools.near:setTooltip(T('Só as hunts de 55%% a 110%% do seu level, a mesma faixa da task livre.'))
     box.tools.near.onClick = function()
         huntFilter.near = not huntFilter.near
         fillHunts(box)

@@ -66,7 +66,7 @@ WIKI_NPC_INFO = {
     ['Sirius Black'] = { role = 'Trox Quest: 7ª missão.', quest = 'trox' },
     ['Stan'] = { role = 'Ajuda novos jogadores com o básico do servidor (diga help).' },
     ['Swan'] = { role = 'Montaria Crab em troca de itens (diga mount).' },
-    ['Szuszkin'] = { role = 'Hunt Tasks: a tarefa diária, a Trilha do Caçador e a Loja de Tasks.', page = 'hunttasks' },
+    ['Szuszkin'] = { role = 'Tasks: as Linked Tasks, a task livre e a Loja de Tasks.', page = 'hunttasks' },
     ['Takaru'] = { role = 'Ajuda com a montaria Mandrake (diga mandrake).' },
     ['Talaru'] = { role = 'Montarias Mandrake, Mutated Rat e Stampor em troca de itens.' },
     ['Thandruil'] = { role = 'Missão para ganhar a permissão de pegar o Winged Helmet.' },

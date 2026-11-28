@@ -163,6 +163,136 @@ TaskCard < BrevesSection
     size: 150 24
     visible: false
 
+  // the free task: the monsters to pick from, over the card's other parts
+  // (hunttasks.lua: renderPicker)
+  Panel
+    id: picker
+    anchors.fill: parent
+    visible: false
+
+    MythosTextEdit
+      id: search
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      !placeholder: tr('Type to search')
+      @onTextChange: modules.game_hunttasks.onPickerSearch()
+
+    TaskList
+      id: list
+      anchors.top: search.bottom
+      anchors.left: parent.left
+      anchors.right: scroll.left
+      anchors.bottom: info.top
+      margin-top: 4
+      margin-bottom: 5
+      focusable: false
+      vertical-scrollbar: scroll
+
+    // (anchored to the search and the text, not to the list: the list is
+    // anchored to it)
+    MythosScrollBar
+      id: scroll
+      anchors.top: search.bottom
+      anchors.right: parent.right
+      anchors.bottom: info.top
+      margin-top: 4
+      margin-bottom: 5
+      step: 36
+      pixels-scroll: true
+
+    BrevesNote
+      id: empty
+      anchors.centerIn: list
+      text-auto-resize: true
+      text-wrap: false
+      visible: false
+
+    // what the chosen monster asks for and pays
+    Label
+      id: info
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: start.top
+      margin-bottom: 5
+      height: 42
+      text-wrap: true
+      font: verdana-11px-antialised
+      color: #c0c0c0
+
+    MythosButton
+      id: cancel
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      size: 110 22
+      !text: tr('Cancel')
+      visible: false
+
+    MythosPrimaryButton
+      id: start
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      size: 150 22
+
+// a monster of the free task's picker: its picture, name, level and kills,
+// and the Hunt Points it pays
+TaskChoice < BrevesRow
+  height: 36
+
+  UIWidget
+    id: frame
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 1
+    size: 34 34
+    image-source: /images/ui/item
+    phantom: true
+
+  UICreature
+    id: creature
+    anchors.centerIn: frame
+    size: 32 32
+    creature-size: 32
+    phantom: true
+
+  Label
+    id: points
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
+    text-auto-resize: true
+    font: verdana-11px-antialised
+    color: #c0c0c0
+    phantom: true
+
+  Label
+    id: name
+    anchors.top: parent.top
+    anchors.left: frame.right
+    anchors.right: points.left
+    margin-top: 3
+    margin-left: 6
+    margin-right: 4
+    height: 14
+    font: verdana-11px-antialised
+    color: #c0c0c0
+    phantom: true
+
+  Label
+    id: info
+    anchors.top: name.bottom
+    anchors.left: name.left
+    anchors.right: points.left
+    margin-top: 2
+    margin-right: 4
+    height: 14
+    font: verdana-11px-antialised
+    color: #909090
+    phantom: true
+
+TaskChoiceEven < TaskChoice
+  background-color: #ffffff0a
+
 // one reward of a Trail step: its icon and how much (hunttasks.lua:
 // addReward); an item reward is a TrailRewardItem
 TrailReward < UIWidget
@@ -370,7 +500,7 @@ MythosWindow
     id: trailTab
     anchors.left: prev.right
     margin-left: 4
-    !text: tr('Trilha completa')
+    !text: tr('Linked Tasks')
     @onClick: modules.game_hunttasks.selectTab('trail')
 
   TaskTab

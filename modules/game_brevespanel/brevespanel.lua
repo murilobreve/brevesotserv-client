@@ -21,10 +21,11 @@ local NEWS_VERSION = 13
 local FEATURES = {
     { id = 'vip', group = 'vip', label = 'Mythos VIP', icon = 'vip',
       news = 'Mythos VIP: +10%% experience, loot and training, the Fusca, Uno and Gol mounts and more. The row shows your days left and opens the Store.' },
-    { id = 'tasks', group = 'tasks', label = 'Daily Task', short = 'Task', icon = 'tasks', inside = 'trail',
+    -- (ids of the names they had: the daily task and the Hunter's Trail)
+    { id = 'tasks', group = 'tasks', label = 'Free Task', short = 'Task', icon = 'tasks', inside = 'trail',
       tip = 'Go hunt: free teleport to the monster.',
-      news = 'One monster of your level a day, for experience and Hunt Points. The row shows the monster and your kills.' },
-    { id = 'trail', group = 'tasks', label = "Hunter's Trail", short = 'Trail', icon = 'trail',
+      news = 'A monster of your level that you pick, up to 3 a day, for experience and Hunt Points. The row shows the monster and your kills.' },
+    { id = 'trail', group = 'tasks', label = 'Linked Tasks', short = 'Linked', icon = 'trail',
       tip = 'Go hunt: free teleport to the monster.',
       news = 'The hunt monsters in order, from the weakest to the strongest, with a bonus every 5 steps.' },
     { id = 'taskshop', group = 'tasks', label = 'Shop', icon = 'taskshop',

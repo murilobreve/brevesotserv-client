@@ -207,20 +207,22 @@ function WIKI_BUILDERS.tasksinfo(parent)
     if type(t) ~= 'table' then
         return paragraph(parent, T('As Hunt Tasks estão desligadas.'))
     end
-    heading(parent, T('Tarefa diária'))
+    -- the free task (the daily task's place since 2026-11-28): the player
+    -- picks the monster, up to perDay a day, for about half a linked task's
+    heading(parent, T('Task livre'))
     local window = t.window or { 0, 0 }
+    local perKill, least = t.pointsPerKill or 0, t.pointsMin or 0
+    local low = math.max(least, math.floor((t.kills[1] or 0) * perKill + 0.5))
+    local high = math.max(least, math.floor((t.kills[2] or 0) * perKill + 0.5))
     tableOf(parent, { 200, 346 }, nil, {
-        { T('Monstro'), T('Sorteado entre os que têm level recomendado de %d%% a %d%% do seu', math.floor((window[1] or 0) * 100 + 0.5), math.floor((window[2] or 0) * 100 + 0.5)) },
+        { T('Monstro'), T('Você escolhe entre os que têm level recomendado de %d%% a %d%% do seu, e pode trocar quando quiser', math.floor((window[1] or 0) * 100 + 0.5), math.floor((window[2] or 0) * 100 + 0.5)) },
+        { T('Por dia'), T('%d tasks livres', t.perDay or 0) },
         { T('Kills'), T('%d a %d (mais spawns, mais kills)', t.kills[1] or 0, t.kills[2] or 0) },
-        { T('Experiência'), (t.experienceKills or 0) > 0
-            and T('%d%% do que falta para o próximo level, no máximo o que %d kills do monstro pagam', math.floor((t.experience or 0) * 100 + 0.5), t.experienceKills)
-            or T('%d%% do que falta para o próximo level', math.floor((t.experience or 0) * 100 + 0.5)) },
-        { T('Hunt Points'), T('%d, mais %d por dia seguido (até +%d)', t.points or 0, t.streakBonus or 0, (t.streakBonus or 0) * (t.streakMax or 0)) },
-        { T('Monstro em alta'), T('Com XP %sx ou mais no Hunt Board, os pontos dobram', decimal(t.hot)) },
-        { T('Charm points'), T('%d', t.charms or 0) },
-        { T('Trocar o monstro'), T('%d vez de graça por dia; depois, level x %s gold', t.freeRerolls or 0, num(t.rerollGold)) },
+        { T('Experiência'), T('Até %d%% de um level, no máximo o que as kills da task valem', math.floor((t.experience or 0) * 100 + 0.5)) },
+        { T('Hunt Points'), T('%d a %d pelas kills; a primeira do dia dá +%d por dia seguido (até +%d)', low, high, t.streakBonus or 0, (t.streakBonus or 0) * (t.streakMax or 0)) },
+        { T('Gold'), T('%d%% do gold de uma Linked Task do mesmo monstro', math.floor((t.goldShare or 1) * 100 + 0.5)) },
     })
-    heading(parent, T('Trilha do Caçador'))
+    heading(parent, T('Linked Tasks'))
     if (t.milestoneShare or 0) > 0 then
         paragraph(parent, T('Uma corrente fixa de %d monstros, do %s até o %s. Cada passo pede de %s a %s kills, dá %d%% de um level, Hunt Points e charm points; a cada %d passos vem um bônus de %d%% dos pontos do passo e %d charm points.',
             t.trailSteps or 0, L(t.trailFirst), L(t.trailLast), num(t.trailKills[1]), num(t.trailKills[2]), math.floor((t.trailExperience or 0) * 100 + 0.5),
@@ -230,7 +232,7 @@ function WIKI_BUILDERS.tasksinfo(parent)
         t.trailSteps or 0, L(t.trailFirst), L(t.trailLast), num(t.trailKills[1]), num(t.trailKills[2]), math.floor((t.trailExperience or 0) * 100 + 0.5),
         t.milestoneEvery or 0, t.milestonePoints or 0, t.milestoneCharms or 0))
     end
-    paragraph(parent, T('A janela de Hunt Tasks leva até o monstro da tarefa e da trilha pelo mesmo teleport do Hunts TP (%d segundos de espera, só fora de luta).', t.cooldown or 0))
+    paragraph(parent, T('A janela de Tasks leva até o monstro da task livre e da Linked Task pelo mesmo teleport do Hunts TP (%d segundos de espera, só fora de luta).', t.cooldown or 0))
     heading(parent, T('Loja do Szuszkin'))
     local rows = {}
     for _, offer in ipairs(t.shop or {}) do
@@ -270,7 +272,7 @@ function WIKI_BUILDERS.vipinfo(parent)
         end
     end
     if (tonumber(v.extraFreeRerolls) or 0) > 0 then
-        table.insert(rows, { T('Hunt Tasks'), { T('+%d troca grátis da tarefa diária por dia', v.extraFreeRerolls), GOLD } })
+        table.insert(rows, { T('Hunt Tasks'), { T('+%d task livre a mais por dia', v.extraFreeRerolls), GOLD } })
     end
     if #(v.mounts or {}) > 0 then
         local mounts = {}

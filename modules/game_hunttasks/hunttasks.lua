@@ -1,4 +1,7 @@
--- Szuszkin hunting tasks: the daily task, the Hunter's Trail and the Hunt
+-- The Tasks window: the Linked Tasks (a chain of monsters; "trail" in the
+-- code, the Hunter's Trail until 2026-11-28), the free task (a monster the
+-- player picks, up to a few a day; "daily" in the code, the daily task until
+-- then) and the Hunt
 -- Points shop. Everything the NPC does can be done from here.
 -- Talks to data-otservbr-global/scripts/hunt_tasks/03_window.lua through
 -- extended opcode TASK_OPCODE with JSON payloads.
@@ -10,8 +13,8 @@ local toolbarButton
 local sectionButtons = {} -- tasks / trail / shop rows in the Mythos panel
 local SECTION_ROWS = { tasks = 'tasks', trail = 'trail', shop = 'taskshop' }
 local SECTIONS = {
-    tasks = { title = 'Task diária', intro = 'A task do dia e a etapa atual da trilha' },
-    trail = { title = 'Trilha do Caçador', intro = 'Todas as etapas, da mais fraca à mais forte' },
+    tasks = { title = 'Tasks', intro = 'A task livre e a etapa atual das Linked Tasks' },
+    trail = { title = 'Linked Tasks', intro = 'Todas as etapas, da mais fraca à mais forte' },
     shop = { title = 'Loja de Tasks', intro = 'O que os Hunt Points compram' },
 }
 local tickEvent
@@ -254,55 +257,184 @@ local function showSpecies(card, counted)
     panel:setVisible(true)
 end
 
+-- The free task's picker (the left card): the monsters of the player's level
+-- to pick from (state.choices), a search, what the chosen one pays and the
+-- button that takes it. It shows when the player has no free task, when the
+-- last one is done and the day has more, and when he asks to change.
+local pickerOpen = false -- asked to change the monster of a task still open
+local pickedName -- the row chosen in the picker
+
+local CARD_PARTS = { 'portrait', 'creature', 'name', 'info', 'badge', 'bar', 'reward', 'extra', 'species', 'action', 'action2', 'take' }
+
+local function choiceOf(name)
+    for _, choice in ipairs(state and state.choices or {}) do
+        if choice.name == name then
+            return choice
+        end
+    end
+end
+
+local function chooseTask(name)
+    pickerOpen = false
+    send({ action = 'choose', monster = name })
+end
+
+local function renderPickerInfo(picker)
+    local choice = choiceOf(pickedName)
+    picker.start:setEnabled(choice ~= nil)
+    if not choice then
+        picker.info:setText(tr('Escolha um monstro da lista.'))
+        return
+    end
+    picker.info:setText(tr('Mate %d %s.', choice.need, choice.label) .. ' '
+        .. rewardText(choice.experience, string.format('+%d Hunt Points', choice.points or 0), choice.charms, choice.gold))
+end
+
+local function renderPicker(card, daily)
+    local picker = card.picker
+    for _, id in ipairs(CARD_PARTS) do
+        card[id]:setVisible(false)
+    end
+    picker:setVisible(true)
+    local changing = daily ~= nil and not daily.done
+    picker.cancel:setVisible(changing)
+    picker.cancel.onClick = function()
+        pickerOpen = false
+        modules.game_hunttasks.refresh()
+    end
+    picker.start:setText(changing and tr('Trocar para este') or tr('Começar task'))
+    picker.start.onClick = function()
+        local choice = choiceOf(pickedName)
+        if not choice then
+            return
+        end
+        -- changing a task with kills on it: they are lost
+        if changing and (daily.kills or 0) > 0 then
+            closeRerollBox()
+            rerollBox = displayGeneralBox(tr('Trocar task'), tr('Trocar o monstro apaga as %d kills desta task. Continuar?', daily.kills), {
+                { text = tr('Sim'), callback = function()
+                    closeRerollBox()
+                    chooseTask(choice.name)
+                end },
+                { text = tr('Não'), callback = closeRerollBox },
+            }, closeRerollBox, closeRerollBox)
+            return
+        end
+        chooseTask(choice.name)
+    end
+
+    local list = picker.list
+    list:destroyChildren()
+    local query = picker.search:getText():lower()
+    local shownPicked = false
+    local count = 0
+    for _, choice in ipairs(state.choices or {}) do
+        local current = changing and daily.key == choice.name
+        if not current and (query == '' or choice.label:lower():find(query, 1, true) or choice.name:lower():find(query, 1, true)) then
+            count = count + 1
+            local row = g_ui.createWidget(count % 2 == 0 and 'TaskChoiceEven' or 'TaskChoice', list)
+            row.creature:setOutfit(outfitOf(choice.outfit))
+            row.name:setText(choice.label)
+            row.info:setText(tr('Level %d', choice.level or 0) .. tr('  ·  ') .. tr('%d kills', choice.need or 0))
+            row.info:setColor(readiness(choice.level))
+            row.points:setText(string.format('+%d pts', choice.points or 0))
+            row.onFocusChange = function(widget, focused)
+                widget.name:setColor(focused and '#ffffff' or '#c0c0c0')
+                if focused then
+                    pickedName = choice.name
+                    renderPickerInfo(picker)
+                end
+            end
+            row.onDoubleClick = function()
+                pickedName = choice.name
+                picker.start.onClick()
+                return true
+            end
+            if choice.name == pickedName then
+                shownPicked = true
+                list:focusChild(row, KeyboardFocusReason)
+            end
+        end
+    end
+    if not shownPicked then
+        pickedName = nil
+    end
+    picker.empty:setVisible(count == 0)
+    picker.empty:setText(#(state.choices or {}) == 0 and tr('Nenhum monstro para o seu level agora.') or tr('Nenhum monstro com esse nome.'))
+    renderPickerInfo(picker)
+end
+
+-- the search of the picker (hunttasks.otui)
+function onPickerSearch()
+    if window and state then
+        local card = window.tasksPanel.dailyCard
+        if card.picker:isVisible() then
+            renderPicker(card, state.daily)
+        end
+    end
+end
+
 local function renderDaily()
     local card = window.tasksPanel.dailyCard
     local daily = state.daily
-    card.title:setText(tr('Task diária'))
+    local count, limit = state.dailyCount or 0, state.dailyLimit or 3
+    card.title:setText(tr('Task livre (%d de %d hoje)', count, limit))
+    card.title:setTooltip(tr('Você escolhe o monstro, até %d tasks livres por dia. Paga menos que uma Linked Task.', limit))
+    card.picker:setVisible(false)
     card.action2:setVisible(false)
     card.action:setEnabled(true)
+    card.take:setVisible(false)
     showSpecies(card, daily and not daily.done and daily.counted)
-    -- no task yet: the card is one big button, and what it pays
-    card.portrait:setVisible(daily ~= nil)
-    card.action:setVisible(daily ~= nil)
-    card.take:setVisible(daily == nil)
+    local active = daily ~= nil and not daily.done
 
-    if not daily then
-        card.creature:setVisible(false)
-        card.name:setText('')
-        card.info:setText('')
-        card.badge:setText('')
-        card.bar:setVisible(false)
-        card.reward:setText(rewardText(state.dailyExp, string.format('%d+ Hunt Points', state.dailyBase or 20), state.dailyCharms))
-        card.extra:setText('')
-        card.take:setText(tr('Pegar task de hoje'))
-        card.take.onClick = function()
-            send({ action = 'take' })
+    -- the day's free tasks are done: nothing to pick until tomorrow
+    if not active and count >= limit then
+        pickerOpen = false
+        card.portrait:setVisible(daily ~= nil)
+        card.creature:setVisible(daily ~= nil)
+        if daily then
+            card.creature:setOutfit(outfitOf(daily.outfit))
         end
-        return
-    end
-
-    card.creature:setVisible(true)
-    card.creature:setOutfit(outfitOf(daily.outfit))
-    fitText(card.name, daily.monster)
-    card.info:setText(levelAndRooms(daily.level, daily.rooms))
-    card.info:setColor(readiness(daily.level))
-    card.badge:setText(daily.hot and tr('Em alta no Hunt Board: pontos dobrados!') or '')
-    card.bar:setVisible(true)
-
-    if daily.done then
-        setBar(card.bar, daily.need, daily.need, '#f7a55f')
-        card.bar.value:setText(tr('Completa!'))
-        card.reward:setText(tr('Você já completou a task de hoje.'))
+        fitText(card.name, daily and daily.monster or '')
+        card.name:setVisible(true)
+        card.info:setVisible(true)
+        card.info:setText(tr('Você fez as %d tasks livres de hoje.', limit))
+        card.info:setColor('#c0c0c0')
+        card.badge:setVisible(true)
+        card.badge:setText('')
+        card.bar:setVisible(daily ~= nil)
+        if daily then
+            setBar(card.bar, daily.need, daily.need, '#f7a55f')
+            card.bar.value:setText(tr('Completa!'))
+        end
+        card.reward:setVisible(true)
+        card.reward:setText(tr('As Linked Tasks continuam valendo: veja a etapa ao lado.'))
+        card.extra:setVisible(true)
         card.extra:setText('')
+        card.action:setVisible(true)
         card.action:setText(tr('Volte amanhã'))
         card.action:setEnabled(false)
         card.action.onClick = nil
         return
     end
 
+    -- nothing running, or the player asked to change: the list to pick from
+    if not active or pickerOpen then
+        renderPicker(card, daily)
+        return
+    end
+
+    for _, id in ipairs({ 'portrait', 'creature', 'name', 'info', 'badge', 'bar', 'reward', 'extra', 'action' }) do
+        card[id]:setVisible(true)
+    end
+    card.creature:setOutfit(outfitOf(daily.outfit))
+    fitText(card.name, daily.monster)
+    card.info:setText(levelAndRooms(daily.level, daily.rooms))
+    card.info:setColor(readiness(daily.level))
+    card.badge:setText('')
     setBar(card.bar, daily.kills, daily.need)
     updateTeleportButton(card.action2, 'daily', state.teleportDaily)
-    card.reward:setText(rewardText(state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms, daily.gold))
+    card.reward:setText(rewardText(daily.experience or state.dailyExp, string.format('+%d Hunt Points', daily.points or 0), daily.charms, daily.gold))
     -- a species task: its name is the species' ("Iks") and these are the
     -- monsters of its hunt that count ("Iks Chuka, Iks Pututu e Iks Aucar")
     if daily.variants and daily.variants ~= '' then
@@ -312,21 +444,12 @@ local function renderDaily()
         card.extra:setText(tr('Mate %d %s', daily.need, daily.monster))
         card.name:setTooltip(tr('Conta para todos que ajudarem na kill e para a party.'))
     end
-    local cost = state.rerollCost or 0
-    card.action:setText(cost > 0 and tr('Trocar (%s gold)', formatNumber(cost)) or tr('Trocar (grátis)'))
+    card.action:setText(tr('Trocar monstro'))
+    card.action:setTooltip(tr('Escolher outro monstro. As kills desta task recomeçam do zero.'))
     card.action.onClick = function()
-        if cost > 0 then
-            closeRerollBox()
-            rerollBox = displayGeneralBox(tr('Trocar task'), tr('Trocar o monstro custa %s gold (banco ou mochila). Continuar?', formatNumber(cost)), {
-                { text = tr('Sim'), callback = function()
-                    closeRerollBox()
-                    send({ action = 'reroll' })
-                end },
-                { text = tr('Não'), callback = closeRerollBox },
-            }, closeRerollBox, closeRerollBox)
-            return
-        end
-        send({ action = 'reroll' })
+        pickerOpen = true
+        pickedName = nil
+        modules.game_hunttasks.refresh()
     end
 end
 
@@ -336,11 +459,12 @@ local function renderTrailCard()
     local steps = trail.steps or {}
     card.action2:setVisible(false)
     showSpecies(card, not trail.finished and (steps[trail.index] or {}).counted)
-    card.title:setText(tr('Trilha do Caçador'))
+    card.title:setText(tr('Linked Tasks'))
+    card.picker:setVisible(false)
     if trail.finished then
         card.creature:setVisible(false)
-        fitText(card.name, tr('Trilha completa!'))
-        card.info:setText(tr('Você venceu os %d monstros da trilha.', #steps))
+        fitText(card.name, tr('Linked Tasks completas!'))
+        card.info:setText(tr('Você venceu os %d monstros das Linked Tasks.', #steps))
         card.badge:setText('')
         card.bar:setVisible(true)
         setBar(card.bar, #steps, #steps, '#f7a55f')
@@ -348,7 +472,7 @@ local function renderTrailCard()
         card.extra:setText('')
     else
         local step = steps[trail.index] or {}
-        card.title:setText(tr('Trilha do Caçador, etapa %d de %d', trail.index, #steps))
+        card.title:setText(tr('Linked Tasks, etapa %d de %d', trail.index, #steps))
         card.creature:setVisible(true)
         card.creature:setOutfit(outfitOf(step.outfit))
         fitText(card.name, step.name or '?')
@@ -391,7 +515,7 @@ local function renderTrailCard()
         card.extra:setText(after)
         updateTeleportButton(card.action2, 'trail', state.teleportTrail)
     end
-    card.action:setText(tr('Ver trilha completa'))
+    card.action:setText(tr('Ver todas as etapas'))
     card.action:setEnabled(true)
     card.action.onClick = function()
         selectTab('trail')
@@ -401,17 +525,17 @@ end
 local function renderStreak()
     local panel = window.tasksPanel
     local streak = state.streak or 0
-    local max = state.streakMax or 6
-    local bonus = state.streakBonus or 5
-    panel.streakTitle:setText(tr('Sequência diária: %d dia%s', streak, streak == 1 and '' or 's'))
-    panel.streakTitle:setTooltip(tr('Cada dia seguido dá +%d pontos na task diária (até +%d).', bonus, bonus * max))
+    local max = state.streakMax or 5
+    local bonus = state.streakBonus or 1
+    panel.streakTitle:setText(tr('Dias seguidos: %d', streak))
+    panel.streakTitle:setTooltip(tr('A primeira task livre de cada dia dá +%d Hunt Point por dia seguido (até +%d).', bonus, bonus * max))
     panel.streakDots:destroyChildren()
-    local doneToday = state.daily and state.daily.done
-    local today = math.min(max + 1, doneToday and math.max(1, streak) or streak + 1)
-    for day = 1, max + 1 do
+    local doneToday = (state.dailyCount or 0) > 0
+    local today = math.min(max, doneToday and math.max(1, streak) or streak + 1)
+    for day = 1, max do
         local dot = g_ui.createWidget('StreakDot', panel.streakDots)
-        dot:setText(string.format('+%d', (day - 1) * bonus))
-        dot:setTooltip(tr('Dia %d seguido: +%d pontos', day, (day - 1) * bonus))
+        dot:setText(string.format('+%d', day * bonus))
+        dot:setTooltip(tr('Dia %d seguido: +%d pontos', day, day * bonus))
         if day <= streak then
             dot:setBackgroundColor('#f7a55f90')
             dot:setBorderColor('#ffe066')
@@ -421,7 +545,7 @@ local function renderStreak()
         if day == today then
             dot:setBorderColor('#ffffff')
             dot:setColor('#ffffff')
-            dot:setTooltip(tr('Hoje: +%d pontos', (day - 1) * bonus))
+            dot:setTooltip(tr('Hoje: +%d pontos', day * bonus))
         end
     end
     -- no explanation under the cards: each one says what it is
@@ -509,7 +633,7 @@ local function renderTrailList()
     panel.summary:setText(tr('%d de %d etapas completas', done, #steps))
     fillLegend(panel.legend)
     local bonusText = (trail.milestoneShare or 0) > 0 and tr('+%d%% dos pontos da etapa', trail.milestoneShare) or tr('+%d', trail.milestonePoints or 0)
-    panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, %s de bônus. A trilha inteira vale %s pontos.',
+    panel.summary:setTooltip(tr('Cada etapa: +%s de experiência e pontos que crescem com as kills; a cada %d etapas, %s de bônus. As Linked Tasks inteiras valem %s pontos.',
         formatNumber(trail.exp), trail.milestoneEvery or 5, bonusText, formatNumber(trail.totalPoints or 0))
         .. ((trail.totalCharms or 0) > 0 and tr(' E %s charm points.', formatNumber(trail.totalCharms)) or ''))
 
@@ -834,6 +958,10 @@ local function render()
     end
 end
 
+function refresh()
+    render()
+end
+
 local function tick()
     tickEvent = nil
     if not window or not window:isVisible() then
@@ -841,7 +969,9 @@ local function tick()
     end
     if state and state.resetAt then
         local left = state.resetAt - (os.time() + timeOffset)
-        window.tasksPanel.dailyCard.title:setText(tr('Task diária, nova em %s', formatDuration(left)))
+        if (state.dailyCount or 0) >= (state.dailyLimit or 3) then
+            window.tasksPanel.dailyCard.title:setText(tr('Task livre: novas em %s', formatDuration(left)))
+        end
         if left < -3 and left > -15 then
             state.resetAt = nil
             send({ action = 'open' })
@@ -1054,11 +1184,11 @@ function handlers.done(data)
     local title, second
     local points = tr('+%d Hunt Points', tonumber(data.points) or 0)
     if data.kind == 'daily' then
-        title = tr('Task diária completa!')
+        title = tr('Task livre completa!')
         local streak = tonumber(data.streak) or 0
         second = streak > 1 and (points .. tr(' · %d dias', streak)) or points
     else
-        title = data.last and tr('Trilha completa!') or tr('Etapa %d da Trilha!', tonumber(data.step) or 0)
+        title = data.last and tr('Linked Tasks completas!') or tr('Linked Task %d completa!', tonumber(data.step) or 0)
         second = data.milestone and (points .. tr(' · marco!')) or points
     end
     local first = tr('+%s exp', goldText(data.experience))
@@ -1201,7 +1331,7 @@ local function onGameStart()
         end
     end, 3000)
     if not next(sectionButtons) and not toolbarButton and modules.game_mainpanel then
-        toolbarButton = modules.game_mainpanel.addToggleButton('huntTasksButton', tr('Tasks do Caçador (task diária, trilha e loja)'),
+        toolbarButton = modules.game_mainpanel.addToggleButton('huntTasksButton', tr('Tasks (Linked Tasks, task livre e loja)'),
             '/game_hunttasks/images/button', toggle, false, 22)
     end
 end
@@ -1219,7 +1349,7 @@ end
 function init()
     window = g_ui.displayUI('hunttasks')
     window:hide()
-    window:setText(tr('Tasks do Caçador'))
+    window:setText(tr('Tasks'))
     window.footer:setText('')
 
     ProtocolGame.registerExtendedJSONOpcode(TASK_OPCODE, onTaskOpcode)

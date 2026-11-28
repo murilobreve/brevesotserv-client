@@ -1,6 +1,6 @@
 Module
   name: game_hunttasks
-  description: Szuszkin hunting tasks - daily task, Hunter's Trail and the Hunt Points shop
+  description: Tasks - the Linked Tasks, the free task and the Hunt Points shop
   author: Mythos
   website: http://25.18.172.192
   sandboxed: true
