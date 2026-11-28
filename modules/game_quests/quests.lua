@@ -308,7 +308,13 @@ local function addItemCell(grid, id, name, sub, color, tip)
     cell.name:setText(fitted(name, 18))
     cell.sub:setText(sub or '')
     cell.sub:setColor(color or '#909090')
-    cell:setTooltip(tip or name)
+    -- what the item is, under the mouse (game_wiki: WikiItems.hover)
+    local wiki = modules.game_wiki
+    if wiki and wiki.WikiItems and wiki.WikiItems.hover and (tonumber(id) or 0) > 0 then
+        wiki.WikiItems.hover(cell, id, name, tip ~= name and tip or nil)
+    else
+        cell:setTooltip(tip or name)
+    end
     return cell
 end
 

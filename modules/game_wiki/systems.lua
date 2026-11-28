@@ -215,7 +215,7 @@ function WIKI_BUILDERS.tasksinfo(parent)
     local low = math.max(least, math.floor((t.kills[1] or 0) * perKill + 0.5))
     local high = math.max(least, math.floor((t.kills[2] or 0) * perKill + 0.5))
     tableOf(parent, { 200, 346 }, nil, {
-        { T('Monstro'), T('Você escolhe entre os que têm level recomendado de %d%% a %d%% do seu, e pode trocar quando quiser', math.floor((window[1] or 0) * 100 + 0.5), math.floor((window[2] or 0) * 100 + 0.5)) },
+        { T('Monstro'), T('Você escolhe entre todos os que têm teleporte de hunt, e pode trocar quando quiser. Abaixo de %d%% do seu level o monstro paga menos pontos', math.floor((window[1] or 0) * 100 + 0.5)) },
         { T('Por dia'), T('%d tasks livres', t.perDay or 0) },
         { T('Kills'), T('%d a %d (mais spawns, mais kills)', t.kills[1] or 0, t.kills[2] or 0) },
         { T('Experiência'), T('Até %d%% de um level, no máximo o que as kills da task valem', math.floor((t.experience or 0) * 100 + 0.5)) },

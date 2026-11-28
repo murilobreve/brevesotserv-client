@@ -621,6 +621,102 @@ WIKI_HANDLERS.item = function(data)
     refresh('i:' .. id)
 end
 
+-- ---------------------------------------------------------------- tooltips of other windows
+
+-- The loot of the Bosses window, of a monster's page and of a quest showed
+-- an item's name and nothing else: to know what a drop is the player had to
+-- open its page. Hovering one now shows what the item is (its stats, who can
+-- use it, its weight, what an NPC pays), from a small answer of the server
+-- (action "tip") asked once per item and kept for the session.
+local tips = {} -- item id -> the server's data, or { missing = true }
+local tipAsked = {} -- item id -> when
+local tipWidgets = {} -- item id -> { widget -> { title, extra } }
+local TIP_ASK_AGAIN = 1500
+local TIP_LINE = 64 -- a tooltip does not wrap: longer lines are cut
+
+local function cut(text)
+    text = tostring(text or '')
+    if #text > TIP_LINE then
+        return text:sub(1, TIP_LINE - 3):gsub('%s+$', '') .. '...'
+    end
+    return text
+end
+
+local function tipText(id, title, extra)
+    local d = tips[id] or pages[id]
+    local lines = { title }
+    local value = WikiItems.valueOf(id)
+    if d and not d.missing then
+        for _, row in ipairs(statRows(d)) do
+            table.insert(lines, cut(row[1] .. ': ' .. row[2]))
+        end
+        value = tonumber(d.value) or value
+    elseif byId[id] and byId[id].sum ~= '' then
+        table.insert(lines, cut(byId[id].sum))
+    end
+    if value > 0 then
+        table.insert(lines, T('Um NPC paga: %s gold', num(value)))
+    end
+    if extra and extra ~= '' then
+        table.insert(lines, extra)
+    end
+    return table.concat(lines, '\n')
+end
+
+local function askTip(id)
+    local now = g_clock.millis()
+    if tips[id] or pages[id] or (tipAsked[id] and now - tipAsked[id] < TIP_ASK_AGAIN) then
+        return
+    end
+    tipAsked[id] = now
+    WIKI_REQUEST({ action = 'tip', id = id })
+end
+
+-- widget: what the player hovers; title: the item's name as that window
+-- shows it; extra: a last line of that window's own (the drop chance, "click
+-- to open"). The tooltip is the name at once, and the stats as they come.
+function WikiItems.hover(widget, id, title, extra)
+    id = tonumber(id) or 0
+    if not widget or id <= 0 then
+        return
+    end
+    tipWidgets[id] = tipWidgets[id] or setmetatable({}, { __mode = 'k' })
+    tipWidgets[id][widget] = { title, extra }
+    widget:setTooltip(tipText(id, title, extra))
+    connect(widget, { onHoverChange = function(_, hovered)
+        if not hovered then
+            return
+        end
+        askTip(id)
+        -- the server drops a request that comes right after another (the
+        -- mouse ran over a row of items): once more while the mouse stays
+        scheduleEvent(function()
+            if not tips[id] and not pages[id] and not widget:isDestroyed() and widget:isHovered() then
+                tipAsked[id] = nil
+                askTip(id)
+            end
+        end, 500)
+    end })
+end
+
+WIKI_HANDLERS.tip = function(data)
+    local id = tonumber(data.id)
+    if not id then
+        return
+    end
+    tips[id] = type(data.data) == 'table' and data.data or { missing = true }
+    for widget, text in pairs(tipWidgets[id] or {}) do
+        if not widget:isDestroyed() then
+            local tooltip = tipText(id, text[1], text[2])
+            widget:setTooltip(tooltip)
+            -- the one under the mouse shows it now, not on the next hover
+            if widget:isHovered() then
+                g_tooltip.display(tooltip)
+            end
+        end
+    end
+end
+
 -- ---------------------------------------------------------------- imbuements
 
 local imbuements -- the server's list: { { name, group, levels = { { level, name, text, items } } } }

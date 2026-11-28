@@ -892,11 +892,11 @@ function WIKI_BUILDERS.loot(parent, block)
         local value = WikiItems.valueOf(tonumber(item.id) or 0)
         if value > 0 then
             cell.chance:setText(T('%s   NPC: %s', chance, num(value)))
-            cell:setTooltip(T('%s - %s. Um NPC paga %s gold. Clique para abrir o item.', name, chance, num(value)))
         else
             cell.chance:setText(chance)
-            cell:setTooltip(T('%s - %s. Clique para abrir o item.', name, chance))
         end
+        -- what the item is, under the mouse (items.lua: WikiItems.hover)
+        WikiItems.hover(cell, item.id, name, T('Chance: %s por kill. Clique para abrir o item.', chance))
         cell.onClick = function() show('i:' .. item.id) end
     end
 end

@@ -803,7 +803,17 @@ renderDetail = function()
             card.name:setText(label)
             card.chance:setText(percent(item.chance))
             card.chance:setColor(color)
-            card:setTooltip(titleCase(item.name))
+            -- what the item is, under the mouse (the Wiki's item data), and
+            -- its page with a click
+            local wiki = modules.game_wiki
+            if wiki and wiki.WikiItems and wiki.WikiItems.hover then
+                wiki.WikiItems.hover(card, item.id, titleCase(item.name), tr('Chance: %s. Clique para abrir o item na Wiki.', percent(item.chance)))
+                card.onClick = function()
+                    wiki.show('i:' .. item.id)
+                end
+            else
+                card:setTooltip(titleCase(item.name))
+            end
         end
     end
 

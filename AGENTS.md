@@ -78,6 +78,7 @@ Reference: `docs/client-assets-auto-install.md`
 - A request a module sends by itself when the game starts waits `g_game.spreadDelay(min, max)` (gamelib), so a login rush does not bring every client's requests in the same second; calls of one burst come `SPREAD_STEP` apart.
 - `client_assets`: a missing sprite sheet offers the download but never locks the player out ("Play anyway"; still missing after a download in the same session opens the game). Only missing core files (appearances, staticdata) are required.
 - Heal Bot (`game_healbot`): every part of the tick (auto attack, spells, caster, potions, food) runs through `guarded` in `engine.lua`, so a fault in one never stops a heal; keep new parts behind it. A new setting goes in `defaults()` (`merge` reads only the keys the defaults have, so old saves keep working with no version bump) and `sanitize` clamps it. `engine.lua` and `data.lua` are Latin-1; `healbot.lua` and `healbot.otui` are ASCII.
+- An item drawn in a window of ours (loot of a boss, of a monster, a quest's reward) gets its tooltip from `modules.game_wiki.WikiItems.hover(widget, id, title, extra)`: the item's stats, weight and NPC price, asked from the server once per item (Wiki action `tip`) when the mouse first rests on it. Do not write a tooltip with only the name, and do not ask for the whole item page for it.
 - Extended opcode 139 is the client build report (`client_updater` -> server `scripts/custom/client_version.lua`); check the server's opcode list before taking a new number.
 
 ## Short updates on the site

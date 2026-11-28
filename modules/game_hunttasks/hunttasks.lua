@@ -95,9 +95,12 @@ local function formatDuration(seconds)
     return string.format('%02d:%02d:%02d', math.floor(seconds / 3600), math.floor(seconds % 3600 / 60), seconds % 60)
 end
 
+-- (v = 2: this client asks for the free task's list by itself, action
+-- "choices", so the server leaves it out of the state)
 local function send(data)
     local protocol = g_game.getProtocolGame()
     if protocol then
+        data.v = 2
         protocol:sendExtendedJSONOpcode(TASK_OPCODE, data)
     end
 end
@@ -257,25 +260,61 @@ local function showSpecies(card, counted)
     panel:setVisible(true)
 end
 
--- The free task's picker (the left card): the monsters of the player's level
--- to pick from (state.choices), a search, what the chosen one pays and the
--- button that takes it. It shows when the player has no free task, when the
--- last one is done and the day has more, and when he asks to change.
+-- The free task's picker (the left card): every monster with a hunt
+-- teleport to pick from, a search, what the chosen one pays and the button
+-- that takes it. It shows when the player has no free task, when the last
+-- one is done and the day has more, and when he asks to change.
+-- The list (about 300 monsters) comes when the picker opens (action
+-- "choices"), not with every state; a server of before sends it in the
+-- state (state.choices). The picker draws PICKER_ROWS of them at most: the
+-- hunts of the player's level come first, the search finds the others.
 local pickerOpen = false -- asked to change the monster of a task still open
 local pickedName -- the row chosen in the picker
+local choices -- the server's list, nil until it comes
+local choicesAskedAt = 0
+local choicesFor -- the free tasks done when the list came: the first of a day pays more
+local pickerDrawn -- what the rows on screen were drawn from
+local PICKER_ROWS = 100
+local CHOICES_WAIT = 4000 -- ms without the list before saying so
 
 local CARD_PARTS = { 'portrait', 'creature', 'name', 'info', 'badge', 'bar', 'reward', 'extra', 'species', 'action', 'action2', 'take' }
 
+local function choiceList()
+    return choices or (state and state.choices) or nil
+end
+
 local function choiceOf(name)
-    for _, choice in ipairs(state and state.choices or {}) do
+    for _, choice in ipairs(choiceList() or {}) do
         if choice.name == name then
             return choice
         end
     end
 end
 
+-- asks for the list when there is none, or when the day's count changed
+-- since it came (the rewards shown are of the next task)
+local function askChoices()
+    local count = state and state.dailyCount or 0
+    if choices and choicesFor == count then
+        return
+    end
+    local now = g_clock.millis()
+    if now - choicesAskedAt < 1500 then
+        return
+    end
+    choicesAskedAt = now
+    send({ action = 'choices' })
+    -- no list after a while: the picker says so instead of staying empty
+    scheduleEvent(function()
+        if window and state and not choiceList() then
+            modules.game_hunttasks.refresh()
+        end
+    end, CHOICES_WAIT + 100)
+end
+
 local function chooseTask(name)
     pickerOpen = false
+    pickerDrawn = nil
     send({ action = 'choose', monster = name })
 end
 
@@ -323,14 +362,28 @@ local function renderPicker(card, daily)
         chooseTask(choice.name)
     end
 
+    askChoices()
+    local all = choiceList()
     local list = picker.list
-    list:destroyChildren()
     local query = picker.search:getText():lower()
+    -- the rows are built again only when what they show changed: a state
+    -- comes often, and 100 rows with their creatures are not built for each
+    local drawn = { all, query, changing and daily.key or false }
+    if pickerDrawn and pickerDrawn[1] == drawn[1] and pickerDrawn[2] == drawn[2] and pickerDrawn[3] == drawn[3]
+        and list:getChildCount() > 0 then
+        renderPickerInfo(picker)
+        return
+    end
+    pickerDrawn = drawn
+    list:destroyChildren()
     local shownPicked = false
-    local count = 0
-    for _, choice in ipairs(state.choices or {}) do
+    local count, more = 0, 0
+    for _, choice in ipairs(all or {}) do
         local current = changing and daily.key == choice.name
         if not current and (query == '' or choice.label:lower():find(query, 1, true) or choice.name:lower():find(query, 1, true)) then
+          if count >= PICKER_ROWS then
+            more = more + 1
+          else
             count = count + 1
             local row = g_ui.createWidget(count % 2 == 0 and 'TaskChoiceEven' or 'TaskChoice', list)
             row.creature:setOutfit(outfitOf(choice.outfit))
@@ -354,14 +407,24 @@ local function renderPicker(card, daily)
                 shownPicked = true
                 list:focusChild(row, KeyboardFocusReason)
             end
+          end
         end
     end
     if not shownPicked then
         pickedName = nil
     end
     picker.empty:setVisible(count == 0)
-    picker.empty:setText(#(state.choices or {}) == 0 and tr('Nenhum monstro para o seu level agora.') or tr('Nenhum monstro com esse nome.'))
+    if not all then
+        -- still on its way, or a server that does not answer
+        local waited = g_clock.millis() - choicesAskedAt
+        picker.empty:setText(waited >= CHOICES_WAIT and tr('O servidor não mandou a lista. Feche a janela e abra de novo.') or tr('Carregando os monstros...'))
+    else
+        picker.empty:setText(#all == 0 and tr('Nenhum monstro com teleporte agora.') or tr('Nenhum monstro com esse nome.'))
+    end
     renderPickerInfo(picker)
+    if more > 0 then
+        picker.info:setText(picker.info:getText() .. ' ' .. tr('(Mais %d na busca.)', more))
+    end
 end
 
 -- the search of the picker (hunttasks.otui)
@@ -449,6 +512,7 @@ local function renderDaily()
     card.action.onClick = function()
         pickerOpen = true
         pickedName = nil
+        pickerDrawn = nil
         modules.game_hunttasks.refresh()
     end
 end
@@ -1109,6 +1173,18 @@ function handlers.state(data)
     updateBadge()
 end
 
+-- the free task's list, asked by the picker (askChoices)
+function handlers.choices(data)
+    if type(data.list) ~= 'table' then
+        return
+    end
+    choices = data.list
+    choicesFor = state and state.dailyCount or 0
+    if window and state then
+        render()
+    end
+end
+
 function handlers.progress(data)
     if not state then
         return
@@ -1339,6 +1415,8 @@ end
 local function onGameEnd()
     hide()
     state = nil
+    -- the next character's level and day are its own
+    choices, choicesFor, pickerDrawn, choicesAskedAt = nil, nil, nil, 0
     updateBadge()
     trailBuilt = false
     if window then
