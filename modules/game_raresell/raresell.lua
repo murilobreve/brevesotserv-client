@@ -12,7 +12,7 @@ local GRADES = {
     { key = 'uncommon',  label = 'Communis',    color = '#63c08a', frame = 1 },
     { key = 'rare',      label = 'Rarus',       color = '#4f8fe8', frame = 2 },
     { key = 'epic',      label = 'Praeclarus',  color = '#a679e6', frame = 3 },
-    { key = 'legendary', label = 'Legendarius', color = '#f7a55f', frame = 4 },
+    { key = 'legendary', label = 'Legendarius', color = '#e2a443', frame = 4 },
     { key = 'mythic',    label = 'Mythicus',    color = '#e8e4ff', frame = 5 },
 }
 local GRADE_BY_KEY = {}

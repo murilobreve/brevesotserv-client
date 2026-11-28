@@ -199,7 +199,7 @@ QuestGrid < UIWidget
   height: 36
   layout:
     type: grid
-    cell-size: 160 36
+    cell-size: 159 36
     cell-spacing: 4
     num-columns: 2
 

@@ -16,7 +16,7 @@ LOOT_GRADES = {
     uncommon = { folder = 'communis', name = 'Communis', rank = 1, color = '#63c08a', h = .72, g = .65, d = .80, ba = .48, ga = .35, gem = .27 },
     rare = { folder = 'rarus', name = 'Rarus', rank = 2, color = '#4f8fe8', h = 1.45, g = .95, d = 1.20, ba = .60, ga = .46, gem = .32 },
     epic = { folder = 'praeclarus', name = 'Praeclarus', rank = 3, color = '#af78ea', h = 2.15, g = 1.30, d = 1.70, ba = .68, ga = .53, gem = .37 },
-    legendary = { folder = 'legendarius', name = 'Legendarius', rank = 4, color = '#f7a55f', h = 2.95, g = 1.75, d = 2.25, ba = .76, ga = .62, gem = .43 },
+    legendary = { folder = 'legendarius', name = 'Legendarius', rank = 4, color = '#e2a443', h = 2.95, g = 1.75, d = 2.25, ba = .76, ga = .62, gem = .43 },
     mythic = { folder = 'mythicus', name = 'Mythicus', rank = 5, color = '#e8e4ff', h = 3.85, g = 2.20, d = 3.10, ba = .84, ga = .70, gem = .49 },
 }
 local LOOT_LAYERS = { chao = 1, feixe = 2, gema = 3, coleta = 4 }
@@ -172,9 +172,12 @@ function showLootDrop(data)
     }
     local player = g_game.getLocalPlayer()
     if data.picked and player and data.finder == player:getId() then
+        -- (nil for a moment after a death or a change of floor)
         local me = player:getPosition()
-        entry.travel = { dx = me.x - pos.x, dy = me.y - pos.y }
-        entry.travelAt = entry.starts + 650
+        if me then
+            entry.travel = { dx = me.x - pos.x, dy = me.y - pos.y }
+            entry.travelAt = entry.starts + 650
+        end
     end
     lootDrops[data.id] = entry
 
@@ -251,11 +254,13 @@ function removeLootDrop(data)
         return
     end
     local taker = data.taken and g_map.getCreatureById(data.taken)
-    if not taker then
+    -- (a taker who died in that moment has no position: the handler threw
+    -- and the gem's marker stayed on the corpse)
+    local to = taker and taker:getPosition()
+    if not to then
         dropLootEffects(data.id)
         return
     end
-    local to = taker:getPosition()
     entry.marker = false
     if entry.effects.gema then
         entry.effects.gema:setOpacity(0)

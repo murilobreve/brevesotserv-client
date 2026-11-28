@@ -646,6 +646,12 @@ local GAIN_STEPS, GAIN_STEP_MS = 40, 40 -- the count up takes about 1.6 seconds
 local FLOAT_STEPS, FLOAT_STEP_MS = 70, 40 -- the "+N" pill rises for about 2.8 seconds
 local FLOAT_RISE = 46 -- pixels the pill climbs
 local gainEvents = {} -- row id -> the running count up
+-- row id -> the "+N" pill in the air: { label, sum, at }. A gain that comes
+-- while the row's pill is still young is added to it instead of making
+-- another (an area spell that kills five rare monsters sent five gains in a
+-- frame: five pills and 350 timers)
+local floats = {}
+local FLOAT_MERGE_MS = 600
 
 -- the first number in a badge ("2.990 pts", "65 XP"), whatever thousands mark it uses
 local function numberIn(text)
@@ -701,6 +707,12 @@ local function floatGain(button, text)
             label:setOpacity(t < 0.6 and 1 or math.max(0, 1 - (t - 0.6) / 0.4))
         end, step * FLOAT_STEP_MS)
     end
+    return label
+end
+
+local function sizePill(label)
+    local size = label:getTextSize()
+    label:setSize({ width = size.width + 24, height = size.height + 10 })
 end
 
 -- the badge counts from `from` up to the number in `text`; the row pulses
@@ -715,7 +727,15 @@ local function animateGain(id, from, to, text)
         gainEvents[id] = nil
     end
     local badge = button.badge
-    floatGain(button, '+' .. withNumber(text, to - from))
+    local pill = floats[id]
+    if pill and not pill.label:isDestroyed() and g_clock.millis() - pill.at < FLOAT_MERGE_MS then
+        pill.sum = pill.sum + (to - from)
+        pill.label:setText('+' .. withNumber(text, pill.sum))
+        sizePill(pill.label)
+    else
+        local label = floatGain(button, '+' .. withNumber(text, to - from))
+        floats[id] = label and { label = label, sum = to - from, at = g_clock.millis() } or nil
+    end
     button.glow:show()
     local step = 0
     local blinks = 6 -- after the count: three gold flashes of the badge
@@ -768,7 +788,11 @@ function setFeatureState(id, text, color)
     states[id] = text and { text = text, color = color } or nil
     styleButton(id)
     resizeSoon()
-    refreshHubs()
+    -- (the hub's tabs show only these rows' counts: a Rarity XP gain, once a
+    -- rare kill, walked every hub window for nothing)
+    if table.contains(HUB, id) then
+        refreshHubs()
+    end
     local after = numberIn(text)
     if before and after and after > before then
         animateGain(id, before, after, text)

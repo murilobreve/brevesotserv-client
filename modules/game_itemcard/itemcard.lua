@@ -25,7 +25,7 @@ local GRADES = {
     uncommon = '#63c08a',
     rare = '#4f8fe8',
     epic = '#a679e6',
-    legendary = '#f7a55f',
+    legendary = '#e2a443',
     mythic = '#e8e4ff',
 }
 

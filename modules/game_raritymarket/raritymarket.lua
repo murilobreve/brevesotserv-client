@@ -12,7 +12,7 @@ local RARITIES = {
     uncommon  = { label = 'Communis',  color = '#63c08a', badge = '#c4ead3', frame = 1 },
     rare      = { label = 'Rarus',     color = '#4f8fe8', badge = '#c3d6f6', frame = 2 },
     epic      = { label = 'Praeclarus',color = '#a679e6', badge = '#ded0f7', frame = 3 },
-    legendary = { label = 'Legendarius',color = '#f7a55f', badge = '#f3dcae', frame = 4 },
+    legendary = { label = 'Legendarius',color = '#e2a443', badge = '#f3dcae', frame = 4 },
     mythic    = { label = 'Mythicus',  color = '#e8e4ff', badge = '#f6f4ff', frame = 5 },
 }
 

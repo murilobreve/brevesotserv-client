@@ -383,7 +383,7 @@ local function renderFacts(facts, quest)
         local _, others = wallNames(quest)
         fact(tr('Kind'), tr('Quest of the teleport room'))
         if #others > 0 then
-            fact(tr('Also'), fitted(table.concat(others, ', '), 34), nil, table.concat(others, '\n'))
+            fact(tr('Also'), fitted(table.concat(others, ', '), 30), nil, table.concat(others, '\n'))
         end
         return
     end

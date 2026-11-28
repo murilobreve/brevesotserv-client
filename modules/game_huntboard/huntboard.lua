@@ -59,6 +59,7 @@ local MEDALS = {
 local window
 local filtersShown = false -- the filter panel and the detail columns (setFiltersShown)
 local quickReady = false -- the level of the player went into the list once
+local listStale = false -- rates came with the window closed: the list is built when it shows
 local updateQuickBar
 local toolbarButton -- old single button, when game_brevespanel is missing
 local sectionButtons = {} -- rates / board rows in the Mythos panel
@@ -1447,9 +1448,17 @@ function handlers.rates(data)
         rateByName[monster.lname] = { xp = monster.xp, loot = monster.loot, rare = monster.rare }
     end
     labelAll()
+    -- (the list is built when the window shows: the rates come a few seconds
+    -- after the login and again at every roll, in the middle of a hunt, and
+    -- sorting the whole list and building a page of rows behind a closed
+    -- window was work nobody saw)
     if window then
         updateFooter()
-        applyFilters()
+        if window:isVisible() then
+            applyFilters()
+        else
+            listStale = true
+        end
     end
     pointNewRates()
     -- no best rate over the Teleports row (the owner, 2026-11-19): the row
@@ -1632,6 +1641,11 @@ function show()
         if not g_settings.getBoolean(MINE_KEY) then
             setLevelRange(myLevelRange())
         end
+        applyFilters()
+        listStale = false
+    end
+    if listStale then
+        listStale = false
         applyFilters()
     end
     window:show()

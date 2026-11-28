@@ -202,7 +202,7 @@ local function requestLabels()
 end
 
 local function onGameStart()
-    scheduleEvent(requestLabels, 500)
+    scheduleEvent(requestLabels, g_game.spreadDelay(500, 2500))
     if not tick then
         loop()
     end

@@ -48,7 +48,7 @@ local function onGameStart()
         if g_game.isOnline() and protocol then
             protocol:sendExtendedOpcode(OPCODE, 'get')
         end
-    end, 1500)
+    end, g_game.spreadDelay(1500, 4000))
 end
 
 local function onGameEnd()

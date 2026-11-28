@@ -30,6 +30,17 @@ VoiceSmallButton < Button
   $hover:
     color: #dfdfdf
 
+  // (Button's own pressed and on states move the text 1 px, and with
+  // text-auto-resize that pixel is added to the button's size)
+  $pressed:
+    text-offset: 0 0
+
+  $on:
+    text-offset: 0 0
+
+  $checked:
+    text-offset: 0 0
+
 // the hint ("Hold Insert") ends at the button when it shows (voice_ui.lua
 // anchors it there; when it does not fit only the key shows, "Insert" beside
 // "SUA PARTY" and "Sair" at the side panel's 150 px; the header's tooltip has

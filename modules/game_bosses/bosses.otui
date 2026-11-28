@@ -155,7 +155,7 @@ BossRow < UIWidget
     anchors.right: star.left
     anchors.verticalCenter: parent.verticalCenter
     margin-right: 8
-    width: 58
+    width: 66
     height: 14
     text-align: right
     font: verdana-11px-antialised

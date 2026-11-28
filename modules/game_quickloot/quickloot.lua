@@ -79,7 +79,13 @@ function quickLootController:onGameStart()
     QuickLoot.supplyPrices = nil
     QuickLoot.rareSell = nil
     QuickLoot.buyer = nil
-    QuickLoot.requestPrices()
+    -- (the answer is the whole price list: a login rush asked for it in the
+    -- same second from every client. Spread like the other login requests)
+    scheduleEvent(function()
+        if g_game.isOnline() and not QuickLoot.prices then
+            QuickLoot.requestPrices()
+        end
+    end, g_game.spreadDelay(1500, 5000))
     QuickLoot.refreshPriceRule()
 
     if modules.game_brevespanel and modules.game_brevespanel.addFeature then

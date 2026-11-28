@@ -39,7 +39,7 @@ local REFRESH_SECONDS = 15 -- the open window asks for the arenas again
 
 local TIER_COLORS = { pale = '#c9d6e3', ashen = '#a7adb5', obsidian = '#a98bff', deathlord = '#ff6b6b', normal = '#3a3342',
     -- the rarity grades (a quest reward's roulette)
-    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#f7a55f', mythic = '#e8e4ff' }
+    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#e2a443', mythic = '#e8e4ff' }
 local CATS = {
     { 'weapon', 'Arma' }, { 'armor', 'Armadura' }, { 'helmet', 'Elmo' }, { 'legs', 'Calça' },
     { 'boots', 'Botas' }, { 'shield', 'Escudo' }, { 'jewel', 'Joia' },
@@ -118,7 +118,7 @@ local function rareColor(chance)
     if chance < 0.1 then
         return '#e8e4ff'
     elseif chance < 0.5 then
-        return '#f7a55f'
+        return '#e2a443'
     elseif chance < 2 then
         return '#af78ea'
     elseif chance < 10 then
@@ -725,6 +725,8 @@ renderDetail = function()
         child:setVisible(boss ~= nil)
     end
     if not boss then
+        -- (the panel's caption is the boss's name: none chosen, none shown)
+        d:setText('')
         return
     end
     local key = statusOf(boss)

@@ -30,7 +30,7 @@ local STEPS = {
 }
 
 local GRADE_COLORS = {
-    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#f7a55f', mythic = '#e8e4ff',
+    uncommon = '#63c08a', rare = '#4f8fe8', epic = '#af78ea', legendary = '#e2a443', mythic = '#e8e4ff',
 }
 
 local window, card, rareWindow
@@ -188,13 +188,17 @@ end
 
 local REWARD_HEIGHT = 30 -- two lines of verdana-11px-rounded
 
+local layoutPending = false
+
 local function layoutWindow()
-    if not window then
+    if not window or layoutPending then
         return
     end
+    layoutPending = true
     local contents = window.contentsPanel
     -- the text wraps to the width it has: measured once it is laid out
     scheduleEvent(function()
+        layoutPending = false
         if not window or window:isDestroyed() then
             return
         end
@@ -423,7 +427,7 @@ local function showRare(data)
     if not root then
         return
     end
-    local color = GRADE_COLORS[info.grade] or '#f7a55f'
+    local color = GRADE_COLORS[info.grade] or '#e2a443'
     rareWindow = g_ui.createWidget('JourneyRareWindow', root)
     rareWindow:addAnchor(AnchorHorizontalCenter, 'gameMapPanel', AnchorHorizontalCenter)
     rareWindow:addAnchor(AnchorVerticalCenter, 'gameMapPanel', AnchorVerticalCenter)
@@ -554,6 +558,25 @@ function handlers.card(data)
     end
 end
 
+-- The window refilled once a packet: the server sends `spins` after every
+-- Rarity XP change (a rare kill) and the tasks tell every kill, with this
+-- window open during a new player's hunt. Now at most once every FILL_EVERY.
+local FILL_EVERY = 100
+local fillPending = false
+
+local function fillSoon()
+    if fillPending then
+        return
+    end
+    fillPending = true
+    scheduleEvent(function()
+        fillPending = false
+        if window and not window:isDestroyed() and window:isVisible() and journey then
+            fillWindow()
+        end
+    end, FILL_EVERY)
+end
+
 function handlers.spins(data)
     if not journey then
         return
@@ -561,7 +584,7 @@ function handlers.spins(data)
     journey.spins = data.spins or {}
     updateBar()
     if window and window:isVisible() then
-        fillWindow()
+        fillSoon()
     end
 end
 
@@ -583,7 +606,7 @@ end
 function onTaskState(state)
     taskState = state
     if window and window:isVisible() and journey then
-        fillWindow()
+        fillSoon()
     end
 end
 
