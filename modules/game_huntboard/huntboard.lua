@@ -287,17 +287,32 @@ local function ramp(t, from, to)
     return string.format('#%02x%02x%02x', mix(1), mix(2), mix(3))
 end
 
+-- (the rates go under 1x since 2026-11-28, down to 0.5x: a rate that takes
+-- something away is the kit's red, deeper the lower it is)
+local function lowTone(tenths)
+    return ramp(math.max(0, math.min(1, (10 - tenths) / 5)), { 144, 144, 144 }, { 247, 95, 95 })
+end
+
 local function xpTone(tenths)
+    if tenths < 10 then
+        return lowTone(tenths)
+    end
     return ramp(math.max(0, math.min(1, (tenths - 10) / 90)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
--- loot goes from 1x to 3x (its own roll since 2026-10-31)
+-- loot goes from 0.5x to 3x (its own roll since 2026-10-31)
 local function lootTone(tenths)
+    if tenths < 10 then
+        return lowTone(tenths)
+    end
     return ramp(math.max(0, math.min(1, (tenths - 10) / 20)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
--- rare monsters go from 1x to 4x: pale grey to the rare monsters' violet
+-- rare monsters go from 0.5x to 4x
 local function rareTone(tenths)
+    if tenths < 10 then
+        return lowTone(tenths)
+    end
     return ramp(math.max(0, math.min(1, (tenths - 10) / 30)), { 144, 144, 144 }, { 255, 255, 255 })
 end
 
@@ -866,6 +881,8 @@ local function renderPage()
         end
         if monster.rare > 10 then
             tooltip = tooltip .. '\n' .. tr('Rare monsters: %.1fx more Pale, Ashen and Obsidian', monster.rare / 10)
+        elseif monster.rare < 10 then
+            tooltip = tooltip .. '\n' .. tr('Rare monsters: %.1fx, fewer Pale, Ashen and Obsidian than usual', monster.rare / 10)
         end
         if monster.lvl then
             tooltip = tooltip .. '\n' .. tr('Recommended level: %d', monster.lvl)

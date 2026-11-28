@@ -1826,6 +1826,7 @@ locale = {
     ["Any rate"] = "Qualquer rate",
     ["Jackpot"] = "Jackpot",
     ["Below 1x"] = "Abaixo de 1x",
+    ["Rare monsters: %.1fx, fewer Pale, Ashen and Obsidian than usual"] = "Monstros raros: %.1fx, menos Pale, Ashen e Obsidian que o normal",
     ["Most XP per health"] = "Mais XP por HP",
     ["Lowest recommended level"] = "Menor level recomendado",
     ["Any element"] = "Qualquer elemento",
